@@ -43,7 +43,10 @@ Completed:
   interface is split into an earlier Rocq module so UFCS runtime safety can
   reuse it without a module cycle. Rocq now exposes extracted helpers for
   resolving a trait method target from `(trait, trait args, receiver type,
-  method name)` against unique impls and matching impl methods.
+  method name)` against unique impls and matching impl methods. The shorter
+  prefix form `(Trait::method receiver args...)` is accepted when `receiver` is
+  a variable whose type is known from the raw-lowering value context, currently function
+  parameters.
 - Concrete associated type projections are normalized by an extracted Rocq helper
   in converted env/raw/core types when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
@@ -67,11 +70,10 @@ Key temporary limitations:
 ## Remaining Roadmap 2-3 Tasks
 
 1. Harden UFCS trait method calls.
-   - Add the shorter prefix-form method call `(Trait::method receiver args...)`
-     by parsing it as a distinct method-call surface form, inferring the
-     receiver type through the extracted checker, and using the extracted Rocq
-     trait-method resolver to select the unique impl target. This keeps method
-     calls aligned with `(function args...)`; do not introduce dot-call syntax.
+   - Extend short prefix UFCS beyond typed variable receivers to receiver
+     expressions whose type must be inferred during lowering, and decide whether
+     to support trait type arguments in the short form or require the explicit
+     `<Ty as Trait>` spelling for those cases.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
      receivers, by adding a Prop-level summary plus checker soundness and
      runtime safety branch; a checker-only clause is insufficient. The reusable

@@ -115,6 +115,7 @@ atom_expr ::= "()"
             | qualified_path "{" struct_literal_field ("," struct_literal_field)* "}"
             | ID "<" type_arg ("," type_arg)* ">" "{" struct_literal_field ("," struct_literal_field)* "}"
             | qualified_path "(" [atom_expr ("," atom_expr)*] ")"
+            | "(" qualified_path atom_expr* ")"  (* includes Trait::method receiver args *)
             | ID "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
             | ID "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"
             | qualified_path "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"

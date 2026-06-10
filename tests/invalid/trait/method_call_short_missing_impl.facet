@@ -1,0 +1,7 @@
+trait Runner {
+  fn run(self: Self) -> ();
+}
+
+fn main(x: unrestricted isize) -> unrestricted () {
+  (Runner::run x)
+}

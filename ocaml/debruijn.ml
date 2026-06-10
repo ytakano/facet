@@ -3,6 +3,7 @@ open TypeChecker
 
 (* scope maps name -> current de Bruijn index (shadow-counting) *)
 type scope = (string * int) list
+type value_ty_scope = (string * ty option) list
 
 type ty_scope = {
   type_params  : string list;
@@ -12,6 +13,17 @@ type ty_scope = {
 }
 
 let string_of_path path = String.concat "::" path
+
+let value_ty_lookup name tys =
+  match List.assoc_opt name tys with
+  | Some (Some ty) -> Some ty
+  | _ -> None
+
+let add_unknown_value_ty name tys =
+  (name, None) :: tys
+
+let add_value_ty name ty tys =
+  (name, Some ty) :: tys
 
 let named_type_param_arg name =
   NTArgTy (NTy (UUnrestricted, NTNamed ([name], [])))
@@ -495,8 +507,20 @@ let rec validate_expr_paths known ty_params value_scope = function
     validate_expr_paths known ty_params (name :: value_scope) e2
   | NCall (path, type_args, args) ->
     let name = string_of_path path in
+    let short_method_candidate =
+      let path_parts =
+        match path with
+        | [flat] -> List.filter (fun part -> part <> "") (String.split_on_char ':' flat)
+        | _ -> path
+      in
+      match List.rev path_parts with
+      | _method_name :: trait_rev when trait_rev <> [] ->
+        List.mem (string_of_path (List.rev trait_rev)) known.known_trait_names
+      | _ -> false
+    in
     begin match path with
     | [local] when List.mem local value_scope -> ()
+    | _ when short_method_candidate -> ()
     | _ -> require_known "function" known.known_fn_names name
     end;
     List.iter (validate_type_arg_paths known ty_params) type_args;
@@ -997,6 +1021,37 @@ let lower_method_call_target ty_scope self_ty trait_ref method_name =
       (string_of_path trait_ref.ntr_name) trait_args self_ty' method_name in
     (f, self_ty')
 
+let split_flat_path name =
+  let parts = String.split_on_char ':' name in
+  List.filter (fun part -> part <> "") parts
+
+let split_short_method_path path =
+  let path =
+    match path with
+    | [flat] -> split_flat_path flat
+    | _ -> path
+  in
+  match List.rev path with
+  | method_name :: trait_rev when trait_rev <> [] ->
+    Some (List.rev trait_rev, method_name)
+  | _ -> None
+
+let resolve_short_method_target env trait_path method_name self_ty =
+  let trait_name = string_of_path trait_path in
+  let trait_args = [] in
+  match TypeChecker.resolve_trait_method_impl
+    env trait_name trait_args self_ty method_name with
+  | None -> None
+  | Some _ ->
+    Some (synthetic_impl_method_name trait_name trait_args self_ty method_name,
+      trait_name ^ "::" ^ method_name)
+
+let short_method_target_for_receiver env f_path receiver_ty =
+  match split_short_method_path f_path with
+  | Some (trait_path, method_name) ->
+    resolve_short_method_target env trait_path method_name receiver_ty
+  | None -> None
+
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
@@ -1102,7 +1157,7 @@ let lower_param ty_scope scope np =
             param_ty         = lower_named_ty ty_scope np.np_ty } in
   (scope', p)
 
-let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (rec_scope : rec_scope) (e : named_expr) : raw_expr =
+let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (value_tys : value_ty_scope) (rec_scope : rec_scope) (e : named_expr) : raw_expr =
   match e with
   | NUnit           -> RawUnit
   | NLit l          -> RawLit l
@@ -1115,80 +1170,116 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
       else RawVar (ident_of_name scope name)
     end
   | NPlace p        -> RawPlace (convert_place scope p)
-  | NDrop e1        -> RawDrop (convert_raw fn_names ty_scope scope rec_scope e1)
+  | NDrop e1        -> RawDrop (convert_raw env fn_names ty_scope scope value_tys rec_scope e1)
   | NReplace (p, e1) ->
-    RawReplace (convert_place scope p, convert_raw fn_names ty_scope scope rec_scope e1)
+    RawReplace (convert_place scope p, convert_raw env fn_names ty_scope scope value_tys rec_scope e1)
   | NAssign (p, e1) ->
-    RawAssign (convert_place scope p, convert_raw fn_names ty_scope scope rec_scope e1)
+    RawAssign (convert_place scope p, convert_raw env fn_names ty_scope scope value_tys rec_scope e1)
   | NBorrow (rk, p) ->
     RawBorrow (rk, convert_place scope p)
   | NDeref e1 ->
-    RawDeref (convert_raw fn_names ty_scope scope rec_scope e1)
+    RawDeref (convert_raw env fn_names ty_scope scope value_tys rec_scope e1)
   | NCall (f_path, type_args, args) ->
     let f = string_of_path f_path in
-    let args' = List.map (convert_raw fn_names ty_scope scope rec_scope) args in
+    let args' = List.map (convert_raw env fn_names ty_scope scope value_tys rec_scope) args in
+    let short_method_target () =
+      if List.mem f fn_names then None else
+      match args with
+      | NVar receiver :: _ ->
+        begin match value_ty_lookup receiver value_tys with
+        | Some receiver_ty ->
+          begin match short_method_target_for_receiver env f_path receiver_ty with
+          | Some (target, display) -> Some (target, display, receiver_ty)
+          | None -> None
+          end
+        | None -> None
+        end
+      | _ -> None
+    in
     if type_args = [] then
       if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
       else begin match rec_ident rec_scope f with
       | Some (id, captures) -> raw_rec_call id captures args'
-      | None -> RawCall (make_ident f 0, args')
+      | None ->
+        begin match short_method_target () with
+        | Some (target, _, receiver_ty) ->
+          RawCallGeneric (make_ident target 0, receiver_ty :: [], args')
+        | None -> RawCall (make_ident f 0, args')
+        end
       end
     else if in_scope scope f || Option.is_some (rec_ident rec_scope f) then
       failwith "explicit type arguments are only supported for direct function calls"
     else
-      RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
+      begin match short_method_target () with
+      | Some (target, _, receiver_ty) ->
+        RawCallGeneric (make_ident target 0,
+          receiver_ty :: lower_call_type_args ty_scope type_args, args')
+      | None -> RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
+      end
   | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
     RawCallGeneric (make_ident f 0, self_ty' :: lower_call_type_args ty_scope type_args,
-      List.map (convert_raw fn_names ty_scope scope rec_scope) args)
+      List.map (convert_raw env fn_names ty_scope scope value_tys rec_scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,
-      List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope rec_scope e1)) fields)
+      List.map (fun (field, e1) -> (field, convert_raw env fn_names ty_scope scope value_tys rec_scope e1)) fields)
   | NEnum (enum_name_path, args, variant_name, variant_args, payloads) ->
     let enum_name = string_of_path enum_name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
     if variant_tys <> [] then failwith "variant-local type arguments are not supported";
     RawEnum (enum_name, variant_name, lts, variant_lts, tys,
-      List.map (convert_raw fn_names ty_scope scope rec_scope) payloads)
+      List.map (convert_raw env fn_names ty_scope scope value_tys rec_scope) payloads)
   | NMatch (scrut, branches) ->
     RawMatch
-      (convert_raw fn_names ty_scope scope rec_scope scrut,
+      (convert_raw env fn_names ty_scope scope value_tys rec_scope scrut,
        List.map
          (fun (variant, binders, body) ->
             let (branch_scope, binder_ids) = add_bindings_with_idents scope binders in
-            ((variant, binder_ids), convert_raw fn_names ty_scope branch_scope rec_scope body))
+            let branch_value_tys =
+              List.fold_left (fun tys name -> add_unknown_value_ty name tys)
+                value_tys binders
+            in
+            ((variant, binder_ids), convert_raw env fn_names ty_scope branch_scope branch_value_tys rec_scope body))
          branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";
-    let e1' = convert_raw fn_names ty_scope scope rec_scope e1 in
+    let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert_raw fn_names ty_scope scope' rec_scope e2 in
-    RawLet (m, make_ident name d, lower_named_ty ty_scope ty, e1', e2')
+    let lowered_ty = lower_named_ty ty_scope ty in
+    let value_tys' = add_value_ty name lowered_ty value_tys in
+    let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
+    RawLet (m, make_ident name d, lowered_ty, e1', e2')
   | NLet (m, name, None, e1, e2) ->
-    let e1' = convert_raw fn_names ty_scope scope rec_scope e1 in
+    let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert_raw fn_names ty_scope scope' rec_scope e2 in
+    let value_tys' = add_unknown_value_ty name value_tys in
+    let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
     RawLetInfer (m, make_ident name d, e1', e2')
   | NIf (cond, then_e, else_e) ->
-    RawIf (convert_raw fn_names ty_scope scope rec_scope cond,
-           convert_raw fn_names ty_scope scope rec_scope then_e,
-           convert_raw fn_names ty_scope scope rec_scope else_e)
+    RawIf (convert_raw env fn_names ty_scope scope value_tys rec_scope cond,
+           convert_raw env fn_names ty_scope scope value_tys rec_scope then_e,
+           convert_raw env fn_names ty_scope scope value_tys rec_scope else_e)
   | NClosure (captures, params, ret, body) ->
     let capture_ids = List.map (ident_of_name scope) captures in
     let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
-    let (body_scope, raw_params) =
+    let closure_value_tys =
       List.fold_left
-        (fun (sc, acc) np ->
+        (fun tys name -> (name, value_ty_lookup name value_tys) :: tys)
+        [] captures
+    in
+    let (body_scope, body_value_tys, raw_params) =
+      List.fold_left
+        (fun (sc, tys, acc) np ->
           let (sc', p) = lower_param ty_scope sc np in
-          (sc', acc @ [p]))
-        (closure_scope, []) params
+          (sc', add_value_ty np.np_name p.param_ty tys, acc @ [p]))
+        (closure_scope, closure_value_tys, []) params
     in
     RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
-      convert_raw fn_names ty_scope body_scope rec_scope body)
+      convert_raw env fn_names ty_scope body_scope body_value_tys rec_scope body)
   | NLetRec (captures, rec_fns, body) ->
     let capture_ids = List.map (ident_of_name scope) captures in
     let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
@@ -1196,18 +1287,23 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let rec_scope' = List.combine rec_names (List.map (fun rec_id -> (rec_id, capture_ids)) rec_ids) @ rec_scope in
     let lower_rec_fn rf rec_id =
       let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
-      let (body_scope, raw_params) =
+      let rec_value_tys =
         List.fold_left
-          (fun (sc, acc) np ->
+          (fun tys name -> (name, value_ty_lookup name value_tys) :: tys)
+          [] captures
+      in
+      let (body_scope, body_value_tys, raw_params) =
+        List.fold_left
+          (fun (sc, tys, acc) np ->
             let (sc', p) = lower_param ty_scope sc np in
-            (sc', acc @ [p]))
-          (closure_scope, []) rf.nrf_params
+            (sc', add_value_ty np.np_name p.param_ty tys, acc @ [p]))
+          (closure_scope, rec_value_tys, []) rf.nrf_params
       in
       MkRawRecFn (rec_id, raw_params, lower_named_ty ty_scope rf.nrf_ret,
-        convert_raw fn_names ty_scope body_scope rec_scope' rf.nrf_body)
+        convert_raw env fn_names ty_scope body_scope body_value_tys rec_scope' rf.nrf_body)
     in
     RawLetRec (capture_ids, List.map2 lower_rec_fn rec_fns rec_ids,
-      convert_raw fn_names ty_scope scope rec_scope' body)
+      convert_raw env fn_names ty_scope scope value_tys rec_scope' body)
 
 let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in
@@ -1240,7 +1336,7 @@ let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def
     fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
     fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
-let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : raw_fn_def =
+let convert_raw_fn_def_with_names env struct_names enum_names fn_names (f : named_fn_def) : raw_fn_def =
   let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
     type_params = tys;
@@ -1248,8 +1344,8 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
     enum_names;
     self_assoc_trait = None;
   } in
-  let (scope, params, next_lifetime, input_lts) = List.fold_left
-    (fun (sc, acc, next_lt, input_lts) np ->
+  let (scope, value_tys, params, next_lifetime, input_lts) = List.fold_left
+    (fun (sc, tys, acc, next_lt, input_lts) np ->
       let (sc', d) = add_binding sc np.np_name in
       let (param_ty, next_lt', input_lts') =
         lower_input_ty ty_scope next_lt input_lts np.np_ty
@@ -1257,8 +1353,9 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
       let p = { param_mutability = np.np_mutability;
                 param_name       = make_ident np.np_name d;
                 param_ty         = param_ty } in
-      (sc', acc @ [p], next_lt', input_lts'))
-    ([], [], List.length lts, []) f.nf_params
+      (sc', add_value_ty np.np_name param_ty tys, acc @ [p],
+       next_lt', input_lts'))
+    ([], [], [], List.length lts, []) f.nf_params
   in
   let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
   { raw_fn_name      = make_ident f.nf_name 0;
@@ -1266,7 +1363,7 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
     raw_fn_outlives = f.nf_outlives;
     raw_fn_params    = params;
     raw_fn_ret       = ret_ty;
-    raw_fn_body      = convert_raw fn_names ty_scope scope [] f.nf_body;
+    raw_fn_body      = convert_raw env fn_names ty_scope scope value_tys [] f.nf_body;
     raw_fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
     raw_fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
@@ -1459,7 +1556,7 @@ and subst_self_raw_rec_fn self_ty (MkRawRecFn (name, params, ret, body)) =
   MkRawRecFn (name, List.map (subst_self_param self_ty) params,
     subst_type_params_ty [self_ty] ret, subst_self_raw_expr self_ty body)
 
-let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetimes
+let convert_impl_method_raw_item env fn_names needed_names ty_scope initial_lifetimes
     trait_name trait_args self_ty = function
   | NIIMethodDef m ->
     let (method_lts, method_tys) = split_generics m.nmd_generics in
@@ -1470,9 +1567,9 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
       synthetic_impl_method_name trait_name trait_args self_ty m.nmd_name
     in
     if not (List.mem synthetic_name needed_names) then None else
-    let (scope, params, next_lifetime, input_lts) =
+    let (scope, value_tys, params, next_lifetime, input_lts) =
       List.fold_left
-        (fun (sc, acc, next_lt, input_lts) p ->
+        (fun (sc, tys, acc, next_lt, input_lts) p ->
           let (sc', d) = add_binding sc p.nsp_name in
           let (param_ty, next_lt', input_lts') =
             lower_surface_input_ty method_ty_scope next_lt input_lts p.nsp_ty
@@ -1482,11 +1579,12 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
               param_name       = make_ident p.nsp_name d;
               param_ty         = param_ty }
           in
-          (sc', acc @ [param], next_lt', input_lts'))
-        ([], [], initial_lifetimes, []) m.nmd_params
+          (sc', add_value_ty p.nsp_name param_ty tys, acc @ [param],
+           next_lt', input_lts'))
+        ([], [], [], initial_lifetimes, []) m.nmd_params
     in
     let ret = lower_surface_output_ty method_ty_scope input_lts m.nmd_ret in
-    let body = convert_raw fn_names method_ty_scope scope [] m.nmd_body in
+    let body = convert_raw env fn_names method_ty_scope scope value_tys [] m.nmd_body in
     let bounds =
       List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
         m.nmd_bounds
@@ -1502,7 +1600,7 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
            raw_fn_bounds = List.map (subst_self_trait_bound self_ty) bounds }
   | NIIAssocTypeDef _ -> None
 
-let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i =
+let convert_impl_method_raw_fns env struct_names enum_names fn_names needed_names i =
   let (lts, tys) = split_generics i.ni_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
@@ -1512,64 +1610,137 @@ let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i 
   let item_ty_scope = { ty_scope with type_params = "Self" :: tys;
     self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
   List.filter_map
-    (convert_impl_method_raw_item fn_names needed_names item_ty_scope (List.length lts)
+    (convert_impl_method_raw_item env fn_names needed_names item_ty_scope (List.length lts)
        (string_of_path i.ni_trait_name) trait_args self_ty)
     i.ni_items
 
-let rec method_call_targets_in_expr ty_scope = function
+let rec method_call_targets_in_expr env fn_names ty_scope value_tys = function
   | NUnit | NLit _ | NVar _ | NPlace _ | NBorrow _ -> []
-  | NLet (_, _, _, e1, e2) ->
-    method_call_targets_in_expr ty_scope e1 @ method_call_targets_in_expr ty_scope e2
-  | NCall (_, _, args) ->
-    List.concat_map (method_call_targets_in_expr ty_scope) args
+  | NLet (_, name, ty_opt, e1, e2) ->
+    let targets1 = method_call_targets_in_expr env fn_names ty_scope value_tys e1 in
+    let value_tys' =
+      match ty_opt with
+      | Some ty -> add_value_ty name (lower_named_ty ty_scope ty) value_tys
+      | None -> add_unknown_value_ty name value_tys
+    in
+    targets1 @ method_call_targets_in_expr env fn_names ty_scope value_tys' e2
+  | NCall (f_path, _, args) ->
+    let f = string_of_path f_path in
+    let short_targets =
+      if List.mem f fn_names then [] else
+      match args with
+      | NVar receiver :: _ ->
+        begin match value_ty_lookup receiver value_tys with
+        | Some receiver_ty ->
+          begin match short_method_target_for_receiver env f_path receiver_ty with
+          | Some (target, display) -> [(target, display)]
+          | None -> []
+          end
+        | None -> []
+        end
+      | _ -> []
+    in
+    short_targets @
+    List.concat_map (method_call_targets_in_expr env fn_names ty_scope value_tys) args
   | NMethodCall (self_ty, trait_ref, method_name, _type_args, args) ->
     let (f, _) = lower_method_call_target ty_scope self_ty trait_ref method_name in
     (f, string_of_path trait_ref.ntr_name ^ "::" ^ method_name) ::
-    List.concat_map (method_call_targets_in_expr ty_scope) args
+    List.concat_map (method_call_targets_in_expr env fn_names ty_scope value_tys) args
   | NStruct (_, _, fields) ->
-    List.concat_map (fun (_, e) -> method_call_targets_in_expr ty_scope e) fields
-  | NEnum (_, _, _, _, payloads) ->
-    List.concat_map (method_call_targets_in_expr ty_scope) payloads
-  | NMatch (scrut, branches) ->
-    method_call_targets_in_expr ty_scope scrut @
-    List.concat_map (fun (_, _, body) -> method_call_targets_in_expr ty_scope body) branches
-  | NReplace (_, e) | NAssign (_, e) | NDeref e | NDrop e ->
-    method_call_targets_in_expr ty_scope e
-  | NIf (cond, then_e, else_e) ->
-    method_call_targets_in_expr ty_scope cond @
-    method_call_targets_in_expr ty_scope then_e @
-    method_call_targets_in_expr ty_scope else_e
-  | NClosure (_, _, _, body) ->
-    method_call_targets_in_expr ty_scope body
-  | NLetRec (_, rec_fns, body) ->
     List.concat_map
-      (fun rf -> method_call_targets_in_expr ty_scope rf.nrf_body)
-      rec_fns @ method_call_targets_in_expr ty_scope body
+      (fun (_, e) -> method_call_targets_in_expr env fn_names ty_scope value_tys e)
+      fields
+  | NEnum (_, _, _, _, payloads) ->
+    List.concat_map (method_call_targets_in_expr env fn_names ty_scope value_tys)
+      payloads
+  | NMatch (scrut, branches) ->
+    method_call_targets_in_expr env fn_names ty_scope value_tys scrut @
+    List.concat_map
+      (fun (_, binders, body) ->
+         let branch_value_tys =
+           List.fold_left
+             (fun tys name -> add_unknown_value_ty name tys) value_tys binders
+         in
+         method_call_targets_in_expr env fn_names ty_scope branch_value_tys body)
+      branches
+  | NReplace (_, e) | NAssign (_, e) | NDeref e | NDrop e ->
+    method_call_targets_in_expr env fn_names ty_scope value_tys e
+  | NIf (cond, then_e, else_e) ->
+    method_call_targets_in_expr env fn_names ty_scope value_tys cond @
+    method_call_targets_in_expr env fn_names ty_scope value_tys then_e @
+    method_call_targets_in_expr env fn_names ty_scope value_tys else_e
+  | NClosure (captures, params, _, body) ->
+    let closure_value_tys =
+      List.fold_left
+        (fun tys name -> (name, value_ty_lookup name value_tys) :: tys)
+        [] captures
+    in
+    let value_tys_body =
+      List.fold_left
+        (fun tys p -> add_value_ty p.np_name (lower_named_ty ty_scope p.np_ty) tys)
+        closure_value_tys params
+    in
+    method_call_targets_in_expr env fn_names ty_scope value_tys_body body
+  | NLetRec (captures, rec_fns, body) ->
+    let captured_tys =
+      List.fold_left
+        (fun tys name -> (name, value_ty_lookup name value_tys) :: tys)
+        [] captures
+    in
+    List.concat_map
+      (fun rf ->
+         let rec_value_tys =
+           List.fold_left
+             (fun tys p -> add_value_ty p.np_name (lower_named_ty ty_scope p.np_ty) tys)
+             captured_tys rf.nrf_params
+         in
+         method_call_targets_in_expr env fn_names ty_scope rec_value_tys rf.nrf_body)
+      rec_fns @
+    method_call_targets_in_expr env fn_names ty_scope value_tys body
 
-let method_call_targets_in_fn struct_names enum_names f =
-  let (_lts, tys) = split_generics f.nf_generics in
+let method_call_targets_in_fn env fn_names struct_names enum_names f =
+  let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
-  method_call_targets_in_expr ty_scope f.nf_body
+  let (_, value_tys, _) =
+    List.fold_left
+      (fun (next_lt, tys_acc, input_lts) np ->
+         let (param_ty, next_lt', input_lts') =
+           lower_input_ty ty_scope next_lt input_lts np.np_ty
+         in
+         (next_lt', add_value_ty np.np_name param_ty tys_acc, input_lts'))
+      (List.length lts, [], []) f.nf_params
+  in
+  method_call_targets_in_expr env fn_names ty_scope value_tys f.nf_body
 
-let method_call_targets_in_impl_method struct_names enum_names i item =
+let method_call_targets_in_impl_method env fn_names struct_names enum_names i item =
   match item with
   | NIIMethodDef m ->
-    let (_lts, tys) = split_generics i.ni_generics in
+    let (lts, tys) = split_generics i.ni_generics in
     let ty_scope = { type_params = "Self" :: tys; struct_names; enum_names;
       self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
-    method_call_targets_in_expr ty_scope m.nmd_body
+    let method_ty_scope = ty_scope in
+    let (_, value_tys, _) =
+      List.fold_left
+        (fun (next_lt, tys_acc, input_lts) p ->
+           let (param_ty, next_lt', input_lts') =
+             lower_surface_input_ty method_ty_scope next_lt input_lts p.nsp_ty
+           in
+           (next_lt', add_value_ty p.nsp_name param_ty tys_acc, input_lts'))
+        (List.length lts, [], []) m.nmd_params
+    in
+    method_call_targets_in_expr env fn_names ty_scope value_tys m.nmd_body
   | NIIAssocTypeDef _ -> []
 
-let method_call_targets_in_item struct_names enum_names = function
-  | NIFn f -> method_call_targets_in_fn struct_names enum_names f
+let method_call_targets_in_item env fn_names struct_names enum_names = function
+  | NIFn f -> method_call_targets_in_fn env fn_names struct_names enum_names f
   | NIImpl i ->
-    List.concat_map (method_call_targets_in_impl_method struct_names enum_names i) i.ni_items
+    List.concat_map (method_call_targets_in_impl_method env fn_names struct_names enum_names i) i.ni_items
   | _ -> []
 
-let needed_impl_method_targets struct_names enum_names items =
+let needed_impl_method_targets env fn_names struct_names enum_names items =
   List.sort_uniq
     (fun (name, _) (name', _) -> String.compare name name')
-    (List.concat_map (method_call_targets_in_item struct_names enum_names) items)
+    (List.concat_map (method_call_targets_in_item env fn_names struct_names enum_names) items)
 
 let duplicate_name names =
   let rec go seen = function
@@ -2129,11 +2300,11 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
-  let needed_method_targets = needed_impl_method_targets struct_names enum_names items in
+  let needed_method_targets = needed_impl_method_targets base_env fn_names struct_names enum_names items in
   let needed_method_names = List.map fst needed_method_targets in
   let impl_method_raw_fns =
     List.concat_map
-      (convert_impl_method_raw_fns struct_names enum_names fn_names needed_method_names)
+      (convert_impl_method_raw_fns base_env struct_names enum_names fn_names needed_method_names)
       impls in
   let produced_method_names =
     List.map (fun f -> fst f.raw_fn_name) impl_method_raw_fns
@@ -2147,7 +2318,7 @@ let convert_program_items_from_flattened items : global_env =
   let raw_fns =
     List.map (normalize_raw_fn base_env)
       (impl_method_raw_fns @
-       List.map (convert_raw_fn_def_with_names struct_names enum_names fn_names) fns) in
+       List.map (convert_raw_fn_def_with_names base_env struct_names enum_names fn_names) fns) in
   let env =
     match elaborate_raw_global_env base_env raw_fns with
     | Infer_ok env -> normalize_global_env_assocs env

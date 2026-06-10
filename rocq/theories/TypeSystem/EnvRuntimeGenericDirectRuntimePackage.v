@@ -3,7 +3,8 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
   TypeSafetyBasePreservationMutual TypeSafetyDirectCallWrappers
   TypeSafetyCheckedRoots.
-From Facet.TypeSystem Require Export EnvRuntimeCapturedCallFacts.
+From Facet.TypeSystem Require Export EnvRuntimeGenericDirectRuntimePackageBase
+  EnvRuntimeCapturedCallFacts.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
@@ -50,33 +51,6 @@ Proof.
   - exact Hv_ret_fdef.
   - exact Hret_exclude.
 Qed.
-
-Record generic_direct_call_runtime_package
-    (env : global_env) (s s' : store) (ret : value)
-    (Sigma_args : sctx) (R_args : root_env) (arg_roots : list root_set)
-    (ret_ty : Ty) : Prop := {
-  generic_direct_call_package_store :
-    store_typed_prefix env s' Sigma_args;
-  generic_direct_call_package_value :
-    value_has_type env s' ret ret_ty;
-  generic_direct_call_package_preserved :
-    store_ref_targets_preserved env s s';
-  generic_direct_call_package_roots :
-    store_roots_within R_args s';
-  generic_direct_call_package_value_roots :
-    value_roots_within (root_sets_union arg_roots) ret;
-  generic_direct_call_package_shadow :
-    store_no_shadow s';
-  generic_direct_call_package_root_shadow :
-    root_env_no_shadow R_args;
-  generic_direct_call_package_roots_named :
-    root_env_store_roots_named R_args s';
-  generic_direct_call_package_keys_named :
-    root_env_store_keys_named R_args s';
-  generic_direct_call_package_closure_summary :
-    store_function_closure_targets_summary env s'
-}.
-
 
 Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_expr :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args

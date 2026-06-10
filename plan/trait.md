@@ -39,7 +39,9 @@ Completed:
   lowered to hidden generic functions and checked through the extracted direct
   call path; hidden method bodies substitute `Self` with the concrete impl
   target type before raw elaboration; unresolved explicit targets report
-  source-level `Trait::method` names.
+  source-level `Trait::method` names. The generic-direct runtime package
+  interface is split into an earlier Rocq module so UFCS runtime safety can
+  reuse it without a module cycle.
 - Concrete associated type projections are normalized by an extracted Rocq helper
   in converted env/raw/core types when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
@@ -68,10 +70,10 @@ Key temporary limitations:
      calls aligned with `(function args...)`; do not introduce dot-call syntax.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
      receivers, by adding a Prop-level summary plus checker soundness and
-     runtime safety branch; a checker-only clause is insufficient. The next
-     implementation cut must first expose or move the reusable generic-direct
-     runtime package before `EnvRuntimeNarrowRuntimePackage.v` without creating
-     a module cycle.
+     runtime safety branch; a checker-only clause is insufficient. The reusable
+     generic-direct runtime package interface is now available before
+     `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can add the Prop
+     summary, checker soundness, and runtime branch.
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.

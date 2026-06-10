@@ -148,6 +148,7 @@ theories/TypeSystem/EnvRuntimeGenericDirectCallFacts.v
 theories/TypeSystem/EnvRuntimeNarrowCheckerFacts.v
 theories/TypeSystem/EnvRuntimeFunctionValueRuntimeFacts.v
 theories/TypeSystem/EnvRuntimeLocalBoundsBridgeFacts.v
+theories/TypeSystem/EnvRuntimeGenericDirectRuntimePackageBase.v
 theories/TypeSystem/EnvRuntimeNarrowRuntimePackage.v
 theories/TypeSystem/EnvRuntimeDirectCallStoreSafeFacts.v
 theories/TypeSystem/EnvRuntimeCheckedPrefixRuntimePackage.v

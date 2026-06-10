@@ -136,12 +136,13 @@ Key temporary limitations:
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
      should checker helpers switch to assoc-aware compatibility. Profiling showed
-     imports and `CompatBoolSoundness.v` itself are fast, but a
-     separate `AssocArgSoundness.v` proof reaches the first assoc helper lemma
-     and stalls at `Qed` when the conclusion mentions `normalize_assoc_ty`. The
-     next proof attempt must shrink the checked proof term for normalized
-     compatibility, not only move the assoc argument helper lemmas between
-     modules.
+     imports and `CompatBoolSoundness.v` itself are
+     fast, but separate assoc helper modules still stall at the first helper
+     `Qed` whenever the proof term mentions `ty_compatible_assoc_b` or
+     `normalize_assoc_ty`, even through a boolean-witness or inductive wrapper.
+     The next proof attempt must shrink the normalized-compatibility definition
+     itself, likely by factoring an opaque comparison relation before proving
+     argument-helper soundness.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

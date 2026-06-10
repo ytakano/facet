@@ -48,7 +48,7 @@ Completed:
   recognized by short-UFCS raw lowering, and the same expression-receiver
   shapes are parsed by explicit UFCS, but these expression receivers
   currently reach the end-to-end safety gate and remain covered by
-  invalid regression tests, including explicit generic direct-call receivers.
+  invalid regression tests, including generic direct-call receivers.
   Immutable annotated local receivers initialized with unrestricted unit, int,
   float, or bool literals are lowered by eliminating the pure receiver `let`
   when the local name is used only as the receiver, including calls with
@@ -114,8 +114,8 @@ Key temporary limitations:
      float, or bool literals are now accepted by pure receiver-let elimination
      in raw lowering and covered by valid regression tests. Struct, enum, and
      direct function-call expression receivers now resolve in raw lowering but
-     still hit the end-to-end safety gate; explicit generic direct-call
-     receivers are covered by invalid tests for this boundary.
+     still hit the end-to-end safety gate; generic direct-call receivers are
+     covered by invalid tests for this boundary.
      General annotated local receivers still need a Prop-level summary plus
      checker soundness and runtime safety branch; a checker-only clause
      is insufficient. Inferred

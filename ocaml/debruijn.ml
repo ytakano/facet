@@ -1434,6 +1434,37 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
     RawLetRec (capture_ids, List.map2 lower_rec_fn rec_fns rec_ids,
       convert_raw env fn_names ty_scope scope value_tys rec_scope' body)
 
+let convert_fn_sig_with_names struct_names enum_names (f : named_fn_def) : fn_def =
+  let (lts, tys) = split_generics f.nf_generics in
+  let ty_scope = {
+    type_params = tys;
+    struct_names;
+    enum_names;
+    self_assoc_trait = None;
+  } in
+  let (_, params, next_lifetime, input_lts) = List.fold_left
+    (fun (sc, acc, next_lt, input_lts) np ->
+      let (sc', d) = add_binding sc np.np_name in
+      let (param_ty, next_lt', input_lts') =
+        lower_input_ty ty_scope next_lt input_lts np.np_ty
+      in
+      let p = { param_mutability = np.np_mutability;
+                param_name       = make_ident np.np_name d;
+                param_ty         = param_ty } in
+      (sc', acc @ [p], next_lt', input_lts'))
+    ([], [], List.length lts, []) f.nf_params
+  in
+  let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
+  { fn_name      = make_ident f.nf_name 0;
+    fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
+    fn_outlives = f.nf_outlives;
+    fn_captures  = [];
+    fn_params    = params;
+    fn_ret       = ret_ty;
+    fn_body      = EUnit;
+    fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
+
 let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
@@ -2308,10 +2339,14 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
-  let needed_method_targets = needed_impl_method_targets base_env fn_names struct_names enum_names items in
+  let signature_env =
+    { base_env with
+      env_fns = List.map (convert_fn_sig_with_names struct_names enum_names) fns }
+  in
+  let needed_method_targets = needed_impl_method_targets signature_env fn_names struct_names enum_names items in
   let impl_method_raw_fns =
     List.concat_map
-      (convert_impl_method_raw_fns base_env struct_names enum_names fn_names)
+      (convert_impl_method_raw_fns signature_env struct_names enum_names fn_names)
       impls in
   let produced_method_names =
     List.map (fun f -> fst f.raw_fn_name) impl_method_raw_fns
@@ -2324,7 +2359,7 @@ let convert_program_items_from_flattened items : global_env =
   end;
   let raw_fns =
     impl_method_raw_fns @
-    List.map (convert_raw_fn_def_with_names base_env struct_names enum_names fn_names) fns in
+    List.map (convert_raw_fn_def_with_names signature_env struct_names enum_names fn_names) fns in
   let env =
     match elaborate_raw_global_env base_env raw_fns with
     | Infer_ok env -> env

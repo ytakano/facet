@@ -1,0 +1,17 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted bool;
+}
+
+impl Runner for unrestricted bool {
+  fn run(self: Self) -> unrestricted bool {
+    self
+  }
+}
+
+fn id<T>(value: unrestricted T) -> unrestricted T {
+  value
+}
+
+fn main() -> unrestricted bool {
+  (Runner::run (id<unrestricted bool> true))
+}

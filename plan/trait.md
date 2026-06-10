@@ -31,6 +31,9 @@ Completed:
   shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
   call path.
+- Concrete associated type projections are normalized in converted env/raw/core
+  types when a unique impl defines the associated type, allowing uses such as
+  `<unrestricted isize as Iterator>::Item` to type-check as `isize`.
 
 Key temporary limitations:
 
@@ -39,8 +42,9 @@ Key temporary limitations:
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
-- Concrete associated type projection normalization through impl definitions is
-  pending.
+- Associated projection normalization currently runs as an OCaml conversion pass
+  using the extracted `impl_matches_b`; moving this into Rocq compatibility and
+  proving the corresponding soundness rule remains pending.
 - `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
   validated method signatures for now.
 
@@ -63,8 +67,9 @@ Key temporary limitations:
      struct receivers, without weakening the end-to-end checker.
    - Keep dot method-call syntax out of this phase.
 
-3. Normalize associated type projections.
-   - Normalize concrete projections through the selected impl definition.
+3. Move associated type normalization into Rocq compatibility.
+   - Add a Prop-level rule or equivalence for concrete associated type
+     projections and prove checker soundness for it.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local
      bounds.
    - Keep associated type defaults and equality constraints deferred.

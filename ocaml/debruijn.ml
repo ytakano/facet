@@ -1795,6 +1795,159 @@ let validate_env env =
       in
       if dup_impl env.env_impls then Some "duplicate impl" else None
 
+let find_impl_assoc assoc_name impl =
+  List.find_opt (fun a -> a.impl_assoc_name = assoc_name) impl.impl_assoc_types
+
+let rec normalize_assoc_ty_fuel fuel env (MkTy (u, c) as original) =
+  match fuel with
+  | 0 -> original
+  | fuel ->
+    let fuel' = fuel - 1 in
+    let norm = normalize_assoc_ty_fuel fuel' env in
+    let norm_list = List.map norm in
+    match c with
+    | TUnits | TIntegers | TFloats | TBooleans | TNamed _ | TParam _ -> original
+    | TStruct (name, lts, args) -> MkTy (u, TStruct (name, lts, norm_list args))
+    | TEnum (name, lts, args) -> MkTy (u, TEnum (name, lts, norm_list args))
+    | TFn (params, ret) -> MkTy (u, TFn (norm_list params, norm ret))
+    | TClosure (lt, params, ret) -> MkTy (u, TClosure (lt, norm_list params, norm ret))
+    | TForall (n, bounds, body) -> MkTy (u, TForall (n, bounds, norm body))
+    | TTypeForall (n, bounds, body) ->
+      let norm_ref r =
+        { r with core_trait_ref_args = norm_list r.core_trait_ref_args }
+      in
+      let norm_bound b =
+        { b with core_bound_traits = List.map norm_ref b.core_bound_traits }
+      in
+      MkTy (u, TTypeForall (n, List.map norm_bound bounds, norm body))
+    | TAssoc (for_ty, trait_name, trait_args, assoc_name) ->
+      let for_ty' = norm for_ty in
+      let trait_args' = norm_list trait_args in
+      begin match matching_impls trait_name trait_args' for_ty' env.env_impls with
+      | [impl] ->
+        begin match find_impl_assoc assoc_name impl with
+        | Some assoc ->
+          let normalized = norm assoc.impl_assoc_ty in
+          MkTy (u, ty_core normalized)
+        | None -> MkTy (u, TAssoc (for_ty', trait_name, trait_args', assoc_name))
+        end
+      | _ -> MkTy (u, TAssoc (for_ty', trait_name, trait_args', assoc_name))
+      end
+    | TRef (lt, rk, inner) -> MkTy (u, TRef (lt, rk, norm inner))
+
+let normalize_assoc_ty env ty =
+  normalize_assoc_ty_fuel 1000 env ty
+
+let normalize_param env p =
+  { p with param_ty = normalize_assoc_ty env p.param_ty }
+
+let normalize_trait_ref env r =
+  { r with trait_ref_args = List.map (normalize_assoc_ty env) r.trait_ref_args }
+
+let normalize_trait_bound env b =
+  { b with bound_traits = List.map (normalize_trait_ref env) b.bound_traits }
+
+let rec normalize_expr env = function
+  | EUnit | ELit _ | EVar _ | EFn _ | EPlace _ as e -> e
+  | ELet (m, x, ty, e1, e2) ->
+    ELet (m, x, normalize_assoc_ty env ty, normalize_expr env e1, normalize_expr env e2)
+  | ELetInfer (m, x, e1, e2) ->
+    ELetInfer (m, x, normalize_expr env e1, normalize_expr env e2)
+  | EMakeClosure (f, captures) -> EMakeClosure (f, captures)
+  | ECall (f, args) -> ECall (f, List.map (normalize_expr env) args)
+  | ECallGeneric (f, type_args, args) ->
+    ECallGeneric (f, List.map (normalize_assoc_ty env) type_args,
+      List.map (normalize_expr env) args)
+  | ECallExpr (callee, args) ->
+    ECallExpr (normalize_expr env callee, List.map (normalize_expr env) args)
+  | ECallExprGeneric (callee, type_args, args) ->
+    ECallExprGeneric (normalize_expr env callee,
+      List.map (normalize_assoc_ty env) type_args, List.map (normalize_expr env) args)
+  | EStruct (name, lts, type_args, fields) ->
+    EStruct (name, lts, List.map (normalize_assoc_ty env) type_args,
+      List.map (fun (field, e) -> (field, normalize_expr env e)) fields)
+  | EEnum (enum_name, variant_name, lts, variant_lts, type_args, payloads) ->
+    EEnum (enum_name, variant_name, lts, variant_lts,
+      List.map (normalize_assoc_ty env) type_args, List.map (normalize_expr env) payloads)
+  | EMatch (scrut, branches) ->
+    EMatch (normalize_expr env scrut,
+      List.map (fun (pat, body) -> (pat, normalize_expr env body)) branches)
+  | EReplace (place, e) -> EReplace (place, normalize_expr env e)
+  | EAssign (place, e) -> EAssign (place, normalize_expr env e)
+  | EBorrow (rk, place) -> EBorrow (rk, place)
+  | EDeref e -> EDeref (normalize_expr env e)
+  | EDrop e -> EDrop (normalize_expr env e)
+  | EIf (cond, then_e, else_e) ->
+    EIf (normalize_expr env cond, normalize_expr env then_e, normalize_expr env else_e)
+
+let rec normalize_raw_expr env = function
+  | RawUnit | RawLit _ | RawVar _ | RawFn _ | RawPlace _ as e -> e
+  | RawLet (m, x, ty, e1, e2) ->
+    RawLet (m, x, normalize_assoc_ty env ty, normalize_raw_expr env e1,
+      normalize_raw_expr env e2)
+  | RawLetInfer (m, x, e1, e2) ->
+    RawLetInfer (m, x, normalize_raw_expr env e1, normalize_raw_expr env e2)
+  | RawCall (f, args) -> RawCall (f, List.map (normalize_raw_expr env) args)
+  | RawCallGeneric (f, type_args, args) ->
+    RawCallGeneric (f, List.map (normalize_assoc_ty env) type_args,
+      List.map (normalize_raw_expr env) args)
+  | RawCallExpr (callee, args) ->
+    RawCallExpr (normalize_raw_expr env callee, List.map (normalize_raw_expr env) args)
+  | RawStruct (name, lts, type_args, fields) ->
+    RawStruct (name, lts, List.map (normalize_assoc_ty env) type_args,
+      List.map (fun (field, e) -> (field, normalize_raw_expr env e)) fields)
+  | RawEnum (enum_name, variant_name, lts, variant_lts, type_args, payloads) ->
+    RawEnum (enum_name, variant_name, lts, variant_lts,
+      List.map (normalize_assoc_ty env) type_args,
+      List.map (normalize_raw_expr env) payloads)
+  | RawMatch (scrut, branches) ->
+    RawMatch (normalize_raw_expr env scrut,
+      List.map (fun (pat, body) -> (pat, normalize_raw_expr env body)) branches)
+  | RawReplace (place, e) -> RawReplace (place, normalize_raw_expr env e)
+  | RawAssign (place, e) -> RawAssign (place, normalize_raw_expr env e)
+  | RawBorrow (rk, place) -> RawBorrow (rk, place)
+  | RawDeref e -> RawDeref (normalize_raw_expr env e)
+  | RawDrop e -> RawDrop (normalize_raw_expr env e)
+  | RawIf (cond, then_e, else_e) ->
+    RawIf (normalize_raw_expr env cond, normalize_raw_expr env then_e,
+      normalize_raw_expr env else_e)
+  | RawClosure (captures, params, ret, body) ->
+    RawClosure (captures, List.map (normalize_param env) params,
+      normalize_assoc_ty env ret, normalize_raw_expr env body)
+  | RawLetRec (captures, rec_fns, body) ->
+    RawLetRec (captures, List.map (normalize_raw_rec_fn env) rec_fns,
+      normalize_raw_expr env body)
+  | RawCore e -> RawCore (normalize_expr env e)
+
+and normalize_raw_rec_fn env (MkRawRecFn (name, params, ret, body)) =
+  MkRawRecFn (name, List.map (normalize_param env) params,
+    normalize_assoc_ty env ret, normalize_raw_expr env body)
+
+let normalize_raw_fn env f =
+  { f with raw_fn_params = List.map (normalize_param env) f.raw_fn_params;
+           raw_fn_ret = normalize_assoc_ty env f.raw_fn_ret;
+           raw_fn_body = normalize_raw_expr env f.raw_fn_body;
+           raw_fn_bounds = List.map (normalize_trait_bound env) f.raw_fn_bounds }
+
+let normalize_fn env f =
+  { f with fn_params = List.map (normalize_param env) f.fn_params;
+           fn_ret = normalize_assoc_ty env f.fn_ret;
+           fn_body = normalize_expr env f.fn_body;
+           fn_bounds = List.map (normalize_trait_bound env) f.fn_bounds }
+
+let normalize_impl_assoc env a =
+  { a with impl_assoc_ty = normalize_assoc_ty env a.impl_assoc_ty }
+
+let normalize_impl env i =
+  { i with impl_trait_args = List.map (normalize_assoc_ty env) i.impl_trait_args;
+           impl_for_ty = normalize_assoc_ty env i.impl_for_ty;
+           impl_assoc_types = List.map (normalize_impl_assoc env) i.impl_assoc_types;
+           impl_methods = List.map (normalize_fn env) i.impl_methods }
+
+let normalize_global_env_assocs env =
+  { env with env_impls = List.map (normalize_impl env) env.env_impls;
+             env_fns = List.map (normalize_fn env) env.env_fns }
+
 let convert_program_items_from_flattened items : global_env =
   let structs = List.filter_map (function NIStruct s -> Some s | _ -> None) items in
   let enums = List.filter_map (function NIEnum e -> Some e | _ -> None) items in
@@ -1828,17 +1981,23 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
+  let base_env = normalize_global_env_assocs base_env in
+  begin match validate_env base_env with
+  | None -> ()
+  | Some msg -> failwith msg
+  end;
   let needed_method_names = needed_impl_method_names struct_names enum_names items in
   let impl_method_raw_fns =
     List.concat_map
       (convert_impl_method_raw_fns struct_names enum_names fn_names needed_method_names)
       impls in
   let raw_fns =
-    impl_method_raw_fns @
-    List.map (convert_raw_fn_def_with_names struct_names enum_names fn_names) fns in
+    List.map (normalize_raw_fn base_env)
+      (impl_method_raw_fns @
+       List.map (convert_raw_fn_def_with_names struct_names enum_names fn_names) fns) in
   let env =
     match elaborate_raw_global_env base_env raw_fns with
-    | Infer_ok env -> env
+    | Infer_ok env -> normalize_global_env_assocs env
     | Infer_err _ -> failwith "raw elaboration failed"
   in
   match validate_env env with

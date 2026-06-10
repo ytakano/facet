@@ -23,11 +23,16 @@ Completed:
 - Trait method signatures are lowered into Rocq `trait_method_sig` values and
   validated for duplicate names, parameter/return types, `Self`, associated
   projections, and lifetime elision in method inputs/outputs.
-- Impl method bodies are still kept only in the surface AST until method body
-  checking and UFCS method resolution are introduced.
+- Impl method definitions are lowered into `impl_methods`, preserved in the
+  environment, checked for well-formed types, and validated for duplicate,
+  missing, and extra method names against the selected trait.
 
 Key temporary limitations:
 
+- Impl method signatures are not yet matched against trait method signatures
+  beyond method name sets.
+- Impl method bodies are stored but not type-checked as trait methods and are
+  not callable through UFCS yet.
 - Concrete associated type projection normalization through impl definitions is
   pending.
 - `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
@@ -35,11 +40,11 @@ Key temporary limitations:
 
 ## Remaining Roadmap 1-3 Tasks
 
-1. Validate and lower impl methods.
-   - Lower impl method definitions into `impl_methods` only after their
-     signatures can be matched against the selected trait method signatures.
-   - Validate method names, arity, receiver type, return type, and absence of
-     missing/extra/duplicate impl methods.
+1. Match impl method signatures against trait method signatures.
+   - Instantiate trait method signatures with the impl's `Self`, trait args,
+     lifetimes, and type parameters.
+   - Validate receiver type, parameter arity/types, return type, and method
+     lifetime elision after instantiation.
    - Keep method calls unresolved until UFCS resolution is added.
 
 2. Add parenthesized UFCS trait method calls.

@@ -1,0 +1,21 @@
+trait Runner {
+  fn run(self: &mut Self) -> ();
+}
+
+struct Job {
+  value: unrestricted isize
+}
+
+impl Runner for unrestricted Job {
+  fn run(self: &mut Self) -> () {
+    ()
+  }
+
+  fn run(self: &mut Self) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  ()
+}

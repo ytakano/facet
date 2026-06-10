@@ -1,0 +1,15 @@
+trait Marker {}
+
+struct Job {
+  value: unrestricted isize
+}
+
+impl Marker for unrestricted Job {
+  fn run(self: &mut Self) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  ()
+}

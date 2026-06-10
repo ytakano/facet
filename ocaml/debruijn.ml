@@ -1192,6 +1192,34 @@ let convert_impl_assoc_item ty_scope = function
     Some { impl_assoc_name = name; impl_assoc_ty = lower_surface_ty ty_scope ty }
   | NIIMethodDef _ -> None
 
+let convert_impl_method_item fn_names ty_scope initial_lifetimes = function
+  | NIIMethodDef m ->
+    let (scope, params, next_lifetime, input_lts) =
+      List.fold_left
+        (fun (sc, acc, next_lt, input_lts) p ->
+          let (sc', d) = add_binding sc p.nsp_name in
+          let (param_ty, next_lt', input_lts') =
+            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+          in
+          let param =
+            { param_mutability = p.nsp_mutability;
+              param_name       = make_ident p.nsp_name d;
+              param_ty         = param_ty }
+          in
+          (sc', acc @ [param], next_lt', input_lts'))
+        ([], [], initial_lifetimes, []) m.nmd_params
+    in
+    Some { fn_name = make_ident m.nmd_name 0;
+           fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
+           fn_outlives = [];
+           fn_captures = [];
+           fn_params = params;
+           fn_ret = lower_surface_output_ty ty_scope input_lts m.nmd_ret;
+           fn_body = convert fn_names ty_scope scope m.nmd_body;
+           fn_type_params = Big_int_Z.big_int_of_int (List.length ty_scope.type_params);
+           fn_bounds = [] }
+  | NIIAssocTypeDef _ -> None
+
 let convert_trait struct_names enum_names t =
   let (_lts, tys) = split_generics t.nt_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names } in
@@ -1202,7 +1230,7 @@ let convert_trait struct_names enum_names t =
     trait_assoc_types = List.filter_map convert_trait_assoc_item t.nt_items;
     trait_methods = List.filter_map (convert_trait_method_item item_ty_scope) t.nt_items }
 
-let convert_impl struct_names enum_names i =
+let convert_impl struct_names enum_names fn_names i =
   let (lts, tys) = split_generics i.ni_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
@@ -1215,7 +1243,8 @@ let convert_impl struct_names enum_names i =
     impl_trait_args = trait_args;
     impl_for_ty = lower_named_ty ty_scope i.ni_for_ty;
     impl_assoc_types = List.filter_map (convert_impl_assoc_item item_ty_scope) i.ni_items;
-    impl_methods = [] }
+    impl_methods = List.filter_map
+      (convert_impl_method_item fn_names item_ty_scope (List.length lts)) i.ni_items }
 
 let duplicate_name names =
   let rec go seen = function
@@ -1497,13 +1526,34 @@ let validate_env env =
               if same_string_set impl_assoc_names trait_assoc_names then None
               else Some ("impl associated types do not match trait: " ^ i.impl_trait_name)
           in
+          let impl_method_names = List.map (fun m -> fst m.fn_name) i.impl_methods in
+          let trait_method_names =
+            List.map (fun m -> m.trait_method_name) trait_def.trait_methods
+          in
+          let method_error =
+            match duplicate_name impl_method_names with
+            | Some name -> Some ("duplicate method in impl " ^ i.impl_trait_name ^ ": " ^ name)
+            | None ->
+              if same_string_set impl_method_names trait_method_names then None
+              else Some ("impl methods do not match trait: " ^ i.impl_trait_name)
+          in
+          let validate_method m =
+            first_some
+              (List.map
+                 (fun p -> type_error m.fn_type_params m.fn_lifetimes zero p.param_ty)
+                 m.fn_params @
+               [type_error m.fn_type_params m.fn_lifetimes zero m.fn_ret] @
+               List.map (validate_bound m.fn_type_params m.fn_lifetimes) m.fn_bounds)
+          in
           first_some
             (List.map
                (type_error i.impl_type_params i.impl_lifetimes zero)
                i.impl_trait_args @
              [type_error i.impl_type_params i.impl_lifetimes zero i.impl_for_ty;
               assoc_error;
-              own_bound_error])
+              method_error;
+              own_bound_error] @
+             List.map validate_method i.impl_methods)
     in
     let validate_fn f =
       first_some
@@ -1559,7 +1609,7 @@ let convert_program_items_from_flattened items : global_env =
     env_structs = List.map (convert_struct struct_names enum_names) structs;
     env_enums = List.map (convert_enum struct_names enum_names) enums;
     env_traits = List.map (convert_trait struct_names enum_names) traits;
-    env_impls = List.map (convert_impl struct_names enum_names) impls;
+    env_impls = List.map (convert_impl struct_names enum_names fn_names) impls;
     env_local_bounds = [];
     env_fns = [];
   } in

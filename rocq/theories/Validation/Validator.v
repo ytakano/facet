@@ -407,6 +407,10 @@ Definition impl_method_wf_b
   trait_bounds_wf_b structs traits (fn_type_params m) (fn_lifetimes m)
     (fn_bounds m).
 
+Definition impl_methods_match_trait_b
+    (methods : list fn_def) (trait_methods : list trait_method_sig) : bool :=
+  string_set_eq_b (fn_names methods) (trait_method_names trait_methods).
+
 Definition impl_key_eqb (a b : impl_def) : bool :=
   String.eqb (impl_trait_name a) (impl_trait_name b) &&
   Nat.eqb (impl_lifetimes a) (impl_lifetimes b) &&
@@ -445,6 +449,7 @@ Definition impl_wf_b (env : global_env) (i : impl_def) : bool :=
       string_set_eq_b (impl_assoc_names (impl_assoc_types i))
         (trait_assoc_names (trait_assoc_types t)) &&
       string_no_dup_b (fn_names (impl_methods i)) &&
+      impl_methods_match_trait_b (impl_methods i) (trait_methods t) &&
       forallb (impl_assoc_wf_b (env_structs env)
         (impl_type_params i) (impl_lifetimes i)) (impl_assoc_types i) &&
       forallb (impl_method_wf_b (env_structs env) (env_traits env))

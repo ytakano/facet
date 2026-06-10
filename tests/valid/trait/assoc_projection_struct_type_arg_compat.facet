@@ -1,0 +1,15 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+struct Box<T> {
+  value: unrestricted T
+}
+
+fn main() -> unrestricted Box<unrestricted <unrestricted isize as Provider>::Item> {
+  Box<unrestricted <unrestricted isize as Provider>::Item> { value = true }
+}

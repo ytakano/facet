@@ -1,0 +1,15 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+enum Slot<T> {
+  Full(unrestricted T)
+}
+
+fn main() -> unrestricted Slot<unrestricted <unrestricted isize as Provider>::Item> {
+  Slot<unrestricted <unrestricted isize as Provider>::Item>::Full(true)
+}

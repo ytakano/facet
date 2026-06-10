@@ -1,0 +1,19 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+trait Marker<T>;
+
+impl Marker<unrestricted bool> for unrestricted isize;
+
+trait Convert<T> where T: Marker<unrestricted <unrestricted isize as Provider>::Item>;
+
+impl Convert<unrestricted isize> for unrestricted isize;
+
+fn main() -> unrestricted isize {
+  1
+}

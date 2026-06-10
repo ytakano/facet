@@ -74,7 +74,7 @@ Completed:
   enum payloads, function-value signatures, closure signatures, trait method
   signatures, and method-local type arguments in explicit and short UFCS calls,
   direct generic function-call type arguments, generic struct/enum type
-  arguments, trait-bound type arguments, and impl trait arguments,
+  arguments, trait-bound type arguments, impl trait arguments, and trait own-bound type arguments,
   with mismatch regressions for those type-argument positions.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden

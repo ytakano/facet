@@ -1916,7 +1916,7 @@ let reject_reserved_synthetic_names names =
   | Some name -> failwith ("reserved top-level name: " ^ name)
   | None -> ()
 
-let validate_env ?(check_impl_method_sigs = true) env =
+let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = true) env =
   let top_names =
     List.map (fun s -> s.struct_name) env.env_structs @
     List.map (fun e -> e.enum_name) env.env_enums @
@@ -2165,9 +2165,10 @@ let validate_env ?(check_impl_method_sigs = true) env =
         then Some ("trait type arity mismatch: " ^ i.impl_trait_name)
         else
           let own_bound_error =
-            match check_struct_bounds env trait_def.trait_bounds i.impl_trait_args with
-            | None -> None
-            | Some _ -> Some ("trait own bound not satisfied: " ^ i.impl_trait_name)
+            if not check_trait_own_bounds then None else
+              match check_struct_bounds env trait_def.trait_bounds i.impl_trait_args with
+              | None -> None
+              | Some _ -> Some ("trait own bound not satisfied: " ^ i.impl_trait_name)
           in
           let impl_assoc_names = List.map (fun a -> a.impl_assoc_name) i.impl_assoc_types in
           let trait_assoc_names = List.map (fun a -> a.trait_assoc_name) trait_def.trait_assoc_types in
@@ -2335,7 +2336,8 @@ let convert_program_items_from_flattened items : global_env =
     env_local_bounds = [];
     env_fns = [];
   } in
-  begin match validate_env ~check_impl_method_sigs:false base_env with
+  begin match validate_env ~check_impl_method_sigs:false
+                ~check_trait_own_bounds:false base_env with
   | None -> ()
   | Some msg -> failwith msg
   end;

@@ -59,7 +59,8 @@ Completed:
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize`. Global environment and raw function normalization now
+  type-check as `isize`, including at function call argument compatibility
+  boundaries. Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type
   normalization pass. In trait and impl items, `Self::Assoc` is accepted as
@@ -99,7 +100,9 @@ Key temporary limitations:
 
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
-     so associated projection equality is checked at the typing rule boundary.
+     so associated projection equality is checked at the typing rule boundary;
+     call-argument compatibility has regression coverage for both accepted
+     concrete projections and rejected mismatches.
    - Add the soundness connection for `ty_compatible_assoc_b`, then wire the
      checker compatibility call sites to it instead of relying on pre-pass
      normalization.

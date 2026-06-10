@@ -1,0 +1,15 @@
+trait Iterator {
+  type Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+}
+
+fn accept_item(x: unrestricted <unrestricted isize as Iterator>::Item) -> unrestricted () {
+  ()
+}
+
+fn main(x: unrestricted bool) -> unrestricted () {
+  (accept_item x)
+}

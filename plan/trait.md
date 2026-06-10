@@ -33,7 +33,8 @@ Completed:
   function-call shape as `(<Ty as Trait>::method receiver args...)`; the
   receiver is the first argument, and additional arguments follow it, so
   method calls stay aligned with `(function args...)` rather than dot
-  syntax. Called impl methods are
+  syntax. This prefix parenthesized UFCS spelling is the canonical method-call surface
+  for Roadmap 1-3; dot calls are not aliases during this phase. Called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
   call path; hidden method bodies substitute `Self` with the concrete impl
   target type before raw elaboration; unresolved explicit targets report

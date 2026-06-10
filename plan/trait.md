@@ -149,14 +149,17 @@ Key temporary limitations:
    - Wire compatibility at the typing-rule boundary before changing helper
      call sites. Helper-only wiring to `check_arg_tys_assoc` makes the
      executable checker accept normalized associated compatibility while
-     existing env/root typing rules still require ordinary `typed_args`
-     compatibility, so full soundness fails. The next implementation step is
-     assoc-aware env/root argument compatibility rules or a proved bridge,
-     followed by checker helper switching. A direct attempt to add assoc
-     helper soundness lemmas in `EnvSoundnessFacts.v` reintroduced a heavy
-     `CompatBoolSoundness` import path and did not finish single-file
-     compilation quickly, so this needs either a lighter proof module split or
-     localized lightweight compatibility soundness before call-site wiring.
+     existing typing and env/root typing rules still require ordinary
+     `typed_args` compatibility, so full soundness fails. The core
+     `typed`/`typed_args` relation currently carries only `fenv`, not
+     `global_env`, so the next implementation step is either an env-aware
+     argument relation plus env/root bridge, or a proved bridge from
+     normalized raw elaboration to ordinary `typed_args`; only after that
+     should checker helpers switch to assoc-aware compatibility. Attempts to
+     put assoc helper soundness in `EnvSoundnessFacts.v` or
+     `CompatBoolSoundness.v` pulled in heavy dependencies or did not finish
+     single-file compilation quickly, so a lighter proof-module split remains
+     part of this step.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

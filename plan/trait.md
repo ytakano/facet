@@ -147,6 +147,14 @@ Key temporary limitations:
      followed by checker helper switching.
    - Keep associated type defaults and equality constraints deferred.
 
+3. Keep Haskell-style deriving on the trait roadmap.
+   - After associated compatibility and UFCS are checker-backed, add a
+     `deriving` surface form that expands to ordinary impl declarations and
+     is validated by the extracted checker rather than by OCaml fallback
+     logic. Initial candidates are structural traits with deterministic
+     generated bodies; deriving for traits with associated type defaults or
+     equality constraints waits until those features exist.
+
 ## Constraints and Checks
 
 - Do not add handwritten OCaml checker fallback paths.

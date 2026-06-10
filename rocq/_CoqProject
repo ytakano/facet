@@ -49,6 +49,7 @@ theories/TypeSystem/AlphaShadowProvenance.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/CompatBoolSoundness.v
+theories/TypeSystem/AssocArgBoolFacts.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/TypeSafetyRootFacts.v
 theories/TypeSystem/TypeSafetyReadiness.v

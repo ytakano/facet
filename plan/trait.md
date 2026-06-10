@@ -135,14 +135,13 @@ Key temporary limitations:
      `global_env`, so the next implementation step is either an env-aware
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
-     should checker helpers switch to assoc-aware compatibility. Profiling showed
-     imports and `CompatBoolSoundness.v` itself are
-     fast, but separate assoc helper modules still stall at the first helper
-     `Qed` whenever the proof term mentions `ty_compatible_assoc_b` or
-     `normalize_assoc_ty`, even through a boolean-witness or inductive wrapper.
-     The next proof attempt must shrink the normalized-compatibility definition
-     itself, likely by factoring an opaque comparison relation before proving
-     argument-helper soundness.
+     should checker helpers switch to assoc-aware compatibility. Boolean-witness
+     helper proofs now compile when `ty_compatible_assoc_b`
+     stays opaque, but the Prop bridge from those boolean facts to
+     normalized `ty_compatible` remains pending. Direct Prop helper soundness
+     still stalls at `Qed` when proof terms expose `normalize_assoc_ty`; the
+     next step is an opaque Prop bridge from `ty_compatible_assoc_b = true` to
+     `ty_compatible_assoc` before wiring checker call sites.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

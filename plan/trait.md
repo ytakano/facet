@@ -47,8 +47,9 @@ Completed:
   method name)` against unique impls and matching impl methods. The shorter
   prefix form `(Trait::method receiver args...)` is accepted when `receiver` is
   a variable whose type is known from the raw-lowering value context, currently
-  function parameters. Generic trait arguments require the explicit `<Ty as Trait<...>>`
-  UFCS spelling.
+  function parameters, and when the receiver is a literal expression whose type
+  is syntactically known during raw lowering. Generic trait arguments require
+  the explicit `<Ty as Trait<...>>` UFCS spelling.
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
@@ -68,16 +69,16 @@ Key temporary limitations:
 ## Remaining Roadmap 2-3 Tasks
 
 1. Harden UFCS trait method calls.
-   - Extend short prefix UFCS beyond typed variable receivers to receiver
-     expressions whose type must be inferred during lowering. Generic trait
-     arguments stay explicit through `<Ty as Trait<...>>`; do not add a short
-     form for them in Roadmap 1-3.
-   - Support receiver-let/generic-call safety-gate shapes, including local struct
-     receivers, by adding a Prop-level summary plus checker soundness and
-     runtime safety branch; a checker-only clause is insufficient. The reusable
-     generic-direct runtime package interface is now available before
-     `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can add the Prop
-     summary, checker soundness, and runtime branch.
+   - Continue extending short prefix UFCS beyond typed variable receivers only
+     where the receiver type is known before checker execution. Literal
+     receivers are supported; generic trait arguments stay explicit through
+     `<Ty as Trait<...>>`, and Roadmap 1-3 does not add a short form for them.
+   - Support receiver-let/generic-call safety-gate shapes, including inferred
+     local receivers and local struct receivers, by adding a Prop-level summary
+     plus checker soundness and runtime safety branch; a checker-only clause is
+     insufficient. The reusable generic-direct runtime package interface is now
+     available before `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can
+     add the Prop summary, checker soundness, and runtime branch.
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.

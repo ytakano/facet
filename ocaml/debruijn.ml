@@ -1052,6 +1052,28 @@ let short_method_target_for_receiver env f_path receiver_ty =
     resolve_short_method_target env trait_path method_name receiver_ty
   | None -> None
 
+let lit_ty = function
+  | LInt _ -> MkTy (UUnrestricted, TIntegers)
+  | LFloat _ -> MkTy (UUnrestricted, TFloats)
+  | LBool _ -> MkTy (UUnrestricted, TBooleans)
+
+let infer_short_method_receiver_ty value_tys = function
+  | NLit lit -> Some (lit_ty lit)
+  | NUnit -> Some (MkTy (UUnrestricted, TUnits))
+  | NVar name -> value_ty_lookup name value_tys
+  | _ -> None
+
+let short_method_target_for_expr env _ty_scope value_tys fn_names f_path receiver =
+  let f = string_of_path f_path in
+  if List.mem f fn_names then None else
+  match infer_short_method_receiver_ty value_tys receiver with
+  | Some receiver_ty ->
+    begin match short_method_target_for_receiver env f_path receiver_ty with
+    | Some (target, display) -> Some (target, display, receiver_ty)
+    | None -> None
+    end
+  | None -> None
+
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
@@ -1183,17 +1205,9 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
     let f = string_of_path f_path in
     let args' = List.map (convert_raw env fn_names ty_scope scope value_tys rec_scope) args in
     let short_method_target () =
-      if List.mem f fn_names then None else
       match args with
-      | NVar receiver :: _ ->
-        begin match value_ty_lookup receiver value_tys with
-        | Some receiver_ty ->
-          begin match short_method_target_for_receiver env f_path receiver_ty with
-          | Some (target, display) -> Some (target, display, receiver_ty)
-          | None -> None
-          end
-        | None -> None
-        end
+      | receiver :: _ ->
+        short_method_target_for_expr env ty_scope value_tys fn_names f_path receiver
       | _ -> None
     in
     if type_args = [] then
@@ -1624,17 +1638,11 @@ let rec method_call_targets_in_expr env fn_names ty_scope value_tys = function
     in
     targets1 @ method_call_targets_in_expr env fn_names ty_scope value_tys' e2
   | NCall (f_path, _, args) ->
-    let f = string_of_path f_path in
     let short_targets =
-      if List.mem f fn_names then [] else
       match args with
-      | NVar receiver :: _ ->
-        begin match value_ty_lookup receiver value_tys with
-        | Some receiver_ty ->
-          begin match short_method_target_for_receiver env f_path receiver_ty with
-          | Some (target, display) -> [(target, display)]
-          | None -> []
-          end
+      | receiver :: _ ->
+        begin match short_method_target_for_expr env ty_scope value_tys fn_names f_path receiver with
+        | Some (target, display, _) -> [(target, display)]
         | None -> []
         end
       | _ -> []

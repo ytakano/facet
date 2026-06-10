@@ -48,8 +48,11 @@ Completed:
   prefix form `(Trait::method receiver args...)` is accepted when `receiver` is
   a variable whose type is known from the raw-lowering value context, currently
   function parameters, and when the receiver is a literal expression whose type
-  is syntactically known during raw lowering. Generic trait arguments require
-  the explicit `<Ty as Trait<...>>` UFCS spelling.
+  is syntactically known during raw lowering. Concrete non-generic impl methods
+  no longer keep an unused hidden `Self` type argument, so local struct
+  receivers elaborate to the safety-gate boundary instead of failing raw
+  lifetime unification. Generic trait arguments require the explicit
+  `<Ty as Trait<...>>` UFCS spelling.
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
@@ -79,7 +82,8 @@ Key temporary limitations:
    - Support receiver-let/generic-call safety-gate shapes, including inferred
      local receivers and local struct receivers, by adding a Prop-level summary
      plus checker soundness and runtime safety branch; a checker-only clause is
-     insufficient. The reusable generic-direct runtime package interface is now
+     insufficient. Local struct receiver calls now reach this safety-gate
+     boundary. The reusable generic-direct runtime package interface is now
      available before `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can
      add the Prop summary, checker soundness, and runtime branch.
    - Keep dot method-call syntax out of this phase.

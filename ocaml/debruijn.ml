@@ -1104,7 +1104,11 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
       ECallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
   | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
-    ECallGeneric (make_ident f 0, self_ty' :: lower_call_type_args ty_scope type_args,
+    let method_type_args = lower_call_type_args ty_scope type_args in
+    let call_type_args =
+      if type_args = [] then method_type_args else self_ty' :: method_type_args
+    in
+    ECallGeneric (make_ident f 0, call_type_args,
       List.map (convert fn_names ty_scope scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
@@ -1216,8 +1220,8 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
       | Some (id, captures) -> raw_rec_call id captures args'
       | None ->
         begin match short_method_target () with
-        | Some (target, _, receiver_ty) ->
-          RawCallGeneric (make_ident target 0, receiver_ty :: [], args')
+        | Some (target, _, _receiver_ty) ->
+          RawCallGeneric (make_ident target 0, [], args')
         | None -> RawCall (make_ident f 0, args')
         end
       end
@@ -1232,7 +1236,11 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
       end
   | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
-    RawCallGeneric (make_ident f 0, self_ty' :: lower_call_type_args ty_scope type_args,
+    let method_type_args = lower_call_type_args ty_scope type_args in
+    let call_type_args =
+      if type_args = [] then method_type_args else self_ty' :: method_type_args
+    in
+    RawCallGeneric (make_ident f 0, call_type_args,
       List.map (convert_raw env fn_names ty_scope scope value_tys rec_scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
@@ -1602,14 +1610,17 @@ let convert_impl_method_raw_item env fn_names ty_scope initial_lifetimes
       List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
         m.nmd_bounds
     in
+    let raw_type_params =
+      if method_tys = [] && List.length ty_scope.type_params = 1 then 0
+      else List.length method_ty_scope.type_params
+    in
     Some { raw_fn_name = make_ident synthetic_name 0;
            raw_fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
            raw_fn_outlives = [];
            raw_fn_params = List.map (subst_self_param self_ty) params;
            raw_fn_ret = subst_type_params_ty [self_ty] ret;
            raw_fn_body = subst_self_raw_expr self_ty body;
-           raw_fn_type_params =
-             Big_int_Z.big_int_of_int (List.length method_ty_scope.type_params);
+           raw_fn_type_params = Big_int_Z.big_int_of_int raw_type_params;
            raw_fn_bounds = List.map (subst_self_trait_bound self_ty) bounds }
   | NIIAssocTypeDef _ -> None
 

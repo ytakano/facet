@@ -126,7 +126,7 @@ Key temporary limitations:
      Immutable annotated and inferred local receivers initialized by unrestricted
      unit, int, float, or bool literals are now accepted in short and explicit
      UFCS by pure receiver-let elimination in raw lowering and covered by
-     valid regression tests.
+     annotated and inferred valid regression tests.
      Struct, enum, and direct function-call expression receivers now resolve in
      raw lowering but still hit the end-to-end safety gate. Direct-call
      receivers cannot be

@@ -69,7 +69,7 @@ Completed:
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize`, including at function call argument compatibility
-  boundaries, let annotations, struct field types, enum payload types,
+  boundaries, let annotations, struct field types, enum payload types, closure signatures,
   and trait method signatures.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
@@ -126,7 +126,7 @@ Key temporary limitations:
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
      so associated projection equality is checked at the typing rule boundary;
-     call-argument, let-annotation, struct-field, enum-payload, and
+     call-argument, let-annotation, struct-field, enum-payload, closure-signature, and
      trait-method-signature compatibility have regression coverage for both accepted concrete projections and
      rejected mismatches.
    - Wire checker compatibility call sites to env-aware associated

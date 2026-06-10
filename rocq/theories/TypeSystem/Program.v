@@ -35,10 +35,31 @@ Record enum_def : Type := MkEnumDef {
   enum_variants    : list enum_variant_def
 }.
 
+Record trait_assoc_def : Type := MkTraitAssocDef {
+  trait_assoc_name   : string;
+  trait_assoc_bounds : list trait_ref
+}.
+
+Record trait_method_sig : Type := MkTraitMethodSig {
+  trait_method_name        : string;
+  trait_method_lifetimes   : nat;
+  trait_method_type_params : nat;
+  trait_method_params      : list param;
+  trait_method_ret         : Ty;
+  trait_method_bounds      : list trait_bound
+}.
+
 Record trait_def : Type := MkTraitDef {
   trait_name        : string;
   trait_type_params : nat;
-  trait_bounds      : list trait_bound
+  trait_bounds      : list trait_bound;
+  trait_assoc_types : list trait_assoc_def;
+  trait_methods     : list trait_method_sig
+}.
+
+Record impl_assoc_def : Type := MkImplAssocDef {
+  impl_assoc_name : string;
+  impl_assoc_ty   : Ty
 }.
 
 Record impl_def : Type := MkImplDef {
@@ -46,7 +67,9 @@ Record impl_def : Type := MkImplDef {
   impl_type_params  : nat;
   impl_trait_name   : string;
   impl_trait_args   : list Ty;
-  impl_for_ty       : Ty
+  impl_for_ty       : Ty;
+  impl_assoc_types  : list impl_assoc_def;
+  impl_methods      : list fn_def
 }.
 
 Record global_env : Type := MkGlobalEnv {

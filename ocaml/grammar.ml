@@ -13,7 +13,14 @@ fn_def ::= opt_pub "fn" ID opt_generic_params "(" params ")" "->" ty opt_fn_wher
 struct_def ::= opt_pub "struct" ID opt_generic_params opt_trait_bounds "{" struct_field ("," struct_field)* "}"
 enum_def ::= opt_pub "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
 trait_def ::= opt_pub "trait" ID opt_generic_params opt_trait_bounds ";"
+            | opt_pub "trait" ID opt_generic_params opt_trait_bounds "{" trait_item* "}"
+trait_item ::= "type" ID ";"
+             | method_sig ";"
+method_sig ::= "fn" ID "(" surface_params ")" "->" surface_ty
 impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
+           | "impl" opt_generic_params path opt_type_args "for" ty "{" impl_item* "}"
+impl_item ::= "type" ID "=" surface_ty ";"
+            | "fn" ID "(" surface_params ")" "->" surface_ty "{" block "}"
 use_def ::= "use" path opt_use_alias ";"
 opt_use_alias ::= "" | "as" ID
 mod_def ::= opt_pub "mod" ID "{" top_item* "}"
@@ -42,11 +49,14 @@ opt_trait_bounds ::= ""
 ```
 params ::= ""
          | param ("," param)*
+surface_params ::= ""
+                 | surface_param ("," surface_param)*
 ```
 
 ## param
 ```
 param ::= opt_mut ID ":" ty
+surface_param ::= opt_mut ID ":" surface_ty
 ```
 
 ## opt_mut
@@ -168,6 +178,28 @@ ty_list ::= ""
 opt_type_args ::= ""
                 | "<" type_arg ("," type_arg)* ">"
 type_arg ::= LIFETIME | ty
+```
+
+## surface_ty
+```
+surface_ty ::= opt_usage surface_ty_core
+opt_usage ::= "" | "affine" | "linear" | "unrestricted"
+surface_ty_core ::= "isize"
+                  | "f64"
+                  | "bool"
+                  | "()"
+                  | path opt_surface_type_args
+                  | "&" surface_ty
+                  | "&" "mut" surface_ty
+                  | "&" LIFETIME surface_ty
+                  | "&" LIFETIME "mut" surface_ty
+                  | "fn" "(" surface_ty_list ")" "->" surface_ty
+                  | "closure" "<" LIFETIME ">" "(" surface_ty_list ")" "->" surface_ty
+surface_ty_list ::= ""
+                  | surface_ty ("," surface_ty)*
+opt_surface_type_args ::= ""
+                        | "<" surface_type_arg ("," surface_type_arg)* ">"
+surface_type_arg ::= LIFETIME | surface_ty
 ```
 
 ## Literals

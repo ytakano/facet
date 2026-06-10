@@ -1,0 +1,25 @@
+trait Marker;
+trait Empty {}
+
+trait Iterator {
+  type Item;
+  fn next(self: &mut Self) -> Option<Self::Item>;
+}
+
+struct Counter {
+  value: unrestricted isize
+}
+
+impl Marker for unrestricted Counter;
+impl Empty for unrestricted Counter {}
+
+impl Iterator for unrestricted Counter {
+  type Item = isize;
+  fn next(self: &mut Self) -> Option<Self::Item> {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  ()
+}

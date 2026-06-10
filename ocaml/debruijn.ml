@@ -124,8 +124,51 @@ and map_named_trait_ref f ty_params r =
 and map_named_trait_bound f ty_params b =
   { b with ntb_traits = List.map (map_named_trait_ref f ty_params) b.ntb_traits }
 
+let rec map_named_surface_ty f ty_params (NSTy (u, c)) =
+  NSTy (u, map_named_surface_ty_core f ty_params c)
+
+and map_named_surface_ty_core f ty_params = function
+  | NSTUnits -> NSTUnits
+  | NSTIntegers -> NSTIntegers
+  | NSTFloats -> NSTFloats
+  | NSTBooleans -> NSTBooleans
+  | NSTNamed ([name], args) when List.mem name ty_params ->
+    NSTNamed ([name], List.map (map_named_surface_type_arg f ty_params) args)
+  | NSTNamed (path, args) ->
+    NSTNamed ([f path], List.map (map_named_surface_type_arg f ty_params) args)
+  | NSTFn (ts, ret) ->
+    NSTFn (List.map (map_named_surface_ty f ty_params) ts, map_named_surface_ty f ty_params ret)
+  | NSTClosure (lt, ts, ret) ->
+    NSTClosure (lt, List.map (map_named_surface_ty f ty_params) ts, map_named_surface_ty f ty_params ret)
+  | NSTRef (lt, rk, inner) ->
+    NSTRef (lt, rk, map_named_surface_ty f ty_params inner)
+
+and map_named_surface_type_arg f ty_params = function
+  | NSTArgLifetime lt -> NSTArgLifetime lt
+  | NSTArgTy ty -> NSTArgTy (map_named_surface_ty f ty_params ty)
+
 let map_named_param f ty_params p =
   { p with np_ty = map_named_ty f ty_params p.np_ty }
+
+let map_named_surface_param f ty_params p =
+  { p with nsp_ty = map_named_surface_ty f ty_params p.nsp_ty }
+
+let map_named_method_sig f ty_params m =
+  { m with nms_params = List.map (map_named_surface_param f ty_params) m.nms_params;
+           nms_ret = map_named_surface_ty f ty_params m.nms_ret }
+
+let map_named_trait_item f ty_params = function
+  | NTIAssocTypeDecl name -> NTIAssocTypeDecl name
+  | NTIMethodSig sig_ -> NTIMethodSig (map_named_method_sig f ty_params sig_)
+
+let map_named_method_def f ty_params m =
+  { m with nmd_params = List.map (map_named_surface_param f ty_params) m.nmd_params;
+           nmd_ret = map_named_surface_ty f ty_params m.nmd_ret }
+
+let map_named_impl_item f ty_params = function
+  | NIIAssocTypeDef (name, ty) ->
+    NIIAssocTypeDef (name, map_named_surface_ty f ty_params ty)
+  | NIIMethodDef m -> NIIMethodDef (map_named_method_def f ty_params m)
 
 let rec map_named_expr f fn_names ty_params value_scope = function
   | NUnit -> NUnit
@@ -332,12 +375,14 @@ let rec flatten_modules known prefix items =
       | NITrait t ->
         let (_lts, tys) = split_generics t.nt_generics in
         [NITrait { t with nt_name = string_of_path (prefix @ [t.nt_name]);
-                          nt_bounds = List.map (map_named_trait_bound resolve tys) t.nt_bounds }]
+                          nt_bounds = List.map (map_named_trait_bound resolve tys) t.nt_bounds;
+                          nt_items = List.map (map_named_trait_item resolve ("Self" :: tys)) t.nt_items }]
       | NIImpl i ->
         let (_lts, tys) = split_generics i.ni_generics in
         [NIImpl { i with ni_trait_name = [resolve i.ni_trait_name];
                          ni_trait_args = List.map (map_named_type_arg resolve tys) i.ni_trait_args;
-                         ni_for_ty = map_named_ty resolve tys i.ni_for_ty }]
+                         ni_for_ty = map_named_ty resolve tys i.ni_for_ty;
+                         ni_items = List.map (map_named_impl_item resolve ("Self" :: tys)) i.ni_items }]
       | NIUse _ -> [])
     items
 
@@ -608,6 +653,49 @@ and split_type_args ty_scope args =
     | [] -> (List.rev lts, List.rev tys)
     | NTArgLifetime lt :: rest -> go (lt :: lts) tys rest
     | NTArgTy ty :: rest -> go lts (lower_named_ty ty_scope ty :: tys) rest
+  in
+  go [] [] args
+
+and lower_surface_ty ty_scope (NSTy (u_opt, c)) =
+  let u = Option.value u_opt ~default:UUnrestricted in
+  MkTy (u, lower_surface_ty_core ty_scope c)
+
+and lower_surface_ty_core ty_scope c =
+  match c with
+  | NSTUnits -> TUnits
+  | NSTIntegers -> TIntegers
+  | NSTFloats -> TFloats
+  | NSTBooleans -> TBooleans
+  | NSTNamed (path, args) ->
+    let s = string_of_path path in
+    begin match index_of s ty_scope.type_params with
+    | Some i ->
+      if args <> [] then failwith ("type parameter cannot take arguments: " ^ s);
+      TParam (Big_int_Z.big_int_of_int i)
+    | None ->
+      let (lts, tys) = split_surface_type_args ty_scope args in
+      if List.mem s ty_scope.struct_names then TStruct (s, lts, tys)
+      else if List.mem s ty_scope.enum_names then TEnum (s, lts, tys)
+      else if args <> [] then TStruct (s, lts, tys)
+      else TNamed s
+    end
+  | NSTFn (ts, ret) ->
+    TFn (List.map (lower_surface_ty ty_scope) ts, lower_surface_ty ty_scope ret)
+  | NSTClosure (env_lt, ts, ret) ->
+    TClosure (env_lt, List.map (lower_surface_ty ty_scope) ts, lower_surface_ty ty_scope ret)
+  | NSTRef (lt_opt, rk, inner) ->
+    let lt =
+      match lt_opt with
+      | Some lt -> lt
+      | None -> LVar Big_int_Z.zero_big_int
+    in
+    TRef (lt, rk, lower_surface_ty ty_scope inner)
+
+and split_surface_type_args ty_scope args =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NSTArgLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NSTArgTy ty :: rest -> go lts (lower_surface_ty ty_scope ty :: tys) rest
   in
   go [] [] args
 
@@ -1011,12 +1099,23 @@ let convert_enum struct_names enum_names e =
             enum_variant_fields = List.map (lower_named_ty ty_scope) v.nev_fields })
         e.ne_variants }
 
+let convert_trait_assoc_item = function
+  | NTIAssocTypeDecl name -> Some { trait_assoc_name = name; trait_assoc_bounds = [] }
+  | NTIMethodSig _ -> None
+
+let convert_impl_assoc_item ty_scope = function
+  | NIIAssocTypeDef (name, ty) ->
+    Some { impl_assoc_name = name; impl_assoc_ty = lower_surface_ty ty_scope ty }
+  | NIIMethodDef _ -> None
+
 let convert_trait struct_names enum_names t =
   let (_lts, tys) = split_generics t.nt_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names } in
   { trait_name = t.nt_name;
     trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
-    trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds }
+    trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds;
+    trait_assoc_types = List.filter_map convert_trait_assoc_item t.nt_items;
+    trait_methods = [] }
 
 let convert_impl struct_names enum_names i =
   let (lts, tys) = split_generics i.ni_generics in
@@ -1024,11 +1123,14 @@ let convert_impl struct_names enum_names i =
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
   if trait_lts <> []
   then failwith ("trait impl target cannot take lifetime arguments: " ^ string_of_path i.ni_trait_name);
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
   { impl_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     impl_type_params = Big_int_Z.big_int_of_int (List.length tys);
     impl_trait_name = string_of_path i.ni_trait_name;
     impl_trait_args = trait_args;
-    impl_for_ty = lower_named_ty ty_scope i.ni_for_ty }
+    impl_for_ty = lower_named_ty ty_scope i.ni_for_ty;
+    impl_assoc_types = List.filter_map (convert_impl_assoc_item item_ty_scope) i.ni_items;
+    impl_methods = [] }
 
 let duplicate_name names =
   let rec go seen = function

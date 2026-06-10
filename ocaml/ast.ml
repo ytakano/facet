@@ -115,13 +115,51 @@ type named_trait_def = {
   nt_name     : name;
   nt_generics : named_generic_param list;
   nt_bounds   : named_trait_bound list;
+  nt_items    : named_trait_item list;
 }
+and named_trait_item =
+  | NTIAssocTypeDecl of name
+  | NTIMethodSig of named_method_sig
+and named_method_sig = {
+  nms_name   : name;
+  nms_params : named_surface_param list;
+  nms_ret    : named_surface_ty;
+}
+and named_surface_param = {
+  nsp_mutability : TypeChecker.mutability;
+  nsp_name       : name;
+  nsp_ty         : named_surface_ty;
+}
+and named_surface_ty =
+  | NSTy of TypeChecker.usage option * named_surface_ty_core
+and named_surface_ty_core =
+  | NSTUnits
+  | NSTIntegers
+  | NSTFloats
+  | NSTBooleans
+  | NSTNamed of path * named_surface_type_arg list
+  | NSTFn of named_surface_ty list * named_surface_ty
+  | NSTClosure of TypeChecker.lifetime * named_surface_ty list * named_surface_ty
+  | NSTRef of TypeChecker.lifetime option * TypeChecker.ref_kind * named_surface_ty
+and named_surface_type_arg =
+  | NSTArgLifetime of TypeChecker.lifetime
+  | NSTArgTy of named_surface_ty
 
 type named_impl_def = {
   ni_generics   : named_generic_param list;
   ni_trait_name : path;
   ni_trait_args : named_type_arg list;
   ni_for_ty     : named_ty;
+  ni_items      : named_impl_item list;
+}
+and named_impl_item =
+  | NIIAssocTypeDef of name * named_surface_ty
+  | NIIMethodDef of named_method_def
+and named_method_def = {
+  nmd_name   : name;
+  nmd_params : named_surface_param list;
+  nmd_ret    : named_surface_ty;
+  nmd_body   : named_expr;
 }
 
 type named_item =

@@ -194,13 +194,43 @@ variant_lifetime_open:
 
 trait_def:
   | KW_TRAIT; name = ID; generics = opt_generic_params; bounds = opt_trait_bounds; SEMI
-    { { nt_visibility = VPrivate; nt_name = name; nt_generics = generics; nt_bounds = bounds } }
+    { { nt_visibility = VPrivate; nt_name = name; nt_generics = generics; nt_bounds = bounds;
+        nt_items = [] } }
+  | KW_TRAIT; name = ID; generics = opt_generic_params; bounds = opt_trait_bounds;
+    LBRACE; items = list(trait_item); RBRACE
+    { { nt_visibility = VPrivate; nt_name = name; nt_generics = generics; nt_bounds = bounds;
+        nt_items = items } }
+
+trait_item:
+  | kw_type; name = ID; SEMI
+    { NTIAssocTypeDecl name }
+  | sig_ = method_sig; SEMI
+    { NTIMethodSig sig_ }
+
+method_sig:
+  | KW_FN; name = ID; LPAREN; ps = surface_params; RPAREN; ARROW; ret = surface_ty
+    { { nms_name = name; nms_params = ps; nms_ret = ret } }
 
 impl_def:
   | KW_IMPL; generics = opt_generic_params; trait_name = path_name; trait_args = opt_type_args;
     KW_FOR; for_ty = ty; SEMI
     { { ni_generics = generics; ni_trait_name = trait_name;
-        ni_trait_args = trait_args; ni_for_ty = for_ty } }
+        ni_trait_args = trait_args; ni_for_ty = for_ty; ni_items = [] } }
+  | KW_IMPL; generics = opt_generic_params; trait_name = path_name; trait_args = opt_type_args;
+    KW_FOR; for_ty = ty; LBRACE; items = list(impl_item); RBRACE
+    { { ni_generics = generics; ni_trait_name = trait_name;
+        ni_trait_args = trait_args; ni_for_ty = for_ty; ni_items = items } }
+
+impl_item:
+  | kw_type; name = ID; EQUAL; t = surface_ty; SEMI
+    { NIIAssocTypeDef (name, t) }
+  | KW_FN; name = ID; LPAREN; ps = surface_params; RPAREN; ARROW; ret = surface_ty;
+    LBRACE; body = block; RBRACE
+    { NIIMethodDef { nmd_name = name; nmd_params = ps; nmd_ret = ret; nmd_body = body } }
+
+kw_type:
+  | kw = ID
+    { if kw = "type" then () else failwith (Printf.sprintf "expected type item, got %s" kw) }
 
 opt_generic_params:
   | { current_lifetimes := []; [] }
@@ -247,6 +277,14 @@ params:
 param:
   | m = opt_mut; name = ID; COLON; t = signature_ty
     { { np_mutability = m; np_name = name; np_ty = t } }
+
+surface_params:
+  | { [] }
+  | ps = separated_nonempty_list(COMMA, surface_param) { ps }
+
+surface_param:
+  | m = opt_mut; name = ID; COLON; t = surface_ty
+    { { nsp_mutability = m; nsp_name = name; nsp_ty = t } }
 
 opt_mut:
   | { MImmutable }
@@ -452,6 +490,42 @@ ty_core:
           NTForall
             (Big_int_Z.big_int_of_int (List.length lts), outs,
              NTy (UUnrestricted, NTTypeForall (tys, bounds, body))) }
+
+surface_ty:
+  | u = opt_usage; c = surface_ty_core { NSTy (u, c) }
+
+opt_usage:
+  | { None }
+  | KW_AFFINE { Some UAffine }
+  | KW_LINEAR { Some ULinear }
+  | KW_UNRESTRICTED { Some UUnrestricted }
+
+surface_ty_core:
+  | KW_ISIZE { NSTIntegers }
+  | KW_F64   { NSTFloats }
+  | KW_BOOL  { NSTBooleans }
+  | LPAREN; RPAREN { NSTUnits }
+  | name = path_name; args = opt_surface_type_args { NSTNamed (name, args) }
+  | AMP; t = surface_ty { NSTRef (None, RShared, t) }
+  | AMP; KW_MUT; t = surface_ty { NSTRef (None, RUnique, t) }
+  | AMP; lt = LIFETIME; t = surface_ty { NSTRef (Some (resolve_lifetime lt), RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = surface_ty { NSTRef (Some (resolve_lifetime lt), RUnique, t) }
+  | KW_FN; LPAREN; ts = surface_ty_list; RPAREN; ARROW; ret = surface_ty
+    { NSTFn (ts, ret) }
+  | KW_CLOSURE; LANGLE; env_lt = LIFETIME; RANGLE; LPAREN; ts = surface_ty_list; RPAREN; ARROW; ret = surface_ty
+    { NSTClosure (resolve_lifetime env_lt, ts, ret) }
+
+opt_surface_type_args:
+  | { [] }
+  | LANGLE; args = separated_nonempty_list(COMMA, surface_type_arg); RANGLE { args }
+
+surface_type_arg:
+  | lt = LIFETIME { NSTArgLifetime (resolve_lifetime lt) }
+  | t = surface_ty { NSTArgTy t }
+
+surface_ty_list:
+  | { [] }
+  | ts = separated_nonempty_list(COMMA, surface_ty) { ts }
 
 signature_ty:
   | KW_AFFINE;       c = signature_ty_core { NTy (UAffine,       c) }

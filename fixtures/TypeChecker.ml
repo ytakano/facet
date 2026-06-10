@@ -1074,14 +1074,29 @@ type enum_def = { enum_name : string; enum_lifetimes : Big_int_Z.big_int;
                   enum_outlives : outlives_ctx;
                   enum_variants : enum_variant_def list }
 
+type trait_assoc_def = { trait_assoc_name : string;
+                         trait_assoc_bounds : trait_ref list }
+
+type trait_method_sig = { trait_method_name : string;
+                          trait_method_lifetimes : Big_int_Z.big_int;
+                          trait_method_type_params : Big_int_Z.big_int;
+                          trait_method_params : param list;
+                          trait_method_ret : ty;
+                          trait_method_bounds : trait_bound list }
+
 type trait_def = { trait_name : string;
                    trait_type_params : Big_int_Z.big_int;
-                   trait_bounds : trait_bound list }
+                   trait_bounds : trait_bound list;
+                   trait_assoc_types : trait_assoc_def list;
+                   trait_methods : trait_method_sig list }
+
+type impl_assoc_def = { impl_assoc_name : string; impl_assoc_ty : ty }
 
 type impl_def = { impl_lifetimes : Big_int_Z.big_int;
                   impl_type_params : Big_int_Z.big_int;
                   impl_trait_name : string; impl_trait_args : ty list;
-                  impl_for_ty : ty }
+                  impl_for_ty : ty; impl_assoc_types : impl_assoc_def list;
+                  impl_methods : fn_def list }
 
 type global_env = { env_structs : struct_def list; env_enums : enum_def list;
                     env_traits : trait_def list; env_impls : impl_def list;

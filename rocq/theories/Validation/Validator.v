@@ -54,6 +54,24 @@ Fixpoint field_names (fields : list field_def) : list string :=
   | f :: rest => field_name f :: field_names rest
   end.
 
+Fixpoint trait_assoc_names (items : list trait_assoc_def) : list string :=
+  match items with
+  | [] => []
+  | x :: rest => trait_assoc_name x :: trait_assoc_names rest
+  end.
+
+Fixpoint trait_method_names (items : list trait_method_sig) : list string :=
+  match items with
+  | [] => []
+  | x :: rest => trait_method_name x :: trait_method_names rest
+  end.
+
+Fixpoint impl_assoc_names (items : list impl_assoc_def) : list string :=
+  match items with
+  | [] => []
+  | x :: rest => impl_assoc_name x :: impl_assoc_names rest
+  end.
+
 Fixpoint type_struct_refs (T : Ty) : list string :=
   match T with
   | MkTy _ (TStruct name _ args) =>
@@ -330,9 +348,46 @@ Definition struct_wf_b (structs : list struct_def) (traits : list trait_def) (s 
     (struct_bounds s) &&
   struct_params_ok_b s.
 
+Definition trait_assoc_wf_b
+    (structs : list struct_def) (traits : list trait_def)
+    (ty_params lt_params : nat) (a : trait_assoc_def) : bool :=
+  forallb (trait_ref_wf_b structs traits ty_params lt_params)
+    (trait_assoc_bounds a).
+
+Definition trait_method_sig_wf_b
+    (structs : list struct_def) (traits : list trait_def)
+    (trait_ty_params : nat) (m : trait_method_sig) : bool :=
+  let ty_params := trait_ty_params + trait_method_type_params m in
+  let lt_params := trait_method_lifetimes m in
+  forallb (param_type_wf_b structs ty_params lt_params)
+    (trait_method_params m) &&
+  type_env_wf_b structs ty_params lt_params 0 (trait_method_ret m) &&
+  trait_bounds_wf_b structs traits ty_params lt_params
+    (trait_method_bounds m).
+
 Definition trait_wf_b (structs : list struct_def) (traits : list trait_def)
     (t : trait_def) : bool :=
-  trait_bounds_wf_b structs traits (trait_type_params t) 0 (trait_bounds t).
+  trait_bounds_wf_b structs traits (trait_type_params t) 0 (trait_bounds t) &&
+  string_no_dup_b (trait_assoc_names (trait_assoc_types t)) &&
+  string_no_dup_b (trait_method_names (trait_methods t)) &&
+  forallb (trait_assoc_wf_b structs traits (trait_type_params t) 0)
+    (trait_assoc_types t) &&
+  forallb (trait_method_sig_wf_b structs traits (trait_type_params t))
+    (trait_methods t).
+
+Definition impl_assoc_wf_b
+    (structs : list struct_def) (ty_params lt_params : nat)
+    (a : impl_assoc_def) : bool :=
+  type_env_wf_b structs ty_params lt_params 0 (impl_assoc_ty a).
+
+Definition impl_method_wf_b
+    (structs : list struct_def) (traits : list trait_def)
+    (m : fn_def) : bool :=
+  forallb (param_type_wf_b structs (fn_type_params m) (fn_lifetimes m))
+    (fn_params m) &&
+  type_env_wf_b structs (fn_type_params m) (fn_lifetimes m) 0 (fn_ret m) &&
+  trait_bounds_wf_b structs traits (fn_type_params m) (fn_lifetimes m)
+    (fn_bounds m).
 
 Definition impl_key_eqb (a b : impl_def) : bool :=
   String.eqb (impl_trait_name a) (impl_trait_name b) &&
@@ -368,6 +423,12 @@ Definition impl_wf_b (env : global_env) (i : impl_def) : bool :=
         (impl_trait_args i) &&
       type_env_wf_b (env_structs env)
         (impl_type_params i) (impl_lifetimes i) 0 (impl_for_ty i) &&
+      string_no_dup_b (impl_assoc_names (impl_assoc_types i)) &&
+      string_no_dup_b (fn_names (impl_methods i)) &&
+      forallb (impl_assoc_wf_b (env_structs env)
+        (impl_type_params i) (impl_lifetimes i)) (impl_assoc_types i) &&
+      forallb (impl_method_wf_b (env_structs env) (env_traits env))
+        (impl_methods i) &&
       match check_struct_bounds env (trait_bounds t) (impl_trait_args i) with
       | None => true
       | Some _ => false
@@ -400,14 +461,14 @@ Definition ValidEnv (env : global_env) : Prop :=
 (* ------------------------------------------------------------------ *)
 
 Definition ex_trait_show : trait_def :=
-  MkTraitDef "Show" 0 [].
+  MkTraitDef "Show" 0 [] [] [].
 
 Definition ex_struct_box : struct_def :=
   MkStructDef "Box" 0 1 [] [MkFieldDef "value" MImmutable (MkTy UUnrestricted (TParam 0))].
 
 Definition ex_impl_show_box : impl_def :=
   MkImplDef 0 1 "Show" []
-    (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted (TParam 0)])).
+    (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted (TParam 0)])) [] [].
 
 Definition ex_env_show_box : global_env :=
   MkGlobalEnv [ex_struct_box] [] [ex_trait_show] [ex_impl_show_box] [] [].

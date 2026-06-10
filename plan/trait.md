@@ -75,7 +75,8 @@ Completed:
   signatures, and method-local type arguments in explicit and short UFCS calls,
   direct generic function-call type arguments, generic struct/enum type
   arguments, trait-bound type arguments, impl trait arguments, trait own-bound
-  type arguments, and method-local bound type arguments,
+  type arguments, function-bound type arguments, and method-local bound
+  type arguments,
   with mismatch regressions for those type-argument positions.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden

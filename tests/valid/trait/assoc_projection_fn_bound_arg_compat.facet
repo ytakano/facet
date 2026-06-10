@@ -1,0 +1,20 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+trait Marker<T>;
+
+impl Marker<unrestricted bool> for unrestricted isize;
+
+fn need<T>(x: unrestricted T) -> unrestricted T
+  where T: Marker<unrestricted <unrestricted isize as Provider>::Item> {
+  x
+}
+
+fn main() -> unrestricted isize {
+  (need<unrestricted isize> 1)
+}

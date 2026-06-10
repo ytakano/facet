@@ -11,18 +11,12 @@ validity checks belong in Rocq and the extracted checker.
 
 Completed:
 
-- Trait and impl item block syntax is accepted by the OCaml frontend while
-  preserving marker forms: `trait Show;`, `trait Show {}`, `impl Show for T;`,
-  and `impl Show for T {}`.
-- Trait associated type declarations and impl associated type definitions are
-  represented in Rocq/extracted environments and validated for duplicate,
-  missing, and extra definitions.
-- Associated type projections have syntax, lowering, core representation, type
-  traversal support, extraction, OCaml validation, and printer coverage for the
-  explicit form `<Ty as Trait>::Assoc`.
-- Trait method signatures and impl method definitions are lowered into Rocq
-  records, validated for duplicate/missing/extra/mismatched methods, and checked
-  against substituted impl trait arguments.
+- Trait and impl item syntax is accepted and lowered into Rocq/extracted
+  environments. Trait associated types, impl associated type definitions,
+  trait method signatures, and impl method bodies are validated for duplicate,
+  missing, extra, and mismatched items. Associated type projections use the
+  explicit form `<Ty as Trait>::Assoc` and have syntax, lowering, core
+  representation, traversal, extraction, validation, and printer coverage.
 - Method-local type parameter syntax is accepted in trait and impl methods as
   `fn name<T>(...) -> ... where T: Bound`; parameters, return types, and bounds
   are converted into the existing Rocq method/function generic fields and
@@ -68,9 +62,9 @@ Completed:
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize`, including at function call argument compatibility
-  boundaries, let annotations, struct field types, enum payload types, closure signatures,
-  and trait method signatures.
+  type-check as `isize` across call arguments, let annotations, struct fields,
+  enum payloads, function-value signatures, closure signatures, and trait
+  method signatures.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type
@@ -126,9 +120,10 @@ Key temporary limitations:
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
      so associated projection equality is checked at the typing rule boundary;
-     call-argument, let-annotation, struct-field, enum-payload, closure-signature, and
-     trait-method-signature compatibility have regression coverage for both accepted concrete projections and
-     rejected mismatches.
+     call-argument, let-annotation, struct-field, enum-payload,
+     function-value-signature, closure-signature, and trait-method-signature
+     compatibility have regression coverage for accepted concrete projections
+     and rejected mismatches.
    - Wire checker compatibility call sites to env-aware associated
      compatibility instead of relying on pre-pass normalization.
    - Keep associated type defaults and equality constraints deferred.

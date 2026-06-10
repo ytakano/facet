@@ -1,0 +1,16 @@
+trait Iterator {
+  type Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+}
+
+fn id(x: unrestricted isize) -> unrestricted isize {
+  x
+}
+
+fn main() -> unrestricted isize {
+  let f: unrestricted fn(unrestricted <unrestricted isize as Iterator>::Item) -> unrestricted <unrestricted isize as Iterator>::Item = id in
+  (f 1)
+}

@@ -74,7 +74,7 @@ Completed:
   signatures, and method-local type arguments in explicit and short UFCS calls,
   direct generic function-call type arguments, and generic struct/enum type
   arguments,
-  with mismatch regressions for those method type arguments.
+  with mismatch regressions for those type-argument positions.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type

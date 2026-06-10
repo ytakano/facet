@@ -84,9 +84,11 @@ Key temporary limitations:
   checks inside the extracted Rocq raw elaborator. Wiring checker call sites to
   the env-aware helper layer and proving the corresponding soundness connection
   remain pending.
-- Short method calls intentionally use the same parenthesized call syntax as
-  functions: `(Trait::method receiver args...)`. Dot method-call syntax remains
-  out of phase and is covered by rejection tests.
+- Method calls intentionally use the same parenthesized prefix call shape as
+  functions: `(callee args...)`. Short UFCS uses `(Trait::method receiver args...)`,
+  and explicit UFCS uses `(<Ty as Trait>::method receiver args...)`; both treat
+  the receiver as the first argument. Dot method-call syntax remains out of
+  phase and is covered by rejection tests.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -133,13 +135,13 @@ Key temporary limitations:
      `global_env`, so the next implementation step is either an env-aware
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
-     should checker helpers switch to assoc-aware compatibility. Attempts to put
-     assoc helper soundness in
-     `EnvSoundnessFacts.v`, `CompatBoolSoundness.v`, `CheckerSoundness.v`,
-     or a separate post-`CompatBoolSoundness` helper module pulled in heavy
-     dependencies or did not finish single-file compilation quickly. The next
-     proof attempt needs to split the boolean compatibility proof itself, not
-     only the assoc argument helper lemmas.
+     should checker helpers switch to assoc-aware compatibility. Profiling showed
+     imports and `CompatBoolSoundness.v` itself are fast, but a
+     separate `AssocArgSoundness.v` proof reaches the first assoc helper lemma
+     and stalls at `Qed` when the conclusion mentions `normalize_assoc_ty`. The
+     next proof attempt must shrink the checked proof term for normalized
+     compatibility, not only move the assoc argument helper lemmas between
+     modules.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

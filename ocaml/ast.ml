@@ -53,7 +53,7 @@ type named_expr =
   | NPlace  of named_place
   | NLet    of TypeChecker.mutability * name * named_ty option * named_expr * named_expr
   | NCall   of path * named_type_arg list * named_expr list
-  | NMethodCall of named_ty * named_trait_ref * name * named_expr list
+  | NMethodCall of named_ty * named_trait_ref * name * named_type_arg list * named_expr list
   | NStruct of path * named_type_arg list * (name * named_expr) list
   | NEnum   of path * named_type_arg list * name * named_type_arg list * named_expr list
   | NMatch  of named_expr * (name * name list * named_expr) list

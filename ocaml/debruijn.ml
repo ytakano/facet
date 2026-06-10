@@ -208,11 +208,12 @@ let rec map_named_expr f fn_names ty_params value_scope = function
     in
     NCall (path', List.map (map_named_type_arg f ty_params) args,
       List.map (map_named_expr f fn_names ty_params value_scope) exprs)
-  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+  | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     NMethodCall
       (map_named_ty f ty_params self_ty,
        map_named_trait_ref f ty_params trait_ref,
        method_name,
+       List.map (map_named_type_arg f ty_params) type_args,
        List.map (map_named_expr f fn_names ty_params value_scope) args)
   | NStruct (path, args, fields) ->
     NStruct ([f path], List.map (map_named_type_arg f ty_params) args,
@@ -485,9 +486,10 @@ let rec validate_expr_paths known ty_params value_scope = function
     end;
     List.iter (validate_type_arg_paths known ty_params) type_args;
     List.iter (validate_expr_paths known ty_params value_scope) args
-  | NMethodCall (self_ty, trait_ref, _, args) ->
+  | NMethodCall (self_ty, trait_ref, _, type_args, args) ->
     validate_ty_paths known ty_params self_ty;
     validate_trait_ref_paths known ty_params trait_ref;
+    List.iter (validate_type_arg_paths known ty_params) type_args;
     List.iter (validate_expr_paths known ty_params value_scope) args
   | NStruct (path, type_args, fields) ->
     let name = string_of_path path in
@@ -970,9 +972,9 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
       failwith "explicit type arguments are only supported for direct function calls"
     else
       ECallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
-  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+  | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
-    ECallGeneric (make_ident f 0, [self_ty'],
+    ECallGeneric (make_ident f 0, self_ty' :: lower_call_type_args ty_scope type_args,
       List.map (convert fn_names ty_scope scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
@@ -1082,9 +1084,9 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
       failwith "explicit type arguments are only supported for direct function calls"
     else
       RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
-  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+  | NMethodCall (self_ty, trait_ref, method_name, type_args, args) ->
     let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
-    RawCallGeneric (make_ident f 0, [self_ty'],
+    RawCallGeneric (make_ident f 0, self_ty' :: lower_call_type_args ty_scope type_args,
       List.map (convert_raw fn_names ty_scope scope rec_scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
@@ -1401,7 +1403,7 @@ let rec method_call_targets_in_expr ty_scope = function
     method_call_targets_in_expr ty_scope e1 @ method_call_targets_in_expr ty_scope e2
   | NCall (_, _, args) ->
     List.concat_map (method_call_targets_in_expr ty_scope) args
-  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+  | NMethodCall (self_ty, trait_ref, method_name, _type_args, args) ->
     let (f, _) = lower_method_call_target ty_scope self_ty trait_ref method_name in
     (f, string_of_path trait_ref.ntr_name ^ "::" ^ method_name) ::
     List.concat_map (method_call_targets_in_expr ty_scope) args

@@ -155,11 +155,11 @@ Key temporary limitations:
      `global_env`, so the next implementation step is either an env-aware
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
-     should checker helpers switch to assoc-aware compatibility. Attempts to
-     put assoc helper soundness in `EnvSoundnessFacts.v` or
-     `CompatBoolSoundness.v` pulled in heavy dependencies or did not finish
-     single-file compilation quickly, so a lighter proof-module split remains
-     part of this step.
+     should checker helpers switch to assoc-aware compatibility. Attempts to put
+     assoc helper soundness in
+     `EnvSoundnessFacts.v`, `CompatBoolSoundness.v`, or `CheckerSoundness.v`
+     pulled in heavy dependencies or did not finish single-file compilation
+     quickly, so a lighter proof-module split remains part of this step.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

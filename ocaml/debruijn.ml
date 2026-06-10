@@ -2156,9 +2156,6 @@ let validate_env env =
       in
       if dup_impl env.env_impls then Some "duplicate impl" else None
 
-let normalize_raw_fn env f =
-  TypeChecker.normalize_assoc_raw_fn env f
-
 let normalize_global_env_assocs env =
   TypeChecker.normalize_assoc_global_env env
 
@@ -2215,12 +2212,11 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   end;
   let raw_fns =
-    List.map (normalize_raw_fn base_env)
-      (impl_method_raw_fns @
-       List.map (convert_raw_fn_def_with_names base_env struct_names enum_names fn_names) fns) in
+    impl_method_raw_fns @
+    List.map (convert_raw_fn_def_with_names base_env struct_names enum_names fn_names) fns in
   let env =
     match elaborate_raw_global_env base_env raw_fns with
-    | Infer_ok env -> normalize_global_env_assocs env
+    | Infer_ok env -> env
     | Infer_err _ -> failwith "raw elaboration failed"
   in
   match validate_env env with

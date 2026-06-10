@@ -16861,17 +16861,19 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
     global_env -> raw_fn_def list -> global_env infer_result **)
 
 let elaborate_raw_global_env env fs =
-  let stubs = map fn_stub_of_raw fs in
-  let base = { env_structs = env.env_structs; env_enums = env.env_enums;
-    env_traits = env.env_traits; env_impls = env.env_impls;
-    env_local_bounds = []; env_fns = stubs }
+  let env_norm = normalize_assoc_global_env env in
+  let fs_norm = map (normalize_assoc_raw_fn env_norm) fs in
+  let stubs = map fn_stub_of_raw fs_norm in
+  let base = { env_structs = env_norm.env_structs; env_enums =
+    env_norm.env_enums; env_traits = env_norm.env_traits; env_impls =
+    env_norm.env_impls; env_local_bounds = []; env_fns = stubs }
   in
   (match elaborate_raw_fns_fuel
            (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) base []
-           Big_int_Z.zero_big_int fs with
+           Big_int_Z.zero_big_int fs_norm with
    | Infer_ok p ->
      let (fns, _) = p in
-     Infer_ok { env_structs = env.env_structs; env_enums = env.env_enums;
-     env_traits = env.env_traits; env_impls = env.env_impls;
-     env_local_bounds = []; env_fns = fns }
+     Infer_ok { env_structs = env_norm.env_structs; env_enums =
+     env_norm.env_enums; env_traits = env_norm.env_traits; env_impls =
+     env_norm.env_impls; env_local_bounds = []; env_fns = fns }
    | Infer_err err -> Infer_err err)

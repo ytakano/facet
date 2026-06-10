@@ -788,13 +788,15 @@ Fixpoint elaborate_raw_fns_fuel
 
 Definition elaborate_raw_global_env (env : global_env) (fs : list raw_fn_def)
     : infer_result global_env :=
-  let stubs := map fn_stub_of_raw fs in
-  let base := MkGlobalEnv (env_structs env) (env_enums env)
-    (env_traits env) (env_impls env)
+  let env_norm := normalize_assoc_global_env env in
+  let fs_norm := map (normalize_assoc_raw_fn env_norm) fs in
+  let stubs := map fn_stub_of_raw fs_norm in
+  let base := MkGlobalEnv (env_structs env_norm) (env_enums env_norm)
+    (env_traits env_norm) (env_impls env_norm)
     [] stubs in
-  match elaborate_raw_fns_fuel 10000 base [] 0 fs with
+  match elaborate_raw_fns_fuel 10000 base [] 0 fs_norm with
   | infer_err err => infer_err err
   | infer_ok (fns, _) =>
-      infer_ok (MkGlobalEnv (env_structs env) (env_enums env)
-        (env_traits env) (env_impls env) [] fns)
+      infer_ok (MkGlobalEnv (env_structs env_norm) (env_enums env_norm)
+        (env_traits env_norm) (env_impls env_norm) [] fns)
   end.

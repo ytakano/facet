@@ -1345,6 +1345,63 @@ let convert_impl struct_names enum_names fn_names i =
     impl_methods = List.filter_map
       (convert_impl_method_item fn_names item_ty_scope (List.length lts)) i.ni_items }
 
+let subst_self_param self_ty p =
+  { p with param_ty = subst_type_params_ty [self_ty] p.param_ty }
+
+let subst_self_trait_ref self_ty r =
+  { r with trait_ref_args = List.map (subst_type_params_ty [self_ty]) r.trait_ref_args }
+
+let subst_self_trait_bound self_ty b =
+  { b with bound_traits = List.map (subst_self_trait_ref self_ty) b.bound_traits }
+
+let rec subst_self_raw_expr self_ty = function
+  | RawUnit -> RawUnit
+  | RawLit lit -> RawLit lit
+  | RawVar x -> RawVar x
+  | RawFn f -> RawFn f
+  | RawPlace p -> RawPlace p
+  | RawLet (m, x, ty, e1, e2) ->
+    RawLet (m, x, subst_type_params_ty [self_ty] ty,
+      subst_self_raw_expr self_ty e1, subst_self_raw_expr self_ty e2)
+  | RawLetInfer (m, x, e1, e2) ->
+    RawLetInfer (m, x, subst_self_raw_expr self_ty e1, subst_self_raw_expr self_ty e2)
+  | RawCall (f, args) -> RawCall (f, List.map (subst_self_raw_expr self_ty) args)
+  | RawCallGeneric (f, type_args, args) ->
+    RawCallGeneric (f, List.map (subst_type_params_ty [self_ty]) type_args,
+      List.map (subst_self_raw_expr self_ty) args)
+  | RawCallExpr (callee, args) ->
+    RawCallExpr (subst_self_raw_expr self_ty callee,
+      List.map (subst_self_raw_expr self_ty) args)
+  | RawStruct (name, lts, type_args, fields) ->
+    RawStruct (name, lts, List.map (subst_type_params_ty [self_ty]) type_args,
+      List.map (fun (field, e) -> (field, subst_self_raw_expr self_ty e)) fields)
+  | RawEnum (name, variant, lts, variant_lts, type_args, payloads) ->
+    RawEnum (name, variant, lts, variant_lts,
+      List.map (subst_type_params_ty [self_ty]) type_args,
+      List.map (subst_self_raw_expr self_ty) payloads)
+  | RawMatch (scrut, branches) ->
+    RawMatch (subst_self_raw_expr self_ty scrut,
+      List.map (fun (pat, body) -> (pat, subst_self_raw_expr self_ty body)) branches)
+  | RawReplace (p, e) -> RawReplace (p, subst_self_raw_expr self_ty e)
+  | RawAssign (p, e) -> RawAssign (p, subst_self_raw_expr self_ty e)
+  | RawBorrow (rk, p) -> RawBorrow (rk, p)
+  | RawDeref e -> RawDeref (subst_self_raw_expr self_ty e)
+  | RawDrop e -> RawDrop (subst_self_raw_expr self_ty e)
+  | RawIf (cond, then_e, else_e) ->
+    RawIf (subst_self_raw_expr self_ty cond, subst_self_raw_expr self_ty then_e,
+      subst_self_raw_expr self_ty else_e)
+  | RawClosure (captures, params, ret, body) ->
+    RawClosure (captures, List.map (subst_self_param self_ty) params,
+      subst_type_params_ty [self_ty] ret, subst_self_raw_expr self_ty body)
+  | RawLetRec (captures, rec_fns, body) ->
+    RawLetRec (captures, List.map (subst_self_raw_rec_fn self_ty) rec_fns,
+      subst_self_raw_expr self_ty body)
+  | RawCore e -> RawCore (subst_type_params_expr [self_ty] e)
+
+and subst_self_raw_rec_fn self_ty (MkRawRecFn (name, params, ret, body)) =
+  MkRawRecFn (name, List.map (subst_self_param self_ty) params,
+    subst_type_params_ty [self_ty] ret, subst_self_raw_expr self_ty body)
+
 let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetimes
     trait_name trait_args self_ty = function
   | NIIMethodDef m ->
@@ -1371,17 +1428,21 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
           (sc', acc @ [param], next_lt', input_lts'))
         ([], [], initial_lifetimes, []) m.nmd_params
     in
+    let ret = lower_surface_output_ty method_ty_scope input_lts m.nmd_ret in
+    let body = convert_raw fn_names method_ty_scope scope [] m.nmd_body in
+    let bounds =
+      List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
+        m.nmd_bounds
+    in
     Some { raw_fn_name = make_ident synthetic_name 0;
            raw_fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
            raw_fn_outlives = [];
-           raw_fn_params = params;
-           raw_fn_ret = lower_surface_output_ty method_ty_scope input_lts m.nmd_ret;
-           raw_fn_body = convert_raw fn_names method_ty_scope scope [] m.nmd_body;
+           raw_fn_params = List.map (subst_self_param self_ty) params;
+           raw_fn_ret = subst_type_params_ty [self_ty] ret;
+           raw_fn_body = subst_self_raw_expr self_ty body;
            raw_fn_type_params =
              Big_int_Z.big_int_of_int (List.length method_ty_scope.type_params);
-           raw_fn_bounds =
-             List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
-               m.nmd_bounds }
+           raw_fn_bounds = List.map (subst_self_trait_bound self_ty) bounds }
   | NIIAssocTypeDef _ -> None
 
 let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i =

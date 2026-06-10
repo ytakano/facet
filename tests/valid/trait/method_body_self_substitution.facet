@@ -1,0 +1,13 @@
+trait Touch {
+  fn touch(self: Self) -> unrestricted isize;
+}
+
+impl Touch for unrestricted isize {
+  fn touch(self: Self) -> unrestricted isize {
+    self
+  }
+}
+
+fn main() -> unrestricted isize {
+  (<unrestricted isize as Touch>::touch 1)
+}

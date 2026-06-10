@@ -35,8 +35,9 @@ Completed:
 - Explicit parenthesized UFCS method calls are accepted in the ordinary call
   shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
-  call path; unresolved explicit targets report source-level `Trait::method`
-  names.
+  call path; hidden method bodies substitute `Self` with the concrete impl
+  target type before raw elaboration; unresolved explicit targets report
+  source-level `Trait::method` names.
 - Concrete associated type projections are normalized in converted env/raw/core
   types when a unique impl defines the associated type, allowing uses such as
   `<unrestricted isize as Iterator>::Item` to type-check as `isize`.

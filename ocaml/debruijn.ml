@@ -1556,7 +1556,7 @@ and subst_self_raw_rec_fn self_ty (MkRawRecFn (name, params, ret, body)) =
   MkRawRecFn (name, List.map (subst_self_param self_ty) params,
     subst_type_params_ty [self_ty] ret, subst_self_raw_expr self_ty body)
 
-let convert_impl_method_raw_item env fn_names needed_names ty_scope initial_lifetimes
+let convert_impl_method_raw_item env fn_names ty_scope initial_lifetimes
     trait_name trait_args self_ty = function
   | NIIMethodDef m ->
     let (method_lts, method_tys) = split_generics m.nmd_generics in
@@ -1566,7 +1566,6 @@ let convert_impl_method_raw_item env fn_names needed_names ty_scope initial_life
     let synthetic_name =
       synthetic_impl_method_name trait_name trait_args self_ty m.nmd_name
     in
-    if not (List.mem synthetic_name needed_names) then None else
     let (scope, value_tys, params, next_lifetime, input_lts) =
       List.fold_left
         (fun (sc, tys, acc, next_lt, input_lts) p ->
@@ -1600,7 +1599,7 @@ let convert_impl_method_raw_item env fn_names needed_names ty_scope initial_life
            raw_fn_bounds = List.map (subst_self_trait_bound self_ty) bounds }
   | NIIAssocTypeDef _ -> None
 
-let convert_impl_method_raw_fns env struct_names enum_names fn_names needed_names i =
+let convert_impl_method_raw_fns env struct_names enum_names fn_names i =
   let (lts, tys) = split_generics i.ni_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
@@ -1610,7 +1609,7 @@ let convert_impl_method_raw_fns env struct_names enum_names fn_names needed_name
   let item_ty_scope = { ty_scope with type_params = "Self" :: tys;
     self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
   List.filter_map
-    (convert_impl_method_raw_item env fn_names needed_names item_ty_scope (List.length lts)
+    (convert_impl_method_raw_item env fn_names item_ty_scope (List.length lts)
        (string_of_path i.ni_trait_name) trait_args self_ty)
     i.ni_items
 
@@ -2301,10 +2300,9 @@ let convert_program_items_from_flattened items : global_env =
   | Some msg -> failwith msg
   end;
   let needed_method_targets = needed_impl_method_targets base_env fn_names struct_names enum_names items in
-  let needed_method_names = List.map fst needed_method_targets in
   let impl_method_raw_fns =
     List.concat_map
-      (convert_impl_method_raw_fns base_env struct_names enum_names fn_names needed_method_names)
+      (convert_impl_method_raw_fns base_env struct_names enum_names fn_names)
       impls in
   let produced_method_names =
     List.map (fun f -> fst f.raw_fn_name) impl_method_raw_fns

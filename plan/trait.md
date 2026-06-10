@@ -28,7 +28,8 @@ Completed:
   are converted into the existing Rocq method/function generic fields and
   signature arity matching rejects non-generic impls for generic trait methods,
   and method-local bounds are matched structurally after trait-argument
-  substitution.
+  substitution. All impl method bodies are hidden-function elaborated and
+  checked through the extracted checker even when the method is not called.
 - Explicit UFCS method calls can pass method-local type arguments as
   `(<Ty as Trait>::method<Arg> receiver args...)`; lowering prepends `Self` to
   those method arguments before calling the hidden generic impl method.
@@ -59,9 +60,6 @@ Key temporary limitations:
 - Method-local lifetime generics are intentionally deferred beyond Roadmap 1-3;
   trait and impl method lifetime generics are rejected by regression tests for
   this phase.
-- Only explicitly called impl methods are hidden-function elaborated and
-  type-checked; uncalled impl method bodies remain stored but not checked as
-  standalone functions.
 - Associated projection normalization still runs as a conversion pass, but the
   normalization algorithm itself is now extracted from Rocq; wiring it into
   Rocq compatibility and proving the corresponding soundness rule remains

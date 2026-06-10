@@ -1496,8 +1496,7 @@ Done:
 - The extracted `fixtures/TypeChecker.ml/.mli` artifacts were regenerated from
   Rocq, and the direct-recursion safety-gate regression cases were moved from
   `tests/invalid/function/` to `tests/valid/function/`.
-- Removed audited-unused strict-only callback projection wrappers from
-  `End2EndSafety.v`.
+- Removed audited-unused strict-only wrappers from `End2EndSafety.v`.
 
 Non-blocking maintenance:
 

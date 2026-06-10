@@ -546,22 +546,6 @@ Proof.
   exact Hfns.
 Qed.
 
-Lemma infer_program_env_end2end_strict_exact_closure_component_check_when_not_captured :
-  forall env env' f_component,
-    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
-    In f_component (env_fns env') ->
-    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' f_component = true.
-Proof.
-  intros env env' f_component Hprog Hin Hcaptured.
-  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured.
-  - eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
-    exact Hprog.
-  - exact Hin.
-  - exact Hcaptured.
-Qed.
-
 Lemma infer_program_env_end2end_strict_exact_closure_component_ready_when_not_captured :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
@@ -2278,25 +2262,6 @@ Proof.
     eassumption.
 Qed.
 
-Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_check_in_provider :
-  forall env env',
-    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
-    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
-      env'
-      (fun env0 fdef =>
-        env0 = env' /\
-        In fdef (env_fns env') /\
-        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-          env' fdef = true).
-Proof.
-  intros env env' Hprog.
-  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_summary_at_check_provider.
-  - eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
-    exact Hprog.
-  - eapply infer_program_env_end2end_strict_exact_closure_summary_at_check_in_provider.
-    exact Hprog.
-Qed.
-
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -3864,43 +3829,6 @@ Proof.
   - exact Heval.
 Qed.
 
-Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_check_store_safe_callbacks :
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_prefix_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check
-    Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_callbacks.
-  - exact Hscope_synthetic.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hprog.
-  - intros env0 fdef Hfamily Hin0.
-    eapply infer_program_env_end2end_strict_exact_closure_component_check_provider_of_check_env_no_capture;
-      eassumption.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_ready_provider_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
@@ -4123,43 +4051,6 @@ Proof.
     exact Hprog.
   - eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
     exact Hprog.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
-Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_check_callbacks :
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_prefix_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check
-    Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_callbacks.
-  - exact Hscope_synthetic.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hprog.
-  - intros env0 fdef Hfamily Hin0.
-    eapply infer_program_env_end2end_strict_exact_closure_component_check_provider_of_check_env_no_capture;
-      eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

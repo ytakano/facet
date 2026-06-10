@@ -71,9 +71,11 @@ Completed:
   normalization pass. In trait and impl items, `Self::Assoc` is accepted as
   shorthand for the current trait projection, including current trait type
   arguments. Rocq now has an `AssocCompatibility` bridge that names env-aware
-  compatibility and its executable boolean form over `normalize_assoc_ty`; the
-  bridge is intentionally lightweight and does not yet replace checker call
-  sites. Generic projections such as `<affine T as Iterator>::Item` are
+  compatibility and its executable boolean form over `normalize_assoc_ty`; a
+  lightweight `CompatBoolSoundness` module proves the boolean compatibility
+  soundness needed for normalized associated projections. Checker call sites
+  still use ordinary compatibility and are not yet wired to the bridge.
+  Generic projections such as `<affine T as Iterator>::Item` are
   preserved under local trait bounds and covered by valid/invalid regression
   tests for same-parameter and mismatched-parameter compatibility.
 
@@ -111,9 +113,8 @@ Key temporary limitations:
      so associated projection equality is checked at the typing rule boundary;
      call-argument compatibility has regression coverage for both accepted
      concrete projections and rejected mismatches.
-   - Add the soundness connection for `ty_compatible_assoc_b`, then wire the
-     checker compatibility call sites to it instead of relying on pre-pass
-     normalization.
+   - Wire checker compatibility call sites to env-aware associated
+     compatibility instead of relying on pre-pass normalization.
    - Keep associated type defaults and equality constraints deferred.
 
 ## Constraints and Checks

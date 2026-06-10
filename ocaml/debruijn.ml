@@ -1170,6 +1170,10 @@ let inline_pure_short_method_receiver env ty_scope value_tys fn_names name repla
     | Some _ -> Some (NCall (f_path, type_args, replacement :: rest))
     | None -> None
     end
+  | NMethodCall (self_ty, trait_ref, method_name, type_args, NVar receiver :: rest)
+      when receiver = name &&
+           not (List.exists (named_expr_mentions_name name) rest) ->
+    Some (NMethodCall (self_ty, trait_ref, method_name, type_args, replacement :: rest))
   | _ -> None
 
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =

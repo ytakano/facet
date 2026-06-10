@@ -44,7 +44,8 @@ Completed:
   in converted env/raw/core types when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize`. In trait and impl items, `Self::Assoc` is accepted as
-  shorthand for the current trait projection.
+  shorthand for the current trait projection, including current trait type
+  arguments.
 
 Key temporary limitations:
 

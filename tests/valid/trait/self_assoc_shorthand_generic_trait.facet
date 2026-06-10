@@ -1,0 +1,15 @@
+trait Provider<T> {
+  type Item;
+  fn get(self: Self, value: unrestricted T) -> Self::Item;
+}
+
+impl Provider<unrestricted bool> for unrestricted isize {
+  type Item = isize;
+  fn get(self: Self, value: unrestricted bool) -> Self::Item {
+    self
+  }
+}
+
+fn main() -> unrestricted isize {
+  (<unrestricted isize as Provider<unrestricted bool>>::get 1 true)
+}

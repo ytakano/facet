@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance CheckerBase CheckerTraits.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance CheckerBase CheckerTraits AssocCompatibility.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -181,6 +181,30 @@ Fixpoint check_arg_tys (Ω : outlives_ctx) (arg_tys params : list Ty)
   | t :: ts, p :: ps =>
       if ty_compatible_b Ω t p
       then check_arg_tys Ω ts ps
+      else Some (compatible_error t p)
+  | _, _ => Some ErrArityMismatch
+  end.
+
+Fixpoint check_args_assoc
+    (env : global_env) (Ω : outlives_ctx) (arg_tys : list Ty) (params : list param)
+    : option infer_error :=
+  match arg_tys, params with
+  | [], [] => None
+  | t :: ts, p :: ps =>
+      if ty_compatible_assoc_b env Ω t (param_ty p)
+      then check_args_assoc env Ω ts ps
+      else Some (compatible_error t (param_ty p))
+  | _, _ => Some ErrArityMismatch
+  end.
+
+Fixpoint check_arg_tys_assoc
+    (env : global_env) (Ω : outlives_ctx) (arg_tys params : list Ty)
+    : option infer_error :=
+  match arg_tys, params with
+  | [], [] => None
+  | t :: ts, p :: ps =>
+      if ty_compatible_assoc_b env Ω t p
+      then check_arg_tys_assoc env Ω ts ps
       else Some (compatible_error t p)
   | _, _ => Some ErrArityMismatch
   end.

@@ -73,8 +73,10 @@ Completed:
   arguments. Rocq now has an `AssocCompatibility` bridge that names env-aware
   compatibility and its executable boolean form over `normalize_assoc_ty`; a
   lightweight `CompatBoolSoundness` module proves the boolean compatibility
-  soundness needed for normalized associated projections. Checker call sites
-  still use ordinary compatibility and are not yet wired to the bridge. The
+  soundness needed for normalized associated projections. `AssocCompatibility`
+  is ordered before checker helpers, and `CheckerHrt` exposes env-aware
+  `check_args_assoc` and `check_arg_tys_assoc` helpers. Checker call sites
+  still use ordinary compatibility and are not yet wired to those helpers. The
   OCaml pre-elaboration validation defers impl method signature equality until
   after extracted Rocq normalization so it does not reject normalizable
   associated projections before the checker runs.
@@ -89,7 +91,7 @@ Key temporary limitations:
   this phase.
 - Associated projection normalization still runs before ordinary compatibility
   checks inside the extracted Rocq raw elaborator. Wiring checker call sites to
-  `ty_compatible_assoc_b` and proving the corresponding soundness connection
+  the env-aware helper layer and proving the corresponding soundness connection
   remain pending.
 - Short method calls intentionally use the same parenthesized call syntax as
   functions: `(Trait::method receiver args...)`. Dot method-call syntax remains
@@ -124,8 +126,9 @@ Key temporary limitations:
      function-value-signature, closure-signature, and trait-method-signature
      compatibility have regression coverage for accepted concrete projections
      and rejected mismatches.
-   - Wire checker compatibility call sites to env-aware associated
-     compatibility instead of relying on pre-pass normalization.
+   - Wire checker compatibility call sites to `check_args_assoc`,
+     `check_arg_tys_assoc`, or direct `ty_compatible_assoc_b` checks instead
+     of relying on pre-pass normalization.
    - Keep associated type defaults and equality constraints deferred.
 
 ## Constraints and Checks

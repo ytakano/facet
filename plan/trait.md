@@ -61,7 +61,10 @@ Completed:
   stubs and checked bodies are built; OCaml no longer runs an associated-type
   normalization pass. In trait and impl items, `Self::Assoc` is accepted as
   shorthand for the current trait projection, including current trait type
-  arguments.
+  arguments. Rocq now has an `AssocCompatibility` bridge that names env-aware
+  compatibility and its executable boolean form over `normalize_assoc_ty`; the
+  bridge is intentionally lightweight and does not yet replace checker call
+  sites.
 
 Key temporary limitations:
 
@@ -69,8 +72,9 @@ Key temporary limitations:
   trait and impl method lifetime generics are rejected by regression tests for
   this phase.
 - Associated projection normalization still runs before ordinary compatibility
-  checks inside the extracted Rocq raw elaborator. Env-aware compatibility and
-  its soundness proof remain pending.
+  checks inside the extracted Rocq raw elaborator. Wiring checker call sites to
+  `ty_compatible_assoc_b` and proving the corresponding soundness connection
+  remain pending.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -92,8 +96,9 @@ Key temporary limitations:
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
      so associated projection equality is checked at the typing rule boundary.
-   - Add a Prop-level rule or equivalence for concrete associated type
-     projections and prove checker soundness for it.
+   - Add the soundness connection for `ty_compatible_assoc_b`, then wire the
+     checker compatibility call sites to it instead of relying on pre-pass
+     normalization.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local
      bounds.
    - Keep associated type defaults and equality constraints deferred.

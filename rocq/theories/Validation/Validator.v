@@ -407,9 +407,57 @@ Definition impl_method_wf_b
   trait_bounds_wf_b structs traits (fn_type_params m) (fn_lifetimes m)
     (fn_bounds m).
 
+Definition mutability_eqb_decl (a b : mutability) : bool :=
+  match a, b with
+  | MImmutable, MImmutable => true
+  | MMutable, MMutable => true
+  | _, _ => false
+  end.
+
+Fixpoint method_params_sig_eqb (actual expected : list param) : bool :=
+  match actual, expected with
+  | [], [] => true
+  | a :: actual', e :: expected' =>
+      mutability_eqb_decl (param_mutability a) (param_mutability e) &&
+      ty_eqb_decl (param_ty a) (param_ty e) &&
+      method_params_sig_eqb actual' expected'
+  | _, _ => false
+  end.
+
+Definition impl_method_matches_trait_sig_b
+    (impl_ty_params impl_lt_params : nat)
+    (actual : fn_def) (expected : trait_method_sig) : bool :=
+  String.eqb (fst (fn_name actual)) (trait_method_name expected) &&
+  Nat.eqb (fn_lifetimes actual)
+    (impl_lt_params + trait_method_lifetimes expected) &&
+  Nat.eqb (fn_type_params actual)
+    (S (impl_ty_params + trait_method_type_params expected)) &&
+  method_params_sig_eqb (fn_params actual) (trait_method_params expected) &&
+  ty_eqb_decl (fn_ret actual) (trait_method_ret expected).
+
+Fixpoint find_impl_method_by_name
+    (name : string) (methods : list fn_def) : option fn_def :=
+  match methods with
+  | [] => None
+  | m :: rest =>
+      if String.eqb (fst (fn_name m)) name then Some m
+      else find_impl_method_by_name name rest
+  end.
+
+Definition impl_method_for_trait_sig_b
+    (impl_ty_params impl_lt_params : nat)
+    (methods : list fn_def) (sig : trait_method_sig) : bool :=
+  match find_impl_method_by_name (trait_method_name sig) methods with
+  | None => false
+  | Some m => impl_method_matches_trait_sig_b impl_ty_params impl_lt_params m sig
+  end.
+
 Definition impl_methods_match_trait_b
-    (methods : list fn_def) (trait_methods : list trait_method_sig) : bool :=
-  string_set_eq_b (fn_names methods) (trait_method_names trait_methods).
+    (impl_ty_params impl_lt_params : nat) (methods : list fn_def)
+    (trait_methods : list trait_method_sig) : bool :=
+  string_set_eq_b (fn_names methods) (trait_method_names trait_methods) &&
+  forallb (impl_method_for_trait_sig_b impl_ty_params impl_lt_params methods)
+    trait_methods.
 
 Definition impl_key_eqb (a b : impl_def) : bool :=
   String.eqb (impl_trait_name a) (impl_trait_name b) &&
@@ -449,7 +497,8 @@ Definition impl_wf_b (env : global_env) (i : impl_def) : bool :=
       string_set_eq_b (impl_assoc_names (impl_assoc_types i))
         (trait_assoc_names (trait_assoc_types t)) &&
       string_no_dup_b (fn_names (impl_methods i)) &&
-      impl_methods_match_trait_b (impl_methods i) (trait_methods t) &&
+      impl_methods_match_trait_b (impl_type_params i) (impl_lifetimes i)
+        (impl_methods i) (trait_methods t) &&
       forallb (impl_assoc_wf_b (env_structs env)
         (impl_type_params i) (impl_lifetimes i)) (impl_assoc_types i) &&
       forallb (impl_method_wf_b (env_structs env) (env_traits env))

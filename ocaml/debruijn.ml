@@ -1530,11 +1530,45 @@ let validate_env env =
           let trait_method_names =
             List.map (fun m -> m.trait_method_name) trait_def.trait_methods
           in
+          let params_sig_equal actual expected =
+            List.length actual = List.length expected &&
+            List.for_all2
+              (fun a e ->
+                 a.param_mutability = e.param_mutability &&
+                 ty_eqb a.param_ty e.param_ty)
+              actual expected
+          in
+          let method_matches_sig actual expected =
+            fst actual.fn_name = expected.trait_method_name &&
+            Big_int_Z.eq_big_int actual.fn_lifetimes
+              (Big_int_Z.add_big_int i.impl_lifetimes expected.trait_method_lifetimes) &&
+            Big_int_Z.eq_big_int actual.fn_type_params
+              (Big_int_Z.succ_big_int
+                 (Big_int_Z.add_big_int i.impl_type_params
+                    expected.trait_method_type_params)) &&
+            params_sig_equal actual.fn_params expected.trait_method_params &&
+            ty_eqb actual.fn_ret expected.trait_method_ret
+          in
+          let method_sig_error =
+            first_some
+              (List.map
+                 (fun expected ->
+                    match List.find_opt
+                      (fun actual -> fst actual.fn_name = expected.trait_method_name)
+                      i.impl_methods with
+                    | Some actual when method_matches_sig actual expected -> None
+                    | Some _ ->
+                      Some ("impl method signature does not match trait: " ^
+                        i.impl_trait_name ^ "::" ^ expected.trait_method_name)
+                    | None -> None)
+                 trait_def.trait_methods)
+          in
           let method_error =
             match duplicate_name impl_method_names with
             | Some name -> Some ("duplicate method in impl " ^ i.impl_trait_name ^ ": " ^ name)
             | None ->
-              if same_string_set impl_method_names trait_method_names then None
+              if same_string_set impl_method_names trait_method_names
+              then method_sig_error
               else Some ("impl methods do not match trait: " ^ i.impl_trait_name)
           in
           let validate_method m =

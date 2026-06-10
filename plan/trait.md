@@ -152,8 +152,9 @@ Key temporary limitations:
      `deriving` surface form that expands to ordinary impl declarations and
      is validated by the extracted checker rather than by OCaml fallback
      logic. Initial candidates are structural traits with deterministic
-     generated bodies; deriving for traits with associated type defaults or
-     equality constraints waits until those features exist.
+     generated bodies. Current syntax is intentionally rejected by regression
+     tests; deriving for traits with associated type defaults or equality
+     constraints waits until those features exist.
 
 ## Constraints and Checks
 

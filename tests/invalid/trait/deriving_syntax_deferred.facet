@@ -1,0 +1,11 @@
+trait Show {
+  fn show(self: Self) -> unrestricted isize;
+}
+
+struct Token deriving Show {
+  value: unrestricted isize
+}
+
+fn main() -> unrestricted isize {
+  0
+}

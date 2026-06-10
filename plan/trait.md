@@ -29,8 +29,9 @@ Completed:
   those method arguments before calling the hidden generic impl method.
 - Explicit parenthesized UFCS method calls are accepted in the ordinary
   function-call shape as `(<Ty as Trait>::method receiver args...)`; the
-  receiver is the first argument, so method calls stay aligned with
-  `(function args...)` rather than dot syntax. Called impl methods are
+  receiver is the first argument, and additional arguments follow it, so
+  method calls stay aligned with `(function args...)` rather than dot
+  syntax. Called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
   call path; hidden method bodies substitute `Self` with the concrete impl
   target type before raw elaboration; unresolved explicit targets report

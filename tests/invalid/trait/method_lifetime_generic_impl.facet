@@ -1,0 +1,11 @@
+trait Borrower {
+  fn borrow(self: &Self) -> &Self;
+}
+
+impl Borrower for unrestricted isize {
+  fn borrow<'a>(self: &'a Self) -> &'a Self { self }
+}
+
+fn main() -> unrestricted () {
+  ()
+}

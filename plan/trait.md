@@ -43,7 +43,9 @@ Completed:
 
 Key temporary limitations:
 
-- Method-local lifetime generics are rejected for now.
+- Method-local lifetime generics are intentionally deferred beyond Roadmap 1-3;
+  trait and impl method lifetime generics are rejected by regression tests for
+  this phase.
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
@@ -53,12 +55,9 @@ Key temporary limitations:
 - `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
   validated method signatures for now.
 
-## Remaining Roadmap 1-3 Tasks
+## Remaining Roadmap 2-3 Tasks
 
-1. Finish method generics.
-   - Decide whether method-local lifetime generics are in scope for this phase.
-
-2. Harden UFCS trait method calls.
+1. Harden UFCS trait method calls.
    - Add the shorter `(Trait::method receiver args...)` form after receiver
      type-directed resolution exists in Rocq.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
@@ -66,7 +65,7 @@ Key temporary limitations:
      runtime safety branch; a checker-only clause is insufficient.
    - Keep dot method-call syntax out of this phase.
 
-3. Move associated type normalization into Rocq compatibility.
+2. Move associated type normalization into Rocq compatibility.
    - Add a Prop-level rule or equivalence for concrete associated type
      projections and prove checker soundness for it.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local

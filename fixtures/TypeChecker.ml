@@ -2298,6 +2298,104 @@ let normalize_assoc_ty env t =
     Big_int_Z.zero_big_int))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
     env t
 
+(** val normalize_assoc_param : global_env -> param -> param **)
+
+let normalize_assoc_param env p =
+  { param_mutability = p.param_mutability; param_name = p.param_name;
+    param_ty = (normalize_assoc_ty env p.param_ty) }
+
+(** val normalize_assoc_trait_ref : global_env -> trait_ref -> trait_ref **)
+
+let normalize_assoc_trait_ref env tr =
+  { trait_ref_name = tr.trait_ref_name; trait_ref_args =
+    (map (normalize_assoc_ty env) tr.trait_ref_args) }
+
+(** val normalize_assoc_trait_bound :
+    global_env -> trait_bound -> trait_bound **)
+
+let normalize_assoc_trait_bound env b =
+  { bound_type_index = b.bound_type_index; bound_traits =
+    (map (normalize_assoc_trait_ref env) b.bound_traits) }
+
+(** val normalize_assoc_expr : global_env -> expr -> expr **)
+
+let rec normalize_assoc_expr env = function
+| ELet (m, x, t, e1, e2) ->
+  ELet (m, x, (normalize_assoc_ty env t), (normalize_assoc_expr env e1),
+    (normalize_assoc_expr env e2))
+| ELetInfer (m, x, e1, e2) ->
+  ELetInfer (m, x, (normalize_assoc_expr env e1),
+    (normalize_assoc_expr env e2))
+| ECall (f, args) -> ECall (f, (map (normalize_assoc_expr env) args))
+| ECallGeneric (f, type_args, args) ->
+  ECallGeneric (f, (map (normalize_assoc_ty env) type_args),
+    (map (normalize_assoc_expr env) args))
+| ECallExpr (callee, args) ->
+  ECallExpr ((normalize_assoc_expr env callee),
+    (map (normalize_assoc_expr env) args))
+| ECallExprGeneric (callee, type_args, args) ->
+  ECallExprGeneric ((normalize_assoc_expr env callee),
+    (map (normalize_assoc_ty env) type_args),
+    (map (normalize_assoc_expr env) args))
+| EStruct (name, lts, type_args, fields) ->
+  EStruct (name, lts, (map (normalize_assoc_ty env) type_args),
+    (map (fun field -> ((fst field), (normalize_assoc_expr env (snd field))))
+      fields))
+| EEnum (enum_name0, variant_name, lts, variant_lts, type_args, payloads) ->
+  EEnum (enum_name0, variant_name, lts, variant_lts,
+    (map (normalize_assoc_ty env) type_args),
+    (map (normalize_assoc_expr env) payloads))
+| EMatch (scrut, branches) ->
+  EMatch ((normalize_assoc_expr env scrut),
+    (map (fun branch ->
+      let (y, body) = branch in (y, (normalize_assoc_expr env body)))
+      branches))
+| EReplace (p, e1) -> EReplace (p, (normalize_assoc_expr env e1))
+| EAssign (p, e1) -> EAssign (p, (normalize_assoc_expr env e1))
+| EDeref e1 -> EDeref (normalize_assoc_expr env e1)
+| EDrop e1 -> EDrop (normalize_assoc_expr env e1)
+| EIf (e1, e2, e3) ->
+  EIf ((normalize_assoc_expr env e1), (normalize_assoc_expr env e2),
+    (normalize_assoc_expr env e3))
+| x -> x
+
+(** val normalize_assoc_fn : global_env -> fn_def -> fn_def **)
+
+let normalize_assoc_fn env f =
+  { fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
+    f.fn_outlives; fn_captures =
+    (map (normalize_assoc_param env) f.fn_captures); fn_params =
+    (map (normalize_assoc_param env) f.fn_params); fn_ret =
+    (normalize_assoc_ty env f.fn_ret); fn_body =
+    (normalize_assoc_expr env f.fn_body); fn_type_params = f.fn_type_params;
+    fn_bounds = (map (normalize_assoc_trait_bound env) f.fn_bounds) }
+
+(** val normalize_assoc_impl_assoc :
+    global_env -> impl_assoc_def -> impl_assoc_def **)
+
+let normalize_assoc_impl_assoc env a =
+  { impl_assoc_name = a.impl_assoc_name; impl_assoc_ty =
+    (normalize_assoc_ty env a.impl_assoc_ty) }
+
+(** val normalize_assoc_impl : global_env -> impl_def -> impl_def **)
+
+let normalize_assoc_impl env i =
+  { impl_lifetimes = i.impl_lifetimes; impl_type_params = i.impl_type_params;
+    impl_trait_name = i.impl_trait_name; impl_trait_args =
+    (map (normalize_assoc_ty env) i.impl_trait_args); impl_for_ty =
+    (normalize_assoc_ty env i.impl_for_ty); impl_assoc_types =
+    (map (normalize_assoc_impl_assoc env) i.impl_assoc_types); impl_methods =
+    (map (normalize_assoc_fn env) i.impl_methods) }
+
+(** val normalize_assoc_global_env : global_env -> global_env **)
+
+let normalize_assoc_global_env env =
+  { env_structs = env.env_structs; env_enums = env.env_enums; env_traits =
+    env.env_traits; env_impls =
+    (map (normalize_assoc_impl env) env.env_impls); env_local_bounds =
+    (map (normalize_assoc_trait_bound env) env.env_local_bounds); env_fns =
+    (map (normalize_assoc_fn env) env.env_fns) }
+
 type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
@@ -15907,6 +16005,70 @@ type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_body : raw_expr;
                     raw_fn_type_params : Big_int_Z.big_int;
                     raw_fn_bounds : trait_bound list }
+
+(** val normalize_assoc_raw_expr : global_env -> raw_expr -> raw_expr **)
+
+let rec normalize_assoc_raw_expr env = function
+| RawLet (m, x, t, e1, e2) ->
+  RawLet (m, x, (normalize_assoc_ty env t),
+    (normalize_assoc_raw_expr env e1), (normalize_assoc_raw_expr env e2))
+| RawLetInfer (m, x, e1, e2) ->
+  RawLetInfer (m, x, (normalize_assoc_raw_expr env e1),
+    (normalize_assoc_raw_expr env e2))
+| RawCall (f, args) -> RawCall (f, (map (normalize_assoc_raw_expr env) args))
+| RawCallGeneric (f, type_args, args) ->
+  RawCallGeneric (f, (map (normalize_assoc_ty env) type_args),
+    (map (normalize_assoc_raw_expr env) args))
+| RawCallExpr (callee, args) ->
+  RawCallExpr ((normalize_assoc_raw_expr env callee),
+    (map (normalize_assoc_raw_expr env) args))
+| RawStruct (name, lts, type_args, fields) ->
+  RawStruct (name, lts, (map (normalize_assoc_ty env) type_args),
+    (map (fun field -> ((fst field),
+      (normalize_assoc_raw_expr env (snd field)))) fields))
+| RawEnum (enum_name0, variant_name, lts, variant_lts, type_args, payloads) ->
+  RawEnum (enum_name0, variant_name, lts, variant_lts,
+    (map (normalize_assoc_ty env) type_args),
+    (map (normalize_assoc_raw_expr env) payloads))
+| RawMatch (scrut, branches) ->
+  RawMatch ((normalize_assoc_raw_expr env scrut),
+    (map (fun branch ->
+      let (y, body) = branch in (y, (normalize_assoc_raw_expr env body)))
+      branches))
+| RawReplace (p, e1) -> RawReplace (p, (normalize_assoc_raw_expr env e1))
+| RawAssign (p, e1) -> RawAssign (p, (normalize_assoc_raw_expr env e1))
+| RawDeref e1 -> RawDeref (normalize_assoc_raw_expr env e1)
+| RawDrop e1 -> RawDrop (normalize_assoc_raw_expr env e1)
+| RawIf (e1, e2, e3) ->
+  RawIf ((normalize_assoc_raw_expr env e1),
+    (normalize_assoc_raw_expr env e2), (normalize_assoc_raw_expr env e3))
+| RawClosure (captures, params, ret, body) ->
+  RawClosure (captures, (map (normalize_assoc_param env) params),
+    (normalize_assoc_ty env ret), (normalize_assoc_raw_expr env body))
+| RawLetRec (captures, rec_fns, body) ->
+  RawLetRec (captures, (map (normalize_assoc_raw_rec_fn env) rec_fns),
+    (normalize_assoc_raw_expr env body))
+| RawCore ecore -> RawCore (normalize_assoc_expr env ecore)
+| x -> x
+
+(** val normalize_assoc_raw_rec_fn :
+    global_env -> raw_rec_fn -> raw_rec_fn **)
+
+and normalize_assoc_raw_rec_fn env = function
+| MkRawRecFn (name, params, ret, body) ->
+  MkRawRecFn (name, (map (normalize_assoc_param env) params),
+    (normalize_assoc_ty env ret), (normalize_assoc_raw_expr env body))
+
+(** val normalize_assoc_raw_fn : global_env -> raw_fn_def -> raw_fn_def **)
+
+let normalize_assoc_raw_fn env f =
+  { raw_fn_name = f.raw_fn_name; raw_fn_lifetimes = f.raw_fn_lifetimes;
+    raw_fn_outlives = f.raw_fn_outlives; raw_fn_params =
+    (map (normalize_assoc_param env) f.raw_fn_params); raw_fn_ret =
+    (normalize_assoc_ty env f.raw_fn_ret); raw_fn_body =
+    (normalize_assoc_raw_expr env f.raw_fn_body); raw_fn_type_params =
+    f.raw_fn_type_params; raw_fn_bounds =
+    (map (normalize_assoc_trait_bound env) f.raw_fn_bounds) }
 
 (** val fn_stub_of_raw : raw_fn_def -> fn_def **)
 

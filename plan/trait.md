@@ -49,8 +49,8 @@ Completed:
   a variable whose type is known from the raw-lowering value context, currently
   function parameters. Generic trait arguments require the explicit `<Ty as Trait<...>>`
   UFCS spelling.
-- Concrete associated type projections are normalized by an extracted Rocq helper
-  in converted env/raw/core types when a unique impl defines the associated
+- Concrete associated type projections are normalized by extracted Rocq
+  env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize`. In trait and impl items, `Self::Assoc` is accepted as
   shorthand for the current trait projection, including current trait type
@@ -61,10 +61,9 @@ Key temporary limitations:
 - Method-local lifetime generics are intentionally deferred beyond Roadmap 1-3;
   trait and impl method lifetime generics are rejected by regression tests for
   this phase.
-- Associated projection normalization still runs as a conversion pass, but the
-  normalization algorithm itself is now extracted from Rocq; wiring it into
-  Rocq compatibility and proving the corresponding soundness rule remains
-  pending.
+- Associated projection normalization still runs as a pre-check conversion pass,
+  but the traversal and algorithm are extracted from Rocq. Env-aware
+  compatibility and its soundness rule remain pending.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -82,8 +81,9 @@ Key temporary limitations:
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.
-   - Use the extracted Rocq normalization helper as the compatibility/checker
-     authority instead of relying on the conversion pass.
+   - Replace the remaining pre-check conversion pass with env-aware Rocq
+     compatibility so associated projection equality is checked at the typing
+     rule boundary.
    - Add a Prop-level rule or equivalence for concrete associated type
      projections and prove checker soundness for it.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local

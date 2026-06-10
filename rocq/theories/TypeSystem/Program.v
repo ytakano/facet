@@ -1167,3 +1167,99 @@ Fixpoint normalize_assoc_ty_fuel
 
 Definition normalize_assoc_ty (env : global_env) (T : Ty) : Ty :=
   normalize_assoc_ty_fuel 1000 env T.
+
+Definition normalize_assoc_param (env : global_env) (p : param) : param :=
+  {| param_mutability := param_mutability p;
+     param_name := param_name p;
+     param_ty := normalize_assoc_ty env (param_ty p) |}.
+
+Definition normalize_assoc_trait_ref
+    (env : global_env) (tr : trait_ref) : trait_ref :=
+  {| trait_ref_name := trait_ref_name tr;
+     trait_ref_args := map (normalize_assoc_ty env) (trait_ref_args tr) |}.
+
+Definition normalize_assoc_trait_bound
+    (env : global_env) (b : trait_bound) : trait_bound :=
+  {| bound_type_index := bound_type_index b;
+     bound_traits := map (normalize_assoc_trait_ref env) (bound_traits b) |}.
+
+Fixpoint normalize_assoc_expr (env : global_env) (e : expr) : expr :=
+  match e with
+  | EUnit => EUnit
+  | ELit l => ELit l
+  | EVar x => EVar x
+  | EFn f => EFn f
+  | EPlace p => EPlace p
+  | ELet m x T e1 e2 =>
+      ELet m x (normalize_assoc_ty env T)
+        (normalize_assoc_expr env e1) (normalize_assoc_expr env e2)
+  | ELetInfer m x e1 e2 =>
+      ELetInfer m x (normalize_assoc_expr env e1)
+        (normalize_assoc_expr env e2)
+  | EMakeClosure f captures => EMakeClosure f captures
+  | ECall f args => ECall f (map (normalize_assoc_expr env) args)
+  | ECallGeneric f type_args args =>
+      ECallGeneric f (map (normalize_assoc_ty env) type_args)
+        (map (normalize_assoc_expr env) args)
+  | ECallExpr callee args =>
+      ECallExpr (normalize_assoc_expr env callee)
+        (map (normalize_assoc_expr env) args)
+  | ECallExprGeneric callee type_args args =>
+      ECallExprGeneric (normalize_assoc_expr env callee)
+        (map (normalize_assoc_ty env) type_args)
+        (map (normalize_assoc_expr env) args)
+  | EStruct name lts type_args fields =>
+      EStruct name lts (map (normalize_assoc_ty env) type_args)
+        (map (fun field =>
+          (fst field, normalize_assoc_expr env (snd field))) fields)
+  | EEnum enum_name variant_name lts variant_lts type_args payloads =>
+      EEnum enum_name variant_name lts variant_lts
+        (map (normalize_assoc_ty env) type_args)
+        (map (normalize_assoc_expr env) payloads)
+  | EMatch scrut branches =>
+      EMatch (normalize_assoc_expr env scrut)
+        (map (fun branch =>
+          let '(name, binders, body) := branch in
+          (name, binders, normalize_assoc_expr env body)) branches)
+  | EReplace p e1 => EReplace p (normalize_assoc_expr env e1)
+  | EAssign p e1 => EAssign p (normalize_assoc_expr env e1)
+  | EBorrow rk p => EBorrow rk p
+  | EDeref e1 => EDeref (normalize_assoc_expr env e1)
+  | EDrop e1 => EDrop (normalize_assoc_expr env e1)
+  | EIf e1 e2 e3 =>
+      EIf (normalize_assoc_expr env e1)
+        (normalize_assoc_expr env e2) (normalize_assoc_expr env e3)
+  end.
+
+Definition normalize_assoc_fn (env : global_env) (f : fn_def) : fn_def :=
+  {| fn_name := fn_name f;
+     fn_lifetimes := fn_lifetimes f;
+     fn_outlives := fn_outlives f;
+     fn_captures := map (normalize_assoc_param env) (fn_captures f);
+     fn_params := map (normalize_assoc_param env) (fn_params f);
+     fn_ret := normalize_assoc_ty env (fn_ret f);
+     fn_body := normalize_assoc_expr env (fn_body f);
+     fn_type_params := fn_type_params f;
+     fn_bounds := map (normalize_assoc_trait_bound env) (fn_bounds f) |}.
+
+Definition normalize_assoc_impl_assoc
+    (env : global_env) (a : impl_assoc_def) : impl_assoc_def :=
+  {| impl_assoc_name := impl_assoc_name a;
+     impl_assoc_ty := normalize_assoc_ty env (impl_assoc_ty a) |}.
+
+Definition normalize_assoc_impl (env : global_env) (i : impl_def) : impl_def :=
+  {| impl_lifetimes := impl_lifetimes i;
+     impl_type_params := impl_type_params i;
+     impl_trait_name := impl_trait_name i;
+     impl_trait_args := map (normalize_assoc_ty env) (impl_trait_args i);
+     impl_for_ty := normalize_assoc_ty env (impl_for_ty i);
+     impl_assoc_types := map (normalize_assoc_impl_assoc env) (impl_assoc_types i);
+     impl_methods := map (normalize_assoc_fn env) (impl_methods i) |}.
+
+Definition normalize_assoc_global_env (env : global_env) : global_env :=
+  {| env_structs := env_structs env;
+     env_enums := env_enums env;
+     env_traits := env_traits env;
+     env_impls := map (normalize_assoc_impl env) (env_impls env);
+     env_local_bounds := map (normalize_assoc_trait_bound env) (env_local_bounds env);
+     env_fns := map (normalize_assoc_fn env) (env_fns env) |}.

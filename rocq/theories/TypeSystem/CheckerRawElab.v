@@ -102,6 +102,77 @@ Record raw_fn_def : Type := MkRawFnDef {
   raw_fn_bounds    : list trait_bound
 }.
 
+Fixpoint normalize_assoc_raw_expr
+    (env : global_env) (e : raw_expr) : raw_expr :=
+  match e with
+  | RawUnit => RawUnit
+  | RawLit l => RawLit l
+  | RawVar x => RawVar x
+  | RawFn f => RawFn f
+  | RawPlace p => RawPlace p
+  | RawLet m x T e1 e2 =>
+      RawLet m x (normalize_assoc_ty env T)
+        (normalize_assoc_raw_expr env e1)
+        (normalize_assoc_raw_expr env e2)
+  | RawLetInfer m x e1 e2 =>
+      RawLetInfer m x (normalize_assoc_raw_expr env e1)
+        (normalize_assoc_raw_expr env e2)
+  | RawCall f args => RawCall f (map (normalize_assoc_raw_expr env) args)
+  | RawCallGeneric f type_args args =>
+      RawCallGeneric f (map (normalize_assoc_ty env) type_args)
+        (map (normalize_assoc_raw_expr env) args)
+  | RawCallExpr callee args =>
+      RawCallExpr (normalize_assoc_raw_expr env callee)
+        (map (normalize_assoc_raw_expr env) args)
+  | RawStruct name lts type_args fields =>
+      RawStruct name lts (map (normalize_assoc_ty env) type_args)
+        (map (fun field =>
+          (fst field, normalize_assoc_raw_expr env (snd field))) fields)
+  | RawEnum enum_name variant_name lts variant_lts type_args payloads =>
+      RawEnum enum_name variant_name lts variant_lts
+        (map (normalize_assoc_ty env) type_args)
+        (map (normalize_assoc_raw_expr env) payloads)
+  | RawMatch scrut branches =>
+      RawMatch (normalize_assoc_raw_expr env scrut)
+        (map (fun branch =>
+          let '(name, binders, body) := branch in
+          (name, binders, normalize_assoc_raw_expr env body)) branches)
+  | RawReplace p e1 => RawReplace p (normalize_assoc_raw_expr env e1)
+  | RawAssign p e1 => RawAssign p (normalize_assoc_raw_expr env e1)
+  | RawBorrow rk p => RawBorrow rk p
+  | RawDeref e1 => RawDeref (normalize_assoc_raw_expr env e1)
+  | RawDrop e1 => RawDrop (normalize_assoc_raw_expr env e1)
+  | RawIf e1 e2 e3 =>
+      RawIf (normalize_assoc_raw_expr env e1)
+        (normalize_assoc_raw_expr env e2)
+        (normalize_assoc_raw_expr env e3)
+  | RawClosure captures params ret body =>
+      RawClosure captures (map (normalize_assoc_param env) params)
+        (normalize_assoc_ty env ret) (normalize_assoc_raw_expr env body)
+  | RawLetRec captures rec_fns body =>
+      RawLetRec captures (map (normalize_assoc_raw_rec_fn env) rec_fns)
+        (normalize_assoc_raw_expr env body)
+  | RawCore ecore => RawCore (normalize_assoc_expr env ecore)
+  end
+with normalize_assoc_raw_rec_fn
+    (env : global_env) (rf : raw_rec_fn) : raw_rec_fn :=
+  match rf with
+  | MkRawRecFn name params ret body =>
+      MkRawRecFn name (map (normalize_assoc_param env) params)
+        (normalize_assoc_ty env ret) (normalize_assoc_raw_expr env body)
+  end.
+
+Definition normalize_assoc_raw_fn
+    (env : global_env) (f : raw_fn_def) : raw_fn_def :=
+  {| raw_fn_name := raw_fn_name f;
+     raw_fn_lifetimes := raw_fn_lifetimes f;
+     raw_fn_outlives := raw_fn_outlives f;
+     raw_fn_params := map (normalize_assoc_param env) (raw_fn_params f);
+     raw_fn_ret := normalize_assoc_ty env (raw_fn_ret f);
+     raw_fn_body := normalize_assoc_raw_expr env (raw_fn_body f);
+     raw_fn_type_params := raw_fn_type_params f;
+     raw_fn_bounds := map (normalize_assoc_trait_bound env) (raw_fn_bounds f) |}.
+
 Definition fn_stub_of_raw (f : raw_fn_def) : fn_def :=
   MkFnDef (raw_fn_name f) (raw_fn_lifetimes f) (raw_fn_outlives f)
     [] (raw_fn_params f) (raw_fn_ret f) EUnit

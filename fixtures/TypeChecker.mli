@@ -435,6 +435,23 @@ val normalize_assoc_ty_fuel : Big_int_Z.big_int -> global_env -> ty -> ty
 
 val normalize_assoc_ty : global_env -> ty -> ty
 
+val normalize_assoc_param : global_env -> param -> param
+
+val normalize_assoc_trait_ref : global_env -> trait_ref -> trait_ref
+
+val normalize_assoc_trait_bound : global_env -> trait_bound -> trait_bound
+
+val normalize_assoc_expr : global_env -> expr -> expr
+
+val normalize_assoc_fn : global_env -> fn_def -> fn_def
+
+val normalize_assoc_impl_assoc :
+  global_env -> impl_assoc_def -> impl_assoc_def
+
+val normalize_assoc_impl : global_env -> impl_def -> impl_def
+
+val normalize_assoc_global_env : global_env -> global_env
+
 type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
@@ -1483,6 +1500,12 @@ type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_body : raw_expr;
                     raw_fn_type_params : Big_int_Z.big_int;
                     raw_fn_bounds : trait_bound list }
+
+val normalize_assoc_raw_expr : global_env -> raw_expr -> raw_expr
+
+val normalize_assoc_raw_rec_fn : global_env -> raw_rec_fn -> raw_rec_fn
+
+val normalize_assoc_raw_fn : global_env -> raw_fn_def -> raw_fn_def
 
 val fn_stub_of_raw : raw_fn_def -> fn_def
 

@@ -64,8 +64,8 @@ Completed:
   The generated grammar also documents explicit UFCS method-local type
   arguments in the prefix shape. Accepted variable and literal receiver
   calls, generic-trait explicit UFCS with method-local type arguments and
-  accepted/rejected method-local bounds, plus excess method type arguments
-  are covered by regression
+  accepted/rejected method-local bounds, plus ordinary and generic-trait
+  explicit UFCS excess method type arguments are covered by regression
   tests, and dot syntax, including type-argument dot calls, is rejected
   for this phase.
   Concrete non-generic impl methods no longer keep an unused hidden `Self` type

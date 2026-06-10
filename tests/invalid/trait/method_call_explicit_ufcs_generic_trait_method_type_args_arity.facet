@@ -1,0 +1,13 @@
+trait Project<T> {
+  fn project<U>(self: Self, value: unrestricted U) -> unrestricted U;
+}
+
+impl Project<unrestricted isize> for unrestricted isize {
+  fn project<U>(self: Self, value: unrestricted U) -> unrestricted U {
+    value
+  }
+}
+
+fn main(x: unrestricted isize) -> unrestricted bool {
+  (<unrestricted isize as Project<unrestricted isize>>::project<unrestricted bool, unrestricted isize> x true)
+}

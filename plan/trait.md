@@ -27,13 +27,18 @@ Completed:
   environment, checked for well-formed types, and validated for duplicate,
   missing, extra, and structurally mismatched method signatures against the
   selected trait.
+- Explicit parenthesized UFCS method calls are accepted in the ordinary call
+  shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
+  lowered to hidden generic functions and checked through the extracted direct
+  call path.
 
 Key temporary limitations:
 
 - Impl method signature matching is structural in the shared `Self` layout;
   substitution of concrete trait arguments for generic impls is still pending.
-- Impl method bodies are stored but not type-checked as trait methods and are
-  not callable through UFCS yet.
+- Only explicitly called impl methods are hidden-function elaborated and
+  type-checked; uncalled impl method bodies remain stored but not checked as
+  standalone functions.
 - Concrete associated type projection normalization through impl definitions is
   pending.
 - `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
@@ -46,18 +51,17 @@ Key temporary limitations:
      lifetimes, and type parameters.
    - Validate receiver type, parameter arity/types, return type, and method
      lifetime elision after instantiation.
-   - Keep method calls unresolved until UFCS resolution is added.
+   - Keep substitution-aware generic receiver resolution pending; explicit UFCS
+     targets are already lowered through hidden direct calls.
 
-2. Add parenthesized UFCS trait method calls.
-   - Match Facet's ordinary function call shape: `(callee arg...)`.
-   - Use qualified method callees: `(Trait::method receiver args...)` and
-     `(<Ty as Trait>::method receiver args...)`.
-   - Treat the receiver as the first ordinary argument; do not introduce a dot
-     method-call form in this phase.
-   - Resolve calls through a unique impl or local bound in Rocq, then elaborate
-     to an ordinary resolved call or an explicit resolved core trait-call form.
-   - Reject missing impls, ambiguous impls, missing methods, wrong arity, and
-     receiver usage violations.
+2. Harden UFCS trait method calls.
+   - Add the shorter `(Trait::method receiver args...)` form after receiver
+     type-directed resolution exists in Rocq.
+   - Improve missing impl and missing method diagnostics; current failures are
+     rejected through hidden direct-call lookup.
+   - Support more safety-gate shapes for receiver expressions, including local
+     struct receivers, without weakening the end-to-end checker.
+   - Keep dot method-call syntax out of this phase.
 
 3. Normalize associated type projections.
    - Normalize concrete projections through the selected impl definition.

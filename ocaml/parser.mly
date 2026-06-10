@@ -405,6 +405,9 @@ atom_expr:
     { NBorrow (RUnique, p) }
   | LPAREN; STAR; e = expr; RPAREN
     { NDeref e }
+  | LPAREN; LANGLE; self_ty = ty; KW_AS; trait = trait_ref; RANGLE;
+    DCOLON; method_name = ID; args = list(atom_expr); RPAREN
+    { NMethodCall (self_ty, trait, method_name, args) }
   | LPAREN; f = path_name; type_args = opt_type_args; args = list(atom_expr); RPAREN
     { NCall (f, type_args, args) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;

@@ -202,6 +202,12 @@ let rec map_named_expr f fn_names ty_params value_scope = function
     in
     NCall (path', List.map (map_named_type_arg f ty_params) args,
       List.map (map_named_expr f fn_names ty_params value_scope) exprs)
+  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+    NMethodCall
+      (map_named_ty f ty_params self_ty,
+       map_named_trait_ref f ty_params trait_ref,
+       method_name,
+       List.map (map_named_expr f fn_names ty_params value_scope) args)
   | NStruct (path, args, fields) ->
     NStruct ([f path], List.map (map_named_type_arg f ty_params) args,
       List.map (fun (field, e) ->
@@ -472,6 +478,10 @@ let rec validate_expr_paths known ty_params value_scope = function
     | _ -> require_known "function" known.known_fn_names name
     end;
     List.iter (validate_type_arg_paths known ty_params) type_args;
+    List.iter (validate_expr_paths known ty_params value_scope) args
+  | NMethodCall (self_ty, trait_ref, _, args) ->
+    validate_ty_paths known ty_params self_ty;
+    validate_trait_ref_paths known ty_params trait_ref;
     List.iter (validate_expr_paths known ty_params value_scope) args
   | NStruct (path, type_args, fields) ->
     let name = string_of_path path in
@@ -865,6 +875,67 @@ let lower_call_type_args ty_scope args =
   then failwith "explicit generic direct calls do not accept lifetime arguments"
   else tys
 
+let mangle_big_int n = Big_int_Z.string_of_big_int n
+
+let mangle_usage = function
+  | ULinear -> "linear"
+  | UAffine -> "affine"
+  | UUnrestricted -> "unrestricted"
+
+let mangle_lifetime = function
+  | LVar n -> "v" ^ mangle_big_int n
+  | LBound n -> "b" ^ mangle_big_int n
+  | LStatic -> "static"
+
+let rec mangle_ty (MkTy (u, c)) =
+  mangle_usage u ^ "_" ^ mangle_ty_core c
+
+and mangle_ty_core = function
+  | TUnits -> "unit"
+  | TIntegers -> "isize"
+  | TFloats -> "float"
+  | TBooleans -> "bool"
+  | TNamed name -> "named_" ^ name
+  | TParam n -> "param_" ^ mangle_big_int n
+  | TStruct (name, lts, args) ->
+    "struct_" ^ name ^ "_" ^ String.concat "_"
+      (List.map mangle_lifetime lts @ List.map mangle_ty args)
+  | TEnum (name, lts, args) ->
+    "enum_" ^ name ^ "_" ^ String.concat "_"
+      (List.map mangle_lifetime lts @ List.map mangle_ty args)
+  | TFn (params, ret) ->
+    "fn_" ^ String.concat "_" (List.map mangle_ty params) ^ "_ret_" ^ mangle_ty ret
+  | TClosure (lt, params, ret) ->
+    "closure_" ^ mangle_lifetime lt ^ "_" ^
+      String.concat "_" (List.map mangle_ty params) ^ "_ret_" ^ mangle_ty ret
+  | TForall (n, _, body) ->
+    "forall_" ^ mangle_big_int n ^ "_" ^ mangle_ty body
+  | TTypeForall (n, _, body) ->
+    "typeforall_" ^ mangle_big_int n ^ "_" ^ mangle_ty body
+  | TAssoc (self_ty, trait_name, trait_args, assoc_name) ->
+    "assoc_" ^ mangle_ty self_ty ^ "_as_" ^ trait_name ^ "_" ^
+      String.concat "_" (List.map mangle_ty trait_args) ^ "_" ^ assoc_name
+  | TRef (lt, RShared, inner) ->
+    "ref_" ^ mangle_lifetime lt ^ "_" ^ mangle_ty inner
+  | TRef (lt, RUnique, inner) ->
+    "mutref_" ^ mangle_lifetime lt ^ "_" ^ mangle_ty inner
+
+let synthetic_impl_method_name trait_name trait_args self_ty method_name =
+  "__facet_impl_" ^ trait_name ^ "_" ^
+  String.concat "_" (List.map mangle_ty trait_args) ^
+  "_for_" ^ mangle_ty self_ty ^ "_" ^ method_name
+
+let lower_method_call_target ty_scope self_ty trait_ref method_name =
+  let self_ty' = lower_named_ty ty_scope self_ty in
+  let (trait_lts, trait_args) = split_expr_type_args ty_scope trait_ref.ntr_args in
+  if trait_lts <> []
+  then failwith ("trait method target cannot take lifetime arguments: " ^
+    string_of_path trait_ref.ntr_name)
+  else
+    let f = synthetic_impl_method_name
+      (string_of_path trait_ref.ntr_name) trait_args self_ty' method_name in
+    (f, self_ty')
+
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
@@ -893,6 +964,10 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
       failwith "explicit type arguments are only supported for direct function calls"
     else
       ECallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
+  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+    let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
+    ECallGeneric (make_ident f 0, [self_ty'],
+      List.map (convert fn_names ty_scope scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
@@ -1001,6 +1076,10 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
       failwith "explicit type arguments are only supported for direct function calls"
     else
       RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
+  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+    let (f, self_ty') = lower_method_call_target ty_scope self_ty trait_ref method_name in
+    RawCallGeneric (make_ident f 0, [self_ty'],
+      List.map (convert_raw fn_names ty_scope scope rec_scope) args)
   | NStruct (name_path, args, fields) ->
     let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
@@ -1245,6 +1324,104 @@ let convert_impl struct_names enum_names fn_names i =
     impl_assoc_types = List.filter_map (convert_impl_assoc_item item_ty_scope) i.ni_items;
     impl_methods = List.filter_map
       (convert_impl_method_item fn_names item_ty_scope (List.length lts)) i.ni_items }
+
+let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetimes
+    trait_name trait_args self_ty = function
+  | NIIMethodDef m ->
+    let synthetic_name =
+      synthetic_impl_method_name trait_name trait_args self_ty m.nmd_name
+    in
+    if not (List.mem synthetic_name needed_names) then None else
+    let (scope, params, next_lifetime, input_lts) =
+      List.fold_left
+        (fun (sc, acc, next_lt, input_lts) p ->
+          let (sc', d) = add_binding sc p.nsp_name in
+          let (param_ty, next_lt', input_lts') =
+            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+          in
+          let param =
+            { param_mutability = p.nsp_mutability;
+              param_name       = make_ident p.nsp_name d;
+              param_ty         = param_ty }
+          in
+          (sc', acc @ [param], next_lt', input_lts'))
+        ([], [], initial_lifetimes, []) m.nmd_params
+    in
+    Some { raw_fn_name = make_ident synthetic_name 0;
+           raw_fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
+           raw_fn_outlives = [];
+           raw_fn_params = params;
+           raw_fn_ret = lower_surface_output_ty ty_scope input_lts m.nmd_ret;
+           raw_fn_body = convert_raw fn_names ty_scope scope [] m.nmd_body;
+           raw_fn_type_params =
+             Big_int_Z.big_int_of_int (List.length ty_scope.type_params);
+           raw_fn_bounds = [] }
+  | NIIAssocTypeDef _ -> None
+
+let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i =
+  let (lts, tys) = split_generics i.ni_generics in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
+  if trait_lts <> []
+  then failwith ("trait impl target cannot take lifetime arguments: " ^ string_of_path i.ni_trait_name);
+  let self_ty = lower_named_ty ty_scope i.ni_for_ty in
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
+  List.filter_map
+    (convert_impl_method_raw_item fn_names needed_names item_ty_scope (List.length lts)
+       (string_of_path i.ni_trait_name) trait_args self_ty)
+    i.ni_items
+
+let rec method_call_names_in_expr ty_scope = function
+  | NUnit | NLit _ | NVar _ | NPlace _ | NBorrow _ -> []
+  | NLet (_, _, _, e1, e2) ->
+    method_call_names_in_expr ty_scope e1 @ method_call_names_in_expr ty_scope e2
+  | NCall (_, _, args) ->
+    List.concat_map (method_call_names_in_expr ty_scope) args
+  | NMethodCall (self_ty, trait_ref, method_name, args) ->
+    let (f, _) = lower_method_call_target ty_scope self_ty trait_ref method_name in
+    f :: List.concat_map (method_call_names_in_expr ty_scope) args
+  | NStruct (_, _, fields) ->
+    List.concat_map (fun (_, e) -> method_call_names_in_expr ty_scope e) fields
+  | NEnum (_, _, _, _, payloads) ->
+    List.concat_map (method_call_names_in_expr ty_scope) payloads
+  | NMatch (scrut, branches) ->
+    method_call_names_in_expr ty_scope scrut @
+    List.concat_map (fun (_, _, body) -> method_call_names_in_expr ty_scope body) branches
+  | NReplace (_, e) | NAssign (_, e) | NDeref e | NDrop e ->
+    method_call_names_in_expr ty_scope e
+  | NIf (cond, then_e, else_e) ->
+    method_call_names_in_expr ty_scope cond @
+    method_call_names_in_expr ty_scope then_e @
+    method_call_names_in_expr ty_scope else_e
+  | NClosure (_, _, _, body) ->
+    method_call_names_in_expr ty_scope body
+  | NLetRec (_, rec_fns, body) ->
+    List.concat_map
+      (fun rf -> method_call_names_in_expr ty_scope rf.nrf_body)
+      rec_fns @ method_call_names_in_expr ty_scope body
+
+let method_call_names_in_fn struct_names enum_names f =
+  let (_lts, tys) = split_generics f.nf_generics in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  method_call_names_in_expr ty_scope f.nf_body
+
+let method_call_names_in_impl_method struct_names enum_names i item =
+  match item with
+  | NIIMethodDef m ->
+    let (_lts, tys) = split_generics i.ni_generics in
+    let ty_scope = { type_params = "Self" :: tys; struct_names; enum_names } in
+    method_call_names_in_expr ty_scope m.nmd_body
+  | NIIAssocTypeDef _ -> []
+
+let method_call_names_in_item struct_names enum_names = function
+  | NIFn f -> method_call_names_in_fn struct_names enum_names f
+  | NIImpl i ->
+    List.concat_map (method_call_names_in_impl_method struct_names enum_names i) i.ni_items
+  | _ -> []
+
+let needed_impl_method_names struct_names enum_names items =
+  List.sort_uniq String.compare
+    (List.concat_map (method_call_names_in_item struct_names enum_names) items)
 
 let duplicate_name names =
   let rec go seen = function
@@ -1651,7 +1828,13 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
+  let needed_method_names = needed_impl_method_names struct_names enum_names items in
+  let impl_method_raw_fns =
+    List.concat_map
+      (convert_impl_method_raw_fns struct_names enum_names fn_names needed_method_names)
+      impls in
   let raw_fns =
+    impl_method_raw_fns @
     List.map (convert_raw_fn_def_with_names struct_names enum_names fn_names) fns in
   let env =
     match elaborate_raw_global_env base_env raw_fns with

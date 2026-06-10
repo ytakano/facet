@@ -1,0 +1,7 @@
+trait Runner {
+  fn run(self: Self) -> ();
+}
+
+fn main() -> unrestricted () {
+  (<unrestricted bool as Runner>::run true)
+}

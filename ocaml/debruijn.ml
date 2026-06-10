@@ -802,6 +802,40 @@ let rec lower_output_ty ty_scope input_lts (NTy (u, c)) =
   | _ ->
     MkTy (u, lower_named_ty_core ty_scope c)
 
+let rec lower_surface_input_ty ty_scope next input_lts (NSTy (u_opt, c)) =
+  let u = Option.value u_opt ~default:UUnrestricted in
+  match c with
+  | NSTRef (lt_opt, rk, inner) ->
+    let (inner_ty, next', input_lts') =
+      lower_surface_input_ty ty_scope next input_lts inner
+    in
+    let (lt, next'') =
+      match lt_opt with
+      | Some lt -> (lt, next')
+      | None -> (LVar (Big_int_Z.big_int_of_int next'), next' + 1)
+    in
+    (MkTy (u, TRef (lt, rk, inner_ty)), next'', lifetime_add lt input_lts')
+  | _ ->
+    (MkTy (u, lower_surface_ty_core ty_scope c), next, input_lts)
+
+let rec lower_surface_output_ty ty_scope input_lts (NSTy (u_opt, c)) =
+  let u = Option.value u_opt ~default:UUnrestricted in
+  match c with
+  | NSTRef (lt_opt, rk, inner) ->
+    let inner_ty = lower_surface_output_ty ty_scope input_lts inner in
+    let lt =
+      match lt_opt with
+      | Some lt -> lt
+      | None ->
+        match input_lts with
+        | [only] -> only
+        | [] -> failwith "cannot elide output lifetime without an input lifetime"
+        | _ -> failwith "cannot elide output lifetime with multiple input lifetimes"
+    in
+    MkTy (u, TRef (lt, rk, inner_ty))
+  | _ ->
+    MkTy (u, lower_surface_ty_core ty_scope c)
+
 let split_generics generics =
   let rec go lts tys = function
     | [] -> (List.rev lts, List.rev tys)
@@ -1129,6 +1163,30 @@ let convert_trait_assoc_item = function
   | NTIAssocTypeDecl name -> Some { trait_assoc_name = name; trait_assoc_bounds = [] }
   | NTIMethodSig _ -> None
 
+let convert_trait_method_item ty_scope = function
+  | NTIMethodSig m ->
+    let (params, next_lifetime, input_lts) =
+      List.fold_left
+        (fun (acc, next_lt, input_lts) p ->
+          let (param_ty, next_lt', input_lts') =
+            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+          in
+          let param =
+            { param_mutability = p.nsp_mutability;
+              param_name       = make_ident p.nsp_name 0;
+              param_ty         = param_ty }
+          in
+          (acc @ [param], next_lt', input_lts'))
+        ([], 0, []) m.nms_params
+    in
+    Some { trait_method_name = m.nms_name;
+           trait_method_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
+           trait_method_type_params = Big_int_Z.zero_big_int;
+           trait_method_params = params;
+           trait_method_ret = lower_surface_output_ty ty_scope input_lts m.nms_ret;
+           trait_method_bounds = [] }
+  | NTIAssocTypeDecl _ -> None
+
 let convert_impl_assoc_item ty_scope = function
   | NIIAssocTypeDef (name, ty) ->
     Some { impl_assoc_name = name; impl_assoc_ty = lower_surface_ty ty_scope ty }
@@ -1137,11 +1195,12 @@ let convert_impl_assoc_item ty_scope = function
 let convert_trait struct_names enum_names t =
   let (_lts, tys) = split_generics t.nt_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
   { trait_name = t.nt_name;
     trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
     trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds;
     trait_assoc_types = List.filter_map convert_trait_assoc_item t.nt_items;
-    trait_methods = [] }
+    trait_methods = List.filter_map (convert_trait_method_item item_ty_scope) t.nt_items }
 
 let convert_impl struct_names enum_names i =
   let (lts, tys) = split_generics i.ni_generics in
@@ -1398,7 +1457,24 @@ let validate_env env =
       match duplicate_name (List.map (fun a -> a.trait_assoc_name) t.trait_assoc_types) with
       | Some name -> Some ("duplicate associated type in trait " ^ t.trait_name ^ ": " ^ name)
       | None ->
-        first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)
+        match duplicate_name (List.map (fun m -> m.trait_method_name) t.trait_methods) with
+        | Some name -> Some ("duplicate method in trait " ^ t.trait_name ^ ": " ^ name)
+        | None ->
+          let validate_method m =
+            let ty_params =
+              Big_int_Z.succ_big_int
+                (Big_int_Z.add_big_int t.trait_type_params m.trait_method_type_params)
+            in
+            first_some
+              (List.map
+                 (fun p -> type_error ty_params m.trait_method_lifetimes zero p.param_ty)
+                 m.trait_method_params @
+               [type_error ty_params m.trait_method_lifetimes zero m.trait_method_ret] @
+               List.map (validate_bound ty_params m.trait_method_lifetimes) m.trait_method_bounds)
+          in
+          first_some
+            (List.map (validate_bound t.trait_type_params zero) t.trait_bounds @
+             List.map validate_method t.trait_methods)
     in
     let validate_impl i =
       match find_trait i.impl_trait_name with

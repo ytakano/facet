@@ -375,7 +375,7 @@ Definition trait_assoc_wf_b
 Definition trait_method_sig_wf_b
     (structs : list struct_def) (traits : list trait_def)
     (trait_ty_params : nat) (m : trait_method_sig) : bool :=
-  let ty_params := trait_ty_params + trait_method_type_params m in
+  let ty_params := S (trait_ty_params + trait_method_type_params m) in
   let lt_params := trait_method_lifetimes m in
   forallb (param_type_wf_b structs ty_params lt_params)
     (trait_method_params m) &&

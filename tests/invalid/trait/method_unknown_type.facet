@@ -1,0 +1,7 @@
+trait BadMethod {
+  fn make(self: &mut Self) -> MissingType;
+}
+
+fn main() -> unrestricted () {
+  ()
+}

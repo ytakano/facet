@@ -1,0 +1,8 @@
+trait Duplicated {
+  fn next(self: &mut Self) -> ();
+  fn next(self: &mut Self) -> ();
+}
+
+fn main() -> unrestricted () {
+  ()
+}

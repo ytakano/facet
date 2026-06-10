@@ -16,11 +16,11 @@ trait_def ::= opt_pub "trait" ID opt_generic_params opt_trait_bounds ";"
             | opt_pub "trait" ID opt_generic_params opt_trait_bounds "{" trait_item* "}"
 trait_item ::= "type" ID ";"
              | method_sig ";"
-method_sig ::= "fn" ID "(" surface_params ")" "->" surface_ty
+method_sig ::= "fn" ID opt_generic_params "(" surface_params ")" "->" surface_ty opt_trait_bounds
 impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
            | "impl" opt_generic_params path opt_type_args "for" ty "{" impl_item* "}"
 impl_item ::= "type" ID "=" surface_ty ";"
-            | "fn" ID "(" surface_params ")" "->" surface_ty "{" block "}"
+            | "fn" ID opt_generic_params "(" surface_params ")" "->" surface_ty opt_trait_bounds "{" block "}"
 use_def ::= "use" path opt_use_alias ";"
 opt_use_alias ::= "" | "as" ID
 mod_def ::= opt_pub "mod" ID "{" top_item* "}"

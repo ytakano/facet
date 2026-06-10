@@ -23,7 +23,9 @@ Completed:
   signature arity matching rejects non-generic impls for generic trait methods,
   and method-local bounds are matched structurally after trait-argument
   substitution. All impl method bodies are hidden-function elaborated and
-  checked through the extracted checker even when the method is not called.
+  checked through the extracted checker even when the method is not called;
+  the generated grammar documents method-local generics and bounds for trait
+  and impl methods.
 - Explicit UFCS method calls can pass method-local type arguments as
   `(<Ty as Trait>::method<Arg> receiver args...)`; lowering prepends `Self` to
   those method arguments before calling the hidden generic impl method.

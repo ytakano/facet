@@ -1,0 +1,13 @@
+trait Marker {}
+
+struct Counter {
+  value: unrestricted isize
+}
+
+impl Marker for unrestricted Counter {
+  type Item = isize;
+}
+
+fn main() -> unrestricted () {
+  ()
+}

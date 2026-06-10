@@ -1,0 +1,13 @@
+trait Iterator {
+  type Item;
+}
+
+struct Counter {
+  value: unrestricted isize
+}
+
+impl Iterator for unrestricted Counter {}
+
+fn main() -> unrestricted () {
+  ()
+}

@@ -18,6 +18,15 @@ Fixpoint string_no_dup_b (xs : list string) : bool :=
   | x :: rest => negb (string_mem_b x rest) && string_no_dup_b rest
   end.
 
+Fixpoint strings_all_in_b (xs ys : list string) : bool :=
+  match xs with
+  | [] => true
+  | x :: rest => string_mem_b x ys && strings_all_in_b rest ys
+  end.
+
+Definition string_set_eq_b (xs ys : list string) : bool :=
+  strings_all_in_b xs ys && strings_all_in_b ys xs.
+
 Fixpoint nat_mem_b (x : nat) (xs : list nat) : bool :=
   match xs with
   | [] => false
@@ -424,6 +433,8 @@ Definition impl_wf_b (env : global_env) (i : impl_def) : bool :=
       type_env_wf_b (env_structs env)
         (impl_type_params i) (impl_lifetimes i) 0 (impl_for_ty i) &&
       string_no_dup_b (impl_assoc_names (impl_assoc_types i)) &&
+      string_set_eq_b (impl_assoc_names (impl_assoc_types i))
+        (trait_assoc_names (trait_assoc_types t)) &&
       string_no_dup_b (fn_names (impl_methods i)) &&
       forallb (impl_assoc_wf_b (env_structs env)
         (impl_type_params i) (impl_lifetimes i)) (impl_assoc_types i) &&

@@ -1175,6 +1175,8 @@ let validate_env env =
       | [] -> None
       | x :: xs -> begin match x with Some _ -> x | None -> first_some xs end
     in
+    let all_in xs ys = List.for_all (fun x -> List.mem x ys) xs in
+    let same_string_set xs ys = all_in xs ys && all_in ys xs in
     let lifetime_error lt_params bound_depth = function
       | LStatic -> None
       | LVar i ->
@@ -1352,7 +1354,10 @@ let validate_env env =
            [outlives_error e.enum_lifetimes zero e.enum_outlives])
     in
     let validate_trait t =
-      first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)
+      match duplicate_name (List.map (fun a -> a.trait_assoc_name) t.trait_assoc_types) with
+      | Some name -> Some ("duplicate associated type in trait " ^ t.trait_name ^ ": " ^ name)
+      | None ->
+        first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)
     in
     let validate_impl i =
       match find_trait i.impl_trait_name with
@@ -1366,11 +1371,21 @@ let validate_env env =
             | None -> None
             | Some _ -> Some ("trait own bound not satisfied: " ^ i.impl_trait_name)
           in
+          let impl_assoc_names = List.map (fun a -> a.impl_assoc_name) i.impl_assoc_types in
+          let trait_assoc_names = List.map (fun a -> a.trait_assoc_name) trait_def.trait_assoc_types in
+          let assoc_error =
+            match duplicate_name impl_assoc_names with
+            | Some name -> Some ("duplicate associated type in impl " ^ i.impl_trait_name ^ ": " ^ name)
+            | None ->
+              if same_string_set impl_assoc_names trait_assoc_names then None
+              else Some ("impl associated types do not match trait: " ^ i.impl_trait_name)
+          in
           first_some
             (List.map
                (type_error i.impl_type_params i.impl_lifetimes zero)
                i.impl_trait_args @
              [type_error i.impl_type_params i.impl_lifetimes zero i.impl_for_ty;
+              assoc_error;
               own_bound_error])
     in
     let validate_fn f =

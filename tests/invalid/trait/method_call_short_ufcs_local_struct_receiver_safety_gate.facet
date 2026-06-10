@@ -1,0 +1,18 @@
+struct Job {
+  id: unrestricted isize
+}
+
+trait Runner {
+  fn run(self: Self) -> unrestricted isize;
+}
+
+impl Runner for unrestricted Job {
+  fn run(self: Self) -> unrestricted isize {
+    1
+  }
+}
+
+fn main() -> unrestricted isize {
+  let x: unrestricted Job = Job { id = 1 };
+  (Runner::run x)
+}

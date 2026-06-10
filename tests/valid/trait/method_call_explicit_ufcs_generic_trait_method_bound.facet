@@ -1,0 +1,19 @@
+trait Show {}
+
+impl Show for unrestricted bool;
+
+trait Project<T> {
+  fn project<U>(self: Self, value: unrestricted U) -> unrestricted U
+    where U: Show;
+}
+
+impl Project<unrestricted isize> for unrestricted isize {
+  fn project<U>(self: Self, value: unrestricted U) -> unrestricted U
+    where U: Show {
+    value
+  }
+}
+
+fn main(x: unrestricted isize) -> unrestricted bool {
+  (<unrestricted isize as Project<unrestricted isize>>::project<unrestricted bool> x true)
+}

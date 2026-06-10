@@ -2191,18 +2191,40 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
                  ty_eqb a.param_ty e.param_ty)
               actual expected
           in
-          let trait_method_type_subst =
-            MkTy (UUnrestricted, TParam zero) :: i.impl_trait_args
+          let hidden_method_type_params method_type_params =
+            let impl_type_params = Big_int_Z.int_of_big_int i.impl_type_params in
+            let method_type_params = Big_int_Z.int_of_big_int method_type_params in
+            List.init method_type_params (fun j ->
+              MkTy (UUnrestricted,
+                TParam (Big_int_Z.big_int_of_int (1 + impl_type_params + j))))
           in
-          let subst_trait_method_param p =
-            { p with param_ty = subst_type_params_ty trait_method_type_subst p.param_ty }
+          let trait_method_type_subst expected =
+            MkTy (UUnrestricted, TParam zero) ::
+            i.impl_trait_args @
+            hidden_method_type_params expected.trait_method_type_params
           in
-          let subst_trait_method_ref r =
+          let remap_trait_method_type_index idx =
+            let trait_type_params = Big_int_Z.int_of_big_int trait_def.trait_type_params in
+            let impl_type_params = Big_int_Z.int_of_big_int i.impl_type_params in
+            let idx_int = Big_int_Z.int_of_big_int idx in
+            let method_start = 1 + trait_type_params in
+            if idx_int < method_start then idx
+            else Big_int_Z.big_int_of_int (1 + impl_type_params + (idx_int - method_start))
+          in
+          let subst_trait_method_param expected p =
+            { p with param_ty =
+                subst_type_params_ty (trait_method_type_subst expected) p.param_ty }
+          in
+          let subst_trait_method_ref expected r =
             { r with trait_ref_args =
-                List.map (subst_type_params_ty trait_method_type_subst) r.trait_ref_args }
+                List.map
+                  (subst_type_params_ty (trait_method_type_subst expected))
+                  r.trait_ref_args }
           in
-          let subst_trait_method_bound b =
-            { b with bound_traits = List.map subst_trait_method_ref b.bound_traits }
+          let subst_trait_method_bound expected b =
+            { bound_type_index =
+                remap_trait_method_type_index b.bound_type_index;
+              bound_traits = List.map (subst_trait_method_ref expected) b.bound_traits }
           in
           let trait_ref_equal a b =
             a.trait_ref_name = b.trait_ref_name &&
@@ -2220,10 +2242,12 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
           in
           let method_matches_sig actual expected =
             let expected_params =
-              List.map subst_trait_method_param expected.trait_method_params
+              List.map (subst_trait_method_param expected) expected.trait_method_params
             in
             let expected_ret =
-              subst_type_params_ty trait_method_type_subst expected.trait_method_ret
+              subst_type_params_ty
+                (trait_method_type_subst expected)
+                expected.trait_method_ret
             in
             fst actual.fn_name = expected.trait_method_name &&
             Big_int_Z.eq_big_int actual.fn_lifetimes
@@ -2235,7 +2259,9 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
             params_sig_equal actual.fn_params expected_params &&
             ty_eqb actual.fn_ret expected_ret &&
             trait_bounds_equal actual.fn_bounds
-              (List.map subst_trait_method_bound expected.trait_method_bounds)
+              (List.map
+                 (subst_trait_method_bound expected)
+                 expected.trait_method_bounds)
           in
           let method_sig_error =
             if not check_impl_method_sigs then None else

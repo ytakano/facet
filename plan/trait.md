@@ -22,7 +22,9 @@ Completed:
   are converted into the existing Rocq method/function generic fields and
   signature arity matching rejects non-generic impls for generic trait methods,
   and method-local bounds are matched structurally after trait-argument
-  substitution. All impl method bodies are hidden-function elaborated and
+  substitution, including the type-parameter index remapping needed when a
+  concrete generic-trait impl has method-local type parameters. All impl
+  method bodies are hidden-function elaborated and
   checked through the extracted checker even when the method is not called;
   the generated grammar documents method-local generics and bounds for trait
   and impl methods.
@@ -60,9 +62,11 @@ Completed:
   Short UFCS uses the same ordinary call layout for method-local type
   arguments and additional arguments, `(Trait::method<Arg> receiver arg ...)`.
   The generated grammar also documents explicit UFCS method-local type
-  arguments in the prefix shape. Accepted variable and literal receiver calls
-  plus excess method type arguments are covered by regression tests, and dot
-  syntax, including type-argument dot calls, is rejected for this phase.
+  arguments in the prefix shape. Accepted variable and literal receiver
+  calls, generic-trait explicit UFCS with method-local type arguments and
+  bounds, plus excess method type arguments are covered by regression
+  tests, and dot syntax, including type-argument dot calls, is rejected
+  for this phase.
   Concrete non-generic impl methods no longer keep an unused hidden `Self` type
   argument, so local struct receivers elaborate to the safety-gate boundary
   instead of failing raw lifetime unification. Generic trait arguments require

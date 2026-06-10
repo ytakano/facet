@@ -54,8 +54,9 @@ Completed:
   additional arguments, so `(Trait::method x arg ...)` reaches the checker as
   the same prefix call shape as `(Trait::method 1 arg ...)`.
   Short UFCS uses the same ordinary call layout for method-local type
-  arguments and additional arguments, `(Trait::method<Arg> receiver arg ...)`,
-  and dot syntax is rejected by regression tests for this phase.
+  arguments and additional arguments, `(Trait::method<Arg> receiver arg ...)`;
+  accepted calls and excess method type arguments are covered by regression
+  tests, and dot syntax is rejected for this phase.
   Concrete non-generic impl methods no longer keep an unused hidden `Self` type
   argument, so local struct receivers elaborate to the safety-gate boundary
   instead of failing raw lifetime unification. Generic trait arguments require

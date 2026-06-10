@@ -18,7 +18,7 @@ Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_elab infer_env_elab infer_full_env_elab
   infer_program_env_alpha_elab check_program_env_alpha_elab
   elaborate_raw_expr elaborate_raw_global_env
-  alpha_normalize_global_env check_program_env_alpha
+  alpha_normalize_global_env normalize_assoc_ty check_program_env_alpha
   check_program_env_alpha_validated
   preservation_ready_expr_b preservation_ready_args_b
   preservation_ready_fields_b

@@ -38,9 +38,10 @@ Completed:
   call path; hidden method bodies substitute `Self` with the concrete impl
   target type before raw elaboration; unresolved explicit targets report
   source-level `Trait::method` names.
-- Concrete associated type projections are normalized in converted env/raw/core
-  types when a unique impl defines the associated type, allowing uses such as
-  `<unrestricted isize as Iterator>::Item` to type-check as `isize`.
+- Concrete associated type projections are normalized by an extracted Rocq helper
+  in converted env/raw/core types when a unique impl defines the associated
+  type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
+  type-check as `isize`.
 
 Key temporary limitations:
 
@@ -50,9 +51,10 @@ Key temporary limitations:
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
-- Associated projection normalization currently runs as an OCaml conversion pass
-  using the extracted `impl_matches_b`; moving this into Rocq compatibility and
-  proving the corresponding soundness rule remains pending.
+- Associated projection normalization still runs as a conversion pass, but the
+  normalization algorithm itself is now extracted from Rocq; wiring it into
+  Rocq compatibility and proving the corresponding soundness rule remains
+  pending.
 - `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
   validated method signatures for now.
 
@@ -67,6 +69,8 @@ Key temporary limitations:
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.
+   - Use the extracted Rocq normalization helper as the compatibility/checker
+     authority instead of relying on the conversion pass.
    - Add a Prop-level rule or equivalence for concrete associated type
      projections and prove checker soundness for it.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local

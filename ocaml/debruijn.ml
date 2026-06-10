@@ -1919,48 +1919,8 @@ let validate_env env =
       in
       if dup_impl env.env_impls then Some "duplicate impl" else None
 
-let find_impl_assoc assoc_name impl =
-  List.find_opt (fun a -> a.impl_assoc_name = assoc_name) impl.impl_assoc_types
-
-let rec normalize_assoc_ty_fuel fuel env (MkTy (u, c) as original) =
-  match fuel with
-  | 0 -> original
-  | fuel ->
-    let fuel' = fuel - 1 in
-    let norm = normalize_assoc_ty_fuel fuel' env in
-    let norm_list = List.map norm in
-    match c with
-    | TUnits | TIntegers | TFloats | TBooleans | TNamed _ | TParam _ -> original
-    | TStruct (name, lts, args) -> MkTy (u, TStruct (name, lts, norm_list args))
-    | TEnum (name, lts, args) -> MkTy (u, TEnum (name, lts, norm_list args))
-    | TFn (params, ret) -> MkTy (u, TFn (norm_list params, norm ret))
-    | TClosure (lt, params, ret) -> MkTy (u, TClosure (lt, norm_list params, norm ret))
-    | TForall (n, bounds, body) -> MkTy (u, TForall (n, bounds, norm body))
-    | TTypeForall (n, bounds, body) ->
-      let norm_ref r =
-        { r with core_trait_ref_args = norm_list r.core_trait_ref_args }
-      in
-      let norm_bound b =
-        { b with core_bound_traits = List.map norm_ref b.core_bound_traits }
-      in
-      MkTy (u, TTypeForall (n, List.map norm_bound bounds, norm body))
-    | TAssoc (for_ty, trait_name, trait_args, assoc_name) ->
-      let for_ty' = norm for_ty in
-      let trait_args' = norm_list trait_args in
-      begin match matching_impls trait_name trait_args' for_ty' env.env_impls with
-      | [impl] ->
-        begin match find_impl_assoc assoc_name impl with
-        | Some assoc ->
-          let normalized = norm assoc.impl_assoc_ty in
-          MkTy (u, ty_core normalized)
-        | None -> MkTy (u, TAssoc (for_ty', trait_name, trait_args', assoc_name))
-        end
-      | _ -> MkTy (u, TAssoc (for_ty', trait_name, trait_args', assoc_name))
-      end
-    | TRef (lt, rk, inner) -> MkTy (u, TRef (lt, rk, norm inner))
-
 let normalize_assoc_ty env ty =
-  normalize_assoc_ty_fuel 1000 env ty
+  TypeChecker.normalize_assoc_ty env ty
 
 let normalize_param env p =
   { p with param_ty = normalize_assoc_ty env p.param_ty }

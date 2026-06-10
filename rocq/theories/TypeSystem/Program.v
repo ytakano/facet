@@ -1111,3 +1111,59 @@ Definition resolve_impl
   | [i] => Some i
   | _ => None
   end.
+
+Fixpoint find_impl_assoc (assoc_name : string) (items : list impl_assoc_def)
+    : option impl_assoc_def :=
+  match items with
+  | [] => None
+  | a :: rest =>
+      if String.eqb (impl_assoc_name a) assoc_name then Some a
+      else find_impl_assoc assoc_name rest
+  end.
+
+Fixpoint normalize_assoc_ty_fuel
+    (fuel : nat) (env : global_env) (T : Ty) {struct fuel} : Ty :=
+  match fuel with
+  | 0 => T
+  | S fuel' =>
+      let norm := normalize_assoc_ty_fuel fuel' env in
+      match T with
+      | MkTy u TUnits => T
+      | MkTy u TIntegers => T
+      | MkTy u TFloats => T
+      | MkTy u TBooleans => T
+      | MkTy u (TNamed _) => T
+      | MkTy u (TParam _) => T
+      | MkTy u (TStruct name lts args) =>
+          MkTy u (TStruct name lts (map norm args))
+      | MkTy u (TEnum name lts args) =>
+          MkTy u (TEnum name lts (map norm args))
+      | MkTy u (TFn params ret) =>
+          MkTy u (TFn (map norm params) (norm ret))
+      | MkTy u (TClosure lt params ret) =>
+          MkTy u (TClosure lt (map norm params) (norm ret))
+      | MkTy u (TForall n bounds body) =>
+          MkTy u (TForall n bounds (norm body))
+      | MkTy u (TTypeForall n bounds body) =>
+          MkTy u (TTypeForall n (map (map_core_trait_bound norm) bounds)
+            (norm body))
+      | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+          let for_ty' := norm for_ty in
+          let trait_args' := map norm trait_args in
+          match matching_impls trait_name trait_args' for_ty' (env_impls env) with
+          | [impl] =>
+              match find_impl_assoc assoc_name (impl_assoc_types impl) with
+              | Some assoc =>
+                  let normalized := norm (impl_assoc_ty assoc) in
+                  MkTy u (ty_core normalized)
+              | None => MkTy u (TAssoc for_ty' trait_name trait_args' assoc_name)
+              end
+          | _ => MkTy u (TAssoc for_ty' trait_name trait_args' assoc_name)
+          end
+      | MkTy u (TRef lt rk inner) =>
+          MkTy u (TRef lt rk (norm inner))
+      end
+  end.
+
+Definition normalize_assoc_ty (env : global_env) (T : Ty) : Ty :=
+  normalize_assoc_ty_fuel 1000 env T.

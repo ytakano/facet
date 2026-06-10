@@ -429,6 +429,12 @@ val impl_matches_b : string -> ty list -> ty -> impl_def -> bool
 
 val matching_impls : string -> ty list -> ty -> impl_def list -> impl_def list
 
+val find_impl_assoc : string -> impl_assoc_def list -> impl_assoc_def option
+
+val normalize_assoc_ty_fuel : Big_int_Z.big_int -> global_env -> ty -> ty
+
+val normalize_assoc_ty : global_env -> ty -> ty
+
 type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list

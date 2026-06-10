@@ -44,7 +44,8 @@ Completed:
   and non-pure inferred local receivers remain at the documented safety-gate
   boundary with invalid tests. Regression coverage includes generic-trait
   explicit UFCS with method-local type args and bounds, extra method type args,
-  pure local receivers in short and explicit UFCS, and dot-syntax rejection.
+  pure local receivers in short and explicit UFCS, including method-local
+  type arguments, and dot-syntax rejection.
   Generic trait arguments require the explicit `<Ty as Trait<...>>` spelling.
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated

@@ -1,0 +1,14 @@
+trait Mapper {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T;
+}
+
+impl Mapper for unrestricted isize {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T {
+    value
+  }
+}
+
+fn main() -> unrestricted bool {
+  let x = 1;
+  (Mapper::map<unrestricted bool> x true)
+}

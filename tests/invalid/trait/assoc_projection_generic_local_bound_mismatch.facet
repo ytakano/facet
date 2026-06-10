@@ -1,0 +1,7 @@
+trait Iterator {
+  type Item;
+}
+
+fn mix_item<T, U>(x: affine <affine T as Iterator>::Item) -> affine <affine U as Iterator>::Item where T: Iterator, U: Iterator {
+  x
+}

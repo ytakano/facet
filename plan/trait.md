@@ -73,7 +73,9 @@ Completed:
   arguments. Rocq now has an `AssocCompatibility` bridge that names env-aware
   compatibility and its executable boolean form over `normalize_assoc_ty`; the
   bridge is intentionally lightweight and does not yet replace checker call
-  sites.
+  sites. Generic projections such as `<affine T as Iterator>::Item` are
+  preserved under local trait bounds and covered by valid/invalid regression
+  tests for same-parameter and mismatched-parameter compatibility.
 
 Key temporary limitations:
 
@@ -112,8 +114,6 @@ Key temporary limitations:
    - Add the soundness connection for `ty_compatible_assoc_b`, then wire the
      checker compatibility call sites to it instead of relying on pre-pass
      normalization.
-   - Preserve generic projections such as `<T as Trait>::Assoc` under local
-     bounds.
    - Keep associated type defaults and equality constraints deferred.
 
 ## Constraints and Checks

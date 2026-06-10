@@ -1,0 +1,7 @@
+trait Iterator {
+  type Item;
+}
+
+fn keep_item<T>(x: affine <affine T as Iterator>::Item) -> affine <affine T as Iterator>::Item where T: Iterator {
+  x
+}

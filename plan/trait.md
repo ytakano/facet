@@ -49,6 +49,10 @@ Completed:
   a variable whose type is known from the raw-lowering value context, currently
   function parameters including struct parameters, and when the receiver is a
   literal expression whose type is syntactically known during raw lowering.
+  Immutable annotated local receivers initialized with unrestricted unit, int,
+  float, or bool literals are lowered by eliminating the pure receiver `let`
+  when the local name is used only as the receiver, so `(Trait::method x ...)`
+  reaches the checker as the same prefix call shape as `(Trait::method 1 ...)`.
   Short UFCS uses the same ordinary call layout for additional arguments,
   `(Trait::method receiver arg ...)`, and dot syntax is rejected by regression
   tests for this phase.
@@ -88,13 +92,14 @@ Key temporary limitations:
      parameters, and syntactically typed literals are supported; generic trait
      arguments stay explicit through `<Ty as Trait<...>>`, and Roadmap 1-3 does
      not add a short form for them.
-   - Support receiver-let/generic-call safety-gate shapes. Annotated local
-     receivers currently resolve to hidden `ECallGeneric` and fail the
-     end-to-end safety gate; inferred local receivers still fail earlier because
-     short UFCS has no checker-backed receiver type inference. Both boundaries
-     are covered by invalid regression tests. The next cut must add a Prop-level
-     summary plus checker soundness and runtime safety branch; a checker-only
-     clause is insufficient.
+   - Support the remaining receiver-let/generic-call safety-gate shapes.
+     Immutable annotated local receivers initialized by unrestricted unit, int,
+     float, or bool literals are now accepted by pure receiver-let elimination
+     in raw lowering and covered by a valid regression test. General annotated
+     local receivers still need a Prop-level summary plus checker soundness and
+     runtime safety branch; a checker-only clause is insufficient. Inferred
+     local receivers still fail earlier because short UFCS has no checker-backed
+     receiver type inference and remain covered by an invalid regression test.
    - Keep dot method-call syntax out of this phase; parser-level rejection is
      covered by regression tests.
 

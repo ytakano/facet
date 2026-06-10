@@ -1063,6 +1063,59 @@ let infer_short_method_receiver_ty value_tys = function
   | NVar name -> value_ty_lookup name value_tys
   | _ -> None
 
+let pure_unrestricted_receiver_expr ty expr =
+  match ty, expr with
+  | NTy (UUnrestricted, NTUnits), NUnit -> Some NUnit
+  | NTy (UUnrestricted, NTIntegers), NLit (LInt _)
+  | NTy (UUnrestricted, NTFloats), NLit (LFloat _)
+  | NTy (UUnrestricted, NTBooleans), NLit (LBool _) -> Some expr
+  | _ -> None
+
+let rec named_place_mentions_name name = function
+  | NPVar x -> x = name
+  | NPDeref p -> named_place_mentions_name name p
+  | NPField (p, _) -> named_place_mentions_name name p
+
+let rec named_expr_mentions_name name = function
+  | NVar x -> x = name
+  | NPlace p -> named_place_mentions_name name p
+  | NLet (_, x, _, e1, e2) ->
+    named_expr_mentions_name name e1 ||
+    (x <> name && named_expr_mentions_name name e2)
+  | NCall (_, _, args) | NMethodCall (_, _, _, _, args)
+  | NEnum (_, _, _, _, args) ->
+    List.exists (named_expr_mentions_name name) args
+  | NStruct (_, _, fields) ->
+    List.exists (fun (_, e) -> named_expr_mentions_name name e) fields
+  | NMatch (scrut, branches) ->
+    named_expr_mentions_name name scrut ||
+    List.exists
+      (fun (_, binders, body) ->
+        not (List.mem name binders) && named_expr_mentions_name name body)
+      branches
+  | NReplace (p, e) | NAssign (p, e) ->
+    named_place_mentions_name name p || named_expr_mentions_name name e
+  | NBorrow (_, p) -> named_place_mentions_name name p
+  | NDeref e | NDrop e -> named_expr_mentions_name name e
+  | NIf (cond, then_e, else_e) ->
+    named_expr_mentions_name name cond ||
+    named_expr_mentions_name name then_e ||
+    named_expr_mentions_name name else_e
+  | NClosure (captures, params, _, body) ->
+    List.mem name captures ||
+    (not (List.exists (fun p -> p.np_name = name) params) &&
+     named_expr_mentions_name name body)
+  | NLetRec (captures, rec_fns, body) ->
+    List.mem name captures ||
+    let shadowed = List.exists (fun rf -> rf.nrf_name = name) rec_fns in
+    (not shadowed && named_expr_mentions_name name body) ||
+    List.exists
+      (fun rf ->
+        not (List.exists (fun p -> p.np_name = name) rf.nrf_params) &&
+        named_expr_mentions_name name rf.nrf_body)
+      rec_fns
+  | NUnit | NLit _ -> false
+
 let short_method_target_for_expr env _ty_scope value_tys fn_names f_path receiver =
   let f = string_of_path f_path in
   if List.mem f fn_names then None else
@@ -1073,6 +1126,17 @@ let short_method_target_for_expr env _ty_scope value_tys fn_names f_path receive
     | None -> None
     end
   | None -> None
+
+let inline_pure_short_method_receiver env ty_scope value_tys fn_names name replacement e =
+  match e with
+  | NCall (f_path, type_args, NVar receiver :: rest)
+      when receiver = name &&
+           not (List.exists (named_expr_mentions_name name) rest) ->
+    begin match short_method_target_for_expr env ty_scope value_tys fn_names f_path (NVar receiver) with
+    | Some _ -> Some (NCall (f_path, type_args, replacement :: rest))
+    | None -> None
+    end
+  | _ -> None
 
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
@@ -1273,8 +1337,22 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
     let (scope', d) = add_binding scope name in
     let lowered_ty = lower_named_ty ty_scope ty in
     let value_tys' = add_value_ty name lowered_ty value_tys in
-    let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
-    RawLet (m, make_ident name d, lowered_ty, e1', e2')
+    let inlined_method_receiver =
+      if m = MImmutable then
+        match pure_unrestricted_receiver_expr ty e1 with
+        | Some replacement ->
+          inline_pure_short_method_receiver env ty_scope value_tys' fn_names
+            name replacement e2
+        | None -> None
+      else None
+    in
+    begin match inlined_method_receiver with
+    | Some e2_inline ->
+      convert_raw env fn_names ty_scope scope value_tys rec_scope e2_inline
+    | None ->
+      let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
+      RawLet (m, make_ident name d, lowered_ty, e1', e2')
+    end
   | NLet (m, name, None, e1, e2) ->
     let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in

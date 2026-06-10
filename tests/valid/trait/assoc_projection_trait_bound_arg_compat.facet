@@ -1,0 +1,19 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+trait Marker<T>;
+
+impl Marker<unrestricted bool> for unrestricted isize;
+
+struct Box<T> where T: Marker<unrestricted <unrestricted isize as Provider>::Item> {
+  value: unrestricted T
+}
+
+fn main() -> unrestricted Box<unrestricted isize> {
+  Box<unrestricted isize> { value = 1 }
+}

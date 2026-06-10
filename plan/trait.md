@@ -133,9 +133,13 @@ Key temporary limitations:
      function-value-signature, closure-signature, and trait-method-signature
      compatibility have regression coverage for accepted concrete projections
      and rejected mismatches.
-   - Wire checker compatibility call sites to `check_args_assoc`,
-     `check_arg_tys_assoc`, or direct `ty_compatible_assoc_b` checks instead
-     of relying on pre-pass normalization.
+   - Wire compatibility at the typing-rule boundary before changing helper
+     call sites. Helper-only wiring to `check_arg_tys_assoc` makes the
+     executable checker accept normalized associated compatibility while
+     existing env/root typing rules still require ordinary `typed_args`
+     compatibility, so full soundness fails. The next implementation step is
+     assoc-aware env/root argument compatibility rules or a proved bridge,
+     followed by checker helper switching.
    - Keep associated type defaults and equality constraints deferred.
 
 ## Constraints and Checks

@@ -43,10 +43,10 @@ Completed:
   a variable whose type is known from the raw-lowering value context, currently
   function parameters including struct parameters, and when the receiver is a
   literal expression whose type is syntactically known during raw lowering.
-  Struct literal and enum constructor receivers are also recognized as
-  syntactically typed short-UFCS receivers, but currently reach the same
-  end-to-end safety gate as explicit UFCS expression receivers and remain
-  rejected by regression tests.
+  Struct literal and enum constructor receivers are recognized by short-UFCS
+  raw lowering, and the same expression-receiver shapes are parsed by explicit
+  UFCS, but both currently reach the end-to-end safety gate and remain covered
+  by invalid regression tests.
   Immutable annotated local receivers initialized with unrestricted unit, int,
   float, or bool literals are lowered by eliminating the pure receiver `let`
   when the local name is used only as the receiver, including calls with

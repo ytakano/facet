@@ -49,6 +49,9 @@ Completed:
   a variable whose type is known from the raw-lowering value context, currently
   function parameters including struct parameters, and when the receiver is a
   literal expression whose type is syntactically known during raw lowering.
+  Short UFCS uses the same ordinary call layout for additional arguments,
+  `(Trait::method receiver arg ...)`, and dot syntax is rejected by regression
+  tests for this phase.
   Concrete non-generic impl methods no longer keep an unused hidden `Self` type
   argument, so local struct receivers elaborate to the safety-gate boundary
   instead of failing raw lifetime unification. Generic trait arguments require
@@ -91,7 +94,8 @@ Key temporary limitations:
      boundary. The reusable generic-direct runtime package interface is now
      available before `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can
      add the Prop summary, checker soundness, and runtime branch.
-   - Keep dot method-call syntax out of this phase.
+   - Keep dot method-call syntax out of this phase; parser-level rejection is
+     covered by regression tests.
 
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility

@@ -1,0 +1,13 @@
+trait Combiner {
+  fn combine(self: Self, rhs: unrestricted isize) -> unrestricted isize;
+}
+
+impl Combiner for unrestricted isize {
+  fn combine(self: Self, rhs: unrestricted isize) -> unrestricted isize {
+    rhs
+  }
+}
+
+fn main(x: unrestricted isize) -> unrestricted isize {
+  (Combiner::combine x 1)
+}

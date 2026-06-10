@@ -1100,6 +1100,11 @@ let pure_unrestricted_receiver_expr ty expr =
   | NTy (UUnrestricted, NTBooleans), NLit (LBool _) -> Some expr
   | _ -> None
 
+let pure_unrestricted_receiver_inferred_expr = function
+  | NUnit -> Some (MkTy (UUnrestricted, TUnits), NUnit)
+  | NLit lit as expr -> Some (lit_ty lit, expr)
+  | _ -> None
+
 let rec named_place_mentions_name name = function
   | NPVar x -> x = name
   | NPDeref p -> named_place_mentions_name name p
@@ -1385,9 +1390,28 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
   | NLet (m, name, None, e1, e2) ->
     let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let value_tys' = add_unknown_value_ty name value_tys in
-    let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
-    RawLetInfer (m, make_ident name d, e1', e2')
+    let inferred_receiver =
+      if m = MImmutable then pure_unrestricted_receiver_inferred_expr e1 else None
+    in
+    let value_tys' =
+      match inferred_receiver with
+      | Some (inferred_ty, _) -> add_value_ty name inferred_ty value_tys
+      | None -> add_unknown_value_ty name value_tys
+    in
+    let inlined_method_receiver =
+      match inferred_receiver with
+      | Some (_, replacement) ->
+        inline_pure_short_method_receiver env ty_scope value_tys' fn_names
+          name replacement e2
+      | None -> None
+    in
+    begin match inlined_method_receiver with
+    | Some e2_inline ->
+      convert_raw env fn_names ty_scope scope value_tys rec_scope e2_inline
+    | None ->
+      let e2' = convert_raw env fn_names ty_scope scope' value_tys' rec_scope e2 in
+      RawLetInfer (m, make_ident name d, e1', e2')
+    end
   | NIf (cond, then_e, else_e) ->
     RawIf (convert_raw env fn_names ty_scope scope value_tys rec_scope cond,
            convert_raw env fn_names ty_scope scope value_tys rec_scope then_e,
@@ -1783,7 +1807,11 @@ let rec method_call_targets_in_expr env fn_names ty_scope value_tys = function
     let value_tys' =
       match ty_opt with
       | Some ty -> add_value_ty name (lower_named_ty ty_scope ty) value_tys
-      | None -> add_unknown_value_ty name value_tys
+      | None ->
+        begin match pure_unrestricted_receiver_inferred_expr e1 with
+        | Some (inferred_ty, _) -> add_value_ty name inferred_ty value_tys
+        | None -> add_unknown_value_ty name value_tys
+        end
     in
     targets1 @ method_call_targets_in_expr env fn_names ty_scope value_tys' e2
   | NCall (f_path, _, args) ->

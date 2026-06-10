@@ -54,11 +54,11 @@ Completed:
   shapes are parsed by explicit UFCS, but these expression receivers
   currently reach the end-to-end safety gate and remain covered by
   invalid regression tests, including generic direct-call receivers.
-  Immutable annotated local receivers initialized with unrestricted unit, int,
-  float, or bool literals are lowered by eliminating the pure receiver `let`
-  when the local name is used only as the receiver, including calls with
-  additional arguments, so `(Trait::method x arg ...)` reaches the checker as
-  the same prefix call shape as `(Trait::method 1 arg ...)`.
+  Immutable annotated or inferred local receivers initialized with
+  unrestricted unit, int, float, or bool literals are lowered by eliminating
+  the pure receiver `let` when the local name is used only as the receiver,
+  including calls with additional arguments, so `(Trait::method x arg ...)`
+  reaches the checker as the same prefix call shape as `(Trait::method 1 arg ...)`.
   Short UFCS uses the same ordinary call layout for method-local type
   arguments and additional arguments, `(Trait::method<Arg> receiver arg ...)`.
   The generated grammar also documents explicit UFCS method-local type
@@ -122,10 +122,10 @@ Key temporary limitations:
      arguments stay explicit through `<Ty as Trait<...>>`, and Roadmap 1-3 does
      not add a short form for them.
    - Support the remaining receiver-let/generic-call safety-gate shapes.
-     Immutable annotated local receivers initialized by unrestricted unit, int,
-     float, or bool literals are now accepted by pure receiver-let elimination
-     in raw lowering and covered by valid regression tests. Struct, enum, and
-     direct function-call expression receivers now resolve in raw lowering but
+     Immutable annotated and inferred local receivers initialized by unrestricted
+     unit, int, float, or bool literals are now accepted by pure receiver-let
+     elimination in raw lowering and covered by valid regression tests.
+     Struct, enum, and direct function-call expression receivers now resolve in raw lowering but
      still hit the end-to-end safety gate. Direct-call receivers cannot be
      completed by a raw temporary-let rewrite alone, because let-bound direct
      calls still need store-safe summary evidence. Generic direct-call
@@ -133,9 +133,9 @@ Key temporary limitations:
      are covered by invalid tests for this boundary.
      General annotated local receivers still need a Prop-level summary plus
      checker soundness and runtime safety branch; a checker-only clause
-     is insufficient. Inferred
-     local receivers still fail earlier because short UFCS has no checker-backed
-     receiver type inference and remain covered by an invalid regression test.
+     is insufficient. Non-pure inferred local receivers still fail earlier because
+     short UFCS has no checker-backed receiver type inference and remain covered by an
+     invalid regression test.
    - Keep dot method-call syntax out of this phase; parser-level rejection is
      covered by regression tests.
 

@@ -1,0 +1,18 @@
+fn make() -> unrestricted isize {
+  1
+}
+
+trait Runner {
+  fn run(self: Self) -> ();
+}
+
+impl Runner for unrestricted isize {
+  fn run(self: Self) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  let x = (make);
+  (Runner::run x)
+}

@@ -1715,7 +1715,19 @@ let validate_env env =
                  ty_eqb a.param_ty e.param_ty)
               actual expected
           in
+          let trait_method_type_subst =
+            MkTy (UUnrestricted, TParam zero) :: i.impl_trait_args
+          in
+          let subst_trait_method_param p =
+            { p with param_ty = subst_type_params_ty trait_method_type_subst p.param_ty }
+          in
           let method_matches_sig actual expected =
+            let expected_params =
+              List.map subst_trait_method_param expected.trait_method_params
+            in
+            let expected_ret =
+              subst_type_params_ty trait_method_type_subst expected.trait_method_ret
+            in
             fst actual.fn_name = expected.trait_method_name &&
             Big_int_Z.eq_big_int actual.fn_lifetimes
               (Big_int_Z.add_big_int i.impl_lifetimes expected.trait_method_lifetimes) &&
@@ -1723,8 +1735,8 @@ let validate_env env =
               (Big_int_Z.succ_big_int
                  (Big_int_Z.add_big_int i.impl_type_params
                     expected.trait_method_type_params)) &&
-            params_sig_equal actual.fn_params expected.trait_method_params &&
-            ty_eqb actual.fn_ret expected.trait_method_ret
+            params_sig_equal actual.fn_params expected_params &&
+            ty_eqb actual.fn_ret expected_ret
           in
           let method_sig_error =
             first_some

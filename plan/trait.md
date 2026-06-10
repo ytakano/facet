@@ -37,8 +37,9 @@ Completed:
 
 Key temporary limitations:
 
-- Impl method signature matching is structural in the shared `Self` layout;
-  substitution of concrete trait arguments for generic impls is still pending.
+- Impl method signature matching substitutes the impl's concrete trait arguments
+  into the trait method signature before comparison; method-local type
+  parameters remain deferred because method generic syntax is not implemented.
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
@@ -50,12 +51,12 @@ Key temporary limitations:
 
 ## Remaining Roadmap 1-3 Tasks
 
-1. Complete substitution-aware impl method signature matching.
-   - Instantiate trait method signatures with the impl's `Self`, trait args,
-     lifetimes, and type parameters.
-   - Validate receiver type, parameter arity/types, return type, and method
-     lifetime elision after instantiation.
-   - Keep substitution-aware generic receiver resolution pending; explicit UFCS
+1. Extend method generics when syntax exists.
+   - Add method-local type parameters and bounds to trait method signatures and
+     impl methods.
+   - Reuse the current substitution-aware signature matcher for method-local
+     type parameters once they are represented.
+   - Keep receiver type-directed shorthand resolution pending; explicit UFCS
      targets are already lowered through hidden direct calls.
 
 2. Harden UFCS trait method calls.

@@ -1,0 +1,17 @@
+trait Sink<T> {
+  fn put(self: Self, value: T) -> ();
+}
+
+struct Boxed {
+  value: unrestricted isize
+}
+
+impl Sink<unrestricted isize> for unrestricted Boxed {
+  fn put(self: Self, value: unrestricted bool) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  ()
+}

@@ -56,11 +56,12 @@ Completed:
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize`. Raw function normalization now happens inside the
-  extracted Rocq raw-elaboration entrypoint before hidden stubs and checked
-  bodies are built; OCaml no longer maps over raw functions itself. In trait
-  and impl items, `Self::Assoc` is accepted as shorthand for the current trait
-  projection, including current trait type arguments.
+  type-check as `isize`. Global environment and raw function normalization now
+  happen inside the extracted Rocq raw-elaboration entrypoint before hidden
+  stubs and checked bodies are built; OCaml no longer runs an associated-type
+  normalization pass. In trait and impl items, `Self::Assoc` is accepted as
+  shorthand for the current trait projection, including current trait type
+  arguments.
 
 Key temporary limitations:
 
@@ -68,9 +69,8 @@ Key temporary limitations:
   trait and impl method lifetime generics are rejected by regression tests for
   this phase.
 - Associated projection normalization still runs before ordinary compatibility
-  checks, but raw-body normalization is now performed by the extracted Rocq raw
-  elaborator rather than OCaml. Base environment normalization and env-aware
-  compatibility/soundness remain pending.
+  checks inside the extracted Rocq raw elaborator. Env-aware compatibility and
+  its soundness proof remain pending.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -90,9 +90,8 @@ Key temporary limitations:
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.
-   - Replace the remaining base-environment pre-check conversion pass with
-     env-aware Rocq compatibility so associated projection equality is checked
-     at the typing rule boundary.
+   - Replace pre-compatibility normalization with env-aware Rocq compatibility
+     so associated projection equality is checked at the typing rule boundary.
    - Add a Prop-level rule or equivalence for concrete associated type
      projections and prove checker soundness for it.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local

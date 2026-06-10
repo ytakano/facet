@@ -2167,9 +2167,6 @@ let validate_env env =
       in
       if dup_impl env.env_impls then Some "duplicate impl" else None
 
-let normalize_global_env_assocs env =
-  TypeChecker.normalize_assoc_global_env env
-
 let convert_program_items_from_flattened items : global_env =
   let structs = List.filter_map (function NIStruct s -> Some s | _ -> None) items in
   let enums = List.filter_map (function NIEnum e -> Some e | _ -> None) items in
@@ -2199,11 +2196,6 @@ let convert_program_items_from_flattened items : global_env =
     env_local_bounds = [];
     env_fns = [];
   } in
-  begin match validate_env base_env with
-  | None -> ()
-  | Some msg -> failwith msg
-  end;
-  let base_env = normalize_global_env_assocs base_env in
   begin match validate_env base_env with
   | None -> ()
   | Some msg -> failwith msg

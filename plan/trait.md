@@ -136,12 +136,12 @@ Key temporary limitations:
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
      should checker helpers switch to assoc-aware compatibility. Boolean-witness
-     helper proofs now compile when `ty_compatible_assoc_b`
-     stays opaque, but the Prop bridge from those boolean facts to
-     normalized `ty_compatible` remains pending. Direct Prop helper soundness
-     still stalls at `Qed` when proof terms expose `normalize_assoc_ty`; the
-     next step is an opaque Prop bridge from `ty_compatible_assoc_b = true` to
-     `ty_compatible_assoc` before wiring checker call sites.
+     helper proofs compile when `ty_compatible_assoc_b` stays opaque, but even
+     a single-pair bridge from `ty_compatible_assoc_b = true` to
+     `ty_compatible_assoc` stalls at `Qed` once it exposes `normalize_assoc_ty`.
+     The next step is to change the bridge shape itself, for example by making
+     normalized compatibility an opaque primitive relation with a separate
+     unfolding lemma, before wiring checker call sites.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

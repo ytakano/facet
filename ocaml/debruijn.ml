@@ -1864,7 +1864,7 @@ let reject_reserved_synthetic_names names =
   | Some name -> failwith ("reserved top-level name: " ^ name)
   | None -> ()
 
-let validate_env env =
+let validate_env ?(check_impl_method_sigs = true) env =
   let top_names =
     List.map (fun s -> s.struct_name) env.env_structs @
     List.map (fun e -> e.enum_name) env.env_enums @
@@ -2185,6 +2185,7 @@ let validate_env env =
               (List.map subst_trait_method_bound expected.trait_method_bounds)
           in
           let method_sig_error =
+            if not check_impl_method_sigs then None else
             first_some
               (List.map
                  (fun expected ->
@@ -2282,7 +2283,7 @@ let convert_program_items_from_flattened items : global_env =
     env_local_bounds = [];
     env_fns = [];
   } in
-  begin match validate_env base_env with
+  begin match validate_env ~check_impl_method_sigs:false base_env with
   | None -> ()
   | Some msg -> failwith msg
   end;

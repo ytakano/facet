@@ -1,0 +1,21 @@
+trait Iterator {
+  type Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+}
+
+trait Consumer {
+  fn consume(self: Self, value: unrestricted <unrestricted isize as Iterator>::Item) -> unrestricted <unrestricted isize as Iterator>::Item;
+}
+
+impl Consumer for unrestricted () {
+  fn consume(self: Self, value: unrestricted bool) -> unrestricted bool {
+    value
+  }
+}
+
+fn main() -> unrestricted isize {
+  (<unrestricted () as Consumer>::consume () 1)
+}

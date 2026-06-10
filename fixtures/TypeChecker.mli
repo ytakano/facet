@@ -452,6 +452,14 @@ val normalize_assoc_enum_variant :
 
 val normalize_assoc_enum : global_env -> enum_def -> enum_def
 
+val normalize_assoc_trait_assoc :
+  global_env -> trait_assoc_def -> trait_assoc_def
+
+val normalize_assoc_trait_method :
+  global_env -> trait_method_sig -> trait_method_sig
+
+val normalize_assoc_trait : global_env -> trait_def -> trait_def
+
 val normalize_assoc_fn : global_env -> fn_def -> fn_def
 
 val normalize_assoc_impl_assoc :

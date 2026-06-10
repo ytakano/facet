@@ -2390,6 +2390,34 @@ let normalize_assoc_enum env e =
     e.enum_outlives; enum_variants =
     (map (normalize_assoc_enum_variant env) e.enum_variants) }
 
+(** val normalize_assoc_trait_assoc :
+    global_env -> trait_assoc_def -> trait_assoc_def **)
+
+let normalize_assoc_trait_assoc env a =
+  { trait_assoc_name = a.trait_assoc_name; trait_assoc_bounds =
+    (map (normalize_assoc_trait_ref env) a.trait_assoc_bounds) }
+
+(** val normalize_assoc_trait_method :
+    global_env -> trait_method_sig -> trait_method_sig **)
+
+let normalize_assoc_trait_method env m =
+  { trait_method_name = m.trait_method_name; trait_method_lifetimes =
+    m.trait_method_lifetimes; trait_method_type_params =
+    m.trait_method_type_params; trait_method_params =
+    (map (normalize_assoc_param env) m.trait_method_params);
+    trait_method_ret = (normalize_assoc_ty env m.trait_method_ret);
+    trait_method_bounds =
+    (map (normalize_assoc_trait_bound env) m.trait_method_bounds) }
+
+(** val normalize_assoc_trait : global_env -> trait_def -> trait_def **)
+
+let normalize_assoc_trait env t =
+  { trait_name = t.trait_name; trait_type_params = t.trait_type_params;
+    trait_bounds = (map (normalize_assoc_trait_bound env) t.trait_bounds);
+    trait_assoc_types =
+    (map (normalize_assoc_trait_assoc env) t.trait_assoc_types);
+    trait_methods = (map (normalize_assoc_trait_method env) t.trait_methods) }
+
 (** val normalize_assoc_fn : global_env -> fn_def -> fn_def **)
 
 let normalize_assoc_fn env f =
@@ -2423,7 +2451,7 @@ let normalize_assoc_impl env i =
 let normalize_assoc_global_env env =
   { env_structs = (map (normalize_assoc_struct env) env.env_structs);
     env_enums = (map (normalize_assoc_enum env) env.env_enums); env_traits =
-    env.env_traits; env_impls =
+    (map (normalize_assoc_trait env) env.env_traits); env_impls =
     (map (normalize_assoc_impl env) env.env_impls); env_local_bounds =
     (map (normalize_assoc_trait_bound env) env.env_local_bounds); env_fns =
     (map (normalize_assoc_fn env) env.env_fns) }

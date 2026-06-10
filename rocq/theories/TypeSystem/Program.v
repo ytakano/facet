@@ -1257,6 +1257,27 @@ Definition normalize_assoc_enum (env : global_env) (e : enum_def) : enum_def :=
      enum_outlives := enum_outlives e;
      enum_variants := map (normalize_assoc_enum_variant env) (enum_variants e) |}.
 
+Definition normalize_assoc_trait_assoc
+    (env : global_env) (a : trait_assoc_def) : trait_assoc_def :=
+  {| trait_assoc_name := trait_assoc_name a;
+     trait_assoc_bounds := map (normalize_assoc_trait_ref env) (trait_assoc_bounds a) |}.
+
+Definition normalize_assoc_trait_method
+    (env : global_env) (m : trait_method_sig) : trait_method_sig :=
+  {| trait_method_name := trait_method_name m;
+     trait_method_lifetimes := trait_method_lifetimes m;
+     trait_method_type_params := trait_method_type_params m;
+     trait_method_params := map (normalize_assoc_param env) (trait_method_params m);
+     trait_method_ret := normalize_assoc_ty env (trait_method_ret m);
+     trait_method_bounds := map (normalize_assoc_trait_bound env) (trait_method_bounds m) |}.
+
+Definition normalize_assoc_trait (env : global_env) (t : trait_def) : trait_def :=
+  {| trait_name := trait_name t;
+     trait_type_params := trait_type_params t;
+     trait_bounds := map (normalize_assoc_trait_bound env) (trait_bounds t);
+     trait_assoc_types := map (normalize_assoc_trait_assoc env) (trait_assoc_types t);
+     trait_methods := map (normalize_assoc_trait_method env) (trait_methods t) |}.
+
 Definition normalize_assoc_fn (env : global_env) (f : fn_def) : fn_def :=
   {| fn_name := fn_name f;
      fn_lifetimes := fn_lifetimes f;
@@ -1285,7 +1306,7 @@ Definition normalize_assoc_impl (env : global_env) (i : impl_def) : impl_def :=
 Definition normalize_assoc_global_env (env : global_env) : global_env :=
   {| env_structs := map (normalize_assoc_struct env) (env_structs env);
      env_enums := map (normalize_assoc_enum env) (env_enums env);
-     env_traits := env_traits env;
+     env_traits := map (normalize_assoc_trait env) (env_traits env);
      env_impls := map (normalize_assoc_impl env) (env_impls env);
      env_local_bounds := map (normalize_assoc_trait_bound env) (env_local_bounds env);
      env_fns := map (normalize_assoc_fn env) (env_fns env) |}.

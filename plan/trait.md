@@ -69,7 +69,8 @@ Completed:
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize`, including at function call argument compatibility
-  boundaries, let annotations, struct field types, and enum payload types.
+  boundaries, let annotations, struct field types, enum payload types,
+  and trait method signatures.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type
@@ -79,7 +80,10 @@ Completed:
   compatibility and its executable boolean form over `normalize_assoc_ty`; a
   lightweight `CompatBoolSoundness` module proves the boolean compatibility
   soundness needed for normalized associated projections. Checker call sites
-  still use ordinary compatibility and are not yet wired to the bridge.
+  still use ordinary compatibility and are not yet wired to the bridge. The
+  OCaml pre-elaboration validation defers impl method signature equality until
+  after extracted Rocq normalization so it does not reject normalizable
+  associated projections before the checker runs.
   Generic projections such as `<affine T as Iterator>::Item` are
   preserved under local trait bounds and covered by valid/invalid regression
   tests for same-parameter and mismatched-parameter compatibility.
@@ -122,8 +126,8 @@ Key temporary limitations:
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
      so associated projection equality is checked at the typing rule boundary;
-     call-argument, let-annotation, struct-field, and enum-payload compatibility
-     have regression coverage for both accepted concrete projections and
+     call-argument, let-annotation, struct-field, enum-payload, and
+     trait-method-signature compatibility have regression coverage for both accepted concrete projections and
      rejected mismatches.
    - Wire checker compatibility call sites to env-aware associated
      compatibility instead of relying on pre-pass normalization.

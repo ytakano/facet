@@ -126,3 +126,26 @@ Proof.
   rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
   apply (check_args_assoc_length env Ω). exact Hcheck.
 Qed.
+
+Lemma check_args_assoc_params_of_tys_map_param_ty :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys (params_of_tys (map param_ty params)) =
+    check_args_assoc env Ω arg_tys params.
+Proof.
+  intros env Ω arg_tys.
+  induction arg_tys as [| arg rest IH]; intros params.
+  - destruct params; reflexivity.
+  - destruct params as [| p ps]; [reflexivity |].
+    simpl. destruct (ty_compatible_assoc_b env Ω arg (param_ty p));
+      [apply IH | reflexivity].
+Qed.
+
+Lemma check_args_assoc_params_of_tys_map_param_ty_true :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys (params_of_tys (map param_ty params)) = None ->
+    check_args_assoc env Ω arg_tys params = None.
+Proof.
+  intros env Ω arg_tys params Hcheck.
+  rewrite <- check_args_assoc_params_of_tys_map_param_ty.
+  exact Hcheck.
+Qed.

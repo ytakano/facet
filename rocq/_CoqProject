@@ -17,6 +17,7 @@ theories/TypeSystem/CheckerOrdinary.v
 theories/TypeSystem/CheckerEnvHelpers.v
 theories/TypeSystem/AssocHrtHelpers.v
 theories/TypeSystem/AssocDirectCallHelpers.v
+theories/TypeSystem/AssocFnValueCallHelpers.v
 theories/TypeSystem/CheckerCore.v
 theories/TypeSystem/CheckerEnvCore.v
 theories/TypeSystem/CheckerState.v
@@ -57,6 +58,7 @@ theories/TypeSystem/CompatBoolSoundness.v
 theories/TypeSystem/AssocArgBoolFacts.v
 theories/TypeSystem/AssocHrtFacts.v
 theories/TypeSystem/AssocDirectCallFacts.v
+theories/TypeSystem/AssocFnValueCallFacts.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/TypeSafetyRootFacts.v
 theories/TypeSystem/TypeSafetyReadiness.v

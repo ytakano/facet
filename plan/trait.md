@@ -145,7 +145,7 @@ Key temporary limitations:
      payloads, trait-method signatures/resolution, value witnesses,
      env/root arguments, fields, values, function bodies, and direct-call, function-value call, HRT, type-forall, and mixed-forall argument collectors. The executable
      assoc helpers `check_args_assoc` and `check_arg_tys_assoc` also have
-     helper-level soundness lemmas. Remaining work is to use these wrappers at
+     helper-level soundness lemmas, and `infer_args_collect` now has a `typed_args_assoc` soundness bridge for `check_args_assoc`. Remaining work is to use these wrappers at
      checker-facing call sites once the typing-rule boundary is ready, while
      keeping executable checker behavior unchanged until then.
    - Keep associated type defaults and equality constraints deferred.

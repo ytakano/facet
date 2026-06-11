@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program TypingRules CheckerHrt AssocCompatibility
+  Lifetime Types Syntax Program TypingRules CheckerHrt TypeChecker AssocCompatibility
   CompatBoolSoundness.
 From Stdlib Require Import List.
 Import ListNotations.
@@ -233,4 +233,42 @@ Proof.
   intros env Ω arg_tys params Hcheck.
   rewrite <- check_arg_tys_assoc_map_param_ty.
   exact Hcheck.
+Qed.
+
+Lemma infer_call_args_assoc_sound_v2 :
+  forall env fenv Ω n Γ args arg_tys params Γ',
+    infer_args_collect fenv Ω n Γ args = infer_ok (arg_tys, Γ') ->
+    (forall Γ0 e T Γ1,
+        In e args ->
+        infer_core fenv Ω n Γ0 e = infer_ok (T, Γ1) ->
+        typed fenv Ω n Γ0 e T Γ1) ->
+    check_args_assoc env Ω arg_tys params = None ->
+    typed_args_assoc env fenv Ω n Γ args params Γ'.
+Proof.
+  intros env fenv Ω n Γ args.
+  revert Γ.
+  induction args as [| e es IH]; intros Γ arg_tys params Γ' Hcollect Hexpr Hcheck.
+  - simpl in Hcollect. injection Hcollect as <- <-.
+    destruct params; simpl in Hcheck; [constructor | discriminate].
+  - simpl in Hcollect.
+    destruct (infer_core fenv Ω n Γ e) as [[T_e Γ1] | err] eqn:He;
+      [| discriminate].
+    destruct (infer_args_collect fenv Ω n Γ1 es) as [[tys Γ2] | err']
+      eqn:Htail; [| discriminate].
+    injection Hcollect as <- <-.
+    destruct params as [| p ps]; [discriminate |].
+    simpl in Hcheck.
+    destruct (ty_compatible_assoc_b env Ω T_e (param_ty p)) eqn:Hcompat;
+      [| discriminate].
+    eapply TArgsAssoc_Cons.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact He.
+    + apply ty_compatible_assoc_checked_sound.
+      exact Hcompat.
+    + eapply IH.
+      * exact Htail.
+      * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
+        eapply Hexpr. right; exact Hin. exact Hinfer0.
+      * exact Hcheck.
 Qed.

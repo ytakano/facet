@@ -140,8 +140,8 @@ Key temporary limitations:
      `typed`/`typed_args` relation currently carries only `fenv`, not
      `global_env`, so the assoc-aware `typed_args_assoc` relation now names
      the env-aware Prop boundary, but it still needs an env/root bridge or a
-     proved bridge from normalized raw elaboration to ordinary `typed_args`; only after that
-     should checker helpers switch to assoc-aware compatibility. Boolean-witness,
+     proved bridge from normalized raw elaboration to ordinary `typed_args`;
+     only after that should checker helpers switch to assoc-aware compatibility. Boolean-witness,
      param-type-list, and arity-length helper proofs compile when
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`

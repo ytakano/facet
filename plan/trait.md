@@ -21,10 +21,12 @@ validity checks must be represented in Rocq and the extracted checker.
   `(Trait::method receiver args...)`. The receiver is always the first
   argument. Dot method-call syntax is intentionally rejected in this phase.
 - Short UFCS accepts receiver types known before checker execution: function
-  parameters, syntactically typed literals, and immutable pure local literals
-  after receiver-let elimination. Struct, enum, direct-call, generic direct-call,
-  non-pure inferred local, and general annotated local receivers remain gated by
-  tests until store/root-safe checker evidence is available.
+  parameters, syntactically typed literals, immutable pure local literals after
+  receiver-let elimination, and fieldless struct literals whose store-safe
+  argument evidence is checked in Rocq. Field-bearing struct literals, enum
+  constructors, direct-call receivers, generic direct-call receivers, non-pure
+  inferred locals, and general annotated locals remain gated by tests until
+  store/root-safe checker evidence is available.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested.
@@ -114,7 +116,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Keep the canonical surface syntax as prefix calls with receiver-first
      arguments.
    - Add remaining receiver shapes only when the checker and safety proofs have
-     store/root-safe summary evidence. Do not add checker-only acceptance paths.
+     store/root-safe summary evidence. Field-bearing struct literals, enum
+     constructors, direct-call receivers, and non-pure locals are still gated;
+     do not add checker-only acceptance paths.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

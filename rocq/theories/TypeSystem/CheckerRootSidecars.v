@@ -51,6 +51,18 @@ Fixpoint store_safe_function_value_call_args_b
           store_safe_function_value_call_args_b env rest
       | None => false
       end
+  | EStruct name lts tys [] :: rest =>
+      match lookup_struct name env with
+      | Some sdef =>
+          match struct_bounds sdef with
+          | [] =>
+              capture_ref_free_ty_b env
+                (MkTy UUnrestricted (TStruct name lts tys)) &&
+              store_safe_function_value_call_args_b env rest
+          | _ :: _ => false
+          end
+      | None => false
+      end
   | _ :: _ => false
   end.
 

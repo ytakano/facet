@@ -28,7 +28,7 @@ Lemma store_safe_function_value_call_arg_global_env_with_local_bounds :
       (global_env_with_local_bounds env bounds) arg.
 Proof.
   intros env bounds arg Harg.
-  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary].
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds].
   - constructor.
   - constructor.
   - constructor.
@@ -37,6 +37,10 @@ Proof.
     + exact Hname.
     + apply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
       exact Hsummary.
+  - eapply SSFVCArg_EmptyStruct.
+    + change (lookup_struct name (global_env_with_local_bounds env bounds))
+        with (lookup_struct name env). exact Hlookup.
+    + exact Hbounds.
 Qed.
 
 Lemma store_safe_function_value_call_args_global_env_with_local_bounds :
@@ -129,6 +133,25 @@ Proof.
     exact Htyped.
   - eapply typed_env_roots_shadow_safe_efn_global_env_with_local_bounds.
     exact Htyped.
+  - dependent destruction Htyped.
+    match goal with
+    | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ [] _ _ _ _ |- _ =>
+        dependent destruction Hfields
+    end.
+    eapply TERS_Struct.
+    + change (lookup_struct name (global_env_with_local_bounds env bounds))
+        with (lookup_struct name env). exact H.
+    + exact H0.
+    + exact H1.
+    + match goal with
+      | Hlookup_typed : lookup_struct name env = Some sdef,
+        Hlookup_safe : lookup_struct name env = Some ?sdef_safe,
+        Hbounds_safe : struct_bounds ?sdef_safe = [] |- _ =>
+          rewrite Hlookup_typed in Hlookup_safe;
+          inversion Hlookup_safe; subst;
+          rewrite Hbounds_safe; reflexivity
+      end.
+    + rewrite <- x. constructor.
 Qed.
 
 Lemma typed_args_roots_shadow_safe_store_safe_global_env_with_local_bounds :
@@ -180,6 +203,25 @@ Proof.
     change (env_fns (global_env_with_local_bounds env bounds))
       with (env_fns env).
     eapply TER_Fn; eassumption.
+  - dependent destruction Htyped.
+    match goal with
+    | Hfields : typed_fields_roots _ _ _ _ _ _ _ [] _ _ _ _ |- _ =>
+        dependent destruction Hfields
+    end.
+    eapply TER_Struct.
+    + change (lookup_struct name (global_env_with_local_bounds env bounds))
+        with (lookup_struct name env). exact H.
+    + exact H0.
+    + exact H1.
+    + match goal with
+      | Hlookup_typed : lookup_struct name env = Some sdef,
+        Hlookup_safe : lookup_struct name env = Some ?sdef_safe,
+        Hbounds_safe : struct_bounds ?sdef_safe = [] |- _ =>
+          rewrite Hlookup_typed in Hlookup_safe;
+          inversion Hlookup_safe; subst;
+          rewrite Hbounds_safe; reflexivity
+      end.
+    + rewrite <- x. constructor.
 Qed.
 
 Lemma typed_args_roots_store_safe_global_env_with_local_bounds :
@@ -555,6 +597,13 @@ Proof.
     with (env_fns env).
   destruct (lookup_fn_b i (env_fns env)); try reflexivity.
   rewrite check_fn_root_shadow_provenance_summary_global_env_with_local_bounds.
+  rewrite IH. reflexivity.
+  + destruct l1 as [| field fields]; try reflexivity.
+  change (lookup_struct s (global_env_with_local_bounds env bounds))
+    with (lookup_struct s env).
+  destruct (lookup_struct s env) as [sdef |]; try reflexivity.
+  destruct (struct_bounds sdef); try reflexivity.
+  rewrite capture_ref_free_ty_b_global_env_with_local_bounds.
   rewrite IH. reflexivity.
 Qed.
 

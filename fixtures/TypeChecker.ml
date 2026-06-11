@@ -14057,6 +14057,20 @@ let rec store_safe_function_value_call_args_b env = function
         (&&) (check_fn_root_shadow_provenance_summary env callee)
           (store_safe_function_value_call_args_b env rest)
       | None -> false)
+   | EStruct (name, lts, tys, l) ->
+     (match l with
+      | [] ->
+        (match lookup_struct name env with
+         | Some sdef ->
+           (match sdef.struct_bounds with
+            | [] ->
+              (&&)
+                (capture_ref_free_ty_b env (MkTy (UUnrestricted, (TStruct
+                  (name, lts, tys)))))
+                (store_safe_function_value_call_args_b env rest)
+            | _ :: _ -> false)
+         | None -> false)
+      | _ :: _ -> false)
    | _ -> false)
 
 (** val direct_call_target_expr :

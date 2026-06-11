@@ -29,7 +29,7 @@ Proof.
   induction Hsafe as [| arg rest Harg Hsafe_rest IH];
     intros used argsr used' Hfree Hrename; simpl in Hrename.
   - injection Hrename as <- _. simpl. split; intros Hin; contradiction.
-  - destruct Harg as [| lit | y | fname0 fdef0 Hin0 Hname0 Hsummary0]; simpl in Hrename.
+  - destruct Harg as [| lit | y | fname0 fdef0 Hin0 Hname0 Hsummary0 | name lts tys sdef Hlookup Hbounds]; simpl in Hrename.
     + destruct ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
           match args0 with
@@ -81,6 +81,20 @@ Proof.
                  rewrite Hself in Heq. exact Heq.
            ++ apply Hfree_rest. exact Hin.
         -- simpl. exact Hlocal_rest.
+    + destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used rest) as [restr used_rest] eqn:Hrest.
+      injection Hrename as <- <-.
+      destruct (IH used restr used_rest) as [Hfree_rest Hlocal_rest].
+      * intros Hin. apply Hfree. simpl. exact Hin.
+      * exact Hrest.
+      * simpl. split; assumption.
     + destruct ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
           match args0 with

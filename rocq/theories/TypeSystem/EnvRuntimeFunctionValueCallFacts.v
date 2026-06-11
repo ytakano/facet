@@ -21,6 +21,12 @@ Proof.
   - inversion Heval_callee; subst; auto.
   - eapply store_function_closure_targets_summary_eval_var; eassumption.
   - inversion Heval_callee; subst; auto.
+  - inversion Heval_callee; subst.
+    match goal with
+    | Hfields : eval_struct_fields _ _ [] _ _ _ |- _ =>
+        dependent destruction Hfields
+    end.
+    exact Hsummary.
 Qed.
 
 Lemma store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary :
@@ -50,7 +56,7 @@ Lemma store_safe_function_value_call_arg_eval_value_summary :
     value_function_closure_targets_summary env v.
 Proof.
   intros env arg s s' v Hunique Harg Hsummary Heval_arg.
-  destruct Harg as [| lit | x | fname fdef Hin Hname Hcallee].
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hcallee | name lts tys sdef Hlookup Hbounds].
   - inversion Heval_arg; subst; simpl; auto.
   - inversion Heval_arg; subst; simpl; auto.
   - inversion Heval_arg; subst;
@@ -64,6 +70,7 @@ Proof.
     simpl. exists fdef. split.
     + exact Hlookup.
     + exact Hcallee.
+  - inversion Heval_arg; subst; simpl; auto.
 Qed.
 
 Lemma store_safe_function_value_call_args_eval_values_summary :
@@ -503,6 +510,13 @@ Proof.
         -- exact Hname.
         -- apply check_fn_root_shadow_provenance_summary_sound. exact Hcallee.
       * apply IH. exact Hrest.
+    + destruct l1 as [| field fields]; try discriminate.
+      destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
+      destruct (struct_bounds sdef) eqn:Hbounds; try discriminate.
+      apply andb_true_iff in Hcheck as [_ Hrest].
+      constructor.
+      * eapply SSFVCArg_EmptyStruct; eassumption.
+      * apply IH. exact Hrest.
 Qed.
 
 Lemma store_safe_function_value_call_arg_subst_type_params_expr :
@@ -512,11 +526,12 @@ Lemma store_safe_function_value_call_arg_subst_type_params_expr :
       (subst_type_params_expr type_args arg).
 Proof.
   intros env type_args arg Harg.
-  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary]; simpl.
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds]; simpl.
   - constructor.
   - constructor.
   - constructor.
   - eapply SSFVCArg_Fn; eassumption.
+  - eapply SSFVCArg_EmptyStruct; eassumption.
 Qed.
 
 Lemma store_safe_function_value_call_args_subst_type_params_expr :
@@ -541,8 +556,13 @@ Lemma store_safe_function_value_call_arg_subst_type_params_expr_inv :
     store_safe_function_value_call_arg env arg.
 Proof.
   intros env type_args arg Harg.
-  destruct arg; simpl in Harg; inversion Harg; subst; try constructor.
-  eapply SSFVCArg_Fn; eauto.
+  destruct arg; simpl in Harg; try (inversion Harg; subst; constructor).
+  - inversion Harg; subst. eapply SSFVCArg_Fn; eauto.
+  - destruct l1 as [| field fields].
+    + simpl in Harg. inversion Harg; subst.
+      eapply SSFVCArg_EmptyStruct; eassumption.
+    + destruct field as [field_name e_field].
+      simpl in Harg. inversion Harg; subst; discriminate.
 Qed.
 
 Lemma store_safe_function_value_call_args_subst_type_params_expr_inv :
@@ -568,12 +588,13 @@ Lemma store_safe_function_value_call_arg_alpha_rename_expr :
     store_safe_function_value_call_arg env ar.
 Proof.
   intros env rho used arg ar used' Harg Hrename.
-  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary];
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds];
     simpl in Hrename; inversion Hrename; subst.
   - constructor.
   - constructor.
   - constructor.
   - eapply SSFVCArg_Fn; eauto.
+  - eapply SSFVCArg_EmptyStruct; eassumption.
 Qed.
 
 Lemma store_safe_function_value_call_args_alpha_rename_exprs :

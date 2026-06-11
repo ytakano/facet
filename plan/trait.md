@@ -148,7 +148,8 @@ Key temporary limitations:
 
 3. Keep Haskell-style deriving on the trait roadmap.
    - `deriving` is reserved for a future surface form. For now, provisional
-     `struct ... deriving Trait { ... }` syntax is caught by the parser and
+     `struct ... deriving Trait { ... }` and
+     `enum ... deriving Trait { ... }` syntax are caught by the parser and
      rejected with an explicit deferred error, and `deriving` cannot be used as
      an identifier. Once associated compatibility and UFCS are checker-backed,
      deriving should expand to ordinary impl declarations validated by the

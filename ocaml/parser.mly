@@ -180,6 +180,9 @@ enum_def:
     { let (bounds, outs) = where_clause in
       { ne_visibility = VPrivate; ne_name = name; ne_generics = generics; ne_bounds = bounds;
         ne_outlives = outs; ne_variants = variants } }
+  | KW_ENUM; name = ID; _generics = opt_generic_params;
+    KW_DERIVING; _derived = trait_ref; LBRACE; _variants = separated_list(COMMA, enum_variant); RBRACE
+    { failwith (Printf.sprintf "deriving syntax is deferred: %s" name) }
 
 enum_variant:
   | name = ID

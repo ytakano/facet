@@ -1,0 +1,12 @@
+trait Show {
+  fn show(self: Self) -> unrestricted isize;
+}
+
+enum Token deriving Show {
+  Start,
+  Stop
+}
+
+fn main() -> unrestricted isize {
+  0
+}

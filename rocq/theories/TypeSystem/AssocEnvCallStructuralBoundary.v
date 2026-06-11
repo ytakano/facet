@@ -4194,6 +4194,42 @@ Proof.
   eapply infer_core_env_roots_sound. exact Hinfer.
 Qed.
 
+Theorem infer_core_env_roots_assoc_boundary_store_named :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_assoc_boundary_store_named; try eassumption.
+  eapply infer_core_env_roots_assoc_boundary_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_assoc_boundary_store_named_prefix :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed_prefix env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_assoc_boundary_store_named_prefix; try eassumption.
+  eapply infer_core_env_roots_assoc_boundary_sound. exact Hinfer.
+Qed.
+
 Theorem infer_core_env_state_fuel_roots_shadow_safe_assoc_boundary_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =
@@ -4219,6 +4255,44 @@ Proof.
   eapply infer_core_env_roots_shadow_safe_sound. exact Hinfer.
 Qed.
 
+Theorem infer_core_env_roots_shadow_safe_assoc_boundary_store_named :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots_shadow_safe env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_assoc_boundary_store_named; try eassumption.
+  eapply infer_core_env_roots_shadow_safe_assoc_boundary_sound.
+  exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_shadow_safe_assoc_boundary_store_named_prefix :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots_shadow_safe env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed_prefix env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_assoc_boundary_store_named_prefix; try eassumption.
+  eapply infer_core_env_roots_shadow_safe_assoc_boundary_sound.
+  exact Hinfer.
+Qed.
+
 Theorem infer_core_env_state_fuel_roots_shadow_safe_checked_assoc_boundary_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe_checked fuel env Omega n R Sigma e =
@@ -4242,4 +4316,43 @@ Proof.
   apply TERCAssocBoundary_Checked.
   eapply typed_env_roots_shadow_safe_checked_checked.
   eapply infer_core_env_roots_shadow_safe_checked_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_shadow_safe_checked_assoc_boundary_store_named :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots_shadow_safe_checked env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_checked_assoc_boundary_store_named; try eassumption.
+  eapply infer_core_env_roots_shadow_safe_checked_assoc_boundary_sound.
+  exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_shadow_safe_checked_assoc_boundary_store_named_prefix :
+  forall env Omega n R Gamma e T Gamma' R' roots s,
+    infer_core_env_roots_shadow_safe_checked env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_of_ctx Gamma) ->
+    root_env_sctx_roots_named R (sctx_of_ctx Gamma) ->
+    store_typed_prefix env s (sctx_of_ctx Gamma') ->
+    root_env_store_keys_named R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots s Hinfer Hshadow Hkeys
+    Hnamed Hstore.
+  eapply typed_env_roots_checked_assoc_boundary_store_named_prefix;
+    try eassumption.
+  eapply infer_core_env_roots_shadow_safe_checked_assoc_boundary_sound.
+  exact Hinfer.
 Qed.

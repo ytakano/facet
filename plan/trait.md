@@ -70,11 +70,11 @@ validity checks must be represented in Rocq and the extracted checker.
   preserve key naming and root naming on both ctx and runtime-side sctx views,
   including returned root-set naming, and expose individual plus combined
   same-store packages for keys, roots, and returned root-set naming.
-  Function-level assoc root boundaries, their checked wrappers, checked
-  function-environment wrappers, full-env, function end-to-end, function-list,
-  program, and check-program entrypoints lift the same combined store packages
-  for safety consumers. Assoc root value and argument typing bridge to the same
-  roots-ready invariants. Ordinary
+  Core-root checker entrypoints, function-level assoc root boundaries, their
+  checked wrappers, checked function-environment wrappers, full-env, function
+  end-to-end, function-list, program, and check-program entrypoints lift the
+  same combined store packages for safety consumers. Assoc root value and
+  argument typing bridge to the same roots-ready invariants. Ordinary
   compatibility is not treated as an implicit proof of associated
   compatibility; call-site wiring must dispatch through the env-aware assoc
   helpers at each checker path being proved. The ctx/env checker's top-level

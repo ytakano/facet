@@ -148,8 +148,9 @@ Key temporary limitations:
      composition, arity, length, and inversion facts. Conditional bridge
      reductions now show `typed_args_assoc_checked` reduces to
      `typed_args_assoc`, enum payload, core struct-field, and function-body
-     wrappers reduce through explicit single-pair bridge assumptions, and env/roots checked
-     argument and field relations reduce to their ordinary relations once the
+     wrappers reduce through explicit single-pair bridge assumptions,
+     and env/roots checked argument, field, and function-body relations reduce to their ordinary
+     relations once the
      corresponding isolated compatibility bridge assumptions are available.
    - Remaining blocker: prove the single-pair bridge from
      `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root

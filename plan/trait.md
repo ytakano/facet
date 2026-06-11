@@ -147,8 +147,9 @@ Key temporary limitations:
      `ty_compatible_assoc_checked`/boolean witnesses and expose structural
      composition, arity, length, and inversion facts. Conditional bridge
      reductions now show `typed_args_assoc_checked` reduces to
-     `typed_args_assoc`, and env/roots checked argument and field relations reduce to
-     their ordinary relations once the corresponding isolated compatibility
+     `typed_args_assoc`, enum payload wrappers reduce through that argument bridge,
+     and env/roots checked argument and field relations reduce to their ordinary
+     relations once the corresponding isolated compatibility
      bridge assumptions are available.
    - Remaining blocker: prove the single-pair bridge from
      `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root

@@ -147,8 +147,8 @@ Key temporary limitations:
      Boolean-witness through `ty_compatible_assoc_checked`, checked Prop-level
      argument relation, param-type-list, arity-length, params_of_tys rewrite,
      direct params_of_tys witness/length facts, assoc Prop/env-structural
-     same-bindings, roots/field same-bindings bridges, roots-aware argument
-     helpers, and assoc field-list helper proofs compile while
+     same-bindings, roots/field same-bindings bridges, roots-aware argument length
+     and structural helpers, and assoc field-list helper proofs compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

@@ -92,6 +92,15 @@ Proof.
   induction Hargs; simpl; auto.
 Qed.
 
+Lemma typed_args_roots_assoc_arg_roots_args_length :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
+    List.length arg_roots = List.length args.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Hargs.
+  induction Hargs; simpl; auto.
+Qed.
+
 Lemma typed_args_roots_assoc_params_of_tys_map_param_ty :
   forall env Ω n R Σ args ps Σ' R' arg_roots,
     typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->

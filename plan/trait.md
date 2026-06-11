@@ -137,39 +137,17 @@ Key temporary limitations:
      executable checker accept cases that the current typing and env/roots
      relations cannot justify, so checker call sites must stay on ordinary
      compatibility until the bridge is proved.
-   - Current helper coverage names the unchecked-to-checked boundary without
-     expanding normalized compatibility proofs: checked argument and single-value
-     relations; struct-field, enum-payload, function-body, trait-method
-     signature, and trait-method-resolution facts; env/roots argument, field,
-     payload, HRT, generic-call, direct-call, and function-value collector facts;
-     normalized `if`, match, and core-shape witnesses; and env/roots
-     function-body wrappers. These facts carry
-     `ty_compatible_assoc_checked`/boolean witnesses and expose structural
-     composition, arity, length, and inversion facts. Conditional bridge
-     reductions now cover checked arguments, single-value witnesses,
-     HRT/function-value/direct-call argument witnesses, enum payloads,
-     core struct fields, function bodies, trait-method signatures,
-     trait-method resolutions, and
-     env/roots checked argument, value, field, and function-body relations under
-     explicit single-pair bridge assumptions; plain checked-argument and
-     enum-payload reductions reach ordinary `typed_args`, while bool reductions
-     expose per-argument structural witnesses, and env/root plain reductions
-     expose dedicated argument, field, and function-body witness relations.
    - The single-pair bridge from `ty_compatible_assoc_checked` to
-     `ty_compatible_assoc` is proved by splitting the three assoc compatibility
-     definitions into a lightweight base module and making `normalize_assoc_ty`
-     opaque while reusing `ty_compatible_normalize_assoc_b_sound`. A first post-soundness wrapper now threads this proved bridge through
-     checked argument lists, exposing `typed_args_assoc_checked_sound` without an
-     explicit bridge assumption. HRT argument type witnesses, enum payloads, trait-method signatures, and
-     single-value witnesses are also wrapped without an explicit bridge
-     assumption. Trait-method resolution now exposes the same assoc-compatible signature facts
-     without an explicit bridge assumption. Env/root single-value witnesses are also wrapped without an explicit bridge
-     assumption. Env/root argument-list witnesses now expose per-argument assoc compatibility
-     without an explicit bridge assumption. Env/root field witnesses now expose per-field assoc compatibility without an
-     explicit bridge assumption. Env/root function-body wrappers now expose assoc return compatibility without
-     an explicit bridge assumption. Remaining work is to use these wrappers at
+     `ty_compatible_assoc` is proved via `AssocCompatibilityBase` and
+     `ty_compatible_assoc_checked_sound`, keeping `normalize_assoc_ty` opaque at
+     proof boundaries. Bridge wrappers now expose ordinary associated
+     compatibility for checked arguments, HRT/generic argument witnesses, enum
+     payloads, trait-method signatures/resolution, value witnesses,
+     env/root arguments, fields, values, and function bodies. The executable
+     assoc helpers `check_args_assoc` and `check_arg_tys_assoc` also have
+     helper-level soundness lemmas. Remaining work is to use these wrappers at
      checker-facing call sites once the typing-rule boundary is ready, while
-     keeping the executable checker behavior unchanged until then.
+     keeping executable checker behavior unchanged until then.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

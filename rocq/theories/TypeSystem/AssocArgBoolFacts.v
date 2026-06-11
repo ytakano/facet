@@ -1,5 +1,6 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program TypingRules CheckerHrt AssocCompatibility.
+  Lifetime Types Syntax Program TypingRules CheckerHrt AssocCompatibility
+  CompatBoolSoundness.
 From Stdlib Require Import List.
 Import ListNotations.
 
@@ -27,6 +28,22 @@ Proof.
     + apply IH. exact H.
 Qed.
 
+Lemma check_arg_tys_assoc_sound :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys = None ->
+    Forall2
+      (fun actual expected =>
+         ty_compatible_assoc env Ω actual expected)
+      arg_tys param_tys.
+Proof.
+  intros env Ω arg_tys param_tys Hcheck.
+  eapply Forall2_impl.
+  - intros actual expected Hcompat.
+    exact (ty_compatible_assoc_checked_sound
+      env Ω actual expected Hcompat).
+  - apply (check_arg_tys_assoc_true env Ω). exact Hcheck.
+Qed.
+
 Lemma check_args_assoc_true :
   forall env Ω arg_tys params,
     check_args_assoc env Ω arg_tys params = None ->
@@ -46,6 +63,22 @@ Proof.
     + apply IH. exact H.
 Qed.
 
+Lemma check_args_assoc_sound :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys params = None ->
+    Forall2
+      (fun actual p =>
+         ty_compatible_assoc env Ω actual (param_ty p))
+      arg_tys params.
+Proof.
+  intros env Ω arg_tys params Hcheck.
+  eapply Forall2_impl.
+  - intros actual p Hcompat.
+    exact (ty_compatible_assoc_checked_sound
+      env Ω actual (param_ty p) Hcompat).
+  - apply (check_args_assoc_true env Ω). exact Hcheck.
+Qed.
+
 Lemma check_args_assoc_param_tys_true :
   forall env Ω arg_tys params,
     check_args_assoc env Ω arg_tys params = None ->
@@ -63,6 +96,22 @@ Proof.
     simpl. constructor.
     + exact Hcompat.
     + apply IH. exact H.
+Qed.
+
+Lemma check_args_assoc_param_tys_sound :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys params = None ->
+    Forall2
+      (fun actual expected =>
+         ty_compatible_assoc env Ω actual expected)
+      arg_tys (map param_ty params).
+Proof.
+  intros env Ω arg_tys params Hcheck.
+  eapply Forall2_impl.
+  - intros actual expected Hcompat.
+    exact (ty_compatible_assoc_checked_sound
+      env Ω actual expected Hcompat).
+  - apply (check_args_assoc_param_tys_true env Ω). exact Hcheck.
 Qed.
 
 Lemma check_arg_tys_assoc_length :
@@ -115,6 +164,22 @@ Proof.
   intros env Ω arg_tys param_tys Hcheck.
   rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
   apply (check_args_assoc_true env Ω). exact Hcheck.
+Qed.
+
+Lemma check_arg_tys_assoc_params_of_tys_sound :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys = None ->
+    Forall2
+      (fun actual p =>
+         ty_compatible_assoc env Ω actual (param_ty p))
+      arg_tys (params_of_tys param_tys).
+Proof.
+  intros env Ω arg_tys param_tys Hcheck.
+  eapply Forall2_impl.
+  - intros actual p Hcompat.
+    exact (ty_compatible_assoc_checked_sound
+      env Ω actual (param_ty p) Hcompat).
+  - apply (check_arg_tys_assoc_params_of_tys_true env Ω). exact Hcheck.
 Qed.
 
 Lemma check_arg_tys_assoc_params_of_tys_length :

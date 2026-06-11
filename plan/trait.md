@@ -153,10 +153,10 @@ Key temporary limitations:
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.
-     A direct single-pair bridge, `abstract`, and a simple inductive wrapper
-     around `ty_compatible_assoc` still stall at `Qed`; the next step must
-     avoid storing the expanded normalized-compatibility proof term in the
-     bridge before wiring checker call sites.
+     Direct and downstream single-pair wrappers from `ty_compatible_assoc_b = true`
+     to `ty_compatible_assoc` still stall during proof checking, so the next
+     step must keep carrying the checked boolean witness and avoid storing the
+     expanded normalized-compatibility proof term before wiring checker call sites.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

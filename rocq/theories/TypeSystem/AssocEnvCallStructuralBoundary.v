@@ -1098,6 +1098,47 @@ Definition checked_fn_env_roots_assoc_boundary
     borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
+Lemma typed_fn_env_roots_assoc_boundary_sctx_keys_named :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_keys_named R_out (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  unfold typed_fn_env_roots_assoc_boundary.
+  intros env f R0 R_out roots Htyped Hshadow Hkeys.
+  destruct Htyped as [T_body [Gamma_out [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  repeat split; try assumption.
+  eapply typed_env_roots_assoc_boundary_sctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_fn_env_roots_assoc_boundary_sctx_roots_named :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_roots_named R_out (sctx_of_ctx Gamma_out) /\
+      root_set_sctx_roots_named roots (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  unfold typed_fn_env_roots_assoc_boundary.
+  intros env f R0 R_out roots Htyped Hshadow Hnamed.
+  destruct Htyped as [T_body [Gamma_out [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  destruct (typed_env_roots_assoc_boundary_sctx_roots_named
+    (global_env_with_local_bounds env (fn_bounds f))
+    (fn_outlives f) (fn_lifetimes f) R0 (sctx_of_ctx (fn_body_ctx f))
+    (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots Hbody
+    Hshadow Hnamed) as [Henv Hroots].
+  repeat split; assumption.
+Qed.
+
 Definition typed_fn_env_roots_checked_assoc_boundary
     (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
@@ -1134,6 +1175,47 @@ Lemma checked_fn_env_roots_checked_assoc_boundary_typed :
 Proof.
   intros env f R0 R_out roots Hchecked.
   exact (proj1 Hchecked).
+Qed.
+
+Lemma typed_fn_env_roots_checked_assoc_boundary_sctx_keys_named :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_keys_named R_out (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  unfold typed_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 R_out roots Htyped Hshadow Hkeys.
+  destruct Htyped as [T_body [Gamma_out [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  repeat split; try assumption.
+  eapply typed_env_roots_checked_assoc_boundary_sctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_fn_env_roots_checked_assoc_boundary_sctx_roots_named :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_roots_named R_out (sctx_of_ctx Gamma_out) /\
+      root_set_sctx_roots_named roots (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  unfold typed_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 R_out roots Htyped Hshadow Hnamed.
+  destruct Htyped as [T_body [Gamma_out [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  destruct (typed_env_roots_checked_assoc_boundary_sctx_roots_named
+    (global_env_with_local_bounds env (fn_bounds f))
+    (fn_outlives f) (fn_lifetimes f) R0 (sctx_of_ctx (fn_body_ctx f))
+    (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots Hbody
+    Hshadow Hnamed) as [Henv Hroots].
+  repeat split; assumption.
 Qed.
 
 Lemma typed_fn_env_roots_checked_assoc_boundary_structural :

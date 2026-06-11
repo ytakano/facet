@@ -630,6 +630,26 @@ Definition checked_fn_env_roots_assoc_boundary
     borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
+Definition typed_fn_env_roots_checked_assoc_boundary
+    (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  exists T_body Gamma_out,
+    typed_env_roots_checked_assoc_boundary
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      R0 (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots /\
+    ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+    params_ok_env_b env (fn_params f) Gamma_out = true.
+
+Definition checked_fn_env_roots_checked_assoc_boundary
+    (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots /\
+  (exists PBS',
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
+
 Lemma checked_fn_env_roots_assoc_boundary_typed :
   forall env f R0 R_out roots,
     checked_fn_env_roots_assoc_boundary env f R0 R_out roots ->
@@ -637,6 +657,53 @@ Lemma checked_fn_env_roots_assoc_boundary_typed :
 Proof.
   intros env f R0 R_out roots Hchecked.
   exact (proj1 Hchecked).
+Qed.
+
+Lemma checked_fn_env_roots_checked_assoc_boundary_typed :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  intros env f R0 R_out roots Hchecked.
+  exact (proj1 Hchecked).
+Qed.
+
+Lemma typed_fn_env_roots_checked_assoc_boundary_of_checked :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked env f R0 R_out roots ->
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold typed_fn_env_roots_checked,
+    typed_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Gamma_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  repeat split; try assumption.
+  apply TERCAssocBoundary_Checked. exact Htyped.
+Qed.
+
+Lemma checked_fn_env_roots_checked_assoc_boundary_of_checked :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_checked env f R0 R_out roots ->
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold checked_fn_env_roots_checked,
+    checked_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 R_out roots Hchecked.
+  destruct Hchecked as [Htyped [Hborrow Hnodup]].
+  repeat split; try assumption.
+  eapply typed_fn_env_roots_checked_assoc_boundary_of_checked. exact Htyped.
+Qed.
+
+Theorem infer_full_env_roots_checked_assoc_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_full_env_roots_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  eapply checked_fn_env_roots_checked_assoc_boundary_of_checked.
+  eapply infer_full_env_roots_checked_sound. exact Hinfer.
 Qed.
 
 Theorem infer_env_roots_assoc_boundary_sound :

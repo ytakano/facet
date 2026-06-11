@@ -30,3 +30,16 @@ Proof.
   - reflexivity.
   - simpl. f_equal. exact IHHargs.
 Qed.
+
+Lemma typed_args_env_structural_assoc_same_bindings :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ args ps Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  intros env Ω n Σ args ps Σ' Hargs.
+  induction Hargs.
+  - apply sctx_same_bindings_refl.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings. exact H.
+    + exact IHHargs.
+Qed.

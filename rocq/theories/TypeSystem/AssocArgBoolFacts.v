@@ -91,3 +91,15 @@ Proof.
       try discriminate.
     simpl. f_equal. apply IH. exact H.
 Qed.
+
+Lemma check_arg_tys_assoc_params_of_tys :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys =
+    check_args_assoc env Ω arg_tys (params_of_tys param_tys).
+Proof.
+  intros env Ω arg_tys.
+  induction arg_tys as [| a arg_tys IH]; intros param_tys.
+  - destruct param_tys; reflexivity.
+  - destruct param_tys as [| p ps]; [reflexivity |].
+    simpl. destruct (ty_compatible_assoc_b env Ω a p); [apply IH | reflexivity].
+Qed.

@@ -145,7 +145,7 @@ Key temporary limitations:
      elaboration to ordinary `typed_args`;
      only after that should checker helpers switch to assoc-aware compatibility.
      Boolean-witness through `ty_compatible_assoc_checked`, param-type-list,
-     arity-length, params_of_tys,
+     arity-length, params_of_tys rewrite,
      assoc Prop/env-structural same-bindings, roots/field
      same-bindings bridges, roots-aware argument helpers, and assoc field-list
      helper proofs compile while

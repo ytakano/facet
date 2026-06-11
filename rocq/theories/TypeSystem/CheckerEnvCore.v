@@ -617,7 +617,35 @@ Fixpoint infer_core_env_fuel (fuel : nat)
 	              end
 		          end
 		      end
-		  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
+		  | ECallExprGeneric callee type_args args =>
+		      match infer_core_env_fuel fuel' env Ω n Γ callee with
+		      | infer_err err => infer_err err
+		      | infer_ok (T_callee, Γc) =>
+		          let fix collect (Γ0 : ctx) (as_ : list expr)
+		              : infer_result (list Ty * ctx) :=
+		            match as_ with
+		            | [] => infer_ok ([], Γ0)
+		            | e' :: es =>
+		                match infer_core_env_fuel fuel' env Ω n Γ0 e' with
+		                | infer_err err => infer_err err
+		                | infer_ok (T_e, Γ1) =>
+		                    match collect Γ1 es with
+		                    | infer_err err => infer_err err
+		                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+		                    end
+		                end
+		            end
+		          in
+		          match collect Γc args with
+		          | infer_err err => infer_err err
+		          | infer_ok (arg_tys, Γ') =>
+		              match infer_fn_value_call_generic_assoc
+		                      env Ω T_callee type_args arg_tys with
+		              | infer_err err => infer_err err
+		              | infer_ok ret => infer_ok (ret, Γ')
+		              end
+		          end
+		      end
 		  end
 	  end.
 

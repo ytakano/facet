@@ -140,7 +140,7 @@ Key temporary limitations:
      `typed`/`typed_args` relation currently carries only `fenv`, not
      `global_env`, so the assoc-aware `typed_args_assoc`, `typed_args_assoc_checked`,
      core Prop-level single-value, struct-field, enum-payload, and function-body checked relation/facts,
-     `typed_args_env_structural_assoc`, `typed_fn_env_structural_assoc_checked`, and `typed_args_roots_assoc` relations
+     `typed_args_env_structural_assoc`, `typed_fn_env_structural_assoc_checked`, and `typed_args_roots_assoc`, `typed_fn_env_roots_assoc_checked`, and `typed_fn_env_roots_checked_assoc_checked` relations
      now name the Prop, env-structural, and roots boundaries, but they still
      need an env/root bridge or a proved bridge from normalized raw
      elaboration to ordinary `typed_args`;

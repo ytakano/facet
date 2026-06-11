@@ -153,6 +153,7 @@ theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/AssocEnvArgSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v
 theories/TypeSystem/EnvRootSoundness.v
+theories/TypeSystem/AssocEnvRootFnDefTypingFacts.v
 theories/TypeSystem/AssocEnvRootArgSoundness.v
 theories/TypeSystem/AssocEnvHrtSoundness.v
 theories/TypeSystem/End2EndSafety.v

@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules
-  EnvTypingSoundness AssocCompatibility AssocEnvStructural CheckerHrt.
+  EnvTypingSoundness AssocCompatibility AssocEnvStructural AssocHigherBridgeSoundness CheckerHrt.
 From Stdlib Require Import Bool List String.
 Import ListNotations.
 
@@ -242,4 +242,35 @@ Proof.
       * exact Hfields.
       * exact Hcollect.
       * exact Hexpr.
+Qed.
+
+Lemma infer_env_fields_collect_assoc_sound :
+  forall fuel env Ω n lts args Sigma fields defs Sigma_out,
+    forallb (fun '(_, e_field) => struct_expr e_field) fields = true ->
+    infer_env_fields_collect_assoc fuel env Ω n lts args Sigma fields defs =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        struct_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e =
+          infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_fields_env_structural_assoc env Ω n lts args Sigma fields defs
+      Sigma_out /\
+    Forall
+      (fun f =>
+         exists e_field actual Sigma_in Sigma_out_field,
+           lookup_field_b (field_name f) fields = Some e_field /\
+           typed_env_structural env Ω n Sigma_in e_field actual Sigma_out_field /\
+           ty_compatible_assoc env Ω actual
+             (instantiate_struct_field_ty lts args f))
+      defs.
+Proof.
+  intros fuel env Ω n lts args Sigma fields defs Sigma_out
+    Hfields Hcollect Hexpr.
+  pose proof (infer_env_fields_collect_assoc_checked_sound
+    fuel env Ω n lts args Sigma fields defs Sigma_out
+    Hfields Hcollect Hexpr) as Htyped.
+  split; [exact Htyped |].
+  exact (typed_fields_env_structural_assoc_sound
+    env Ω n lts args Sigma fields defs Sigma_out Htyped).
 Qed.

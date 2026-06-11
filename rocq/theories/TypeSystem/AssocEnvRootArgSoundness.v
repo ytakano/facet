@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker RootProvenance
   EnvStructuralRules EnvRootSoundness AssocCompatibility AssocEnvStructural
-  CheckerHrt.
+  AssocHigherBridgeSoundness CheckerHrt.
 From Stdlib Require Import List String.
 Import ListNotations.
 
@@ -246,4 +246,34 @@ Proof.
       * exact Hrest.
       * intros R0 Sigma0 e0 T0 Sigma0' R0' roots0 Hinfer.
         eapply Hexpr. exact Hinfer.
+Qed.
+
+Lemma infer_env_fields_collect_roots_assoc_sound :
+  forall fuel env Ω n lts args R Sigma fields defs Sigma_out R_out roots,
+    infer_env_fields_collect_roots_assoc fuel env Ω n lts args R Sigma fields defs =
+      infer_ok (Sigma_out, R_out, roots) ->
+    (forall R0 Sigma0 e T Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Sigma0 e =
+          infer_ok (T, Sigma1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Sigma0 e T Sigma1 R1 roots1) ->
+    typed_fields_roots_assoc env Ω n lts args R Sigma fields defs
+      Sigma_out R_out roots /\
+    Forall
+      (fun f =>
+         exists e_field actual Rin Rnext Sigma_in Sigma_out_field roots_field,
+           lookup_field_b (field_name f) fields = Some e_field /\
+           typed_env_roots env Ω n Rin Sigma_in e_field actual
+             Sigma_out_field Rnext roots_field /\
+           ty_compatible_assoc env Ω actual
+             (instantiate_struct_field_ty lts args f))
+      defs.
+Proof.
+  intros fuel env Ω n lts args R Sigma fields defs Sigma_out R_out roots
+    Hcollect Hexpr.
+  pose proof (infer_env_fields_collect_roots_assoc_checked_sound
+    fuel env Ω n lts args R Sigma fields defs Sigma_out R_out roots
+    Hcollect Hexpr) as Htyped.
+  split; [exact Htyped |].
+  exact (typed_fields_roots_assoc_sound
+    env Ω n lts args R Sigma fields defs Sigma_out R_out roots Htyped).
 Qed.

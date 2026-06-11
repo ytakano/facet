@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program Renaming TypingRules TypeChecker RootProvenance
-  EnvStructuralRules AlphaRoots TypeSafetyRootFacts TypeSafetyRootsReadyRootSets
+  EnvStructuralRules AlphaRootEnvFacts AlphaRoots TypeSafetyRootFacts
+  TypeSafetyRootsReadyRootSets
   TypeSafetyRootsReadyCtx TypeSafetyRootsReadyMutual
   TypeSafetyCheckedRoots EnvTypingSoundness
   EnvRootSoundness AssocEnvStructural
@@ -399,6 +400,19 @@ Proof.
        eassumption].
 Qed.
 
+Lemma typed_env_roots_assoc_call_boundary_sctx_keys_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma ->
+    root_env_sctx_keys_named R' Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hkeys.
+  unfold root_env_sctx_keys_named, root_env_ctx_keys_named in *.
+  eapply typed_env_roots_assoc_call_boundary_ctx_keys_named; eassumption.
+Qed.
+
 Lemma typed_env_roots_assoc_call_boundary_ctx_roots_named :
   forall env Omega n R Sigma e T Sigma' R' roots,
     typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R'
@@ -562,6 +576,18 @@ Proof.
   - eapply typed_env_roots_assoc_call_boundary_ctx_keys_named; eassumption.
 Qed.
 
+Lemma typed_env_roots_assoc_boundary_sctx_keys_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma ->
+    root_env_sctx_keys_named R' Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hkeys.
+  unfold root_env_sctx_keys_named, root_env_ctx_keys_named in *.
+  eapply typed_env_roots_assoc_boundary_ctx_keys_named; eassumption.
+Qed.
+
 Lemma typed_env_roots_assoc_boundary_ctx_roots_named :
   forall env Omega n R Sigma e T Sigma' R' roots,
     typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
@@ -632,6 +658,19 @@ Proof.
   destruct Hboundary.
   - eapply typed_env_roots_checked_ctx_keys_named; eassumption.
   - eapply typed_env_roots_assoc_boundary_ctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_sctx_keys_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma ->
+    root_env_sctx_keys_named R' Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hkeys.
+  unfold root_env_sctx_keys_named, root_env_ctx_keys_named in *.
+  eapply typed_env_roots_checked_assoc_boundary_ctx_keys_named; eassumption.
 Qed.
 
 Lemma typed_env_roots_checked_assoc_boundary_ctx_roots_named :

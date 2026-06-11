@@ -1320,6 +1320,66 @@ Proof.
   eapply infer_full_env_roots_checked_sound. exact Hinfer.
 Qed.
 
+Lemma initial_root_env_for_params_sctx_keys_named :
+  forall ps,
+    root_env_sctx_keys_named
+      (initial_root_env_for_params ps)
+      (sctx_of_ctx (params_ctx ps)).
+Proof.
+  intros ps.
+  unfold initial_root_env_for_params.
+  apply initial_root_env_for_params_origin_sctx_keys_named.
+  reflexivity.
+Qed.
+
+Lemma initial_root_env_for_params_sctx_roots_named :
+  forall ps,
+    root_env_sctx_roots_named
+      (initial_root_env_for_params ps)
+      (sctx_of_ctx (params_ctx ps)).
+Proof.
+  intros ps.
+  unfold initial_root_env_for_params.
+  apply initial_root_env_for_params_origin_sctx_roots_named.
+Qed.
+
+Theorem infer_full_env_roots_checked_assoc_boundary_sctx_keys_named :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_full_env_roots_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      root_env_sctx_keys_named R_out (sctx_of_ctx Gamma_body) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots Hinfer Hshadow Hkeys.
+  eapply checked_fn_env_roots_checked_assoc_boundary_sctx_keys_named.
+  - eapply infer_full_env_roots_checked_assoc_boundary_sound. exact Hinfer.
+  - exact Hshadow.
+  - exact Hkeys.
+Qed.
+
+Theorem infer_full_env_roots_checked_assoc_boundary_sctx_roots_named :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_full_env_roots_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      root_env_sctx_roots_named R_out (sctx_of_ctx Gamma_body) /\
+      root_set_sctx_roots_named roots (sctx_of_ctx Gamma_body) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots Hinfer Hshadow Hnamed.
+  eapply checked_fn_env_roots_checked_assoc_boundary_sctx_roots_named.
+  - eapply infer_full_env_roots_checked_assoc_boundary_sound. exact Hinfer.
+  - exact Hshadow.
+  - exact Hnamed.
+Qed.
+
 Theorem infer_fn_env_end2end_assoc_boundary_sound :
   forall env f T Gamma_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) ->
@@ -1339,6 +1399,43 @@ Proof.
   injection Hend as <- <- <- <-.
   subst R0.
   eapply infer_full_env_roots_checked_assoc_boundary_sound. exact Hroots.
+Qed.
+
+Theorem infer_fn_env_end2end_assoc_boundary_sctx_keys_named :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T_body Gamma_body,
+      root_env_sctx_keys_named R_out (sctx_of_ctx Gamma_body) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f T Gamma_out R_out roots Hend Hshadow.
+  eapply checked_fn_env_roots_checked_assoc_boundary_sctx_keys_named.
+  - eapply infer_fn_env_end2end_assoc_boundary_sound. exact Hend.
+  - exact Hshadow.
+  - unfold fn_body_ctx, fn_body_params.
+    apply initial_root_env_for_params_sctx_keys_named.
+Qed.
+
+Theorem infer_fn_env_end2end_assoc_boundary_sctx_roots_named :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T_body Gamma_body,
+      root_env_sctx_roots_named R_out (sctx_of_ctx Gamma_body) /\
+      root_set_sctx_roots_named roots (sctx_of_ctx Gamma_body) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f T Gamma_out R_out roots Hend Hshadow.
+  eapply checked_fn_env_roots_checked_assoc_boundary_sctx_roots_named.
+  - eapply infer_fn_env_end2end_assoc_boundary_sound. exact Hend.
+  - exact Hshadow.
+  - unfold fn_body_ctx, fn_body_params.
+    apply initial_root_env_for_params_sctx_roots_named.
 Qed.
 
 Lemma infer_fns_env_end2end_in_assoc_boundary_sound :

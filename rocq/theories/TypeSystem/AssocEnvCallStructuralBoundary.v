@@ -1,7 +1,9 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker RootProvenance
-  EnvStructuralRules AssocEnvStructural.
-From Stdlib Require Import List String.
+  EnvStructuralRules EnvTypingSoundness EnvRootSoundness AssocEnvStructural
+  AssocDirectCallHelpers
+  AssocEnvArgSoundness AssocEnvRootArgSoundness EnvSoundnessFacts.
+From Stdlib Require Import List String Bool PeanoNat.
 Import ListNotations.
 
 (* Specification-only call typing boundaries for associated projections.
@@ -290,3 +292,203 @@ Inductive typed_env_roots_assoc_call_boundary
         (ECallExpr (EMakeClosure fname captures) args)
         (apply_lt_ty sigma (fn_ret fdef)) Sigma' R'
         (root_sets_union arg_roots).
+
+
+Lemma infer_env_direct_call_assoc_structural_boundary :
+  forall fuel env Omega n fname fdef args arg_tys T Sigma Sigma',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect fuel env Omega n Sigma args =
+      infer_ok (arg_tys, Sigma') ->
+    (forall Sigma0 e T0 Sigma1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Omega n Sigma0 e =
+          infer_ok (T0, Sigma1) ->
+        typed_env_structural env Omega n Sigma0 e T0 Sigma1) ->
+    infer_direct_call_assoc env Omega n fdef arg_tys = infer_ok T ->
+    typed_env_structural_assoc_call_boundary env Omega n Sigma
+      (ECall fname args) T Sigma'.
+Proof.
+  intros fuel env Omega n fname fdef args arg_tys T Sigma Sigma'
+    Hin Hname Hcollect Hexpr Hcall.
+  unfold infer_direct_call_assoc in Hcall.
+  destruct (no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0)
+    eqn:Hgate; try discriminate.
+  destruct (build_sigma (fn_lifetimes fdef)
+    (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
+    as [sigma_acc|] eqn:Hsigma; try discriminate.
+  destruct (check_args_assoc env Omega arg_tys
+    (apply_lt_params (finalize_subst sigma_acc) (fn_params fdef)))
+    as [err|] eqn:Hcheck; try discriminate.
+  destruct (forallb (wf_lifetime_b (mk_region_ctx n))
+    (finalize_subst sigma_acc)) eqn:Hwf; try discriminate.
+  destruct (outlives_constraints_hold_b Omega
+    (apply_lt_outlives (finalize_subst sigma_acc) (fn_outlives fdef)))
+    eqn:Hout; try discriminate.
+  inversion Hcall; subst; clear Hcall.
+  apply andb_true_iff in Hgate as [Hcaptures Htype_params].
+  unfold no_captures_b in Hcaptures.
+  destruct (fn_captures fdef) as [| capture captures] eqn:Hcaps;
+    try discriminate.
+  apply Nat.eqb_eq in Htype_params.
+  eapply TESAssocBoundary_Call.
+  - exact Hin.
+  - first [reflexivity | exact Hname].
+  - exact Hcaps.
+  - exact Htype_params.
+  - eapply infer_env_args_collect_assoc_checked_sound; eassumption.
+  - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.
+
+Lemma infer_env_direct_call_generic_assoc_structural_boundary :
+  forall fuel env Omega n fname fdef type_args args arg_tys T Sigma Sigma',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect fuel env Omega n Sigma args =
+      infer_ok (arg_tys, Sigma') ->
+    (forall Sigma0 e T0 Sigma1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Omega n Sigma0 e =
+          infer_ok (T0, Sigma1) ->
+        typed_env_structural env Omega n Sigma0 e T0 Sigma1) ->
+    infer_direct_call_generic_assoc env Omega n fdef type_args arg_tys =
+      infer_ok T ->
+    typed_env_structural_assoc_call_boundary env Omega n Sigma
+      (ECallGeneric fname type_args args) T Sigma'.
+Proof.
+  intros fuel env Omega n fname fdef type_args args arg_tys T Sigma Sigma'
+    Hin Hname Hcollect Hexpr Hcall.
+  unfold infer_direct_call_generic_assoc in Hcall.
+  destruct (no_captures_b fdef &&
+    Nat.eqb (Datatypes.length type_args) (fn_type_params fdef))
+    eqn:Hgate; try discriminate.
+  destruct (check_struct_bounds env (fn_bounds fdef) type_args)
+    as [err_bounds|] eqn:Hbounds; try discriminate.
+  destruct (build_sigma (fn_lifetimes fdef)
+    (repeat None (fn_lifetimes fdef)) arg_tys
+    (apply_type_params type_args (fn_params fdef)))
+    as [sigma_acc|] eqn:Hsigma; try discriminate.
+  destruct (check_args_assoc env Omega arg_tys
+    (apply_lt_params (finalize_subst sigma_acc)
+      (apply_type_params type_args (fn_params fdef))))
+    as [err|] eqn:Hcheck; try discriminate.
+  destruct (forallb (wf_lifetime_b (mk_region_ctx n))
+    (finalize_subst sigma_acc)) eqn:Hwf; try discriminate.
+  destruct (outlives_constraints_hold_b Omega
+    (apply_lt_outlives (finalize_subst sigma_acc) (fn_outlives fdef)))
+    eqn:Hout; try discriminate.
+  inversion Hcall; subst; clear Hcall.
+  apply andb_true_iff in Hgate as [Hcaptures Htype_params].
+  unfold no_captures_b in Hcaptures.
+  destruct (fn_captures fdef) as [| capture captures] eqn:Hcaps;
+    try discriminate.
+  apply Nat.eqb_eq in Htype_params.
+  eapply TESAssocBoundary_CallGeneric.
+  - exact Hin.
+  - first [reflexivity | exact Hname].
+  - exact Hcaps.
+  - exact Htype_params.
+  - exact Hbounds.
+  - eapply infer_env_args_collect_assoc_checked_sound; eassumption.
+  - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.
+
+Lemma infer_roots_direct_call_assoc_structural_boundary :
+  forall fuel env Omega n fname fdef R Sigma args arg_tys T Sigma' R'
+      arg_roots,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect_roots fuel env Omega n R Sigma args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma1, R1, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma1 R1 roots1) ->
+    infer_direct_call_assoc env Omega n fdef arg_tys = infer_ok T ->
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma
+      (ECall fname args) T Sigma' R' (root_sets_union arg_roots).
+Proof.
+  intros fuel env Omega n fname fdef R Sigma args arg_tys T Sigma' R'
+    arg_roots Hin Hname Hcollect Hexpr Hcall.
+  unfold infer_direct_call_assoc in Hcall.
+  destruct (no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0)
+    eqn:Hgate; try discriminate.
+  destruct (build_sigma (fn_lifetimes fdef)
+    (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
+    as [sigma_acc|] eqn:Hsigma; try discriminate.
+  destruct (check_args_assoc env Omega arg_tys
+    (apply_lt_params (finalize_subst sigma_acc) (fn_params fdef)))
+    as [err|] eqn:Hcheck; try discriminate.
+  destruct (forallb (wf_lifetime_b (mk_region_ctx n))
+    (finalize_subst sigma_acc)) eqn:Hwf; try discriminate.
+  destruct (outlives_constraints_hold_b Omega
+    (apply_lt_outlives (finalize_subst sigma_acc) (fn_outlives fdef)))
+    eqn:Hout; try discriminate.
+  inversion Hcall; subst; clear Hcall.
+  apply andb_true_iff in Hgate as [Hcaptures Htype_params].
+  unfold no_captures_b in Hcaptures.
+  destruct (fn_captures fdef) as [| capture captures] eqn:Hcaps;
+    try discriminate.
+  apply Nat.eqb_eq in Htype_params.
+  eapply TERAssocBoundary_Call.
+  - exact Hin.
+  - first [reflexivity | exact Hname].
+  - exact Hcaps.
+  - exact Htype_params.
+  - eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+  - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.
+
+Lemma infer_roots_direct_call_generic_assoc_structural_boundary :
+  forall fuel env Omega n fname fdef type_args R Sigma args arg_tys T Sigma'
+      R' arg_roots,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect_roots fuel env Omega n R Sigma args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma1, R1, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma1 R1 roots1) ->
+    infer_direct_call_generic_assoc env Omega n fdef type_args arg_tys =
+      infer_ok T ->
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma
+      (ECallGeneric fname type_args args) T Sigma' R'
+      (root_sets_union arg_roots).
+Proof.
+  intros fuel env Omega n fname fdef type_args R Sigma args arg_tys T Sigma'
+    R' arg_roots Hin Hname Hcollect Hexpr Hcall.
+  unfold infer_direct_call_generic_assoc in Hcall.
+  destruct (no_captures_b fdef &&
+    Nat.eqb (Datatypes.length type_args) (fn_type_params fdef))
+    eqn:Hgate; try discriminate.
+  destruct (check_struct_bounds env (fn_bounds fdef) type_args)
+    as [err_bounds|] eqn:Hbounds; try discriminate.
+  destruct (build_sigma (fn_lifetimes fdef)
+    (repeat None (fn_lifetimes fdef)) arg_tys
+    (apply_type_params type_args (fn_params fdef)))
+    as [sigma_acc|] eqn:Hsigma; try discriminate.
+  destruct (check_args_assoc env Omega arg_tys
+    (apply_lt_params (finalize_subst sigma_acc)
+      (apply_type_params type_args (fn_params fdef))))
+    as [err|] eqn:Hcheck; try discriminate.
+  destruct (forallb (wf_lifetime_b (mk_region_ctx n))
+    (finalize_subst sigma_acc)) eqn:Hwf; try discriminate.
+  destruct (outlives_constraints_hold_b Omega
+    (apply_lt_outlives (finalize_subst sigma_acc) (fn_outlives fdef)))
+    eqn:Hout; try discriminate.
+  inversion Hcall; subst; clear Hcall.
+  apply andb_true_iff in Hgate as [Hcaptures Htype_params].
+  unfold no_captures_b in Hcaptures.
+  destruct (fn_captures fdef) as [| capture captures] eqn:Hcaps;
+    try discriminate.
+  apply Nat.eqb_eq in Htype_params.
+  eapply TERAssocBoundary_CallGeneric.
+  - exact Hin.
+  - first [reflexivity | exact Hname].
+  - exact Hcaps.
+  - exact Htype_params.
+  - exact Hbounds.
+  - eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+  - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.

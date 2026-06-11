@@ -55,7 +55,9 @@ validity checks must be represented in Rocq and the extracted checker.
   shape, and the roots boundary projects to the env-structural boundary. A
   checker-facing wrapper boundary now admits either existing structural typing
   or an associated call boundary while preserving the same store-shape
-  invariants. These wrappers do not change executable checker behavior.
+  invariants. Full env checker soundness has thin entry theorems into this
+  wrapper for the current checker behavior. These wrappers do not change
+  executable checker behavior.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.

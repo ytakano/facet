@@ -1,5 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
-  TypingRules TypeChecker EnvStructuralRules EnvTypingSoundness EnvBorrowSoundness.
+  TypingRules TypeChecker EnvStructuralRules EnvTypingSoundness EnvBorrowSoundness
+  AssocEnvCallStructuralBoundary.
 From Stdlib Require Import List Bool.
 Import ListNotations.
 
@@ -68,6 +69,27 @@ Proof.
     eqn:Hcore; try discriminate.
   inversion Hinfer; subst.
   eapply infer_core_env_state_fuel_structural_sound. exact Hcore.
+Qed.
+
+Theorem infer_core_env_state_fuel_assoc_boundary_sound :
+  forall fuel env Ω n Σ e T Σ',
+    infer_core_env_state_fuel fuel env Ω n Σ e = infer_ok (T, Σ') ->
+    typed_env_structural_assoc_boundary env Ω n Σ e T Σ'.
+Proof.
+  intros fuel env Ω n Σ e T Σ' Hinfer.
+  apply TESAssocBoundary_Structural.
+  eapply infer_core_env_state_fuel_structural_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_assoc_boundary_sound :
+  forall env Ω n Γ e T Γ',
+    infer_core_env env Ω n Γ e = infer_ok (T, Γ') ->
+    typed_env_structural_assoc_boundary env Ω n
+      (sctx_of_ctx Γ) e T (sctx_of_ctx Γ').
+Proof.
+  intros env Ω n Γ e T Γ' Hinfer.
+  apply TESAssocBoundary_Structural.
+  eapply infer_core_env_structural_sound. exact Hinfer.
 Qed.
 
 Theorem infer_env_structural_sound : forall env f T Γ',

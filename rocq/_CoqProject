@@ -15,6 +15,7 @@ theories/TypeSystem/CheckerHrt.v
 theories/TypeSystem/CheckerClosure.v
 theories/TypeSystem/CheckerOrdinary.v
 theories/TypeSystem/CheckerEnvHelpers.v
+theories/TypeSystem/AssocHrtHelpers.v
 theories/TypeSystem/CheckerCore.v
 theories/TypeSystem/CheckerEnvCore.v
 theories/TypeSystem/CheckerState.v

@@ -62,8 +62,8 @@ validity checks must be represented in Rocq and the extracted checker.
   and checked shadow-safe root checker soundness have entry theorems into
   these wrappers for the current checker behavior, including function-level
   checked full-env roots and end-to-end program entrypoints. Function-level
-  checked assoc root boundaries now project to structural assoc boundaries for
-  safety-side consumers. Ordinary
+  checked assoc root boundaries and end-to-end program entries now project to
+  structural assoc boundaries for safety-side consumers. Ordinary
   compatibility is not treated as an implicit proof of associated
   compatibility; call-site wiring must dispatch through the env-aware assoc
   helpers at each checker path being proved. The ctx/env checker's top-level

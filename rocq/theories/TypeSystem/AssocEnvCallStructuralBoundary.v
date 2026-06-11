@@ -840,6 +840,53 @@ Proof.
   eapply infer_program_env_end2end_assoc_boundary_sound; eauto.
 Qed.
 
+Theorem infer_fn_env_end2end_structural_assoc_boundary_sound :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) ->
+    checked_fn_env_structural_assoc_boundary env f.
+Proof.
+  intros env f T Gamma_out R_out roots Hend.
+  eapply checked_fn_env_roots_checked_assoc_boundary_structural.
+  eapply infer_fn_env_end2end_assoc_boundary_sound. exact Hend.
+Qed.
+
+Lemma infer_fns_env_end2end_in_structural_assoc_boundary_sound :
+  forall env fns f,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    In f fns ->
+    checked_fn_env_structural_assoc_boundary env f.
+Proof.
+  intros env fns f Hfns Hin.
+  destruct (infer_fns_env_end2end_in_assoc_boundary_sound env fns f Hfns Hin)
+    as [T [Gamma_out [R_out [roots [Hend Hchecked]]]]].
+  eapply checked_fn_env_roots_checked_assoc_boundary_structural.
+  exact Hchecked.
+Qed.
+
+Theorem infer_program_env_end2end_structural_assoc_boundary_sound :
+  forall env env' f,
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    checked_fn_env_structural_assoc_boundary env' f.
+Proof.
+  intros env env' f Hprog Hin.
+  destruct (infer_program_env_end2end_assoc_boundary_sound env env' f Hprog Hin)
+    as [T [Gamma_out [R_out [roots [Hend Hchecked]]]]].
+  eapply checked_fn_env_roots_checked_assoc_boundary_structural.
+  exact Hchecked.
+Qed.
+
+Theorem check_program_env_end2end_structural_assoc_boundary_sound :
+  forall env env' f,
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    checked_fn_env_structural_assoc_boundary env' f.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_structural_assoc_boundary_sound; eauto.
+Qed.
+
 Theorem infer_env_roots_assoc_boundary_sound :
   forall env f R0 T Gamma_out R_out roots,
     infer_env_roots env f R0 = infer_ok (T, Gamma_out, R_out, roots) ->

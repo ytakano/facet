@@ -88,8 +88,10 @@ Key temporary limitations:
 - Method calls intentionally use the same parenthesized prefix call shape as
   functions: `(callee args...)`. Short UFCS uses `(Trait::method receiver args...)`,
   and explicit UFCS uses `(<Ty as Trait>::method receiver args...)`; both treat
-  the receiver as the first argument. Dot method-call syntax remains out of
-  phase and is covered by rejection tests.
+  the receiver as the first argument. This is the canonical Roadmap 1-3 method
+  call surface; later receiver-oriented sugar must desugar to the same prefix
+  shape before Rocq checking. Dot method-call syntax remains out of phase and
+  is covered by rejection tests.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -117,8 +119,10 @@ Key temporary limitations:
      is insufficient. Non-pure inferred local receivers still fail earlier because
      short UFCS has no checker-backed receiver type inference and remain covered by an
      invalid regression test.
-   - Keep dot method-call syntax out of this phase; parser-level rejection is
-     covered by regression tests.
+   - Keep method calls aligned with ordinary function calls by using the
+     parenthesized prefix shape `(callee args...)`, with the receiver passed as
+     the first argument for trait methods. Keep dot method-call syntax out of
+     this phase; parser-level rejection is covered by regression tests.
 
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility

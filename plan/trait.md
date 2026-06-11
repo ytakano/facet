@@ -44,7 +44,8 @@ validity checks must be represented in Rocq and the extracted checker.
   targets that mention `global_env` without changing `typed` yet. Direct,
   generic direct-call, non-generic function-value, explicit generic
   function-value, HRT, inferred/elaborating type-forall, and mixed-forall
-  helper results now bridge to the env/root structural call boundary.
+  helper results now bridge to the env/root structural call boundary, and
+  root function-value helper results also lift into the checked root wrapper.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
   function-value calls, explicit generic function-value calls,
@@ -65,8 +66,11 @@ validity checks must be represented in Rocq and the extracted checker.
   direct/generic direct calls, function-value calls, explicit generic
   function-value calls, HRT calls, inferred type-forall calls, and
   mixed-forall calls now dispatch through the env-aware associated call
-  helpers; root/shadow checker call sites remain on ordinary compatibility
-  until their direct assoc-helper soundness is proved.
+  helpers; root/shadow checker call sites remain on ordinary compatibility.
+  A direct root checker wiring attempt reaches the expected proof boundary:
+  assoc-compatible calls no longer prove the primary `typed_env_roots` relation,
+  so wiring must wait until preservation/root safety consumes the checked assoc
+  wrapper instead of the ordinary roots relation.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.
@@ -79,8 +83,8 @@ validity checks must be represented in Rocq and the extracted checker.
      the primary `typed_env_structural` relation until the preservation and
      root-safety obligations are explicitly covered.
    - Wire checker call sites from ordinary `check_args` / `check_arg_tys` to
-     the env-aware assoc helpers only where the corresponding wrapper-boundary
-     soundness is proved.
+     the env-aware assoc helpers only after the consuming soundness theorem no
+     longer requires the primary ordinary compatibility relation.
    - Preserve the required end-to-end checker soundness theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

@@ -149,7 +149,7 @@ Key temporary limitations:
      param-type equality/back-bridges, env-structural and roots-aware
      argument/field relations, same-bindings facts, nil inversions, cons
      inversions, roots structural/length helpers, and a downstream
-     assoc-aware env/roots argument, enum-payload, struct-field collector, HRT, mixed-forall, and non-HRT type-forall call helpers, and HRT/type-forall success facts that recover checked boolean argument witnesses and arity without bridging to `ty_compatible_assoc`, plus env/root collector composition facts that expose `typed_args_env_structural_assoc` and `typed_args_roots_assoc` over `params_of_tys`. These compile while
+     assoc-aware env/roots argument, enum-payload, struct-field collector, HRT, mixed-forall, non-HRT type-forall, and direct top-level call helpers. Success facts recover checked boolean argument witnesses, substituted parameter lists, arity where applicable, and env/root collector composition facts exposing `typed_args_env_structural_assoc` and `typed_args_roots_assoc` without bridging to `ty_compatible_assoc`. These compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

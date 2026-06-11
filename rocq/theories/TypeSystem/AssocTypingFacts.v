@@ -29,6 +29,16 @@ Proof.
   - simpl. econstructor; eauto.
 Qed.
 
+Lemma params_of_tys_map_param_ty_Forall2 :
+  forall ps,
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      (params_of_tys (map param_ty ps)) ps.
+Proof.
+  induction ps as [|p ps IH].
+  - constructor.
+  - simpl. constructor; auto.
+Qed.
+
 Lemma typed_args_assoc_param_tys :
   forall env fenv Ω n Γ args ps_shadow ps Γ',
     typed_args_assoc env fenv Ω n Γ args ps_shadow Γ' ->
@@ -46,6 +56,17 @@ Proof.
     | Heq : param_ty _ = param_ty _ |- _ =>
         rewrite <- Heq; assumption
     end.
+Qed.
+
+Lemma typed_args_assoc_params_of_tys_map_param_ty_back :
+  forall env fenv Ω n Γ args ps Γ',
+    typed_args_assoc env fenv Ω n Γ args
+      (params_of_tys (map param_ty ps)) Γ' ->
+    typed_args_assoc env fenv Ω n Γ args ps Γ'.
+Proof.
+  intros env fenv Ω n Γ args ps Γ' Hargs.
+  eapply typed_args_assoc_param_tys; eauto.
+  apply params_of_tys_map_param_ty_Forall2.
 Qed.
 
 Lemma typed_args_assoc_checked_same_bindings :
@@ -91,4 +112,15 @@ Proof.
     | Heq : param_ty _ = param_ty _ |- _ =>
         rewrite <- Heq; assumption
     end.
+Qed.
+
+Lemma typed_args_assoc_checked_params_of_tys_map_param_ty_back :
+  forall env fenv Ω n Γ args ps Γ',
+    typed_args_assoc_checked env fenv Ω n Γ args
+      (params_of_tys (map param_ty ps)) Γ' ->
+    typed_args_assoc_checked env fenv Ω n Γ args ps Γ'.
+Proof.
+  intros env fenv Ω n Γ args ps Γ' Hargs.
+  eapply typed_args_assoc_checked_param_tys; eauto.
+  apply params_of_tys_map_param_ty_Forall2.
 Qed.

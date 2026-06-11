@@ -244,3 +244,39 @@ Proof.
     + rewrite <- H3. exact H0.
     + apply IHHargs. exact H5.
 Qed.
+
+Lemma assoc_params_of_tys_map_param_ty_Forall2 :
+  forall ps,
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      (params_of_tys (map param_ty ps)) ps.
+Proof.
+  induction ps as [| p ps IH].
+  - constructor.
+  - simpl. constructor.
+    + reflexivity.
+    + exact IH.
+Qed.
+
+Lemma typed_args_env_structural_assoc_params_of_tys_map_param_ty_back :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ args
+      (params_of_tys (map param_ty ps)) Σ' ->
+    typed_args_env_structural_assoc env Ω n Σ args ps Σ'.
+Proof.
+  intros env Ω n Σ args ps Σ' Hargs.
+  eapply typed_args_env_structural_assoc_param_tys.
+  - exact Hargs.
+  - apply assoc_params_of_tys_map_param_ty_Forall2.
+Qed.
+
+Lemma typed_args_roots_assoc_params_of_tys_map_param_ty_back :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args
+      (params_of_tys (map param_ty ps)) Σ' R' arg_roots ->
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Hargs.
+  eapply typed_args_roots_assoc_param_tys.
+  - exact Hargs.
+  - apply assoc_params_of_tys_map_param_ty_Forall2.
+Qed.

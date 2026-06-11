@@ -146,7 +146,7 @@ Key temporary limitations:
      only after that should checker helpers switch to assoc-aware compatibility.
      Boolean-witness through `ty_compatible_assoc_checked`, checked Prop-level
      argument relation, param-type-list, arity-length, params_of_tys rewrite,
-     direct params_of_tys witness/length facts, param-type equality bridges,
+     direct params_of_tys witness/length facts, param-type equality and synthetic-param back-bridges,
      assoc Prop/env-structural same-bindings, roots/field same-bindings
      bridges, roots-aware argument length and structural helpers, and assoc field-list helper proofs compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from

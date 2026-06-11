@@ -133,36 +133,25 @@ Key temporary limitations:
      compatibility have regression coverage for accepted concrete projections
      and rejected mismatches.
    - Wire compatibility at the typing-rule boundary before changing helper
-     call sites. Helper-only wiring to `check_arg_tys_assoc` makes the
-     executable checker accept normalized associated compatibility while
-     existing typing and env/root typing rules still require ordinary
-     `typed_args` compatibility, so full soundness fails. The core
-     `typed`/`typed_args` relation currently carries only `fenv`, not
-     `global_env`, so the assoc-aware `typed_args_assoc`, `typed_args_assoc_checked`,
-     core Prop-level single-value, struct-field, enum-payload, and function-body checked relation/facts,
-     `typed_args_env_structural_assoc`, `typed_fn_env_structural_assoc_checked`, and `typed_args_roots_assoc`, `typed_fn_env_roots_assoc_checked`, and `typed_fn_env_roots_checked_assoc_checked` relations
-     now name the Prop, env-structural, and roots boundaries, but they still
-     need an env/root bridge or a proved bridge from normalized raw
-     elaboration to ordinary `typed_args`;
-     only after that should checker helpers switch to assoc-aware compatibility.
-     The assoc helper layer now has opaque boolean witnesses, checked
-     Prop-level argument relations, arity and params-of-tys bridges,
-     param-type equality/back-bridges, env-structural and roots-aware
-     single-value, argument, and field relations, same-bindings facts, nil inversions, cons
-     inversions, roots structural/length helpers, single-value check and collector helpers,
-     `if` and match-branch result core-equality helpers plus normalized
-     core-shape helpers over associated projections, and a core Prop-level
-     expression core-shape checked relation/facts carrying only the normalized
-     core boolean witness,
-     and a downstream
-     assoc-aware env/roots argument, enum-payload, struct-field collector, HRT, mixed-forall, non-HRT type-forall, direct top-level call, and plain function-value call helpers/facts. Success facts recover checked boolean argument witnesses, normalized `if` and match result core equality witnesses and result type shapes, substituted parameter lists, arity where applicable, and env/root collector composition facts exposing `typed_args_env_structural_assoc` and `typed_args_roots_assoc` without bridging to `ty_compatible_assoc`. These compile while
-     `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
-     `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
-     once it exposes `normalize_assoc_ty`.
-     Direct and downstream single-pair wrappers from `ty_compatible_assoc_b = true`
-     to `ty_compatible_assoc` still stall during proof checking, so the next
-     step must keep carrying the checked boolean witness and avoid storing the
-     expanded normalized-compatibility proof term before wiring checker call sites.
+     call sites. Helper-only wiring to `check_arg_tys_assoc` would make the
+     executable checker accept cases that the current typing and env/roots
+     relations cannot justify, so checker call sites must stay on ordinary
+     compatibility until the bridge is proved.
+   - Current helper coverage names the unchecked-to-checked boundary without
+     expanding normalized compatibility proofs: checked argument and single-value
+     relations; struct-field, enum-payload, function-body, and trait-method
+     signature facts; env/roots argument, field, payload, HRT, generic-call,
+     direct-call, and function-value collector facts; normalized `if`, match,
+     and core-shape witnesses; and env/roots function-body wrappers. These
+     facts carry `ty_compatible_assoc_checked`/boolean witnesses and expose
+     structural composition, arity, length, and inversion facts, but deliberately
+     avoid a bridge to `ty_compatible_assoc`.
+   - Remaining blocker: prove an env/root bridge, or prove that normalized raw
+     elaboration implies the ordinary `typed_args`/compatibility relations.
+     Direct and downstream single-pair wrappers from
+     `ty_compatible_assoc_b = true` to `ty_compatible_assoc` still stall during
+     proof checking once `normalize_assoc_ty` is exposed. Keep carrying checked
+     boolean witnesses until this bridge exists.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

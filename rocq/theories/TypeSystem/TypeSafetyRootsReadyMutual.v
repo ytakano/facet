@@ -2,6 +2,7 @@ From Facet.TypeSystem Require Import TypeSafetyRootsReadyStore.
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyRootSets.
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyStoreOps.
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyCtx.
+From Facet.TypeSystem Require Import AssocEnvStructural.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -1042,6 +1043,45 @@ Proof.
       eapply typed_env_structural_same_bindings.
       eapply typed_env_roots_structural. exact t.
     + rewrite <- e10. exact Hroot_scoped.
+Qed.
+
+Lemma typed_value_roots_assoc_ctx_roots_named :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    root_set_ctx_roots_named roots Σ'.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped Hshadow Hnamed.
+  inversion Htyped; subst.
+  exact (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+    R Σ e T_actual Σ' R' roots H Hshadow Hnamed).
+Qed.
+
+Lemma typed_args_roots_assoc_ctx_roots_named :
+  forall env Ω n R Σ args ps Σ' R' roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    Forall (fun roots => root_set_ctx_roots_named roots Σ') roots.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots Hargs Hshadow Hnamed.
+  induction Hargs.
+  - split; [exact Hnamed | constructor].
+  - destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+      R Σ e T_e Σ1 R1 roots H Hshadow Hnamed) as [Hnamed1 Hroots].
+    assert (Hshadow1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (IHHargs Hshadow1 Hnamed1) as [Hnamed2 Hroots_rest].
+    split.
+    + exact Hnamed2.
+    + constructor.
+      * eapply root_set_ctx_roots_named_same_bindings.
+        -- eapply typed_args_roots_assoc_same_bindings. exact Hargs.
+        -- exact Hroots.
+      * exact Hroots_rest.
 Qed.
 
 Theorem typed_roots_ctx_keys_named_mutual :

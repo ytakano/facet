@@ -38,9 +38,10 @@ validity checks must be represented in Rocq and the extracted checker.
   at proof boundaries.
 - `AssocCallTypingBoundary` and `AssocEnvCallTypingBoundary` define
   lightweight Prop-level call boundaries around associated-compatible argument
-  typing for direct, function-value, explicit generic function-value, and
-  polymorphic function-value calls, so future checker-facing wiring has targets
-  that mention `global_env` without changing `typed` yet.
+  typing for direct, function-value, explicit generic function-value,
+  HRT/type-forall/mixed-forall, and root-aware call paths, so future
+  checker-facing wiring has targets that mention `global_env` without changing
+  `typed` yet.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
   function-value calls, explicit generic function-value calls,

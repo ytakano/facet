@@ -1,9 +1,9 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax PathState Program TypingRules RootProvenance
   TypeChecker EnvStructuralRules AssocEnvStructural
-  AssocDirectCallHelpers AssocFnValueCallHelpers
+  AssocDirectCallHelpers AssocFnValueCallHelpers AssocHrtHelpers
   EnvTypingSoundness EnvRootSoundness
-  AssocDirectCallFacts AssocFnValueCallFacts.
+  AssocDirectCallFacts AssocFnValueCallFacts AssocEnvHrtSoundness.
 From Stdlib Require Import List.
 Import ListNotations.
 
@@ -157,6 +157,114 @@ Proof.
   exists param_tys. constructor. exact Hargs.
 Qed.
 
+
+Lemma infer_env_hrt_assoc_boundary :
+  forall fuel env Ω n m bounds body args arg_tys T Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_hrt_call_env_assoc env Ω n m bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_env_call_typing_boundary env Ω n Σ args
+        (params_of_tys param_tys) T Σ'.
+Proof.
+  intros fuel env Ω n m bounds body args arg_tys T Σ Σ'
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_hrt_assoc_checked_sound
+    fuel env Ω n m bounds body args arg_tys T Σ Σ' Hcollect Hexpr Hcall)
+    as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_env_type_forall_assoc_boundary :
+  forall fuel env Ω n type_params bounds body args arg_tys T Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_type_forall_call_env_assoc
+      env Ω type_params bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_env_call_typing_boundary env Ω n Σ args
+        (params_of_tys param_tys) T Σ'.
+Proof.
+  intros fuel env Ω n type_params bounds body args arg_tys T Σ Σ'
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_type_forall_assoc_checked_sound
+    fuel env Ω n type_params bounds body args arg_tys T Σ Σ'
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_env_type_forall_elab_assoc_boundary :
+  forall fuel env Ω n type_params bounds body args arg_tys type_args_ret Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_type_forall_call_env_elab_assoc
+      env Ω type_params bounds body arg_tys = infer_ok type_args_ret ->
+    exists param_tys,
+      assoc_env_call_typing_boundary env Ω n Σ args
+        (params_of_tys param_tys) (snd type_args_ret) Σ'.
+Proof.
+  intros fuel env Ω n type_params bounds body args arg_tys type_args_ret Σ Σ'
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_type_forall_elab_assoc_checked_sound
+    fuel env Ω n type_params bounds body args arg_tys type_args_ret Σ Σ'
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_env_mixed_forall_assoc_boundary :
+  forall fuel env Ω n m lt_bounds type_params type_bounds body
+      args arg_tys T Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_mixed_forall_call_env_assoc
+      env Ω n m lt_bounds type_params type_bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_env_call_typing_boundary env Ω n Σ args
+        (params_of_tys param_tys) T Σ'.
+Proof.
+  intros fuel env Ω n m lt_bounds type_params type_bounds body
+    args arg_tys T Σ Σ' Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_mixed_forall_assoc_checked_sound
+    fuel env Ω n m lt_bounds type_params type_bounds body args arg_tys T Σ Σ'
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_env_mixed_forall_elab_assoc_boundary :
+  forall fuel env Ω n m lt_bounds type_params type_bounds body
+      args arg_tys type_args_ret Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_mixed_forall_call_env_elab_assoc
+      env Ω n m lt_bounds type_params type_bounds body arg_tys =
+      infer_ok type_args_ret ->
+    exists param_tys,
+      assoc_env_call_typing_boundary env Ω n Σ args
+        (params_of_tys param_tys) (snd type_args_ret) Σ'.
+Proof.
+  intros fuel env Ω n m lt_bounds type_params type_bounds body
+    args arg_tys type_args_ret Σ Σ' Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_mixed_forall_elab_assoc_checked_sound
+    fuel env Ω n m lt_bounds type_params type_bounds body args arg_tys
+    type_args_ret Σ Σ' Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
 Lemma infer_roots_direct_call_assoc_boundary :
   forall fuel env Ω n fdef R Σ args arg_tys T Σ' R' arg_roots,
     infer_env_args_collect_roots fuel env Ω n R Σ args =
@@ -242,5 +350,120 @@ Proof.
   destruct (infer_env_args_collect_roots_fn_value_call_generic_assoc_checked_sound
     fuel env Ω n callee_ty type_args R Σ args arg_tys T Σ' R' arg_roots
     Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_roots_hrt_assoc_boundary :
+  forall fuel env Ω n m bounds body R Σ args arg_tys T Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_hrt_call_env_assoc env Ω n m bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_roots_call_typing_boundary env Ω n R Σ args
+        (params_of_tys param_tys) T Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n m bounds body R Σ args arg_tys T Σ' R' arg_roots
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_hrt_assoc_checked_sound
+    fuel env Ω n m bounds body R Σ args arg_tys T Σ' R' arg_roots
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_roots_type_forall_assoc_boundary :
+  forall fuel env Ω n type_params bounds body R Σ args arg_tys T Σ' R'
+      arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_type_forall_call_env_assoc
+      env Ω type_params bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_roots_call_typing_boundary env Ω n R Σ args
+        (params_of_tys param_tys) T Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n type_params bounds body R Σ args arg_tys T Σ' R'
+    arg_roots Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_type_forall_assoc_checked_sound
+    fuel env Ω n type_params bounds body R Σ args arg_tys T Σ' R' arg_roots
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_roots_type_forall_elab_assoc_boundary :
+  forall fuel env Ω n type_params bounds body R Σ args arg_tys type_args_ret
+      Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_type_forall_call_env_elab_assoc
+      env Ω type_params bounds body arg_tys = infer_ok type_args_ret ->
+    exists param_tys,
+      assoc_roots_call_typing_boundary env Ω n R Σ args
+        (params_of_tys param_tys) (snd type_args_ret) Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n type_params bounds body R Σ args arg_tys type_args_ret
+    Σ' R' arg_roots Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_type_forall_elab_assoc_checked_sound
+    fuel env Ω n type_params bounds body R Σ args arg_tys type_args_ret
+    Σ' R' arg_roots Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_roots_mixed_forall_assoc_boundary :
+  forall fuel env Ω n m lt_bounds type_params type_bounds body
+      R Σ args arg_tys T Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_mixed_forall_call_env_assoc
+      env Ω n m lt_bounds type_params type_bounds body arg_tys = infer_ok T ->
+    exists param_tys,
+      assoc_roots_call_typing_boundary env Ω n R Σ args
+        (params_of_tys param_tys) T Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n m lt_bounds type_params type_bounds body
+    R Σ args arg_tys T Σ' R' arg_roots Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_mixed_forall_assoc_checked_sound
+    fuel env Ω n m lt_bounds type_params type_bounds body R Σ args arg_tys T
+    Σ' R' arg_roots Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. constructor. exact Hargs.
+Qed.
+
+Lemma infer_roots_mixed_forall_elab_assoc_boundary :
+  forall fuel env Ω n m lt_bounds type_params type_bounds body
+      R Σ args arg_tys type_args_ret Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_mixed_forall_call_env_elab_assoc
+      env Ω n m lt_bounds type_params type_bounds body arg_tys =
+      infer_ok type_args_ret ->
+    exists param_tys,
+      assoc_roots_call_typing_boundary env Ω n R Σ args
+        (params_of_tys param_tys) (snd type_args_ret) Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n m lt_bounds type_params type_bounds body
+    R Σ args arg_tys type_args_ret Σ' R' arg_roots Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_mixed_forall_elab_assoc_checked_sound
+    fuel env Ω n m lt_bounds type_params type_bounds body R Σ args arg_tys
+    type_args_ret Σ' R' arg_roots Hcollect Hexpr Hcall)
+    as [param_tys Hargs].
   exists param_tys. constructor. exact Hargs.
 Qed.

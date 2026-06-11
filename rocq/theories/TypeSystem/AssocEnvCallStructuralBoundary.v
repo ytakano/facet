@@ -1194,6 +1194,51 @@ Proof.
 Qed.
 
 
+Lemma infer_roots_direct_call_checked_assoc_boundary :
+  forall fuel env Omega n fname fdef R Sigma args arg_tys T Sigma' R'
+      arg_roots,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect_roots fuel env Omega n R Sigma args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma1, R1, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma1 R1 roots1) ->
+    infer_direct_call_assoc env Omega n fdef arg_tys = infer_ok T ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECall fname args) T Sigma' R' (root_sets_union arg_roots).
+Proof.
+  intros fuel env Omega n fname fdef R Sigma args arg_tys T Sigma' R'
+    arg_roots Hin Hname Hcollect Hexpr Hcall.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply infer_roots_direct_call_assoc_structural_boundary; eassumption.
+Qed.
+
+Lemma infer_roots_direct_call_generic_checked_assoc_boundary :
+  forall fuel env Omega n fname fdef type_args R Sigma args arg_tys T Sigma'
+      R' arg_roots,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    infer_env_args_collect_roots fuel env Omega n R Sigma args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma1, R1, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma1 R1 roots1) ->
+    infer_direct_call_generic_assoc env Omega n fdef type_args arg_tys =
+      infer_ok T ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallGeneric fname type_args args) T Sigma' R'
+      (root_sets_union arg_roots).
+Proof.
+  intros fuel env Omega n fname fdef type_args R Sigma args arg_tys T Sigma'
+    R' arg_roots Hin Hname Hcollect Hexpr Hcall.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply infer_roots_direct_call_generic_assoc_structural_boundary;
+    eassumption.
+Qed.
+
 Lemma infer_roots_fn_value_call_checked_assoc_boundary :
   forall fuel env Omega n callee callee_ty R R1 Sigma Sigma1 args arg_tys T
       Sigma' R' arg_roots roots_callee,
@@ -1344,6 +1389,32 @@ Proof.
   - rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
     eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
 Qed.
+
+Lemma infer_roots_type_forall_checked_assoc_boundary :
+  forall fuel env Omega n callee u type_params bounds body R R1 Sigma Sigma1
+      args arg_tys T Sigma' R' arg_roots roots_callee,
+    typed_env_roots env Omega n R Sigma callee
+      (MkTy u (TTypeForall type_params bounds body)) Sigma1 R1
+      roots_callee ->
+    infer_env_args_collect_roots fuel env Omega n R1 Sigma1 args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma2, R2, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1) ->
+    infer_type_forall_call_env_assoc env Omega type_params bounds body arg_tys =
+      infer_ok T ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallExpr callee args) T Sigma' R'
+      (root_set_union roots_callee (root_sets_union arg_roots)).
+Proof.
+  intros fuel env Omega n callee u type_params bounds body R R1 Sigma Sigma1
+    args arg_tys T Sigma' R' arg_roots roots_callee Hcallee Hcollect Hexpr
+    Hcall.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply infer_roots_type_forall_assoc_structural_boundary; eassumption.
+Qed.
+
 
 Lemma infer_roots_type_forall_elab_assoc_structural_boundary :
   forall fuel env Omega n callee u type_params bounds body R R1 Sigma Sigma1
@@ -1568,6 +1639,33 @@ Proof.
     eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
 Qed.
 
+Lemma infer_roots_mixed_forall_checked_assoc_boundary :
+  forall fuel env Omega n callee u u_body m bounds type_params type_bounds body
+      R R1 Sigma Sigma1 args arg_tys T Sigma' R' arg_roots roots_callee,
+    typed_env_roots env Omega n R Sigma callee
+      (MkTy u (TForall m bounds
+        (MkTy u_body (TTypeForall type_params type_bounds body)))) Sigma1 R1
+      roots_callee ->
+    infer_env_args_collect_roots fuel env Omega n R1 Sigma1 args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma2, R2, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1) ->
+    infer_mixed_forall_call_env_assoc
+      env Omega n m bounds type_params type_bounds body arg_tys = infer_ok T ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallExpr callee args) T Sigma' R'
+      (root_set_union roots_callee (root_sets_union arg_roots)).
+Proof.
+  intros fuel env Omega n callee u u_body m bounds type_params type_bounds body
+    R R1 Sigma Sigma1 args arg_tys T Sigma' R' arg_roots roots_callee
+    Hcallee Hcollect Hexpr Hcall.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply infer_roots_mixed_forall_assoc_structural_boundary; eassumption.
+Qed.
+
+
 Lemma infer_roots_mixed_forall_elab_assoc_structural_boundary :
   forall fuel env Omega n callee u u_body m bounds type_params type_bounds body
       R R1 Sigma Sigma1 args arg_tys type_args_ret Sigma' R' arg_roots
@@ -1759,6 +1857,29 @@ Proof.
     + apply env_outlives_constraints_hold_b_sound. exact Hout.
     + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
       eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+Qed.
+
+
+Lemma infer_roots_hrt_checked_assoc_boundary :
+  forall fuel env Omega n callee u m bounds body R R1 Sigma Sigma1 args
+      arg_tys T Sigma' R' arg_roots roots_callee,
+    typed_env_roots env Omega n R Sigma callee
+      (MkTy u (TForall m bounds body)) Sigma1 R1 roots_callee ->
+    infer_env_args_collect_roots fuel env Omega n R1 Sigma1 args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma2, R2, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1) ->
+    infer_hrt_call_env_assoc env Omega n m bounds body arg_tys = infer_ok T ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallExpr callee args) T Sigma' R'
+      (root_set_union roots_callee (root_sets_union arg_roots)).
+Proof.
+  intros fuel env Omega n callee u m bounds body R R1 Sigma Sigma1 args
+    arg_tys T Sigma' R' arg_roots roots_callee Hcallee Hcollect Hexpr Hcall.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply infer_roots_hrt_assoc_structural_boundary; eassumption.
 Qed.
 
 

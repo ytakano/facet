@@ -45,7 +45,9 @@ validity checks must be represented in Rocq and the extracted checker.
   generic direct-call, non-generic function-value, explicit generic
   function-value, HRT, inferred/elaborating type-forall, and mixed-forall
   helper results now bridge to the env/root structural call boundary, and
-  root function-value helper results also lift into the checked root wrapper.
+  root direct, generic direct, function-value, explicit generic function-value,
+  type-forall, mixed-forall, and HRT helper results also lift into the checked
+  root wrapper.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
   function-value calls, explicit generic function-value calls,

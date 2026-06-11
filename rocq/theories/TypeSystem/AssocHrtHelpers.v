@@ -51,6 +51,50 @@ Definition infer_hrt_call_env_assoc
   | c => infer_err (ErrMalformedHrtBody c)
   end.
 
+Definition infer_type_forall_call_env_assoc
+    (env : global_env) (Ω : outlives_ctx) (type_params : nat)
+    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
+    : infer_result Ty :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match infer_type_forall_args type_params param_tys arg_tys with
+      | None => infer_err ErrTypeArgInferenceFailed
+      | Some type_args =>
+          match check_type_forall_bounds env bounds type_args with
+          | Some err => infer_err err
+          | None =>
+              match check_arg_tys_assoc env Ω arg_tys
+                (map (subst_type_params_ty type_args) param_tys) with
+              | Some err => infer_err err
+              | None => infer_ok (subst_type_params_ty type_args ret)
+              end
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
+
+Definition infer_type_forall_call_env_elab_assoc
+    (env : global_env) (Ω : outlives_ctx) (type_params : nat)
+    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
+    : infer_result (list Ty * Ty) :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match infer_type_forall_args type_params param_tys arg_tys with
+      | None => infer_err ErrTypeArgInferenceFailed
+      | Some type_args =>
+          match check_type_forall_bounds env bounds type_args with
+          | Some err => infer_err err
+          | None =>
+              match check_arg_tys_assoc env Ω arg_tys
+                (map (subst_type_params_ty type_args) param_tys) with
+              | Some err => infer_err err
+              | None => infer_ok (type_args, subst_type_params_ty type_args ret)
+              end
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
+
 Definition infer_mixed_forall_call_env_assoc
     (env : global_env) (Ω : outlives_ctx) (n m : nat)
     (lt_bounds : outlives_ctx) (type_params : nat)

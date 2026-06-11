@@ -89,6 +89,66 @@ Proof.
     apply check_arg_tys_assoc_checked_arg_tys. exact Hcheck.
 Qed.
 
+Lemma infer_type_forall_call_env_assoc_checked_args :
+  forall env Ω type_params bounds body arg_tys T,
+    infer_type_forall_call_env_assoc
+      env Ω type_params bounds body arg_tys = infer_ok T ->
+    exists type_args param_tys ret,
+      ty_core body = TFn param_tys ret /\
+      infer_type_forall_args type_params param_tys arg_tys = Some type_args /\
+      check_type_forall_bounds env bounds type_args = None /\
+      check_arg_tys_assoc env Ω arg_tys
+        (map (subst_type_params_ty type_args) param_tys) = None /\
+      assoc_checked_arg_tys env Ω arg_tys
+        (map (subst_type_params_ty type_args) param_tys).
+Proof.
+  intros env Ω type_params bounds body arg_tys T Hinfer.
+  unfold infer_type_forall_call_env_assoc in Hinfer.
+  destruct (ty_core body) eqn:Hcore; try discriminate.
+  destruct (infer_type_forall_args type_params l arg_tys) as [type_args|]
+    eqn:Htype_args; try discriminate.
+  destruct (check_type_forall_bounds env bounds type_args) eqn:Hbounds;
+    try discriminate.
+  destruct (check_arg_tys_assoc env Ω arg_tys
+    (map (subst_type_params_ty type_args) l)) eqn:Hcheck; try discriminate.
+  exists type_args, l, t.
+  split; [reflexivity |].
+  split; [exact Htype_args |].
+  split; [exact Hbounds |].
+  split; [exact Hcheck |].
+  apply check_arg_tys_assoc_checked_arg_tys. exact Hcheck.
+Qed.
+
+Lemma infer_type_forall_call_env_elab_assoc_checked_args :
+  forall env Ω type_params bounds body arg_tys type_args_ret,
+    infer_type_forall_call_env_elab_assoc
+      env Ω type_params bounds body arg_tys = infer_ok type_args_ret ->
+    exists type_args param_tys ret,
+      ty_core body = TFn param_tys ret /\
+      infer_type_forall_args type_params param_tys arg_tys = Some type_args /\
+      check_type_forall_bounds env bounds type_args = None /\
+      check_arg_tys_assoc env Ω arg_tys
+        (map (subst_type_params_ty type_args) param_tys) = None /\
+      assoc_checked_arg_tys env Ω arg_tys
+        (map (subst_type_params_ty type_args) param_tys).
+Proof.
+  intros env Ω type_params bounds body arg_tys type_args_ret Hinfer.
+  unfold infer_type_forall_call_env_elab_assoc in Hinfer.
+  destruct (ty_core body) eqn:Hcore; try discriminate.
+  destruct (infer_type_forall_args type_params l arg_tys) as [type_args|]
+    eqn:Htype_args; try discriminate.
+  destruct (check_type_forall_bounds env bounds type_args) eqn:Hbounds;
+    try discriminate.
+  destruct (check_arg_tys_assoc env Ω arg_tys
+    (map (subst_type_params_ty type_args) l)) eqn:Hcheck; try discriminate.
+  exists type_args, l, t.
+  split; [reflexivity |].
+  split; [exact Htype_args |].
+  split; [exact Hbounds |].
+  split; [exact Hcheck |].
+  apply check_arg_tys_assoc_checked_arg_tys. exact Hcheck.
+Qed.
+
 Lemma infer_mixed_forall_call_env_assoc_checked_args :
   forall env Ω n m lt_bounds type_params type_bounds body arg_tys T,
     infer_mixed_forall_call_env_assoc

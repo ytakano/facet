@@ -633,3 +633,19 @@ Proof.
     (normalize_assoc_ty env T_actual)
     (normalize_assoc_ty env T_expected) Hcompat).
 Qed.
+
+From Facet.TypeSystem Require Import AssocCompatibilityBase.
+
+Local Opaque normalize_assoc_ty.
+
+Lemma ty_compatible_assoc_checked_sound :
+  forall env Ω T_actual T_expected,
+    ty_compatible_assoc_checked env Ω T_actual T_expected ->
+    ty_compatible_assoc env Ω T_actual T_expected.
+Proof.
+  intros env Ω T_actual T_expected Hcompat.
+  unfold ty_compatible_assoc_checked, ty_compatible_assoc_b in Hcompat.
+  unfold ty_compatible_assoc.
+  exact (ty_compatible_normalize_assoc_b_sound
+    env Ω T_actual T_expected Hcompat).
+Qed.

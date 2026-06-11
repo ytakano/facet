@@ -155,18 +155,13 @@ Key temporary limitations:
      enum-payload reductions reach ordinary `typed_args`, while bool reductions
      expose per-argument structural witnesses, and env/root plain reductions
      expose dedicated argument, field, and function-body witness relations.
-   - Remaining blocker: prove the single-pair bridge from
-     `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root
-     bridge that avoids expanding normalized compatibility at each call site, or
-     prove that normalized raw elaboration implies the ordinary
-     `typed_args`/compatibility relations. Direct wrappers from
-     `ty_compatible_assoc_b = true` to `ty_compatible_assoc` still stall during
-     proof checking once `normalize_assoc_ty` is exposed. A focused attempt to
-     reuse `ty_compatible_normalize_assoc_b_sound` showed that `CompatBoolSoundness`
-     alone compiles quickly, but combining it with `AssocCompatibility` in either
-     direction leaves `rocqworker` spinning before the bridge lemma checks. Keep
-     carrying checked boolean witnesses until the dependency/opacity shape is
-     repaired or the bridge is proved in a lighter compatibility module.
+   - The single-pair bridge from `ty_compatible_assoc_checked` to
+     `ty_compatible_assoc` is proved by splitting the three assoc compatibility
+     definitions into a lightweight base module and making `normalize_assoc_ty`
+     opaque while reusing `ty_compatible_normalize_assoc_b_sound`. Remaining work
+     is to thread this proved bridge through the existing conditional reductions,
+     especially env/root wrappers, so checker-facing facts can expose ordinary
+     associated compatibility without carrying an explicit bridge assumption.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

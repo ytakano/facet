@@ -274,3 +274,69 @@ Proof.
   exact (typed_fields_env_structural_assoc_sound
     env Ω n lts args Sigma fields defs Sigma_out Htyped).
 Qed.
+
+Lemma infer_env_enum_payloads_collect_assoc_sound :
+  forall fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out,
+    forallb struct_expr payloads = true ->
+    infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args Sigma fields payloads =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        struct_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e = infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_args_env_structural_assoc env Ω n Sigma payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) Sigma_out /\
+    Forall2
+      (fun e p =>
+         exists actual Sigma_in Sigma_out_payload,
+           typed_env_structural env Ω n Sigma_in e actual Sigma_out_payload /\
+           ty_compatible_assoc env Ω actual (param_ty p))
+      payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) /\
+    Datatypes.length payloads =
+      Datatypes.length (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)).
+Proof.
+  intros fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out
+    Hpayloads Hcollect Hexpr.
+  pose proof (infer_env_enum_payloads_collect_assoc_checked_sound
+    fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out
+    Hpayloads Hcollect Hexpr) as Htyped.
+  split; [exact Htyped |].
+  exact (typed_args_env_structural_assoc_sound
+    env Ω n Sigma payloads
+    (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
+    Sigma_out Htyped).
+Qed.
+
+Lemma infer_env_enum_payloads_collect_assoc_call_sound :
+  forall fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out,
+    forallb call_expr payloads = true ->
+    infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args Sigma fields payloads =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        call_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e = infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_args_env_structural_assoc env Ω n Sigma payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) Sigma_out /\
+    Forall2
+      (fun e p =>
+         exists actual Sigma_in Sigma_out_payload,
+           typed_env_structural env Ω n Sigma_in e actual Sigma_out_payload /\
+           ty_compatible_assoc env Ω actual (param_ty p))
+      payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) /\
+    Datatypes.length payloads =
+      Datatypes.length (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)).
+Proof.
+  intros fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out
+    Hpayloads Hcollect Hexpr.
+  pose proof (infer_env_enum_payloads_collect_assoc_checked_call_sound
+    fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out
+    Hpayloads Hcollect Hexpr) as Htyped.
+  split; [exact Htyped |].
+  exact (typed_args_env_structural_assoc_sound
+    env Ω n Sigma payloads
+    (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
+    Sigma_out Htyped).
+Qed.

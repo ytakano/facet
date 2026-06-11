@@ -277,3 +277,48 @@ Proof.
   exact (typed_fields_roots_assoc_sound
     env Ω n lts args R Sigma fields defs Sigma_out R_out roots Htyped).
 Qed.
+
+Lemma infer_env_enum_payloads_collect_roots_assoc_sound :
+  forall fuel env Ω n lts variant_lts args R Sigma fields payloads Sigma_out R_out roots,
+    infer_env_enum_payloads_collect_roots_assoc fuel env Ω n lts variant_lts args R Sigma fields payloads =
+      infer_ok (Sigma_out, R_out, roots) ->
+    (forall R0 Sigma0 e T Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Sigma0 e =
+          infer_ok (T, Sigma1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Sigma0 e T Sigma1 R1 roots1) ->
+    exists payload_roots,
+      typed_args_roots_assoc env Ω n R Sigma payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
+        Sigma_out R_out payload_roots /\
+      roots = root_sets_union payload_roots /\
+      Forall2
+        (fun e p =>
+           exists actual Rin Rnext Sigma_in Sigma_out_payload roots_payload,
+             typed_env_roots env Ω n Rin Sigma_in e actual Sigma_out_payload
+               Rnext roots_payload /\
+             ty_compatible_assoc env Ω actual (param_ty p))
+        payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) /\
+      Datatypes.length payloads =
+        Datatypes.length
+          (params_of_tys
+            (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)).
+Proof.
+  intros fuel env Ω n lts variant_lts args R Sigma fields payloads
+    Sigma_out R_out roots Hcollect Hexpr.
+  destruct (infer_env_enum_payloads_collect_roots_assoc_checked_sound
+    fuel env Ω n lts variant_lts args R Sigma fields payloads Sigma_out R_out roots
+    Hcollect Hexpr) as [payload_roots [Htyped Hroots]].
+  destruct (typed_args_roots_assoc_sound
+    env Ω n R Sigma payloads
+    (params_of_tys
+      (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
+    Sigma_out R_out payload_roots Htyped) as [Hcompat Hlen].
+  exists payload_roots. repeat split.
+  - exact Htyped.
+  - exact Hroots.
+  - exact Hcompat.
+  - exact Hlen.
+Qed.

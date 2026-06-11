@@ -20,6 +20,11 @@ Definition ty_compatible_assoc_b
     (normalize_assoc_ty env T_actual)
     (normalize_assoc_ty env T_expected).
 
+Definition ty_compatible_assoc_checked
+    (env : global_env) (Ω : outlives_ctx)
+    (T_actual T_expected : Ty) : Prop :=
+  ty_compatible_assoc_b env Ω T_actual T_expected = true.
+
 (* Argument typing that carries the global environment needed for associated
    projection compatibility. This is not wired into the executable checker yet;
    it names the Prop-level boundary that future call-site rules should target. *)

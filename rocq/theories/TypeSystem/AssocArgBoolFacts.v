@@ -14,7 +14,7 @@ Lemma check_arg_tys_assoc_true :
     check_arg_tys_assoc env Ω arg_tys param_tys = None ->
     Forall2
       (fun actual expected =>
-         ty_compatible_assoc_b env Ω actual expected = true)
+         ty_compatible_assoc_checked env Ω actual expected)
       arg_tys param_tys.
 Proof.
   intros env Ω arg_tys.
@@ -32,7 +32,7 @@ Lemma check_args_assoc_true :
     check_args_assoc env Ω arg_tys params = None ->
     Forall2
       (fun actual p =>
-         ty_compatible_assoc_b env Ω actual (param_ty p) = true)
+         ty_compatible_assoc_checked env Ω actual (param_ty p))
       arg_tys params.
 Proof.
   intros env Ω arg_tys.
@@ -51,7 +51,7 @@ Lemma check_args_assoc_param_tys_true :
     check_args_assoc env Ω arg_tys params = None ->
     Forall2
       (fun actual expected =>
-         ty_compatible_assoc_b env Ω actual expected = true)
+         ty_compatible_assoc_checked env Ω actual expected)
       arg_tys (map param_ty params).
 Proof.
   intros env Ω arg_tys.

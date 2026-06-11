@@ -16,7 +16,7 @@ Inductive typed_args_env_structural_assoc
       typed_args_env_structural_assoc env Ω n Σ [] [] Σ
   | TESArgsAssoc_Cons : forall Σ Σ1 Σ2 e es p ps T_e,
       typed_env_structural env Ω n Σ e T_e Σ1 ->
-      ty_compatible_assoc_b env Ω T_e (param_ty p) = true ->
+      ty_compatible_assoc_checked env Ω T_e (param_ty p) ->
       typed_args_env_structural_assoc env Ω n Σ1 es ps Σ2 ->
       typed_args_env_structural_assoc env Ω n Σ (e :: es) (p :: ps) Σ2.
 
@@ -67,7 +67,7 @@ Inductive typed_args_roots_assoc
       typed_args_roots_assoc env Ω n R Σ [] [] Σ R []
   | TERArgsAssoc_Cons : forall R R1 R2 Σ Σ1 Σ2 e es p ps T_e roots roots_rest,
       typed_env_roots env Ω n R Σ e T_e Σ1 R1 roots ->
-      ty_compatible_assoc_b env Ω T_e (param_ty p) = true ->
+      ty_compatible_assoc_checked env Ω T_e (param_ty p) ->
       typed_args_roots_assoc env Ω n R1 Σ1 es ps Σ2 R2 roots_rest ->
       typed_args_roots_assoc env Ω n R Σ (e :: es) (p :: ps)
         Σ2 R2 (roots :: roots_rest).
@@ -130,8 +130,8 @@ Inductive typed_fields_env_structural_assoc
   | TESFieldsAssoc_Cons : forall lts args Σ Σ1 Σ2 fields f rest e_field T_field,
       lookup_field_b (field_name f) fields = Some e_field ->
       typed_env_structural env Ω n Σ e_field T_field Σ1 ->
-      ty_compatible_assoc_b env Ω T_field
-        (instantiate_struct_field_ty lts args f) = true ->
+      ty_compatible_assoc_checked env Ω T_field
+        (instantiate_struct_field_ty lts args f) ->
       typed_fields_env_structural_assoc env Ω n lts args Σ1 fields rest Σ2 ->
       typed_fields_env_structural_assoc env Ω n lts args Σ fields (f :: rest) Σ2.
 
@@ -158,8 +158,8 @@ Inductive typed_fields_roots_assoc
       e_field T_field roots_field roots_rest,
       lookup_field_b (field_name f) fields = Some e_field ->
       typed_env_roots env Ω n R Σ e_field T_field Σ1 R1 roots_field ->
-      ty_compatible_assoc_b env Ω T_field
-        (instantiate_struct_field_ty lts args f) = true ->
+      ty_compatible_assoc_checked env Ω T_field
+        (instantiate_struct_field_ty lts args f) ->
       typed_fields_roots_assoc env Ω n lts args R1 Σ1 fields rest
         Σ2 R2 roots_rest ->
       typed_fields_roots_assoc env Ω n lts args R Σ fields (f :: rest)

@@ -33,6 +33,7 @@ theories/TypeSystem/CheckerRawElab.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v
+theories/TypeSystem/AssocEnvStructural.v
 theories/TypeSystem/WFType.v
 theories/TypeSystem/ExprFacts.v
 theories/TypeSystem/AlphaCore.v

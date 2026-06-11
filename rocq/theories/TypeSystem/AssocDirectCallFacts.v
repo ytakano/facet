@@ -283,3 +283,58 @@ Proof.
   exists params. split; [exact Hargs |].
   exact (typed_args_roots_assoc_sound env Ω n R Σ args params Σ' R' arg_roots Hargs).
 Qed.
+
+Lemma infer_direct_call_assoc_args_sound :
+  forall env Ω n fdef arg_tys T,
+    infer_direct_call_assoc env Ω n fdef arg_tys = infer_ok T ->
+    exists σ_acc σ params_subst,
+      no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0 = true /\
+      build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+        arg_tys (fn_params fdef) = Some σ_acc /\
+      σ = finalize_subst σ_acc /\
+      params_subst = apply_lt_params σ (fn_params fdef) /\
+      check_args_assoc env Ω arg_tys params_subst = None /\
+      Forall2
+        (fun actual p =>
+           ty_compatible_assoc env Ω actual (param_ty p))
+        arg_tys params_subst /\
+      T = apply_lt_ty σ (fn_ret fdef).
+Proof.
+  intros env Ω n fdef arg_tys T Hcall.
+  destruct (infer_direct_call_assoc_checked_args env Ω n fdef arg_tys T Hcall)
+    as [sigma_acc [sigma [params_subst
+      [Hgate [Hsigma [Hs [Hparams [Hcheck Hret]]]]]]]].
+  exists sigma_acc, sigma, params_subst.
+  repeat split; try assumption.
+  exact (check_args_assoc_sound env Ω arg_tys params_subst Hcheck).
+Qed.
+
+Lemma infer_direct_call_generic_assoc_args_sound :
+  forall env Ω n fdef type_args arg_tys T,
+    infer_direct_call_generic_assoc env Ω n fdef type_args arg_tys =
+      infer_ok T ->
+    exists params_typed σ_acc σ params_subst,
+      no_captures_b fdef &&
+        Nat.eqb (Datatypes.length type_args) (fn_type_params fdef) = true /\
+      check_struct_bounds env (fn_bounds fdef) type_args = None /\
+      params_typed = apply_type_params type_args (fn_params fdef) /\
+      build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+        arg_tys params_typed = Some σ_acc /\
+      σ = finalize_subst σ_acc /\
+      params_subst = apply_lt_params σ params_typed /\
+      check_args_assoc env Ω arg_tys params_subst = None /\
+      Forall2
+        (fun actual p =>
+           ty_compatible_assoc env Ω actual (param_ty p))
+        arg_tys params_subst /\
+      T = apply_lt_ty σ (subst_type_params_ty type_args (fn_ret fdef)).
+Proof.
+  intros env Ω n fdef type_args arg_tys T Hcall.
+  destruct (infer_direct_call_generic_assoc_checked_args
+    env Ω n fdef type_args arg_tys T Hcall) as
+    [params_typed [sigma_acc [sigma [params_subst
+      [Hgate [Hbounds [Htyped [Hsigma [Hs [Hparams [Hcheck Hret]]]]]]]]]]].
+  exists params_typed, sigma_acc, sigma, params_subst.
+  repeat split; try assumption.
+  exact (check_args_assoc_sound env Ω arg_tys params_subst Hcheck).
+Qed.

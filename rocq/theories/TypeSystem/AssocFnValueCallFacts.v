@@ -160,3 +160,33 @@ Proof.
   exact (typed_args_roots_assoc_sound
     env Ω n R Σ args (params_of_tys param_tys) Σ' R' arg_roots Hargs).
 Qed.
+
+Lemma infer_fn_value_call_assoc_args_sound :
+  forall env Ω callee_ty arg_tys T,
+    infer_fn_value_call_assoc env Ω callee_ty arg_tys = infer_ok T ->
+    (exists param_tys ret,
+        ty_core callee_ty = TFn param_tys ret /\
+        check_arg_tys_assoc env Ω arg_tys param_tys = None /\
+        Forall2
+          (fun actual expected =>
+             ty_compatible_assoc env Ω actual expected)
+          arg_tys param_tys /\
+        T = ret) \/
+    (exists env_lt param_tys ret,
+        ty_core callee_ty = TClosure env_lt param_tys ret /\
+        check_arg_tys_assoc env Ω arg_tys param_tys = None /\
+        Forall2
+          (fun actual expected =>
+             ty_compatible_assoc env Ω actual expected)
+          arg_tys param_tys /\
+        T = ret).
+Proof.
+  intros env Ω callee_ty arg_tys T Hcall.
+  destruct (infer_fn_value_call_assoc_checked_args env Ω callee_ty arg_tys T Hcall)
+    as [[param_tys [ret [Hcore [Hcheck [_ Hret]]]]] |
+        [env_lt [param_tys [ret [Hcore [Hcheck [_ Hret]]]]]]].
+  - left. exists param_tys, ret. repeat split; try assumption.
+    exact (check_arg_tys_assoc_sound env Ω arg_tys param_tys Hcheck).
+  - right. exists env_lt, param_tys, ret. repeat split; try assumption.
+    exact (check_arg_tys_assoc_sound env Ω arg_tys param_tys Hcheck).
+Qed.

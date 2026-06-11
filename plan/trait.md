@@ -46,8 +46,8 @@ validity checks must be represented in Rocq and the extracted checker.
   function-value, HRT, inferred/elaborating type-forall, and mixed-forall
   helper results now bridge to the env/root structural call boundary, and
   root direct, generic direct, function-value, explicit generic function-value,
-  type-forall, mixed-forall, and HRT helper results also lift into the checked
-  root wrapper.
+  type-forall, mixed-forall, HRT, and make-closure helper results also lift
+  into the checked root wrapper.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
   function-value calls, explicit generic function-value calls,
@@ -82,8 +82,8 @@ validity checks must be represented in Rocq and the extracted checker.
 1. Move associated compatibility through the checker call-site boundary.
    - Use the proved env/root assoc call boundaries and checker-facing wrapper
      boundaries as the target for assoc-aware call-site soundness. Do not widen
-     the primary `typed_env_structural` relation until the preservation and
-     root-safety obligations are explicitly covered.
+     the primary `typed_env_structural` or `typed_env_roots` relations until
+     preservation and root-safety obligations are explicitly covered.
    - Wire checker call sites from ordinary `check_args` / `check_arg_tys` to
      the env-aware assoc helpers only after the consuming soundness theorem no
      longer requires the primary ordinary compatibility relation.

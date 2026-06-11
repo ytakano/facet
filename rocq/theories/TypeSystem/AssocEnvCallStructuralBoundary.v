@@ -1883,6 +1883,45 @@ Proof.
 Qed.
 
 
+Lemma infer_roots_make_closure_checked_assoc_boundary :
+  forall fuel env Omega n fname fdef captures env_lt captured_tys R Sigma args
+      arg_tys sigma_acc Sigma' R' arg_roots,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    check_make_closure_captures_sctx_with_env env Omega Sigma captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+    infer_env_args_collect_roots fuel env Omega n R Sigma args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma1, R1, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma1 R1 roots1) ->
+    build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+      arg_tys (fn_params fdef) = Some sigma_acc ->
+    check_args_assoc env Omega arg_tys
+      (apply_lt_params (finalize_subst sigma_acc) (fn_params fdef)) = None ->
+    forallb (wf_lifetime_b (mk_region_ctx n)) (finalize_subst sigma_acc) = true ->
+    outlives_constraints_hold_b Omega
+      (apply_lt_outlives (finalize_subst sigma_acc) (fn_outlives fdef)) = true ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallExpr (EMakeClosure fname captures) args)
+      (apply_lt_ty (finalize_subst sigma_acc) (fn_ret fdef)) Sigma' R'
+      (root_sets_union arg_roots).
+Proof.
+  intros fuel env Omega n fname fdef captures env_lt captured_tys R Sigma args
+    arg_tys sigma_acc Sigma' R' arg_roots Hin Hname Hcaptures Hcollect Hexpr
+    Hbuild Hcheck Hwf Hout.
+  eapply typed_env_roots_checked_assoc_boundary_of_assoc_call_boundary.
+  eapply TERAssocBoundary_CallExpr_MakeClosure with
+    (env_lt := env_lt) (captured_tys := captured_tys)
+    (sigma := finalize_subst sigma_acc).
+  - exact Hin.
+  - exact Hname.
+  - exact Hcaptures.
+  - eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+  - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.
+
 Theorem infer_core_env_state_fuel_roots_assoc_boundary_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots fuel env Omega n R Sigma e =

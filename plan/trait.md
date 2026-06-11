@@ -70,9 +70,9 @@ validity checks must be represented in Rocq and the extracted checker.
   preserve key naming and root naming on both ctx and runtime-side sctx views,
   including returned root-set naming, and can project those facts to store and
   prefix-store naming for safety consumers. Function-level assoc root boundaries,
-  checked function-environment wrappers, and full-env/end-to-end checker
-  entrypoints expose the same sctx naming facts for their existential output
-  contexts.
+  checked function-environment wrappers, full-env/function end-to-end checker
+  entrypoints, and program/check-program entrypoints expose the same sctx naming
+  facts for their existential output contexts.
   Assoc root value and argument typing bridge to the same roots-ready
   invariants. Ordinary
   compatibility is not treated as an implicit proof of associated

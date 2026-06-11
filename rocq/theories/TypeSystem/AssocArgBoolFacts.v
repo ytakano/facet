@@ -45,3 +45,30 @@ Proof.
     + exact Hcompat.
     + apply IH. exact H.
 Qed.
+
+Lemma check_arg_tys_assoc_length :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys = None ->
+    length arg_tys = length param_tys.
+Proof.
+  intros env Ω arg_tys.
+  induction arg_tys as [|arg rest IH]; intros param_tys H;
+    destruct param_tys as [|param rest_params]; simpl in H; try discriminate.
+  - reflexivity.
+  - destruct (ty_compatible_assoc_b env Ω arg param); try discriminate.
+    simpl. f_equal. apply IH. exact H.
+Qed.
+
+Lemma check_args_assoc_length :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys params = None ->
+    length arg_tys = length params.
+Proof.
+  intros env Ω arg_tys.
+  induction arg_tys as [|arg rest IH]; intros params H;
+    destruct params as [|param rest_params]; simpl in H; try discriminate.
+  - reflexivity.
+  - destruct (ty_compatible_assoc_b env Ω arg (param_ty param));
+      try discriminate.
+    simpl. f_equal. apply IH. exact H.
+Qed.

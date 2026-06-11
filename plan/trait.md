@@ -142,9 +142,10 @@ Key temporary limitations:
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
      should checker helpers switch to assoc-aware compatibility. Boolean-witness
-     helper proofs compile when `ty_compatible_assoc_b` stays opaque, but even
-     a single-pair bridge from `ty_compatible_assoc_b = true` to
-     `ty_compatible_assoc` stalls at `Qed` once it exposes `normalize_assoc_ty`.
+     and arity-length helper proofs compile when `ty_compatible_assoc_b` stays
+     opaque, but even a single-pair bridge from
+     `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
+     once it exposes `normalize_assoc_ty`.
      A direct single-pair bridge, `abstract`, and a simple inductive wrapper
      around `ty_compatible_assoc` still stall at `Qed`; the next step must
      avoid storing the expanded normalized-compatibility proof term in the

@@ -74,3 +74,21 @@ Proof.
   - reflexivity.
   - simpl. f_equal. exact IHHargs.
 Qed.
+
+Lemma typed_args_assoc_nil_inv :
+  forall env fenv Ω n Γ Γ',
+    typed_args_assoc env fenv Ω n Γ [] [] Γ' ->
+    Γ' = Γ.
+Proof.
+  intros env fenv Ω n Γ Γ' Hargs.
+  inversion Hargs; subst. reflexivity.
+Qed.
+
+Lemma typed_args_assoc_checked_nil_inv :
+  forall env fenv Ω n Γ Γ',
+    typed_args_assoc_checked env fenv Ω n Γ [] [] Γ' ->
+    Γ' = Γ.
+Proof.
+  intros env fenv Ω n Γ Γ' Hargs.
+  inversion Hargs; subst. reflexivity.
+Qed.

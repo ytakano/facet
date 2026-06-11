@@ -140,15 +140,20 @@ Key temporary limitations:
    - Current helper coverage names the unchecked-to-checked boundary without
      expanding normalized compatibility proofs: checked argument and single-value
      relations; struct-field, enum-payload, function-body, trait-method
-     signature, and trait-method-resolution facts; env/roots argument, field, payload, HRT, generic-call,
-     direct-call, and function-value collector facts; normalized `if`, match,
-     and core-shape witnesses; and env/roots function-body wrappers. These
-     facts carry `ty_compatible_assoc_checked`/boolean witnesses and expose
-     structural composition, arity, length, and inversion facts, but deliberately
-     avoid a bridge to `ty_compatible_assoc`.
-   - Remaining blocker: prove an env/root bridge, or prove that normalized raw
-     elaboration implies the ordinary `typed_args`/compatibility relations.
-     Direct and downstream single-pair wrappers from
+     signature, and trait-method-resolution facts; env/roots argument, field,
+     payload, HRT, generic-call, direct-call, and function-value collector facts;
+     normalized `if`, match, and core-shape witnesses; and env/roots
+     function-body wrappers. These facts carry
+     `ty_compatible_assoc_checked`/boolean witnesses and expose structural
+     composition, arity, length, and inversion facts. A conditional bridge
+     reduction now shows `typed_args_assoc_checked` reduces to
+     `typed_args_assoc` once the isolated single-pair compatibility bridge is
+     available.
+   - Remaining blocker: prove the single-pair bridge from
+     `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root
+     bridge that avoids expanding normalized compatibility at each call site, or
+     prove that normalized raw elaboration implies the ordinary
+     `typed_args`/compatibility relations. Direct wrappers from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` still stall during
      proof checking once `normalize_assoc_ty` is exposed. Keep carrying checked
      boolean witnesses until this bridge exists.

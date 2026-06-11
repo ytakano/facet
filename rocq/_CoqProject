@@ -11,6 +11,7 @@ theories/TypeSystem/RootProvenance.v
 theories/TypeSystem/CheckerBase.v
 theories/TypeSystem/CheckerTraits.v
 theories/TypeSystem/AssocCompatibility.v
+theories/TypeSystem/AssocCheckedBridgeReductionFacts.v
 theories/TypeSystem/AssocTraitMethodSigFacts.v
 theories/TypeSystem/AssocTraitMethodResolutionFacts.v
 theories/TypeSystem/CheckerHrt.v

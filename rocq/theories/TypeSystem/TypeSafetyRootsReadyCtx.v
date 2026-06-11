@@ -1,5 +1,6 @@
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyStore.
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyRootSets.
+From Facet.TypeSystem Require Import AlphaRootEnvFacts.
 From Facet.TypeSystem Require Import TypeSafetyRootsReadyStoreOps.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -59,6 +60,28 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_env_sctx_roots_named_store_typed :
+  forall env s Σ R,
+    store_typed env s Σ ->
+    root_env_sctx_roots_named R Σ ->
+    root_env_store_roots_named R s.
+Proof.
+  intros env s Σ R Htyped Hnamed.
+  unfold root_env_sctx_roots_named, root_env_ctx_roots_named in Hnamed.
+  eapply root_env_ctx_roots_named_store_typed; eassumption.
+Qed.
+
+Lemma root_env_sctx_roots_named_store_typed_prefix :
+  forall env s Σ R,
+    store_typed_prefix env s Σ ->
+    root_env_sctx_roots_named R Σ ->
+    root_env_store_roots_named R s.
+Proof.
+  intros env s Σ R Htyped Hnamed.
+  unfold root_env_sctx_roots_named, root_env_ctx_roots_named in Hnamed.
+  eapply root_env_ctx_roots_named_store_typed_prefix; eassumption.
+Qed.
+
 Lemma root_set_ctx_roots_named_store_typed_prefix :
   forall env s Σ roots,
     store_typed_prefix env s Σ ->
@@ -86,6 +109,42 @@ Proof.
   - constructor.
   - constructor.
     + eapply root_set_ctx_roots_named_store_typed; eassumption.
+    + apply IH.
+Qed.
+
+Lemma root_set_sctx_roots_named_store_typed :
+  forall env s Σ roots,
+    store_typed env s Σ ->
+    root_set_sctx_roots_named roots Σ ->
+    root_set_store_roots_named roots s.
+Proof.
+  intros env s Σ roots Htyped Hnamed.
+  unfold root_set_sctx_roots_named, root_set_ctx_roots_named in Hnamed.
+  eapply root_set_ctx_roots_named_store_typed; eassumption.
+Qed.
+
+Lemma root_set_sctx_roots_named_store_typed_prefix :
+  forall env s Σ roots,
+    store_typed_prefix env s Σ ->
+    root_set_sctx_roots_named roots Σ ->
+    root_set_store_roots_named roots s.
+Proof.
+  intros env s Σ roots Htyped Hnamed.
+  unfold root_set_sctx_roots_named, root_set_ctx_roots_named in Hnamed.
+  eapply root_set_ctx_roots_named_store_typed_prefix; eassumption.
+Qed.
+
+Lemma root_sets_sctx_roots_named_store_typed :
+  forall env s Σ sets,
+    store_typed env s Σ ->
+    Forall (fun roots => root_set_sctx_roots_named roots Σ) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets.
+Proof.
+  intros env s Σ sets Htyped Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_sctx_roots_named_store_typed; eassumption.
     + apply IH.
 Qed.
 
@@ -694,6 +753,28 @@ Proof.
     apply in_or_app. left.
     rewrite (roots_ready_store_entries_typed_names env (entries ++ frame) entries Σ Hentries).
     exact Hin.
+Qed.
+
+Lemma root_env_sctx_keys_named_store_typed :
+  forall env s Σ R,
+    store_typed env s Σ ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_store_keys_named R s.
+Proof.
+  intros env s Σ R Htyped Hkeys.
+  unfold root_env_sctx_keys_named, root_env_ctx_keys_named in Hkeys.
+  eapply root_env_ctx_keys_named_store_typed; eassumption.
+Qed.
+
+Lemma root_env_sctx_keys_named_store_typed_prefix :
+  forall env s Σ R,
+    store_typed_prefix env s Σ ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_store_keys_named R s.
+Proof.
+  intros env s Σ R Htyped Hkeys.
+  unfold root_env_sctx_keys_named, root_env_ctx_keys_named in Hkeys.
+  eapply root_env_ctx_keys_named_store_typed_prefix; eassumption.
 Qed.
 
 Lemma root_set_store_roots_named_to_ctx :

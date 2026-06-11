@@ -71,10 +71,11 @@ validity checks must be represented in Rocq and the extracted checker.
   including returned root-set naming, and can project those facts to store and
   prefix-store naming for safety consumers. Function-level assoc root boundaries
   and checked function-environment wrappers can also project those output facts
-  to store and prefix-store naming. Full-env and function end-to-end checker
-  entrypoints and program/check-program entrypoints now expose both sctx naming
-  and store/prefix-store naming facts for their existential output contexts.
-  Assoc root value and argument typing bridge to the same roots-ready
+  to store and prefix-store naming, including combined same-witness packages for
+  keys, roots, and returned root-set naming. Full-env and function end-to-end
+  checker entrypoints and program/check-program entrypoints now expose both sctx
+  naming and store/prefix-store naming facts for their existential output
+  contexts. Assoc root value and argument typing bridge to the same roots-ready
   invariants. Ordinary
   compatibility is not treated as an implicit proof of associated
   compatibility; call-site wiring must dispatch through the env-aware assoc

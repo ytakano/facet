@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore AssocDirectCallHelpers.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore AssocDirectCallHelpers AssocFnValueCallHelpers AssocHrtHelpers.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 
@@ -578,66 +578,38 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           | infer_err err => infer_err err
           | infer_ok (arg_tys, Γ') =>
               match ty_core T_callee with
-              | TFn param_tys ret =>
-                  match check_arg_tys Ω arg_tys param_tys with
-                  | Some err => infer_err err
-                  | None => infer_ok (ret, Γ')
+              | TFn _ _ =>
+                  match infer_fn_value_call_assoc env Ω T_callee arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Γ')
                   end
-              | TClosure _ param_tys ret =>
-                  match check_arg_tys Ω arg_tys param_tys with
-                  | Some err => infer_err err
-                  | None => infer_ok (ret, Γ')
+              | TClosure _ _ _ =>
+                  match infer_fn_value_call_assoc env Ω T_callee arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Γ')
                   end
               | TTypeForall type_params bounds body =>
-                  match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                  match infer_type_forall_call_env_assoc env Ω type_params bounds body arg_tys with
                   | infer_err err => infer_err err
                   | infer_ok ret => infer_ok (ret, Γ')
                   end
               | TForall m bounds body =>
                   match ty_core body with
                   | TTypeForall type_params type_bounds type_body =>
-                      match infer_mixed_forall_call_env env Ω n m bounds
+                      match infer_mixed_forall_call_env_assoc env Ω n m bounds
                               type_params type_bounds type_body arg_tys with
                       | infer_err err => infer_err err
                       | infer_ok ret => infer_ok (ret, Γ')
                       end
-                  | TFn param_tys ret =>
-                      match build_bound_sigma (repeat None m) arg_tys param_tys with
-                      | None => infer_err ErrLifetimeConflict
-                      | Some σ =>
-                          let param_tys_open := map (open_bound_ty σ) param_tys in
-                          match check_arg_tys Ω arg_tys param_tys_open with
-                          | Some err => infer_err err
-                          | None =>
-                              let ret_open := open_bound_ty σ ret in
-                              let bounds_open := open_bound_outlives σ bounds in
-                              if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
-                              then infer_err ErrHrtUnresolvedBound
-                              else if outlives_constraints_hold_b Ω bounds_open
-                                   then infer_ok (ret_open, Γ')
-                                   else infer_err ErrHrtBoundUnsatisfied
-                          end
+                  | TFn _ _ =>
+                      match infer_hrt_call_env_assoc env Ω n m bounds body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Γ')
                       end
-                  | TClosure env_lt param_tys ret =>
-                      match build_bound_sigma (repeat None m) arg_tys param_tys with
-                      | None => infer_err ErrLifetimeConflict
-                      | Some σ0 =>
-                          let σ := complete_bound_sigma_with_vars n σ0 in
-                          let param_tys_open := map (open_bound_ty σ) param_tys in
-                          match check_arg_tys Ω arg_tys param_tys_open with
-                          | Some err => infer_err err
-                          | None =>
-                              let env_open := open_bound_lifetime σ env_lt in
-                              let ret_open := open_bound_ty σ ret in
-                              let bounds_open := open_bound_outlives σ bounds in
-                              if contains_lbound_lifetime env_open ||
-                                 contains_lbound_ty ret_open ||
-                                 contains_lbound_outlives bounds_open
-                              then infer_err ErrHrtUnresolvedBound
-                              else if outlives_constraints_hold_b Ω bounds_open
-                                   then infer_ok (ret_open, Γ')
-                                   else infer_err ErrHrtBoundUnsatisfied
-                          end
+                  | TClosure _ _ _ =>
+                      match infer_hrt_call_env_assoc env Ω n m bounds body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Γ')
                       end
                   | c => infer_err (ErrMalformedHrtBody c)
                   end

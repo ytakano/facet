@@ -57,10 +57,11 @@ validity checks must be represented in Rocq and the extracted checker.
   or an associated call boundary while preserving the same store-shape
   invariants. Full env and root checker soundness have thin entry theorems
   into these wrappers for the current checker behavior. The ctx/env checker's
-  top-level direct and generic direct call branches now dispatch through the
-  env-aware associated direct-call helpers; root/shadow and end-to-end checker
-  paths remain on ordinary compatibility until their wrapper-boundary soundness
-  is wired.
+  top-level direct/generic direct calls, function-value calls, HRT calls,
+  inferred type-forall calls, and mixed-forall calls now dispatch through the
+  env-aware associated call helpers; root/shadow and end-to-end checker paths
+  remain on ordinary compatibility until their wrapper-boundary soundness is
+  wired.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.

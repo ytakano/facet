@@ -143,7 +143,7 @@ Key temporary limitations:
      proof boundaries. Bridge wrappers now expose ordinary associated
      compatibility for checked arguments, HRT/generic argument witnesses, enum
      payloads, trait-method signatures/resolution, value witnesses,
-     env/root arguments, fields, values, function bodies, and direct-call argument collectors. The executable
+     env/root arguments, fields, values, function bodies, and direct-call and function-value call argument collectors. The executable
      assoc helpers `check_args_assoc` and `check_arg_tys_assoc` also have
      helper-level soundness lemmas. Remaining work is to use these wrappers at
      checker-facing call sites once the typing-rule boundary is ready, while

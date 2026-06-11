@@ -3,7 +3,8 @@ From Facet.TypeSystem Require Import
   CheckerBase CheckerTraits CheckerHrt TypeChecker AssocCompatibility
   AssocArgBoolFacts AssocHrtFacts AssocEnvStructural
   AssocEnvArgSoundness AssocEnvRootArgSoundness
-  AssocFnValueCallHelpers EnvStructuralRules EnvTypingSoundness EnvRootSoundness.
+  AssocFnValueCallHelpers EnvStructuralRules EnvTypingSoundness EnvRootSoundness
+  AssocHigherBridgeSoundness.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -99,4 +100,63 @@ Proof.
   - exists param_tys.
     rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
     eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+Qed.
+
+Lemma infer_env_args_collect_fn_value_call_assoc_sound :
+  forall fuel env Ω n callee_ty args arg_tys T Σ Σ',
+    infer_env_args_collect fuel env Ω n Σ args = infer_ok (arg_tys, Σ') ->
+    (forall Σ0 e T0 Σ1,
+        In e args ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T0, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T0 Σ1) ->
+    infer_fn_value_call_assoc env Ω callee_ty arg_tys = infer_ok T ->
+    exists param_tys,
+      typed_args_env_structural_assoc env Ω n Σ args
+        (params_of_tys param_tys) Σ' /\
+      Forall2
+        (fun e p =>
+           exists actual Σin Σout,
+             typed_env_structural env Ω n Σin e actual Σout /\
+             ty_compatible_assoc env Ω actual (param_ty p))
+        args (params_of_tys param_tys) /\
+      Datatypes.length args = Datatypes.length (params_of_tys param_tys).
+Proof.
+  intros fuel env Ω n callee_ty args arg_tys T Σ Σ'
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_fn_value_call_assoc_checked_sound
+    fuel env Ω n callee_ty args arg_tys T Σ Σ' Hcollect Hexpr Hcall)
+    as [param_tys Hargs].
+  exists param_tys. split; [exact Hargs |].
+  exact (typed_args_env_structural_assoc_sound
+    env Ω n Σ args (params_of_tys param_tys) Σ' Hargs).
+Qed.
+
+Lemma infer_env_args_collect_roots_fn_value_call_assoc_sound :
+  forall fuel env Ω n callee_ty R Σ args arg_tys T Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T0 Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T0, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T0 Σ1 R1 roots1) ->
+    infer_fn_value_call_assoc env Ω callee_ty arg_tys = infer_ok T ->
+    exists param_tys,
+      typed_args_roots_assoc env Ω n R Σ args
+        (params_of_tys param_tys) Σ' R' arg_roots /\
+      Forall2
+        (fun e p =>
+           exists actual Rin Rnext Σin Σout roots,
+             typed_env_roots env Ω n Rin Σin e actual Σout Rnext roots /\
+             ty_compatible_assoc env Ω actual (param_ty p))
+        args (params_of_tys param_tys) /\
+      Datatypes.length args = Datatypes.length (params_of_tys param_tys).
+Proof.
+  intros fuel env Ω n callee_ty R Σ args arg_tys T Σ' R' arg_roots
+    Hcollect Hexpr Hcall.
+  destruct (infer_env_args_collect_roots_fn_value_call_assoc_checked_sound
+    fuel env Ω n callee_ty R Σ args arg_tys T Σ' R' arg_roots
+    Hcollect Hexpr Hcall) as [param_tys Hargs].
+  exists param_tys. split; [exact Hargs |].
+  exact (typed_args_roots_assoc_sound
+    env Ω n R Σ args (params_of_tys param_tys) Σ' R' arg_roots Hargs).
 Qed.

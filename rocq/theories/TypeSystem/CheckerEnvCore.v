@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore AssocDirectCallHelpers.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 
@@ -510,22 +510,9 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           match collect Γ args with
           | infer_err err => infer_err err
           | infer_ok (arg_tys, Γ') =>
-              match build_sigma m (repeat None m) arg_tys (fn_params fdef) with
-              | None => infer_err ErrLifetimeConflict
-              | Some σ_acc =>
-                  let σ := finalize_subst σ_acc in
-                  let ps_subst := apply_lt_params σ (fn_params fdef) in
-                  match check_args Ω arg_tys ps_subst with
-                  | Some err => infer_err err
-                  | None =>
-                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
-                      then
-                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
-                        if outlives_constraints_hold_b Ω Ω_subst
-                        then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
-                        else infer_err ErrHrtBoundUnsatisfied
-                      else infer_err ErrLifetimeLeak
-                  end
+              match infer_direct_call_assoc env Ω n fdef arg_tys with
+              | infer_err err => infer_err err
+              | infer_ok ret => infer_ok (ret, Γ')
               end
           end
           else infer_err ErrNotImplemented
@@ -560,24 +547,9 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           match collect Γ args with
           | infer_err err => infer_err err
           | infer_ok (arg_tys, Γ') =>
-              match build_sigma m (repeat None m) arg_tys params_typed with
-              | None => infer_err ErrLifetimeConflict
-              | Some σ_acc =>
-                  let σ := finalize_subst σ_acc in
-                  let ps_subst := apply_lt_params σ params_typed in
-                  match check_args Ω arg_tys ps_subst with
-                  | Some err => infer_err err
-                  | None =>
-                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
-                      then
-                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
-                        if outlives_constraints_hold_b Ω Ω_subst
-                        then infer_ok
-                          (apply_lt_ty σ
-                            (subst_type_params_ty type_args (fn_ret fdef)), Γ')
-                        else infer_err ErrHrtBoundUnsatisfied
-                      else infer_err ErrLifetimeLeak
-                  end
+              match infer_direct_call_generic_assoc env Ω n fdef type_args arg_tys with
+              | infer_err err => infer_err err
+              | infer_ok ret => infer_ok (ret, Γ')
               end
           end
           end

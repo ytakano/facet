@@ -1410,6 +1410,36 @@ Proof.
   - exact I.
 Qed.
 
+Lemma typed_value_roots_assoc_ctx_keys_named :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named R' Σ'.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped Hshadow Hkeys.
+  inversion Htyped; subst.
+  exact (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+    R Σ e T_actual Σ' R' roots H Hshadow Hkeys).
+Qed.
+
+Lemma typed_args_roots_assoc_ctx_keys_named :
+  forall env Ω n R Σ args ps Σ' R' roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named R' Σ'.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots Hargs Hshadow Hkeys.
+  induction Hargs.
+  - exact Hkeys.
+  - pose proof (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+      R Σ e T_e Σ1 R1 roots H Hshadow Hkeys) as Hkeys1.
+    assert (Hshadow1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    exact (IHHargs Hshadow1 Hkeys1).
+Qed.
+
 Theorem eval_preserves_roots_ready_mutual :
   (forall env s e s' v,
     eval env s e s' v ->

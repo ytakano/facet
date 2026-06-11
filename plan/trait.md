@@ -153,7 +153,8 @@ Key temporary limitations:
      env/roots checked argument, value, field, and function-body relations under
      explicit single-pair bridge assumptions; plain checked-argument and
      enum-payload reductions reach ordinary `typed_args`, while bool reductions
-     expose per-argument structural witnesses.
+     expose per-argument structural witnesses, and env/root plain reductions
+     expose dedicated threaded witness relations.
    - Remaining blocker: prove the single-pair bridge from
      `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root
      bridge that avoids expanding normalized compatibility at each call site, or

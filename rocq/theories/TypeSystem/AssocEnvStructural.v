@@ -228,6 +228,17 @@ Proof.
   eapply typed_value_roots_assoc_structural. exact Htyped.
 Qed.
 
+Lemma typed_value_roots_assoc_no_shadow :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped Hshadow.
+  inversion Htyped; subst.
+  eapply typed_env_roots_no_shadow; eassumption.
+Qed.
+
 (* Field-list typing with associated projection compatibility for struct fields.
    This is a specification bridge; struct literal checker rules are not wired to
    it yet. *)
@@ -279,6 +290,19 @@ Proof.
   intros env Ω n R Σ args ps Σ' R' arg_roots Hargs.
   eapply typed_args_env_structural_assoc_same_bindings.
   eapply typed_args_roots_assoc_structural. exact Hargs.
+Qed.
+
+Lemma typed_args_roots_assoc_no_shadow :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Hargs Hshadow.
+  induction Hargs.
+  - exact Hshadow.
+  - apply IHHargs.
+    eapply typed_env_roots_no_shadow; eassumption.
 Qed.
 
 Lemma typed_fields_env_structural_assoc_same_bindings :

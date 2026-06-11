@@ -2047,6 +2047,32 @@ Proof.
   - eapply TERC_LetInfer_CaptureRefFreeResult; eassumption.
 Qed.
 
+Lemma typed_env_roots_checked_no_shadow :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked Hshadow.
+  induction Hchecked.
+  - eapply typed_env_roots_no_shadow; eassumption.
+  - eapply typed_env_roots_no_shadow; eassumption.
+  - apply root_env_no_shadow_remove.
+    apply IHHchecked.
+    apply root_env_no_shadow_add.
+    + eapply typed_env_roots_no_shadow; eassumption.
+    + lazymatch goal with
+      | Hfresh : root_env_lookup _ _ = None |- _ => exact Hfresh
+      end.
+  - apply root_env_no_shadow_remove.
+    apply IHHchecked.
+    apply root_env_no_shadow_add.
+    + eapply typed_env_roots_no_shadow; eassumption.
+    + lazymatch goal with
+      | Hfresh : root_env_lookup _ _ = None |- _ => exact Hfresh
+      end.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_checked_of_roots :
   forall env Ω n R Σ e T Σ' R' roots,
     typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->

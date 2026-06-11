@@ -2114,6 +2114,57 @@ Proof.
           R Σ e1 T1 Σ1 R1 roots1 H Hshadow Hkeys).
 Qed.
 
+Lemma typed_env_roots_checked_ctx_roots_named :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    root_set_ctx_roots_named roots Σ'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked Hshadow Hnamed.
+  induction Hchecked.
+  - exact (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+      R Σ e T Σ' R' roots H Hshadow Hnamed).
+  - destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+      R Σ e T Σ' R' roots H Hshadow Hnamed) as [Hnamed' _].
+    split.
+    + exact Hnamed'.
+    + unfold root_set_ctx_roots_named. intros z Hin. contradiction.
+  - destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+      R Σ e1 T1 Σ1 R1 roots1 H Hshadow Hnamed) as [Hnamed1 Hroots1].
+    assert (Hshadow_add : root_env_no_shadow (root_env_add x roots1 R1)).
+    { apply root_env_no_shadow_add.
+      - eapply typed_env_roots_no_shadow; eassumption.
+      - exact H1. }
+    assert (Hnamed_add :
+      root_env_ctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T m Σ1)).
+    { apply root_env_ctx_roots_named_add_binding; assumption. }
+    destruct (IHHchecked Hshadow_add Hnamed_add) as [Hnamed2 _].
+    assert (Hshadow2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_checked_no_shadow; eassumption. }
+    split.
+    + eapply root_env_ctx_roots_named_remove_binding; eassumption.
+    + unfold root_set_ctx_roots_named. intros z Hin. contradiction.
+  - destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+      R Σ e1 T1 Σ1 R1 roots1 H Hshadow Hnamed) as [Hnamed1 Hroots1].
+    assert (Hshadow_add : root_env_no_shadow (root_env_add x roots1 R1)).
+    { apply root_env_no_shadow_add.
+      - eapply typed_env_roots_no_shadow; eassumption.
+      - exact H0. }
+    assert (Hnamed_add :
+      root_env_ctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1)).
+    { apply root_env_ctx_roots_named_add_binding; assumption. }
+    destruct (IHHchecked Hshadow_add Hnamed_add) as [Hnamed2 _].
+    assert (Hshadow2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_checked_no_shadow; eassumption. }
+    split.
+    + eapply root_env_ctx_roots_named_remove_binding; eassumption.
+    + unfold root_set_ctx_roots_named. intros z Hin. contradiction.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_checked_of_roots :
   forall env Ω n R Σ e T Σ' R' roots,
     typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->

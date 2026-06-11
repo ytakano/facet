@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program Renaming TypingRules TypeChecker RootProvenance
-  EnvStructuralRules AlphaRoots TypeSafetyRootFacts TypeSafetyRootsReadyMutual
+  EnvStructuralRules AlphaRoots TypeSafetyRootFacts TypeSafetyRootsReadyRootSets
+  TypeSafetyRootsReadyCtx TypeSafetyRootsReadyMutual
   TypeSafetyCheckedRoots EnvTypingSoundness
   EnvRootSoundness AssocEnvStructural
   AssocDirectCallHelpers AssocFnValueCallHelpers
@@ -398,6 +399,52 @@ Proof.
        eassumption].
 Qed.
 
+Lemma typed_env_roots_assoc_call_boundary_ctx_roots_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Sigma ->
+    root_env_ctx_roots_named R' Sigma' /\
+    root_set_ctx_roots_named roots Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hnamed.
+  destruct Hboundary.
+  all: try match goal with
+  | |- root_env_ctx_roots_named ?ROut ?SigmaOut /\ root_set_ctx_roots_named (root_sets_union ?arg_roots) ?SigmaOut =>
+      let Hargs_named := fresh "Hargs_named" in
+      assert (Hargs_named :
+        root_env_ctx_roots_named ROut SigmaOut /\
+        Forall (fun roots => root_set_ctx_roots_named roots SigmaOut)
+          arg_roots)
+        by (eapply typed_args_roots_assoc_ctx_roots_named; eassumption);
+      destruct Hargs_named as [Hnamed' Hroots];
+      split; [exact Hnamed' | apply root_sets_ctx_roots_named_union; exact Hroots]
+  end.
+  all: match goal with
+  | |- root_env_ctx_roots_named ?ROut ?SigmaOut /\ root_set_ctx_roots_named
+          (root_set_union ?roots_callee (root_sets_union ?arg_roots)) ?SigmaOut =>
+      let Hcallee_named := fresh "Hcallee_named" in
+      pose proof (proj1 (typed_roots_ctx_roots_named_mutual _ _ _)
+        _ _ _ _ _ _ _ ltac:(eassumption) Hshadow Hnamed) as Hcallee_named;
+      destruct Hcallee_named as [Hnamed1 Hroots_callee];
+      let Hshadow1 := fresh "Hshadow1" in
+      assert (Hshadow1 : root_env_no_shadow _)
+        by (eapply typed_env_roots_no_shadow; eassumption);
+      let Hargs_named := fresh "Hargs_named" in
+      assert (Hargs_named :
+        root_env_ctx_roots_named ROut SigmaOut /\
+        Forall (fun roots => root_set_ctx_roots_named roots SigmaOut)
+          arg_roots)
+        by (eapply typed_args_roots_assoc_ctx_roots_named; eassumption);
+      destruct Hargs_named as [Hnamed' Hroots_args];
+      split; [exact Hnamed' | apply root_set_ctx_roots_named_union;
+        [eapply root_set_ctx_roots_named_same_bindings;
+          [eapply typed_args_roots_assoc_same_bindings; eassumption | exact Hroots_callee]
+        | apply root_sets_ctx_roots_named_union; exact Hroots_args]]
+  end.
+Qed.
+
 Lemma typed_env_roots_assoc_call_boundary_structural :
   forall env Omega n R Sigma e T Sigma' R' roots,
     typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R' roots ->
@@ -515,6 +562,21 @@ Proof.
   - eapply typed_env_roots_assoc_call_boundary_ctx_keys_named; eassumption.
 Qed.
 
+Lemma typed_env_roots_assoc_boundary_ctx_roots_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Sigma ->
+    root_env_ctx_roots_named R' Sigma' /\
+    root_set_ctx_roots_named roots Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hnamed.
+  destruct Hboundary.
+  - eapply (proj1 (typed_roots_ctx_roots_named_mutual env Omega n));
+      eassumption.
+  - eapply typed_env_roots_assoc_call_boundary_ctx_roots_named; eassumption.
+Qed.
+
 Inductive typed_env_roots_checked_assoc_boundary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=
@@ -570,6 +632,20 @@ Proof.
   destruct Hboundary.
   - eapply typed_env_roots_checked_ctx_keys_named; eassumption.
   - eapply typed_env_roots_assoc_boundary_ctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_ctx_roots_named :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Sigma ->
+    root_env_ctx_roots_named R' Sigma' /\
+    root_set_ctx_roots_named roots Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary Hshadow Hnamed.
+  destruct Hboundary.
+  - eapply typed_env_roots_checked_ctx_roots_named; eassumption.
+  - eapply typed_env_roots_assoc_boundary_ctx_roots_named; eassumption.
 Qed.
 
 Lemma typed_env_roots_assoc_boundary_of_assoc_call_boundary :

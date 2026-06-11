@@ -67,10 +67,9 @@ validity checks must be represented in Rocq and the extracted checker.
   safety-side consumers. Assoc root argument, call, root, and checked-root
   boundaries now preserve `root_env_no_shadow`, matching another invariant that
   root-safety consumers require. Checked root typing and assoc root call/root/
-  checked boundaries now also preserve `root_env_ctx_keys_named`, and assoc root
-  value and argument typing bridge to the `root_env_ctx_roots_named`,
-  `root_env_ctx_keys_named`, and root-set named invariants used by roots-ready
-  proofs. Ordinary
+  checked boundaries now also preserve both `root_env_ctx_keys_named` and
+  `root_env_ctx_roots_named` plus returned root-set naming, and assoc root value
+  and argument typing bridge to the same roots-ready invariants. Ordinary
   compatibility is not treated as an implicit proof of associated
   compatibility; call-site wiring must dispatch through the env-aware assoc
   helpers at each checker path being proved. The ctx/env checker's top-level

@@ -149,7 +149,7 @@ Key temporary limitations:
      param-type equality/back-bridges, env-structural and roots-aware
      argument/field relations, same-bindings facts, nil inversions, cons
      inversions, roots structural/length helpers, and a downstream
-     assoc-aware env/roots argument, enum-payload, and struct-field collector soundness helpers. These compile while
+     assoc-aware env/roots argument, enum-payload, and struct-field collector soundness and equation helpers. These compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

@@ -22,3 +22,24 @@ Definition infer_fn_value_call_assoc
       end
   | c => infer_err (ErrNotAFunction c)
   end.
+
+Definition infer_fn_value_call_generic_assoc
+    (env : global_env) (Ω : outlives_ctx)
+    (callee_ty : Ty) (type_args arg_tys : list Ty) : infer_result Ty :=
+  match ty_core callee_ty with
+  | TTypeForall _ bounds body =>
+      match ty_core body with
+      | TFn param_tys ret =>
+          match check_type_forall_bounds env bounds type_args with
+          | Some err => infer_err err
+          | None =>
+              match check_arg_tys_assoc env Ω arg_tys
+                (map (subst_type_params_ty type_args) param_tys) with
+              | Some err => infer_err err
+              | None => infer_ok (subst_type_params_ty type_args ret)
+              end
+          end
+      | c => infer_err (ErrMalformedHrtBody c)
+      end
+  | c => infer_err (ErrNotAFunction c)
+  end.

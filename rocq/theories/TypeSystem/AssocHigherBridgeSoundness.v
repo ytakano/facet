@@ -1,7 +1,8 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules AssocCompatibility
   AssocHrtFacts AssocTraitMethodSigFacts AssocTraitMethodResolutionFacts AssocValueTypingFacts
-  AssocEnvStructural AssocEnvValueBridgeReductionFacts
+  AssocEnvStructural AssocEnvFnDefTypingFacts AssocEnvRootFnDefTypingFacts
+  TypeSafetyCheckedRoots AssocEnvValueBridgeReductionFacts
   AssocCheckedBridgeSoundness CompatBoolSoundness
   AssocHrtBridgeReductionFacts AssocEnumPayloadTypingFacts AssocEnumPayloadBridgeReductionFacts.
 From Stdlib Require Import List.
@@ -286,4 +287,71 @@ Proof.
       * exact (ty_compatible_assoc_checked_sound
           env Ω T_field (instantiate_struct_field_ty lts args f) H1).
     + exact IHHfields.
+Qed.
+
+Lemma typed_fn_env_structural_assoc_checked_sound :
+  forall env f,
+    typed_fn_env_structural_assoc_checked env f ->
+    exists T_body Gamma_out,
+      typed_env_structural (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) (fn_lifetimes f)
+        (sctx_of_ctx (fn_body_ctx f))
+        (fn_body f) T_body (sctx_of_ctx Gamma_out) /\
+      ty_compatible_assoc
+        (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) T_body (fn_ret f) /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  intros env f Hfn.
+  destruct (typed_fn_env_structural_assoc_checked_inv env f Hfn)
+    as [T_body [Gamma_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Gamma_out. repeat split; try assumption.
+  exact (ty_compatible_assoc_checked_sound
+    (global_env_with_local_bounds env (fn_bounds f))
+    (fn_outlives f) T_body (fn_ret f) Hcompat).
+Qed.
+
+Lemma typed_fn_env_roots_assoc_checked_sound :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_assoc_checked env f R0 R_out roots ->
+    exists T_body Gamma_out,
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) (fn_lifetimes f)
+        R0 (sctx_of_ctx (fn_body_ctx f))
+        (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots /\
+      ty_compatible_assoc
+        (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) T_body (fn_ret f) /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  intros env f R0 R_out roots Hfn.
+  destruct (typed_fn_env_roots_assoc_checked_inv env f R0 R_out roots Hfn)
+    as [T_body [Gamma_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Gamma_out. repeat split; try assumption.
+  exact (ty_compatible_assoc_checked_sound
+    (global_env_with_local_bounds env (fn_bounds f))
+    (fn_outlives f) T_body (fn_ret f) Hcompat).
+Qed.
+
+Lemma typed_fn_env_roots_checked_assoc_checked_sound :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked_assoc_checked env f R0 R_out roots ->
+    exists T_body Gamma_out,
+      typed_env_roots_checked (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) (fn_lifetimes f)
+        R0 (sctx_of_ctx (fn_body_ctx f))
+        (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots /\
+      ty_compatible_assoc
+        (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) T_body (fn_ret f) /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  intros env f R0 R_out roots Hfn.
+  destruct (typed_fn_env_roots_checked_assoc_checked_inv
+    env f R0 R_out roots Hfn)
+    as [T_body [Gamma_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Gamma_out. repeat split; try assumption.
+  exact (ty_compatible_assoc_checked_sound
+    (global_env_with_local_bounds env (fn_bounds f))
+    (fn_outlives f) T_body (fn_ret f) Hcompat).
 Qed.

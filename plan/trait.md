@@ -166,9 +166,10 @@ Key temporary limitations:
      without an explicit bridge assumption. Env/root single-value witnesses are also wrapped without an explicit bridge
      assumption. Env/root argument-list witnesses now expose per-argument assoc compatibility
      without an explicit bridge assumption. Env/root field witnesses now expose per-field assoc compatibility without an
-     explicit bridge assumption. Remaining work is to thread the same proof
-     through env/root function-body wrappers so checker-facing facts can expose
-     ordinary associated compatibility throughout.
+     explicit bridge assumption. Env/root function-body wrappers now expose assoc return compatibility without
+     an explicit bridge assumption. Remaining work is to use these wrappers at
+     checker-facing call sites once the typing-rule boundary is ready, while
+     keeping the executable checker behavior unchanged until then.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

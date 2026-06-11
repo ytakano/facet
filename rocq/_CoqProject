@@ -54,6 +54,7 @@ theories/TypeSystem/AlphaTyping.v
 theories/TypeSystem/AssocTypingFacts.v
 theories/TypeSystem/AssocValueTypingFacts.v
 theories/TypeSystem/AssocStructFieldTypingFacts.v
+theories/TypeSystem/AssocStructFieldBridgeReductionFacts.v
 theories/TypeSystem/AssocEnumPayloadTypingFacts.v
 theories/TypeSystem/AssocEnumPayloadBridgeReductionFacts.v
 theories/TypeSystem/AssocFnDefTypingFacts.v

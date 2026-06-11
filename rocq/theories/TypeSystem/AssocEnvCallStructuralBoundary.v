@@ -4,7 +4,7 @@ From Facet.TypeSystem Require Import
   AssocDirectCallHelpers AssocFnValueCallHelpers
   AssocArgBoolFacts AssocFnValueCallFacts
   AssocHrtHelpers AssocHrtFacts AssocEnvArgSoundness
-  AssocEnvRootArgSoundness AssocEnvHrtSoundness EnvSoundnessFacts.
+  AssocEnvRootArgSoundness AssocEnvHrtSoundness EnvBorrowSoundness EnvSoundnessFacts.
 From Stdlib Require Import List String Bool PeanoNat.
 Import ListNotations.
 
@@ -509,6 +509,87 @@ Proof.
   intros env f T_body Gamma_out Hbody.
   eapply typed_env_structural_assoc_boundary_same_bindings.
   exact Hbody.
+Qed.
+
+Definition typed_fn_env_roots_assoc_boundary
+    (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  exists T_body Gamma_out,
+    typed_env_roots_assoc_boundary
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      R0 (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Gamma_out) R_out roots /\
+    ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+    params_ok_env_b env (fn_params f) Gamma_out = true.
+
+Definition checked_fn_env_roots_assoc_boundary
+    (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  typed_fn_env_roots_assoc_boundary env f R0 R_out roots /\
+  (exists PBS',
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
+
+Lemma checked_fn_env_roots_assoc_boundary_typed :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_assoc_boundary env f R0 R_out roots ->
+    typed_fn_env_roots_assoc_boundary env f R0 R_out roots.
+Proof.
+  intros env f R0 R_out roots Hchecked.
+  exact (proj1 Hchecked).
+Qed.
+
+Theorem infer_env_roots_assoc_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_env_roots env f R0 = infer_ok (T, Gamma_out, R_out, roots) ->
+    typed_fn_env_roots_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold infer_env_roots, typed_fn_env_roots_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
+    try discriminate.
+  destruct (infer_core_env_roots (global_env_with_local_bounds env (fn_bounds f))
+              (fn_outlives f) (fn_lifetimes f) R0 (fn_body_ctx f)
+              (fn_body f))
+    as [[[[T_body Gamma_body] R_body] roots_body] | err] eqn:Hcore;
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
+    try discriminate.
+  destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
+    eqn:Hcompatible; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Gamma_body) eqn:Hparams;
+    try discriminate.
+  inversion Hinfer; subst.
+  exists T_body, Gamma_out.
+  repeat split.
+  - apply TERAssocBoundary_Roots.
+    eapply infer_core_env_roots_sound. exact Hcore.
+  - exact Hcompatible.
+  - exact Hparams.
+Qed.
+
+Theorem infer_full_env_roots_assoc_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_full_env_roots env f R0 = infer_ok (T, Gamma_out, R_out, roots) ->
+    checked_fn_env_roots_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold infer_full_env_roots, checked_fn_env_roots_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hfull.
+  destruct (infer_env_roots env f R0)
+    as [[[[T0 Gamma0] R1] roots1] | err] eqn:Hinfer; try discriminate.
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
+    as [PBS' | err] eqn:Hborrow; try discriminate.
+  inversion Hfull; subst.
+  split.
+  - eapply infer_env_roots_assoc_boundary_sound. exact Hinfer.
+  - split.
+    + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+    + eapply infer_env_roots_params_nodup. exact Hinfer.
 Qed.
 
 

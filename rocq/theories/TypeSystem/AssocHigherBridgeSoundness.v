@@ -239,3 +239,51 @@ Proof.
       * exact Htail.
     + simpl. f_equal. exact Hlen.
 Qed.
+
+Lemma typed_fields_env_structural_assoc_sound :
+  forall env Ω n lts args Σ fields defs Σ',
+    typed_fields_env_structural_assoc env Ω n lts args Σ fields defs Σ' ->
+    Forall
+      (fun f =>
+        exists e_field actual Σin Σout,
+          lookup_field_b (field_name f) fields = Some e_field /\
+          typed_env_structural env Ω n Σin e_field actual Σout /\
+          ty_compatible_assoc env Ω actual
+            (instantiate_struct_field_ty lts args f))
+      defs.
+Proof.
+  intros env Ω n lts args Σ fields defs Σ' Hfields.
+  induction Hfields.
+  - constructor.
+  - constructor.
+    + exists e_field, T_field, Σ, Σ1. repeat split.
+      * exact H.
+      * exact H0.
+      * exact (ty_compatible_assoc_checked_sound
+          env Ω T_field (instantiate_struct_field_ty lts args f) H1).
+    + exact IHHfields.
+Qed.
+
+Lemma typed_fields_roots_assoc_sound :
+  forall env Ω n lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots_assoc env Ω n lts args R Σ fields defs Σ' R' roots ->
+    Forall
+      (fun f =>
+        exists e_field actual Rin Rnext Σin Σout roots_field,
+          lookup_field_b (field_name f) fields = Some e_field /\
+          typed_env_roots env Ω n Rin Σin e_field actual Σout Rnext roots_field /\
+          ty_compatible_assoc env Ω actual
+            (instantiate_struct_field_ty lts args f))
+      defs.
+Proof.
+  intros env Ω n lts args R Σ fields defs Σ' R' roots Hfields.
+  induction Hfields.
+  - constructor.
+  - constructor.
+    + exists e_field, T_field, R, R1, Σ, Σ1, roots_field. repeat split.
+      * exact H.
+      * exact H0.
+      * exact (ty_compatible_assoc_checked_sound
+          env Ω T_field (instantiate_struct_field_ty lts args f) H1).
+    + exact IHHfields.
+Qed.

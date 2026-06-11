@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules
   EnvTypingSoundness AssocCompatibility AssocEnvStructural CheckerHrt.
-From Stdlib Require Import Bool List.
+From Stdlib Require Import Bool List String.
 Import ListNotations.
 
 Local Opaque ty_compatible_assoc_b.
@@ -122,4 +122,61 @@ Proof.
     + eapply Hexpr; eassumption.
     + exact Hcompat.
     + eapply IH; eassumption.
+Qed.
+
+Fixpoint infer_env_fields_collect_assoc fuel env Ω n lts args
+    (Sigma : sctx) (fields : list (string * expr)) (defs : list field_def)
+    : infer_result sctx :=
+  match defs with
+  | [] => infer_ok Sigma
+  | f :: rest =>
+      match lookup_field_b (field_name f) fields with
+      | None => infer_err (ErrMissingField (field_name f))
+      | Some e_field =>
+          match infer_core_env_state_fuel fuel env Ω n Sigma e_field with
+          | infer_err err => infer_err err
+          | infer_ok (T_field, Sigma1) =>
+              let T_expected := instantiate_struct_field_ty lts args f in
+              if ty_compatible_assoc_b env Ω T_field T_expected
+              then infer_env_fields_collect_assoc fuel env Ω n lts args
+                     Sigma1 fields rest
+              else infer_err (compatible_error T_field T_expected)
+          end
+      end
+  end.
+
+Lemma infer_env_fields_collect_assoc_checked_sound :
+  forall fuel env Ω n lts args Sigma fields defs Sigma_out,
+    forallb (fun '(_, e_field) => struct_expr e_field) fields = true ->
+    infer_env_fields_collect_assoc fuel env Ω n lts args Sigma fields defs =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        struct_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e =
+          infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_fields_env_structural_assoc env Ω n lts args Sigma fields defs
+      Sigma_out.
+Proof.
+  intros fuel env Ω n lts args Sigma fields defs.
+  revert Sigma.
+  induction defs as [|f rest IH]; intros Sigma Sigma_out Hfields Hcollect Hexpr;
+    simpl in Hcollect.
+  - inversion Hcollect; subst. constructor.
+  - destruct (lookup_field_b (field_name f) fields) as [e_field |] eqn:Hlookup;
+      try discriminate.
+    destruct (infer_core_env_state_fuel fuel env Ω n Sigma e_field)
+      as [[T_field Sigma1] | err] eqn:Hfield; try discriminate.
+    destruct (ty_compatible_assoc_b env Ω T_field
+      (instantiate_struct_field_ty lts args f)) eqn:Hcompat; try discriminate.
+    eapply TESFieldsAssoc_Cons.
+    + exact Hlookup.
+    + eapply Hexpr.
+      * eapply lookup_field_b_struct_expr_true; eassumption.
+      * exact Hfield.
+    + exact Hcompat.
+    + eapply IH.
+      * exact Hfields.
+      * exact Hcollect.
+      * exact Hexpr.
 Qed.

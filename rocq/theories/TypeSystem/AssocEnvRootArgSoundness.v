@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker RootProvenance
   EnvStructuralRules EnvRootSoundness AssocCompatibility AssocEnvStructural
   CheckerHrt.
-From Stdlib Require Import List.
+From Stdlib Require Import List String.
 Import ListNotations.
 
 Local Opaque ty_compatible_assoc_b.
@@ -106,4 +106,67 @@ Proof.
       * exact Hcompat.
       * exact Hpayload_roots.
     + simpl. rewrite Hroots_rest. reflexivity.
+Qed.
+
+Fixpoint infer_env_fields_collect_roots_assoc fuel env Ω n lts args
+    (R : root_env) (Sigma : sctx) (fields : list (string * expr))
+    (defs : list field_def)
+    : infer_result (sctx * root_env * root_set) :=
+  match defs with
+  | [] => infer_ok (Sigma, R, [])
+  | f :: rest =>
+      match lookup_field_b (field_name f) fields with
+      | None => infer_err (ErrMissingField (field_name f))
+      | Some e_field =>
+          match infer_core_env_state_fuel_roots fuel env Ω n R Sigma e_field with
+          | infer_err err => infer_err err
+          | infer_ok (T_field, Sigma1, R1, roots_field) =>
+              let T_expected := instantiate_struct_field_ty lts args f in
+              if ty_compatible_assoc_b env Ω T_field T_expected
+              then
+                match infer_env_fields_collect_roots_assoc fuel env Ω n lts args
+                        R1 Sigma1 fields rest with
+                | infer_err err => infer_err err
+                | infer_ok (Sigma2, R2, roots_rest) =>
+                    infer_ok (Sigma2, R2, root_set_union roots_field roots_rest)
+                end
+              else infer_err (compatible_error T_field T_expected)
+          end
+      end
+  end.
+
+Lemma infer_env_fields_collect_roots_assoc_checked_sound :
+  forall fuel env Ω n lts args R Sigma fields defs Sigma_out R_out roots,
+    infer_env_fields_collect_roots_assoc fuel env Ω n lts args R Sigma fields defs =
+      infer_ok (Sigma_out, R_out, roots) ->
+    (forall R0 Sigma0 e T Sigma1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Sigma0 e =
+          infer_ok (T, Sigma1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Sigma0 e T Sigma1 R1 roots1) ->
+    typed_fields_roots_assoc env Ω n lts args R Sigma fields defs
+      Sigma_out R_out roots.
+Proof.
+  intros fuel env Ω n lts args R Sigma fields defs.
+  revert R Sigma.
+  induction defs as [|f rest IH]; intros R Sigma Sigma_out R_out roots Hcollect Hexpr.
+  - simpl in Hcollect. inversion Hcollect; subst. constructor.
+  - simpl in Hcollect.
+    destruct (lookup_field_b (field_name f) fields) as [e_field |] eqn:Hlookup;
+      try discriminate.
+    destruct (infer_core_env_state_fuel_roots fuel env Ω n R Sigma e_field)
+      as [[[[T_field Sigma1] R1] roots_field] | err] eqn:Hfield; try discriminate.
+    destruct (ty_compatible_assoc_b env Ω T_field
+      (instantiate_struct_field_ty lts args f)) eqn:Hcompat; try discriminate.
+    destruct (infer_env_fields_collect_roots_assoc fuel env Ω n lts args
+      R1 Sigma1 fields rest) as [[[Sigma2 R2] roots_rest] | err] eqn:Hrest;
+      try discriminate.
+    inversion Hcollect; subst.
+    eapply TERFieldsAssoc_Cons.
+    + exact Hlookup.
+    + eapply Hexpr. exact Hfield.
+    + exact Hcompat.
+    + eapply IH.
+      * exact Hrest.
+      * intros R0 Sigma0 e0 T0 Sigma0' R0' roots0 Hinfer.
+        eapply Hexpr. exact Hinfer.
 Qed.

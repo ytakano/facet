@@ -1962,6 +1962,296 @@ Proof.
   eapply infer_program_env_end2end_assoc_boundary_sctx_roots_named; eauto.
 Qed.
 
+Lemma infer_fns_env_end2end_in_assoc_boundary_store_keys_named :
+  forall env fns f s,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    In f fns ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env fns f s Hfns Hin Hshadow.
+  destruct (infer_fns_env_end2end_in_assoc_boundary_sound env fns f Hfns Hin)
+    as [T [Gamma_out [R_out [roots [Hend _]]]]].
+  destruct (infer_fn_env_end2end_assoc_boundary_store_keys_named
+      env f T Gamma_out R_out roots s Hend Hshadow)
+    as [T_body [Gamma_body [Hkeys [Hcompat Hparams]]]].
+  exists T, Gamma_out, R_out, roots, T_body, Gamma_body.
+  split; [exact Hend |].
+  split; [exact Hkeys |].
+  split; assumption.
+Qed.
+
+Lemma infer_fns_env_end2end_in_assoc_boundary_store_keys_named_prefix :
+  forall env fns f s,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    In f fns ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env fns f s Hfns Hin Hshadow.
+  destruct (infer_fns_env_end2end_in_assoc_boundary_sound env fns f Hfns Hin)
+    as [T [Gamma_out [R_out [roots [Hend _]]]]].
+  destruct (infer_fn_env_end2end_assoc_boundary_store_keys_named_prefix
+      env f T Gamma_out R_out roots s Hend Hshadow)
+    as [T_body [Gamma_body [Hkeys [Hcompat Hparams]]]].
+  exists T, Gamma_out, R_out, roots, T_body, Gamma_body.
+  split; [exact Hend |].
+  split; [exact Hkeys |].
+  split; assumption.
+Qed.
+
+Lemma infer_fns_env_end2end_in_assoc_boundary_store_roots_named :
+  forall env fns f s,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    In f fns ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env fns f s Hfns Hin Hshadow.
+  destruct (infer_fns_env_end2end_in_assoc_boundary_sound env fns f Hfns Hin)
+    as [T [Gamma_out [R_out [roots [Hend _]]]]].
+  destruct (infer_fn_env_end2end_assoc_boundary_store_roots_named
+      env f T Gamma_out R_out roots s Hend Hshadow)
+    as [T_body [Gamma_body [Hroots [Hcompat Hparams]]]].
+  exists T, Gamma_out, R_out, roots, T_body, Gamma_body.
+  split; [exact Hend |].
+  split; [exact Hroots |].
+  split; assumption.
+Qed.
+
+Lemma infer_fns_env_end2end_in_assoc_boundary_store_roots_named_prefix :
+  forall env fns f s,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    In f fns ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env fns f s Hfns Hin Hshadow.
+  destruct (infer_fns_env_end2end_in_assoc_boundary_sound env fns f Hfns Hin)
+    as [T [Gamma_out [R_out [roots [Hend _]]]]].
+  destruct (infer_fn_env_end2end_assoc_boundary_store_roots_named_prefix
+      env f T Gamma_out R_out roots s Hend Hshadow)
+    as [T_body [Gamma_body [Hroots [Hcompat Hparams]]]].
+  exists T, Gamma_out, R_out, roots, T_body, Gamma_body.
+  split; [exact Hend |].
+  split; [exact Hroots |].
+  split; assumption.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_boundary_store_keys_named :
+  forall env env' f s,
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s Hprog Hin Hshadow.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  inversion Hprog; subst env'.
+  eapply infer_fns_env_end2end_in_assoc_boundary_store_keys_named; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_boundary_store_keys_named_prefix :
+  forall env env' f s,
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s Hprog Hin Hshadow.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  inversion Hprog; subst env'.
+  eapply infer_fns_env_end2end_in_assoc_boundary_store_keys_named_prefix; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_boundary_store_roots_named :
+  forall env env' f s,
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s Hprog Hin Hshadow.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  inversion Hprog; subst env'.
+  eapply infer_fns_env_end2end_in_assoc_boundary_store_roots_named; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_boundary_store_roots_named_prefix :
+  forall env env' f s,
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s Hprog Hin Hshadow.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  inversion Hprog; subst env'.
+  eapply infer_fns_env_end2end_in_assoc_boundary_store_roots_named_prefix; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_boundary_store_keys_named :
+  forall env env' f s,
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s _ Hprog Hin Hshadow.
+  eapply infer_program_env_end2end_assoc_boundary_store_keys_named; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_boundary_store_keys_named_prefix :
+  forall env env' f s,
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s _ Hprog Hin Hshadow.
+  eapply infer_program_env_end2end_assoc_boundary_store_keys_named_prefix; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_boundary_store_roots_named :
+  forall env env' f s,
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s _ Hprog Hin Hshadow.
+  eapply infer_program_env_end2end_assoc_boundary_store_roots_named; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_boundary_store_roots_named_prefix :
+  forall env env' f s,
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
+    root_env_no_shadow
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)) ->
+    exists T Gamma_out R_out roots T_body Gamma_body,
+      infer_fn_env_end2end env' f = infer_ok (T, Gamma_out, R_out, roots) /\
+      (store_typed_prefix (global_env_with_local_bounds env' (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env' (fn_params f) Gamma_body = true.
+Proof.
+  intros env env' f s _ Hprog Hin Hshadow.
+  eapply infer_program_env_end2end_assoc_boundary_store_roots_named_prefix; eauto.
+Qed.
+
 Theorem infer_fn_env_end2end_structural_assoc_boundary_sound :
   forall env f T Gamma_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Gamma_out, R_out, roots) ->

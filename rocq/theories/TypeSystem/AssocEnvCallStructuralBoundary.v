@@ -1,7 +1,8 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker RootProvenance
   EnvStructuralRules EnvTypingSoundness EnvRootSoundness AssocEnvStructural
-  AssocDirectCallHelpers
+  AssocDirectCallHelpers AssocFnValueCallHelpers
+  AssocArgBoolFacts AssocFnValueCallFacts
   AssocEnvArgSoundness AssocEnvRootArgSoundness EnvSoundnessFacts.
 From Stdlib Require Import List String Bool PeanoNat.
 Import ListNotations.
@@ -491,4 +492,71 @@ Proof.
   - exact Hbounds.
   - eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
   - apply env_outlives_constraints_hold_b_sound. exact Hout.
+Qed.
+
+
+Lemma infer_env_fn_value_call_assoc_structural_boundary :
+  forall fuel env Omega n callee callee_ty args arg_tys T Sigma Sigma1 Sigma',
+    typed_env_structural env Omega n Sigma callee callee_ty Sigma1 ->
+    infer_env_args_collect fuel env Omega n Sigma1 args =
+      infer_ok (arg_tys, Sigma') ->
+    (forall Sigma0 e T0 Sigma2,
+        In e args ->
+        infer_core_env_state_fuel fuel env Omega n Sigma0 e =
+          infer_ok (T0, Sigma2) ->
+        typed_env_structural env Omega n Sigma0 e T0 Sigma2) ->
+    infer_fn_value_call_assoc env Omega callee_ty arg_tys = infer_ok T ->
+    typed_env_structural_assoc_call_boundary env Omega n Sigma
+      (ECallExpr callee args) T Sigma'.
+Proof.
+  intros fuel env Omega n callee callee_ty args arg_tys T Sigma Sigma1
+    Sigma' Hcallee Hcollect Hexpr Hcall.
+  destruct (infer_fn_value_call_assoc_checked_args
+    env Omega callee_ty arg_tys T Hcall) as
+    [[param_tys [ret [Hcore [Hcheck [_ Hret]]]]] |
+     [env_lt [param_tys [ret [Hcore [Hcheck [_ Hret]]]]]]].
+  - destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+    eapply TESAssocBoundary_CallExpr_Fn.
+    + exact Hcallee.
+    + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+      eapply infer_env_args_collect_assoc_checked_sound; eassumption.
+  - destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+    eapply TESAssocBoundary_CallExpr_Closure.
+    + exact Hcallee.
+    + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+      eapply infer_env_args_collect_assoc_checked_sound; eassumption.
+Qed.
+
+Lemma infer_roots_fn_value_call_assoc_structural_boundary :
+  forall fuel env Omega n callee callee_ty R R1 Sigma Sigma1 args arg_tys T
+      Sigma' R' arg_roots roots_callee,
+    typed_env_roots env Omega n R Sigma callee callee_ty Sigma1 R1
+      roots_callee ->
+    infer_env_args_collect_roots fuel env Omega n R1 Sigma1 args =
+      infer_ok (arg_tys, Sigma', R', arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma2, R2, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1) ->
+    infer_fn_value_call_assoc env Omega callee_ty arg_tys = infer_ok T ->
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma
+      (ECallExpr callee args) T Sigma' R'
+      (root_set_union roots_callee (root_sets_union arg_roots)).
+Proof.
+  intros fuel env Omega n callee callee_ty R R1 Sigma Sigma1 args arg_tys T
+    Sigma' R' arg_roots roots_callee Hcallee Hcollect Hexpr Hcall.
+  destruct (infer_fn_value_call_assoc_checked_args
+    env Omega callee_ty arg_tys T Hcall) as
+    [[param_tys [ret [Hcore [Hcheck [_ Hret]]]]] |
+     [env_lt [param_tys [ret [Hcore [Hcheck [_ Hret]]]]]]].
+  - destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+    eapply TERAssocBoundary_CallExpr_Fn.
+    + exact Hcallee.
+    + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+      eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+  - destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+    eapply TERAssocBoundary_CallExpr_Closure.
+    + exact Hcallee.
+    + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+      eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
 Qed.

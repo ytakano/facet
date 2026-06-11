@@ -208,3 +208,39 @@ Proof.
   eapply typed_fields_env_structural_assoc_same_bindings.
   eapply typed_fields_roots_assoc_structural. exact Hfields.
 Qed.
+
+Lemma typed_args_env_structural_assoc_param_tys :
+  forall env Ω n Σ args ps_shadow ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ args ps_shadow Σ' ->
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      ps_shadow ps ->
+    typed_args_env_structural_assoc env Ω n Σ args ps Σ'.
+Proof.
+  intros env Ω n Σ args ps_shadow ps Σ' Hargs Hparams.
+  revert ps Hparams.
+  induction Hargs; intros ps' Hparams.
+  - inversion Hparams; subst. constructor.
+  - inversion Hparams; subst.
+    econstructor.
+    + exact H.
+    + rewrite <- H3. exact H0.
+    + apply IHHargs. exact H5.
+Qed.
+
+Lemma typed_args_roots_assoc_param_tys :
+  forall env Ω n R Σ args ps_shadow ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args ps_shadow Σ' R' arg_roots ->
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      ps_shadow ps ->
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots.
+Proof.
+  intros env Ω n R Σ args ps_shadow ps Σ' R' arg_roots Hargs Hparams.
+  revert ps Hparams.
+  induction Hargs; intros ps' Hparams.
+  - inversion Hparams; subst. constructor.
+  - inversion Hparams; subst.
+    econstructor.
+    + exact H.
+    + rewrite <- H3. exact H0.
+    + apply IHHargs. exact H5.
+Qed.

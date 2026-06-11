@@ -29,6 +29,25 @@ Proof.
   - simpl. econstructor; eauto.
 Qed.
 
+Lemma typed_args_assoc_param_tys :
+  forall env fenv Ω n Γ args ps_shadow ps Γ',
+    typed_args_assoc env fenv Ω n Γ args ps_shadow Γ' ->
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      ps_shadow ps ->
+    typed_args_assoc env fenv Ω n Γ args ps Γ'.
+Proof.
+  intros env fenv Ω n Γ args ps_shadow ps Γ' Hargs.
+  revert ps.
+  induction Hargs; intros ps_shadow Hparams.
+  - inversion Hparams; subst. constructor.
+  - destruct ps_shadow as [|p_shadow ps_shadow]; inversion Hparams; subst.
+    econstructor; eauto.
+    match goal with
+    | Heq : param_ty _ = param_ty _ |- _ =>
+        rewrite <- Heq; assumption
+    end.
+Qed.
+
 Lemma typed_args_assoc_checked_same_bindings :
   forall env fenv Ω n Γ args ps Γ',
     typed_args_assoc_checked env fenv Ω n Γ args ps Γ' ->
@@ -53,4 +72,23 @@ Proof.
   induction Hargs.
   - constructor.
   - simpl. econstructor; eauto.
+Qed.
+
+Lemma typed_args_assoc_checked_param_tys :
+  forall env fenv Ω n Γ args ps_shadow ps Γ',
+    typed_args_assoc_checked env fenv Ω n Γ args ps_shadow Γ' ->
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      ps_shadow ps ->
+    typed_args_assoc_checked env fenv Ω n Γ args ps Γ'.
+Proof.
+  intros env fenv Ω n Γ args ps_shadow ps Γ' Hargs.
+  revert ps.
+  induction Hargs; intros ps_shadow Hparams.
+  - inversion Hparams; subst. constructor.
+  - destruct ps_shadow as [|p_shadow ps_shadow]; inversion Hparams; subst.
+    econstructor; eauto.
+    match goal with
+    | Heq : param_ty _ = param_ty _ |- _ =>
+        rewrite <- Heq; assumption
+    end.
 Qed.

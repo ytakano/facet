@@ -164,9 +164,10 @@ Key temporary limitations:
      single-value witnesses are also wrapped without an explicit bridge
      assumption. Trait-method resolution now exposes the same assoc-compatible signature facts
      without an explicit bridge assumption. Env/root single-value witnesses are also wrapped without an explicit bridge
-     assumption. Remaining work is to thread the same proof through env/root
-     argument, field, and function-body wrappers so checker-facing facts can
-     expose ordinary associated compatibility throughout.
+     assumption. Env/root argument-list witnesses now expose per-argument assoc compatibility
+     without an explicit bridge assumption. Remaining work is to thread the same
+     proof through env/root field and function-body wrappers so checker-facing
+     facts can expose ordinary associated compatibility throughout.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

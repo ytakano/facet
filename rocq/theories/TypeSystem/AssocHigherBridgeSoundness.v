@@ -189,3 +189,53 @@ Proof.
   - exact Htyped.
   - exact (ty_compatible_assoc_checked_sound env Ω actual expected Hchecked).
 Qed.
+
+Lemma typed_args_env_structural_assoc_sound :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ args ps Σ' ->
+    Forall2
+      (fun e p =>
+        exists actual Σin Σout,
+          typed_env_structural env Ω n Σin e actual Σout /\
+          ty_compatible_assoc env Ω actual (param_ty p))
+      args ps /\
+    length args = length ps.
+Proof.
+  intros env Ω n Σ args ps Σ' Hargs.
+  induction Hargs.
+  - split; constructor.
+  - destruct IHHargs as [Htail Hlen].
+    split.
+    + constructor.
+      * exists T_e, Σ, Σ1. split.
+        -- exact H.
+        -- exact (ty_compatible_assoc_checked_sound
+             env Ω T_e (param_ty p) H0).
+      * exact Htail.
+    + simpl. f_equal. exact Hlen.
+Qed.
+
+Lemma typed_args_roots_assoc_sound :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
+    Forall2
+      (fun e p =>
+        exists actual Rin Rnext Σin Σout roots,
+          typed_env_roots env Ω n Rin Σin e actual Σout Rnext roots /\
+          ty_compatible_assoc env Ω actual (param_ty p))
+      args ps /\
+    length args = length ps.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Hargs.
+  induction Hargs.
+  - split; constructor.
+  - destruct IHHargs as [Htail Hlen].
+    split.
+    + constructor.
+      * exists T_e, R, R1, Σ, Σ1, roots. split.
+        -- exact H.
+        -- exact (ty_compatible_assoc_checked_sound
+             env Ω T_e (param_ty p) H0).
+      * exact Htail.
+    + simpl. f_equal. exact Hlen.
+Qed.

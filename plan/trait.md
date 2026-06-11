@@ -16,9 +16,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Method-local type parameters are supported for trait and impl methods,
   including method-local bounds and generic-trait impl remapping. Method-local
   lifetime generics remain deferred and are rejected by tests.
-- Method calls use the ordinary Facet prefix call shape: `(callee args...)`.
+- Method calls use Facet's ordinary prefix call shape: `(callee args...)`.
   Explicit UFCS is `(<Ty as Trait>::method receiver args...)`; short UFCS is
-  `(Trait::method receiver args...)`. The receiver is always the first
+  `(Trait::method receiver args...)`; the receiver is always the first
   argument. Dot method-call syntax is intentionally rejected in this phase.
 - Short UFCS accepts receiver types known before checker execution: function
   parameters, syntactically typed literals, immutable pure local literals after
@@ -30,68 +30,15 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence is available.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
-  local trait bounds are preserved and regression-tested.
-- Associated projections are still normalized by extracted Rocq raw/global-env
-  normalization before ordinary compatibility checks. OCaml no longer performs
-  a separate associated-type normalization pass.
-- Rocq has an env-aware associated compatibility layer:
-  `ty_compatible_assoc`, `ty_compatible_assoc_b`, and
-  `ty_compatible_assoc_checked`. The checked-to-Prop bridge is proved via
-  `ty_compatible_assoc_checked_sound` while keeping `normalize_assoc_ty` opaque
-  at proof boundaries.
-- `AssocCallTypingBoundary`, `AssocEnvCallTypingBoundary`, and
-  `AssocEnvCallStructuralBoundary` define lightweight Prop-level call
-  boundaries around associated-compatible argument typing for direct,
-  function-value, explicit generic function-value, HRT/type-forall/mixed-forall
-  including elaborating type-forall and mixed-forall roots, make-closure, and
-  root-aware call paths, so future checker-facing wiring has
-  targets that mention `global_env` without changing `typed` yet. Direct,
-  generic direct-call, non-generic function-value, explicit generic
-  function-value, HRT, inferred/elaborating type-forall, and mixed-forall
-  helper results now bridge to the env/root structural call boundary, and
-  root direct, generic direct, function-value, explicit generic function-value,
-  type-forall, mixed-forall, HRT, and make-closure helper results also lift
-  into the checked root wrapper.
-- Helper-level associated compatibility soundness is available for
-  `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
-  function-value calls, explicit generic function-value calls,
-  HRT/type-forall/mixed-forall calls including elaborating root variants,
-  trait method signatures and resolution,
-  values, function bodies, struct fields, enum
-  payloads, env/root argument collectors, field collectors, and payload
-  collectors. Env/root associated call boundaries also preserve store binding
-  shape, and the roots boundary projects to the env-structural boundary. A
-  checker-facing wrapper boundary now admits either existing structural typing
-  or an associated call boundary while preserving the same store-shape
-  invariants. Core, expression, function-level, root, shadow-safe root,
-  and checked shadow-safe root checker soundness have entry theorems into
-  these wrappers for the current checker behavior, including function-level
-  checked full-env roots and end-to-end program entrypoints. Function-level
-  checked assoc root boundaries, end-to-end program entries, and checked
-  function environments now project to structural assoc boundaries for
-  safety-side consumers. Assoc root argument, call, root, and checked-root
-  boundaries now preserve `root_env_no_shadow`, matching another invariant that
-  root-safety consumers require. Assoc root call/root/checked boundaries also
-  preserve key naming and root naming on both ctx and runtime-side sctx views,
-  including returned root-set naming, and expose individual plus combined
-  same-store packages for keys, roots, and returned root-set naming.
-  Core-root checker entrypoints, root function checker entrypoints, shadow-safe
-  root function checker entrypoints, function-level assoc root boundaries,
-  their checked wrappers, checked function-environment wrappers, full-env,
-  function end-to-end, function-list, program, and check-program entrypoints
-  lift the same combined store packages for safety consumers. Assoc root value and
-  argument typing bridge to the same roots-ready invariants. Ordinary
-  compatibility is not treated as an implicit proof of associated
-  compatibility; call-site wiring must dispatch through the env-aware assoc
-  helpers at each checker path being proved. The ctx/env checker's top-level
-  direct/generic direct calls, function-value calls, explicit generic
-  function-value calls, HRT calls, inferred type-forall calls, and
-  mixed-forall calls now dispatch through the env-aware associated call
-  helpers; root/shadow checker call sites remain on ordinary compatibility.
-  A direct root checker wiring attempt reaches the expected proof boundary:
-  assoc-compatible calls no longer prove the primary `typed_env_roots` relation,
-  so wiring must wait until preservation/root safety consumes the checked assoc
-  wrapper instead of the ordinary roots relation.
+  local trait bounds are preserved and regression-tested. Associated
+  projections are still normalized before ordinary compatibility checks.
+- Rocq has env-aware associated compatibility helpers and checked wrapper
+  boundaries for core, env, root, shadow-safe root, function-level, and
+  end-to-end checker entrypoints. These wrappers preserve the store/root naming
+  and no-shadow invariants needed by safety consumers, but root/shadow checker
+  call sites still ultimately require the primary ordinary `typed_env_roots`
+  relation. This is the current blocker for replacing pre-compatibility
+  normalization with associated-compatible call typing.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.
@@ -99,27 +46,26 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Move associated compatibility through the checker call-site boundary.
-   - Use the proved env/root assoc call boundaries and checker-facing wrapper
-     boundaries as the target for assoc-aware call-site soundness. Do not widen
-     the primary `typed_env_structural` or `typed_env_roots` relations until
-     preservation and root-safety obligations are explicitly covered.
-   - Wire checker call sites from ordinary `check_args` / `check_arg_tys` to
-     the env-aware assoc helpers only after the consuming soundness theorem no
-     longer requires the primary ordinary compatibility relation.
-   - Preserve the required end-to-end checker soundness theorem names:
+   - Convert safety consumers that still demand ordinary `typed_env_roots` so
+     they can consume the checked assoc wrapper boundary instead.
+   - Only then wire root/shadow checker call sites from ordinary
+     `check_args` / `check_arg_tys` to env-aware assoc helpers.
+   - Preserve the required theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
-   - Remove pre-compatibility normalization once checker-facing assoc
-     compatibility is the accepted path and tests still cover accepted concrete
-     projections and rejected mismatches.
+   - Remove pre-compatibility normalization once associated compatibility is
+     the accepted checker path and projection mismatch tests still reject.
 
 2. Finish UFCS receiver hardening.
    - Keep the canonical surface syntax as prefix calls with receiver-first
      arguments.
    - Add remaining receiver shapes only when the checker and safety proofs have
      store/root-safe summary evidence. Field-bearing struct literals,
-     payload-bearing enum constructors, direct-call receivers, and non-pure
-     locals are still gated; do not add checker-only acceptance paths.
+     payload-bearing enum constructors, direct-call receivers, generic
+     direct-call receivers, and non-pure locals are still gated.
+   - Direct-call receivers are not a checker-only switch: existing store-safe
+     argument facts assume arg evaluation preserves static root/store shape,
+     while direct calls need the separate direct-call route package.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

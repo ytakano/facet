@@ -148,7 +148,7 @@ Key temporary limitations:
      argument relation, param-type-list, arity-length, params_of_tys rewrite,
      direct params_of_tys witness/length facts, param-type equality and synthetic-param back-bridges,
      assoc Prop/env-structural same-bindings, roots/field same-bindings
-     bridges, roots-aware argument length and structural helpers, and assoc field-list helper proofs compile while
+     bridges, roots-aware argument length and structural helpers, and assoc field-list helper proofs, including nil inversion, compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

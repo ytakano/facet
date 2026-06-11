@@ -144,6 +144,15 @@ Inductive typed_fields_env_structural_assoc
       typed_fields_env_structural_assoc env Ω n lts args Σ1 fields rest Σ2 ->
       typed_fields_env_structural_assoc env Ω n lts args Σ fields (f :: rest) Σ2.
 
+Lemma typed_fields_env_structural_assoc_nil_inv :
+  forall env Ω n lts args Σ fields Σ',
+    typed_fields_env_structural_assoc env Ω n lts args Σ fields [] Σ' ->
+    Σ' = Σ.
+Proof.
+  intros env Ω n lts args Σ fields Σ' Hfields.
+  inversion Hfields; subst. reflexivity.
+Qed.
+
 Lemma typed_args_roots_assoc_same_bindings :
   forall env Ω n R Σ args ps Σ' R' arg_roots,
     typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
@@ -183,6 +192,15 @@ Inductive typed_fields_roots_assoc
         Σ2 R2 roots_rest ->
       typed_fields_roots_assoc env Ω n lts args R Σ fields (f :: rest)
         Σ2 R2 (root_set_union roots_field roots_rest).
+
+Lemma typed_fields_roots_assoc_nil_inv :
+  forall env Ω n lts args R Σ fields Σ' R' roots,
+    typed_fields_roots_assoc env Ω n lts args R Σ fields [] Σ' R' roots ->
+    Σ' = Σ /\ R' = R /\ roots = [].
+Proof.
+  intros env Ω n lts args R Σ fields Σ' R' roots Hfields.
+  inversion Hfields; subst. repeat split.
+Qed.
 
 Lemma typed_fields_roots_assoc_structural :
   forall env Ω n lts args R Σ fields defs Σ' R' roots,

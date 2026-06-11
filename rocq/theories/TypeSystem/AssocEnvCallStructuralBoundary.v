@@ -1308,3 +1308,27 @@ Proof.
     + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
       eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
 Qed.
+
+
+Theorem infer_core_env_state_fuel_roots_assoc_boundary_sound :
+  forall fuel env Omega n R Sigma e T Sigma' R' roots,
+    infer_core_env_state_fuel_roots fuel env Omega n R Sigma e =
+      infer_ok (T, Sigma', R', roots) ->
+    typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots.
+Proof.
+  intros fuel env Omega n R Sigma e T Sigma' R' roots Hinfer.
+  apply TERAssocBoundary_Roots.
+  eapply infer_core_env_state_fuel_roots_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_assoc_boundary_sound :
+  forall env Omega n R Gamma e T Gamma' R' roots,
+    infer_core_env_roots env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    typed_env_roots_assoc_boundary env Omega n R (sctx_of_ctx Gamma) e T
+      (sctx_of_ctx Gamma') R' roots.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots Hinfer.
+  apply TERAssocBoundary_Roots.
+  eapply infer_core_env_roots_sound. exact Hinfer.
+Qed.

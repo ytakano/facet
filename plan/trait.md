@@ -158,10 +158,12 @@ Key temporary limitations:
    - The single-pair bridge from `ty_compatible_assoc_checked` to
      `ty_compatible_assoc` is proved by splitting the three assoc compatibility
      definitions into a lightweight base module and making `normalize_assoc_ty`
-     opaque while reusing `ty_compatible_normalize_assoc_b_sound`. Remaining work
-     is to thread this proved bridge through the existing conditional reductions,
-     especially env/root wrappers, so checker-facing facts can expose ordinary
-     associated compatibility without carrying an explicit bridge assumption.
+     opaque while reusing `ty_compatible_normalize_assoc_b_sound`. A first post-soundness wrapper now threads this proved bridge through
+     checked argument lists, exposing `typed_args_assoc_checked_sound` without an
+     explicit bridge assumption. Remaining work is to thread the same proof
+     through higher-level HRT, enum-payload, method-resolution, and env/root
+     wrappers so checker-facing facts can expose ordinary associated
+     compatibility throughout.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

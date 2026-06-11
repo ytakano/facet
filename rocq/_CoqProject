@@ -72,6 +72,7 @@ theories/TypeSystem/AlphaShadowProvenance.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/CompatBoolSoundness.v
+theories/TypeSystem/AssocCheckedBridgeSoundness.v
 theories/TypeSystem/AssocIfHelpers.v
 theories/TypeSystem/AssocCoreShapeHelpers.v
 theories/TypeSystem/AssocCoreTypingFacts.v

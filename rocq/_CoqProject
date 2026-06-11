@@ -42,6 +42,7 @@ theories/TypeSystem/AlphaPlace.v
 theories/TypeSystem/AlphaExpr.v
 theories/TypeSystem/AlphaFn.v
 theories/TypeSystem/AlphaTyping.v
+theories/TypeSystem/AssocTypingFacts.v
 theories/TypeSystem/AlphaEnvStructural.v
 theories/TypeSystem/AlphaRoots.v
 theories/TypeSystem/AlphaRootEnvFacts.v

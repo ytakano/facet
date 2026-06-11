@@ -2073,6 +2073,47 @@ Proof.
       end.
 Qed.
 
+Lemma typed_env_roots_checked_ctx_keys_named :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named R' Σ'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked Hshadow Hkeys.
+  induction Hchecked.
+  - exact (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+      R Σ e T Σ' R' roots H Hshadow Hkeys).
+  - exact (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+      R Σ e T Σ' R' roots H Hshadow Hkeys).
+  - apply root_env_ctx_keys_named_remove_binding.
+    + eapply typed_env_roots_checked_no_shadow.
+      * exact Hchecked.
+      * apply root_env_no_shadow_add.
+        -- eapply typed_env_roots_no_shadow; eassumption.
+        -- exact H1.
+    + apply IHHchecked.
+      * apply root_env_no_shadow_add.
+        -- eapply typed_env_roots_no_shadow; eassumption.
+        -- exact H1.
+      * apply root_env_ctx_keys_named_add_binding.
+        exact (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+          R Σ e1 T1 Σ1 R1 roots1 H Hshadow Hkeys).
+  - apply root_env_ctx_keys_named_remove_binding.
+    + eapply typed_env_roots_checked_no_shadow.
+      * exact Hchecked.
+      * apply root_env_no_shadow_add.
+        -- eapply typed_env_roots_no_shadow; eassumption.
+        -- exact H0.
+    + apply IHHchecked.
+      * apply root_env_no_shadow_add.
+        -- eapply typed_env_roots_no_shadow; eassumption.
+        -- exact H0.
+      * apply root_env_ctx_keys_named_add_binding.
+        exact (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+          R Σ e1 T1 Σ1 R1 roots1 H Hshadow Hkeys).
+Qed.
+
 Lemma typed_env_roots_shadow_safe_checked_of_roots :
   forall env Ω n R Σ e T Σ' R' roots,
     typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->

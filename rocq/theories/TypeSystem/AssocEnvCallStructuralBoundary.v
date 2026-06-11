@@ -295,6 +295,79 @@ Inductive typed_env_roots_assoc_call_boundary
         (apply_lt_ty sigma (fn_ret fdef)) Sigma' R'
         (root_sets_union arg_roots).
 
+Lemma typed_env_structural_assoc_call_boundary_same_bindings :
+  forall env Omega n Sigma e T Sigma',
+    typed_env_structural_assoc_call_boundary env Omega n Sigma e T Sigma' ->
+    sctx_same_bindings Sigma Sigma'.
+Proof.
+  intros env Omega n Sigma e T Sigma' Hboundary.
+  destruct Hboundary.
+  - eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings; eassumption.
+    + eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+  - eapply typed_args_env_structural_assoc_same_bindings; eassumption.
+Qed.
+
+Lemma typed_env_roots_assoc_call_boundary_same_bindings :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    sctx_same_bindings Sigma Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary.
+  destruct Hboundary.
+  - eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply sctx_same_bindings_trans.
+    + eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_same_bindings; eassumption.
+  - eapply typed_args_roots_assoc_same_bindings; eassumption.
+Qed.
+
 
 Lemma infer_env_direct_call_assoc_structural_boundary :
   forall fuel env Omega n fname fdef args arg_tys T Sigma Sigma',

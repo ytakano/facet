@@ -51,7 +51,9 @@ validity checks must be represented in Rocq and the extracted checker.
   HRT/type-forall/mixed-forall calls, trait method signatures and resolution,
   values, function bodies, struct fields, enum
   payloads, env/root argument collectors, field collectors, and payload
-  collectors. These wrappers do not change executable checker behavior.
+  collectors. Env/root associated call boundaries also preserve store binding
+  shape, matching the invariant required by existing structural call typing.
+  These wrappers do not change executable checker behavior.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.

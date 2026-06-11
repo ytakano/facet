@@ -46,6 +46,25 @@ Proof.
     + apply IH. exact H.
 Qed.
 
+Lemma check_args_assoc_param_tys_true :
+  forall env Ω arg_tys params,
+    check_args_assoc env Ω arg_tys params = None ->
+    Forall2
+      (fun actual expected =>
+         ty_compatible_assoc_b env Ω actual expected = true)
+      arg_tys (map param_ty params).
+Proof.
+  intros env Ω arg_tys.
+  induction arg_tys as [|arg rest IH]; intros params H;
+    destruct params as [|param rest_params]; simpl in H; try discriminate.
+  - constructor.
+  - destruct (ty_compatible_assoc_b env Ω arg (param_ty param)) eqn:Hcompat;
+      try discriminate.
+    simpl. constructor.
+    + exact Hcompat.
+    + apply IH. exact H.
+Qed.
+
 Lemma check_arg_tys_assoc_length :
   forall env Ω arg_tys param_tys,
     check_arg_tys_assoc env Ω arg_tys param_tys = None ->

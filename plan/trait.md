@@ -94,7 +94,7 @@ Key temporary limitations:
   shape before Rocq checking. Dot method-call syntax remains out of phase and
   is covered by rejection tests.
 
-## Remaining Roadmap 2-3 Tasks
+## Remaining Roadmap 1-3 Tasks
 
 1. Harden UFCS trait method calls.
    - Continue extending short prefix UFCS only where the receiver type is known
@@ -141,9 +141,9 @@ Key temporary limitations:
      `global_env`, so the next implementation step is either an env-aware
      argument relation plus env/root bridge, or a proved bridge from
      normalized raw elaboration to ordinary `typed_args`; only after that
-     should checker helpers switch to assoc-aware compatibility. Boolean-witness
-     and arity-length helper proofs compile when `ty_compatible_assoc_b` stays
-     opaque, but even a single-pair bridge from
+     should checker helpers switch to assoc-aware compatibility. Boolean-witness,
+     param-type-list, and arity-length helper proofs compile when
+     `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.
      A direct single-pair bridge, `abstract`, and a simple inductive wrapper

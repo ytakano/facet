@@ -103,3 +103,26 @@ Proof.
   - destruct param_tys as [| p ps]; [reflexivity |].
     simpl. destruct (ty_compatible_assoc_b env Ω a p); [apply IH | reflexivity].
 Qed.
+
+Lemma check_arg_tys_assoc_params_of_tys_true :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys = None ->
+    Forall2
+      (fun actual p =>
+         ty_compatible_assoc_checked env Ω actual (param_ty p))
+      arg_tys (params_of_tys param_tys).
+Proof.
+  intros env Ω arg_tys param_tys Hcheck.
+  rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+  apply (check_args_assoc_true env Ω). exact Hcheck.
+Qed.
+
+Lemma check_arg_tys_assoc_params_of_tys_length :
+  forall env Ω arg_tys param_tys,
+    check_arg_tys_assoc env Ω arg_tys param_tys = None ->
+    length arg_tys = length (params_of_tys param_tys).
+Proof.
+  intros env Ω arg_tys param_tys Hcheck.
+  rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+  apply (check_args_assoc_length env Ω). exact Hcheck.
+Qed.

@@ -138,13 +138,14 @@ Key temporary limitations:
      existing typing and env/root typing rules still require ordinary
      `typed_args` compatibility, so full soundness fails. The core
      `typed`/`typed_args` relation currently carries only `fenv`, not
-     `global_env`, so the assoc-aware `typed_args_assoc`,
+     `global_env`, so the assoc-aware `typed_args_assoc`, `typed_args_assoc_checked`,
      `typed_args_env_structural_assoc`, and `typed_args_roots_assoc` relations
      now name the Prop, env-structural, and roots boundaries, but they still
      need an env/root bridge or a proved bridge from normalized raw
      elaboration to ordinary `typed_args`;
      only after that should checker helpers switch to assoc-aware compatibility.
-     Boolean-witness through `ty_compatible_assoc_checked`, param-type-list,
+     Boolean-witness through `ty_compatible_assoc_checked`, checked Prop-level
+     argument relation, param-type-list,
      arity-length, params_of_tys rewrite,
      assoc Prop/env-structural same-bindings, roots/field
      same-bindings bridges, roots-aware argument helpers, and assoc field-list

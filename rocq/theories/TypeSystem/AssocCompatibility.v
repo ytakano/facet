@@ -49,3 +49,28 @@ Proof.
   - reflexivity.
   - simpl. f_equal. exact IHHargs.
 Qed.
+
+(* Prop-level argument typing that stores only the lightweight checked
+   compatibility witness. This is the bridge shape intended for checker-facing
+   facts; it avoids embedding the expanded normalized compatibility proof term. *)
+Inductive typed_args_assoc_checked
+    (env : global_env) (fenv : list fn_def) (Ω : outlives_ctx) (n : nat)
+    : ctx -> list expr -> list param -> ctx -> Prop :=
+  | TArgsAssocChecked_Nil : forall Γ,
+      typed_args_assoc_checked env fenv Ω n Γ [] [] Γ
+  | TArgsAssocChecked_Cons : forall Γ Γ1 Γ2 e es p ps T_e,
+      typed fenv Ω n Γ e T_e Γ1 ->
+      ty_compatible_assoc_checked env Ω T_e (param_ty p) ->
+      typed_args_assoc_checked env fenv Ω n Γ1 es ps Γ2 ->
+      typed_args_assoc_checked env fenv Ω n Γ (e :: es) (p :: ps) Γ2.
+
+Lemma typed_args_assoc_checked_length :
+  forall env fenv Ω n Γ args ps Γ',
+    typed_args_assoc_checked env fenv Ω n Γ args ps Γ' ->
+    length args = length ps.
+Proof.
+  intros env fenv Ω n Γ args ps Γ' Hargs.
+  induction Hargs.
+  - reflexivity.
+  - simpl. f_equal. exact IHHargs.
+Qed.

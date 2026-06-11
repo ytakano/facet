@@ -149,3 +149,23 @@ Proof.
   rewrite <- check_args_assoc_params_of_tys_map_param_ty.
   exact Hcheck.
 Qed.
+
+Lemma check_arg_tys_assoc_map_param_ty :
+  forall env Ω arg_tys params,
+    check_arg_tys_assoc env Ω arg_tys (map param_ty params) =
+    check_args_assoc env Ω arg_tys params.
+Proof.
+  intros env Ω arg_tys params.
+  rewrite check_arg_tys_assoc_params_of_tys.
+  apply check_args_assoc_params_of_tys_map_param_ty.
+Qed.
+
+Lemma check_arg_tys_assoc_map_param_ty_true :
+  forall env Ω arg_tys params,
+    check_arg_tys_assoc env Ω arg_tys (map param_ty params) = None ->
+    check_args_assoc env Ω arg_tys params = None.
+Proof.
+  intros env Ω arg_tys params Hcheck.
+  rewrite <- check_arg_tys_assoc_map_param_ty.
+  exact Hcheck.
+Qed.

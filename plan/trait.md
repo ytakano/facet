@@ -161,8 +161,12 @@ Key temporary limitations:
      prove that normalized raw elaboration implies the ordinary
      `typed_args`/compatibility relations. Direct wrappers from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` still stall during
-     proof checking once `normalize_assoc_ty` is exposed. Keep carrying checked
-     boolean witnesses until this bridge exists.
+     proof checking once `normalize_assoc_ty` is exposed. A focused attempt to
+     reuse `ty_compatible_normalize_assoc_b_sound` showed that `CompatBoolSoundness`
+     alone compiles quickly, but combining it with `AssocCompatibility` in either
+     direction leaves `rocqworker` spinning before the bridge lemma checks. Keep
+     carrying checked boolean witnesses until the dependency/opacity shape is
+     repaired or the bridge is proved in a lighter compatibility module.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

@@ -58,6 +58,7 @@ theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/CompatBoolSoundness.v
 theories/TypeSystem/AssocIfHelpers.v
 theories/TypeSystem/AssocCoreShapeHelpers.v
+theories/TypeSystem/AssocCoreTypingFacts.v
 theories/TypeSystem/AssocMatchHelpers.v
 theories/TypeSystem/AssocArgBoolFacts.v
 theories/TypeSystem/AssocHrtFacts.v

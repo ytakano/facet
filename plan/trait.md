@@ -39,8 +39,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - `AssocCallTypingBoundary`, `AssocEnvCallTypingBoundary`, and
   `AssocEnvCallStructuralBoundary` define lightweight Prop-level call
   boundaries around associated-compatible argument typing for direct,
-  function-value, explicit generic function-value, HRT/type-forall/mixed-forall,
-  make-closure, and root-aware call paths, so future checker-facing wiring has
+  function-value, explicit generic function-value, HRT/type-forall/mixed-forall
+  including elaborating type-forall and mixed-forall roots, make-closure, and
+  root-aware call paths, so future checker-facing wiring has
   targets that mention `global_env` without changing `typed` yet. Direct,
   generic direct-call, non-generic function-value, explicit generic
   function-value, HRT, inferred/elaborating type-forall, and mixed-forall
@@ -51,7 +52,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
   function-value calls, explicit generic function-value calls,
-  HRT/type-forall/mixed-forall calls, trait method signatures and resolution,
+  HRT/type-forall/mixed-forall calls including elaborating root variants,
+  trait method signatures and resolution,
   values, function bodies, struct fields, enum
   payloads, env/root argument collectors, field collectors, and payload
   collectors. Env/root associated call boundaries also preserve store binding

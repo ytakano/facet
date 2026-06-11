@@ -368,6 +368,42 @@ Proof.
   - eapply typed_args_roots_assoc_same_bindings; eassumption.
 Qed.
 
+Lemma typed_env_roots_assoc_call_boundary_structural :
+  forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    typed_env_structural_assoc_call_boundary env Omega n Sigma e T Sigma'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots Hboundary.
+  destruct Hboundary.
+  - eapply TESAssocBoundary_Call; eauto.
+    eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallGeneric; eauto.
+    eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_Fn.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_Closure.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_TypeForall; eauto.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExprGeneric_TypeForall; eauto.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_MixedForall; eauto.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_Forall; eauto.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_Forall_Closure; eauto.
+    + eapply typed_env_roots_structural; eassumption.
+    + eapply typed_args_roots_assoc_structural; eassumption.
+  - eapply TESAssocBoundary_CallExpr_MakeClosure; eauto.
+    eapply typed_args_roots_assoc_structural; eassumption.
+Qed.
+
 
 Lemma infer_env_direct_call_assoc_structural_boundary :
   forall fuel env Omega n fname fdef args arg_tys T Sigma Sigma',

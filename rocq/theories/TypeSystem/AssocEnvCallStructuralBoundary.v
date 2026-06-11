@@ -887,6 +887,27 @@ Proof.
   eapply infer_program_env_end2end_structural_assoc_boundary_sound; eauto.
 Qed.
 
+Theorem infer_program_env_end2end_env_fns_checked_structural_assoc_boundary_sound :
+  forall env env',
+    infer_program_env_end2end env = infer_ok env' ->
+    env_fns_checked_structural_assoc_boundary env'.
+Proof.
+  unfold env_fns_checked_structural_assoc_boundary.
+  intros env env' Hprog f Hin.
+  eapply infer_program_env_end2end_structural_assoc_boundary_sound; eauto.
+Qed.
+
+Theorem check_program_env_end2end_env_fns_checked_structural_assoc_boundary_sound :
+  forall env env',
+    check_program_env_end2end env = true ->
+    infer_program_env_end2end env = infer_ok env' ->
+    env_fns_checked_structural_assoc_boundary env'.
+Proof.
+  intros env env' _ Hprog.
+  eapply infer_program_env_end2end_env_fns_checked_structural_assoc_boundary_sound.
+  exact Hprog.
+Qed.
+
 Theorem infer_env_roots_assoc_boundary_sound :
   forall env f R0 T Gamma_out R_out roots,
     infer_env_roots env f R0 = infer_ok (T, Gamma_out, R_out, roots) ->

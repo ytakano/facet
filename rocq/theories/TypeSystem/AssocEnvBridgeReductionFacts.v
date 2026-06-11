@@ -1,12 +1,6 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules AssocCompatibility
-  AssocEnvStructural.
-
-Definition ty_compatible_assoc_checked_reduces_to_bool
-    (env : global_env) (Ω : outlives_ctx) : Prop :=
-  forall actual expected,
-    ty_compatible_assoc_checked env Ω actual expected ->
-    ty_compatible_b Ω actual expected = true.
+  AssocCheckedBridgeReductionFacts AssocEnvStructural.
 
 Lemma typed_args_env_structural_assoc_reduces_to_env_structural :
   forall env Ω n Σ args ps Σ',

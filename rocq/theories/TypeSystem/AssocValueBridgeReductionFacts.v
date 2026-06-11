@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker
   AssocValueTypingFacts
+  AssocCheckedBridgeReductionFacts
   AssocStructFieldBridgeReductionFacts AssocEnvBridgeReductionFacts.
 
 Lemma typed_value_assoc_checked_reduces_to_plain :

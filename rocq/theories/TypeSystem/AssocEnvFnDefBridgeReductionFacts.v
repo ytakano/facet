@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker
   EnvStructuralRules EnvRootSoundness
+  AssocCheckedBridgeReductionFacts
   AssocEnvBridgeReductionFacts AssocEnvFnDefTypingFacts
   AssocEnvRootFnDefTypingFacts.
 

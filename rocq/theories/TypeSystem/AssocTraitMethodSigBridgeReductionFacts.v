@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker
   AssocTraitMethodSigFacts
+  AssocCheckedBridgeReductionFacts
   AssocStructFieldBridgeReductionFacts AssocEnvBridgeReductionFacts.
 From Stdlib Require Import List.
 Import ListNotations.

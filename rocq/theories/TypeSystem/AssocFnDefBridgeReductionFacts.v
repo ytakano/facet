@@ -1,5 +1,6 @@
 From Facet.TypeSystem Require Import
-  TypingRules Syntax AssocFnDefTypingFacts AssocStructFieldBridgeReductionFacts.
+  TypingRules Syntax AssocFnDefTypingFacts
+  AssocCheckedBridgeReductionFacts AssocStructFieldBridgeReductionFacts.
 
 Lemma typed_fn_def_assoc_checked_reduces_to_fn_def :
   forall env fenv f,

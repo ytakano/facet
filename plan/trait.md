@@ -139,8 +139,8 @@ Key temporary limitations:
      compatibility until the bridge is proved.
    - Current helper coverage names the unchecked-to-checked boundary without
      expanding normalized compatibility proofs: checked argument and single-value
-     relations; struct-field, enum-payload, function-body, and trait-method
-     signature facts; env/roots argument, field, payload, HRT, generic-call,
+     relations; struct-field, enum-payload, function-body, trait-method
+     signature, and trait-method-resolution facts; env/roots argument, field, payload, HRT, generic-call,
      direct-call, and function-value collector facts; normalized `if`, match,
      and core-shape witnesses; and env/roots function-body wrappers. These
      facts carry `ty_compatible_assoc_checked`/boolean witnesses and expose

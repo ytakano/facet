@@ -12,6 +12,7 @@ theories/TypeSystem/CheckerBase.v
 theories/TypeSystem/CheckerTraits.v
 theories/TypeSystem/AssocCompatibility.v
 theories/TypeSystem/AssocTraitMethodSigFacts.v
+theories/TypeSystem/AssocTraitMethodResolutionFacts.v
 theories/TypeSystem/CheckerHrt.v
 theories/TypeSystem/CheckerClosure.v
 theories/TypeSystem/CheckerOrdinary.v

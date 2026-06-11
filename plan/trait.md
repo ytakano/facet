@@ -145,10 +145,11 @@ Key temporary limitations:
      normalized `if`, match, and core-shape witnesses; and env/roots
      function-body wrappers. These facts carry
      `ty_compatible_assoc_checked`/boolean witnesses and expose structural
-     composition, arity, length, and inversion facts. A conditional bridge
-     reduction now shows `typed_args_assoc_checked` reduces to
-     `typed_args_assoc` once the isolated single-pair compatibility bridge is
-     available.
+     composition, arity, length, and inversion facts. Conditional bridge
+     reductions now show `typed_args_assoc_checked` reduces to
+     `typed_args_assoc`, and env/roots checked argument relations reduce to
+     their ordinary relations once the corresponding isolated compatibility
+     bridge assumptions are available.
    - Remaining blocker: prove the single-pair bridge from
      `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root
      bridge that avoids expanding normalized compatibility at each call site, or

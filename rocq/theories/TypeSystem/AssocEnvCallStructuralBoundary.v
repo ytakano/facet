@@ -1218,6 +1218,41 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma checked_fn_env_roots_checked_assoc_boundary_sctx_keys_named :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_keys_named R_out (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  intros env f R0 R_out roots Hchecked Hshadow Hkeys.
+  eapply typed_fn_env_roots_checked_assoc_boundary_sctx_keys_named.
+  - eapply checked_fn_env_roots_checked_assoc_boundary_typed. exact Hchecked.
+  - exact Hshadow.
+  - exact Hkeys.
+Qed.
+
+Lemma checked_fn_env_roots_checked_assoc_boundary_sctx_roots_named :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_out,
+      root_env_sctx_roots_named R_out (sctx_of_ctx Gamma_out) /\
+      root_set_sctx_roots_named roots (sctx_of_ctx Gamma_out) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_out = true.
+Proof.
+  intros env f R0 R_out roots Hchecked Hshadow Hnamed.
+  eapply typed_fn_env_roots_checked_assoc_boundary_sctx_roots_named.
+  - eapply checked_fn_env_roots_checked_assoc_boundary_typed. exact Hchecked.
+  - exact Hshadow.
+  - exact Hnamed.
+Qed.
+
 Lemma typed_fn_env_roots_checked_assoc_boundary_structural :
   forall env f R0 R_out roots,
     typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->

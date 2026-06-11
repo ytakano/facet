@@ -78,6 +78,7 @@ theories/TypeSystem/AssocCoreShapeHelpers.v
 theories/TypeSystem/AssocCoreTypingFacts.v
 theories/TypeSystem/AssocMatchHelpers.v
 theories/TypeSystem/AssocArgBoolFacts.v
+theories/TypeSystem/AssocCallTypingBoundary.v
 theories/TypeSystem/AssocHrtFacts.v
 theories/TypeSystem/AssocHrtBridgeReductionFacts.v
 theories/TypeSystem/AssocHigherBridgeSoundness.v

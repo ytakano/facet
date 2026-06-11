@@ -37,6 +37,7 @@ theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v
 theories/TypeSystem/AssocEnvStructural.v
+theories/TypeSystem/AssocEnvFnDefTypingFacts.v
 theories/TypeSystem/AssocValueHelpers.v
 theories/TypeSystem/WFType.v
 theories/TypeSystem/ExprFacts.v

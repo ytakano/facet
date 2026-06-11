@@ -33,7 +33,8 @@ Completed:
   and `(Trait::method receiver args...)`. Method-local type arguments use the
   same layout, for example `(<Ty as Trait>::method<Arg> receiver args...)`;
   lowering prepends the concrete `Self` type before calling the hidden generic
-  impl method. Dot calls are intentionally rejected for Roadmap 1-3.
+  impl method. Dot calls are intentionally rejected for Roadmap 1-3, and generated grammar
+  output documents both short and explicit prefix UFCS forms.
   Called impl methods lower to hidden functions checked through the extracted
   direct-call path, hidden method bodies substitute `Self`, unresolved targets
   report source-level `Trait::method` names, and Rocq exposes extracted method

@@ -116,12 +116,12 @@ atom_expr ::= "()"
             | ID "<" type_arg ("," type_arg)* ">" "{" struct_literal_field ("," struct_literal_field)* "}"
             | qualified_path "(" [atom_expr ("," atom_expr)*] ")"
             | "(" path opt_type_args atom_expr* ")"  (* direct calls and short UFCS: (Trait::method receiver args) *)
+            | "(" "<" ty "as" trait_ref ">" "::" ID opt_type_args atom_expr* ")"  (* explicit UFCS: (<Ty as Trait>::method receiver args) *)
             | ID "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
             | ID "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"
             | qualified_path "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"
             | ID "<" type_arg ("," type_arg)* ">" "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
             | qualified_path "<" type_arg ("," type_arg)* ">" "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
-            | "(" "<" ty "as" trait_ref ">" "::" ID opt_type_args atom_expr* ")"
             | "match" match_scrut "{" match_branch ("," match_branch)* [","] "}"
             | "(" "drop" expr ")"
             | "(" "replace" place atom_expr ")"

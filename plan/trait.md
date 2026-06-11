@@ -162,9 +162,10 @@ Key temporary limitations:
      checked argument lists, exposing `typed_args_assoc_checked_sound` without an
      explicit bridge assumption. HRT argument type witnesses, enum payloads, trait-method signatures, and
      single-value witnesses are also wrapped without an explicit bridge
-     assumption. Remaining work is to thread the same proof through
-     method-resolution and env/root wrappers so checker-facing facts can expose
-     ordinary associated compatibility throughout.
+     assumption. Trait-method resolution now exposes the same assoc-compatible signature facts
+     without an explicit bridge assumption. Remaining work is to thread the same
+     proof through env/root wrappers so checker-facing facts can expose ordinary
+     associated compatibility throughout.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

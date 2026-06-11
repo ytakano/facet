@@ -112,6 +112,20 @@ Proof.
     + apply IH.
 Qed.
 
+Lemma root_sets_ctx_roots_named_store_typed_prefix :
+  forall env s Σ sets,
+    store_typed_prefix env s Σ ->
+    Forall (fun roots => root_set_ctx_roots_named roots Σ) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets.
+Proof.
+  intros env s Σ sets Htyped Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_ctx_roots_named_store_typed_prefix; eassumption.
+    + apply IH.
+Qed.
+
 Lemma root_set_sctx_roots_named_store_typed :
   forall env s Σ roots,
     store_typed env s Σ ->
@@ -145,6 +159,20 @@ Proof.
   - constructor.
   - constructor.
     + eapply root_set_sctx_roots_named_store_typed; eassumption.
+    + apply IH.
+Qed.
+
+Lemma root_sets_sctx_roots_named_store_typed_prefix :
+  forall env s Σ sets,
+    store_typed_prefix env s Σ ->
+    Forall (fun roots => root_set_sctx_roots_named roots Σ) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets.
+Proof.
+  intros env s Σ sets Htyped Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_sctx_roots_named_store_typed_prefix; eassumption.
     + apply IH.
 Qed.
 

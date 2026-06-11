@@ -31,6 +31,18 @@ Proof.
   - simpl. f_equal. exact IHHargs.
 Qed.
 
+Lemma typed_args_env_structural_assoc_params_of_tys_map_param_ty :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ args ps Σ' ->
+    typed_args_env_structural_assoc env Ω n Σ args
+      (params_of_tys (map param_ty ps)) Σ'.
+Proof.
+  intros env Ω n Σ args ps Σ' Hargs.
+  induction Hargs.
+  - constructor.
+  - simpl. econstructor; eauto.
+Qed.
+
 Lemma typed_args_env_structural_assoc_same_bindings :
   forall env Ω n Σ args ps Σ',
     typed_args_env_structural_assoc env Ω n Σ args ps Σ' ->

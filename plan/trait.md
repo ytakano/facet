@@ -143,9 +143,8 @@ Key temporary limitations:
      env-structural boundaries, but they still need an env/root bridge or a
      proved bridge from normalized raw elaboration to ordinary `typed_args`;
      only after that should checker helpers switch to assoc-aware compatibility.
-     Boolean-witness,
-     param-type-list, arity-length, and assoc Prop/env-structural
-     same-bindings helper proofs compile when
+     Boolean-witness, param-type-list, arity-length, params_of_tys,
+     and assoc Prop/env-structural same-bindings helper proofs compile when
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

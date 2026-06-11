@@ -150,7 +150,7 @@ Key temporary limitations:
      HRT/function-value/direct-call argument witnesses, enum payloads,
      core struct fields, function bodies, trait-method signatures,
      trait-method resolutions, and
-     env/roots checked argument, field, and function-body relations under
+     env/roots checked argument, value, field, and function-body relations under
      explicit single-pair bridge assumptions.
    - Remaining blocker: prove the single-pair bridge from
      `ty_compatible_assoc_checked` to `ty_compatible_assoc`, prove an env/root

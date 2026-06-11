@@ -31,6 +31,19 @@ Proof.
   - simpl. f_equal. exact IHHargs.
 Qed.
 
+Lemma typed_args_env_structural_assoc_cons_inv :
+  forall env Ω n Σ e es p ps Σ',
+    typed_args_env_structural_assoc env Ω n Σ (e :: es) (p :: ps) Σ' ->
+    exists T_e Σ1,
+      typed_env_structural env Ω n Σ e T_e Σ1 /\
+      ty_compatible_assoc_checked env Ω T_e (param_ty p) /\
+      typed_args_env_structural_assoc env Ω n Σ1 es ps Σ'.
+Proof.
+  intros env Ω n Σ e es p ps Σ' Htyped.
+  inversion Htyped; subst.
+  exists T_e, Σ1. repeat split; assumption.
+Qed.
+
 Lemma typed_args_env_structural_assoc_params_of_tys_map_param_ty :
   forall env Ω n Σ args ps Σ',
     typed_args_env_structural_assoc env Ω n Σ args ps Σ' ->
@@ -81,6 +94,20 @@ Proof.
   induction Hargs.
   - reflexivity.
   - simpl. f_equal. exact IHHargs.
+Qed.
+
+Lemma typed_args_roots_assoc_cons_inv :
+  forall env Ω n R Σ e es p ps Σ' R' roots roots_rest,
+    typed_args_roots_assoc env Ω n R Σ (e :: es) (p :: ps) Σ' R'
+      (roots :: roots_rest) ->
+    exists T_e Σ1 R1,
+      typed_env_roots env Ω n R Σ e T_e Σ1 R1 roots /\
+      ty_compatible_assoc_checked env Ω T_e (param_ty p) /\
+      typed_args_roots_assoc env Ω n R1 Σ1 es ps Σ' R' roots_rest.
+Proof.
+  intros env Ω n R Σ e es p ps Σ' R' roots roots_rest Htyped.
+  inversion Htyped; subst.
+  exists T_e, Σ1, R1. repeat split; assumption.
 Qed.
 
 Lemma typed_args_roots_assoc_arg_roots_length :
@@ -153,6 +180,23 @@ Proof.
   inversion Hfields; subst. reflexivity.
 Qed.
 
+Lemma typed_fields_env_structural_assoc_cons_inv :
+  forall env Ω n lts args Σ fields f rest Σ',
+    typed_fields_env_structural_assoc env Ω n lts args Σ fields
+      (f :: rest) Σ' ->
+    exists e_field T_field Σ1,
+      lookup_field_b (field_name f) fields = Some e_field /\
+      typed_env_structural env Ω n Σ e_field T_field Σ1 /\
+      ty_compatible_assoc_checked env Ω T_field
+        (instantiate_struct_field_ty lts args f) /\
+      typed_fields_env_structural_assoc env Ω n lts args Σ1 fields
+        rest Σ'.
+Proof.
+  intros env Ω n lts args Σ fields f rest Σ' Htyped.
+  inversion Htyped; subst.
+  exists e_field, T_field, Σ1. repeat split; assumption.
+Qed.
+
 Lemma typed_args_roots_assoc_same_bindings :
   forall env Ω n R Σ args ps Σ' R' arg_roots,
     typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
@@ -200,6 +244,25 @@ Lemma typed_fields_roots_assoc_nil_inv :
 Proof.
   intros env Ω n lts args R Σ fields Σ' R' roots Hfields.
   inversion Hfields; subst. repeat split.
+Qed.
+
+Lemma typed_fields_roots_assoc_cons_inv :
+  forall env Ω n lts args R Σ fields f rest Σ' R' roots,
+    typed_fields_roots_assoc env Ω n lts args R Σ fields
+      (f :: rest) Σ' R' roots ->
+    exists e_field T_field roots_field roots_rest Σ1 R1,
+      lookup_field_b (field_name f) fields = Some e_field /\
+      typed_env_roots env Ω n R Σ e_field T_field Σ1 R1 roots_field /\
+      ty_compatible_assoc_checked env Ω T_field
+        (instantiate_struct_field_ty lts args f) /\
+      typed_fields_roots_assoc env Ω n lts args R1 Σ1 fields rest
+        Σ' R' roots_rest /\
+      roots = root_set_union roots_field roots_rest.
+Proof.
+  intros env Ω n lts args R Σ fields f rest Σ' R' roots Htyped.
+  inversion Htyped; subst.
+  exists e_field, T_field, roots_field, roots_rest, Σ1, R1.
+  repeat split; assumption.
 Qed.
 
 Lemma typed_fields_roots_assoc_structural :

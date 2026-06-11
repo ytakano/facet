@@ -121,6 +121,35 @@ Proof.
   - exact Hparams.
 Qed.
 
+Theorem infer_env_assoc_boundary_sound : forall env f T Γ',
+  infer_env env f = infer_ok (T, Γ') ->
+  typed_fn_env_structural_assoc_boundary env f.
+Proof.
+  unfold infer_env, typed_fn_env_structural_assoc_boundary.
+  intros env f T Γ' Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
+    try discriminate.
+  destruct (infer_core_env (global_env_with_local_bounds env (fn_bounds f))
+              (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f)
+              (fn_body f))
+    as [[T_body Γ_out] | err] eqn:Hcore; try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
+    try discriminate.
+  destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
+    eqn:Hcompatible; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Γ_out) eqn:Hparams; try discriminate.
+  inversion Hinfer; subst.
+  exists T_body, Γ'.
+  repeat split.
+  - eapply infer_core_env_assoc_boundary_sound. exact Hcore.
+  - exact Hcompatible.
+  - exact Hparams.
+Qed.
+
 Theorem infer_full_env_structural_sound_unvalidated : forall env f T Γ',
   infer_full_env env f = infer_ok (T, Γ') ->
   checked_fn_env_structural env f.
@@ -137,12 +166,37 @@ Proof.
     + eapply infer_env_params_nodup. exact Hinfer.
 Qed.
 
+Theorem infer_full_env_assoc_boundary_sound_unvalidated : forall env f T Γ',
+  infer_full_env env f = infer_ok (T, Γ') ->
+  checked_fn_env_structural_assoc_boundary env f.
+Proof.
+  unfold infer_full_env, checked_fn_env_structural_assoc_boundary.
+  intros env f T Γ' Hfull.
+  destruct (infer_env env f) as [[T0 Γ0] | err] eqn:Hinfer; try discriminate.
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
+    as [PBS' | err] eqn:Hborrow; try discriminate.
+  split.
+  - eapply infer_env_assoc_boundary_sound. exact Hinfer.
+  - split.
+    + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+    + eapply infer_env_params_nodup. exact Hinfer.
+Qed.
+
 Theorem infer_full_env_alpha_structural_sound : forall env f T Γ',
   infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
   checked_fn_env_structural (alpha_normalize_global_env env) f.
 Proof.
   intros env f T Γ' Hfull.
   eapply infer_full_env_structural_sound_unvalidated.
+  exact Hfull.
+Qed.
+
+Theorem infer_full_env_alpha_assoc_boundary_sound : forall env f T Γ',
+  infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
+  checked_fn_env_structural_assoc_boundary (alpha_normalize_global_env env) f.
+Proof.
+  intros env f T Γ' Hfull.
+  eapply infer_full_env_assoc_boundary_sound_unvalidated.
   exact Hfull.
 Qed.
 

@@ -55,8 +55,10 @@ validity checks must be represented in Rocq and the extracted checker.
   shape, and the roots boundary projects to the env-structural boundary. A
   checker-facing wrapper boundary now admits either existing structural typing
   or an associated call boundary while preserving the same store-shape
-  invariants. Full env and root checker soundness have thin entry theorems
-  into these wrappers for the current checker behavior. The ctx/env checker's
+  invariants. Expression- and function-level full-env checker soundness have
+  entry theorems into these wrappers for the current checker behavior; root
+  checker soundness still has an expression-level wrapper entry. The ctx/env
+  checker's
   top-level direct/generic direct calls, function-value calls, explicit
   generic function-value calls, HRT calls, inferred type-forall calls, and
   mixed-forall calls now dispatch through the env-aware associated call

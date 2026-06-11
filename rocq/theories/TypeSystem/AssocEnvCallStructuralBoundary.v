@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program TypingRules TypeChecker RootProvenance
+  Lifetime Types Syntax Program Renaming TypingRules TypeChecker RootProvenance
   EnvStructuralRules EnvTypingSoundness EnvRootSoundness AssocEnvStructural
   AssocDirectCallHelpers AssocFnValueCallHelpers
   AssocArgBoolFacts AssocFnValueCallFacts
@@ -457,6 +457,58 @@ Proof.
   intros env Omega n R Sigma e T Sigma' R' roots Hboundary.
   eapply typed_env_structural_assoc_boundary_same_bindings.
   eapply typed_env_roots_assoc_boundary_structural. exact Hboundary.
+Qed.
+
+Definition typed_fn_env_structural_assoc_boundary
+    (env : global_env) (f : fn_def) : Prop :=
+  exists T_body Gamma_out,
+    typed_env_structural_assoc_boundary
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Gamma_out) /\
+    ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+    params_ok_env_b env (fn_params f) Gamma_out = true.
+
+Definition env_fns_typed_structural_assoc_boundary
+    (env : global_env) : Prop :=
+  forall f, In f (env_fns env) ->
+    typed_fn_env_structural_assoc_boundary env f.
+
+Definition checked_fn_env_structural_assoc_boundary
+    (env : global_env) (f : fn_def) : Prop :=
+  typed_fn_env_structural_assoc_boundary env f /\
+  (exists PBS',
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
+
+Definition env_fns_checked_structural_assoc_boundary
+    (env : global_env) : Prop :=
+  forall f, In f (env_fns env) ->
+    checked_fn_env_structural_assoc_boundary env f.
+
+Lemma checked_fn_env_structural_assoc_boundary_typed :
+  forall env f,
+    checked_fn_env_structural_assoc_boundary env f ->
+    typed_fn_env_structural_assoc_boundary env f.
+Proof.
+  intros env f Hchecked.
+  exact (proj1 Hchecked).
+Qed.
+
+Lemma typed_fn_env_structural_assoc_boundary_same_bindings :
+  forall env f T_body Gamma_out,
+    typed_env_structural_assoc_boundary
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Gamma_out) ->
+    sctx_same_bindings
+      (sctx_of_ctx (fn_body_ctx f)) (sctx_of_ctx Gamma_out).
+Proof.
+  intros env f T_body Gamma_out Hbody.
+  eapply typed_env_structural_assoc_boundary_same_bindings.
+  exact Hbody.
 Qed.
 
 

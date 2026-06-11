@@ -80,6 +80,7 @@ theories/TypeSystem/AssocMatchHelpers.v
 theories/TypeSystem/AssocArgBoolFacts.v
 theories/TypeSystem/AssocHrtFacts.v
 theories/TypeSystem/AssocHrtBridgeReductionFacts.v
+theories/TypeSystem/AssocHigherBridgeSoundness.v
 theories/TypeSystem/AssocDirectCallFacts.v
 theories/TypeSystem/AssocFnValueCallFacts.v
 theories/TypeSystem/EnvSoundnessFacts.v

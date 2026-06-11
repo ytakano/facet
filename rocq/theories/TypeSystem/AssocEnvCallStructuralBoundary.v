@@ -459,6 +459,72 @@ Proof.
   eapply typed_env_roots_assoc_boundary_structural. exact Hboundary.
 Qed.
 
+Lemma assoc_boundary_struct_expr_true : forall e,
+  struct_expr e = true.
+Proof.
+  fix IH 1.
+  intro e.
+  destruct e; simpl; try reflexivity.
+  - rewrite IH, IH. reflexivity.
+  - rewrite IH, IH. reflexivity.
+  - induction l as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - induction l0 as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l0 as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - induction l1 as [| [fname field] rest IHfields]; simpl.
+    + reflexivity.
+    + rewrite IH, IHfields. reflexivity.
+  - induction l2 as [| payload rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l as [| [[name binders] branch] rest IHbranches]; simpl.
+    + reflexivity.
+    + rewrite IH, IHbranches. reflexivity.
+  - rewrite IH. reflexivity.
+  - rewrite IH. reflexivity.
+  - rewrite IH. reflexivity.
+  - rewrite IH. reflexivity.
+  - rewrite IH, IH, IH. reflexivity.
+Qed.
+
+Theorem infer_core_env_state_fuel_struct_assoc_boundary_sound :
+  forall fuel env Omega n Sigma e T Sigma',
+    infer_core_env_state_fuel fuel env Omega n Sigma e =
+      infer_ok (T, Sigma') ->
+    typed_env_structural_assoc_boundary env Omega n Sigma e T Sigma'.
+Proof.
+  intros fuel env Omega n Sigma e T Sigma' Hinfer.
+  apply TESAssocBoundary_Structural.
+  eapply infer_core_env_state_fuel_struct_structural_sound.
+  - apply assoc_boundary_struct_expr_true.
+  - exact Hinfer.
+Qed.
+
+Theorem infer_core_env_struct_assoc_boundary_sound :
+  forall env Omega n Gamma e T Gamma',
+    infer_core_env env Omega n Gamma e = infer_ok (T, Gamma') ->
+    typed_env_structural_assoc_boundary env Omega n
+      (sctx_of_ctx Gamma) e T (sctx_of_ctx Gamma').
+Proof.
+  unfold infer_core_env, sctx_of_ctx, ctx_of_sctx.
+  intros env Omega n Gamma e T Gamma' Hinfer.
+  destruct (infer_core_env_state_fuel 10000 env Omega n Gamma e)
+    as [[T0 Sigma] | err] eqn:Hcore; try discriminate.
+  inversion Hinfer; subst.
+  eapply infer_core_env_state_fuel_struct_assoc_boundary_sound. exact Hcore.
+Qed.
+
 Definition typed_fn_env_structural_assoc_boundary
     (env : global_env) (f : fn_def) : Prop :=
   exists T_body Gamma_out,

@@ -146,7 +146,7 @@ Key temporary limitations:
      function-body wrappers. These facts carry
      `ty_compatible_assoc_checked`/boolean witnesses and expose structural
      composition, arity, length, and inversion facts. Conditional bridge
-     reductions now cover checked arguments,
+     reductions now cover checked arguments, single-value witnesses,
      HRT/function-value/direct-call argument witnesses, enum payloads,
      core struct fields, function bodies, trait-method signatures,
      trait-method resolutions, and

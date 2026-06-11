@@ -3139,6 +3139,136 @@ Proof.
   - exact Hroots.
 Qed.
 
+Theorem infer_env_roots_shadow_safe_assoc_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_env_roots_shadow_safe env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    typed_fn_env_roots_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold typed_fn_env_roots_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  destruct (infer_env_roots_shadow_safe_sound env f R0 T Gamma_out
+    R_out roots Hinfer) as [T_body [Gamma_body [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_body.
+  repeat split; try assumption.
+  apply TERAssocBoundary_Roots.
+  eapply typed_env_roots_shadow_safe_roots. exact Hbody.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_assoc_boundary_store_named :
+  forall env f R0 T Gamma_out R_out roots s,
+    infer_env_roots_shadow_safe env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      (store_typed (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s /\
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots s Hinfer Hshadow Hkeys Hroots.
+  eapply typed_fn_env_roots_assoc_boundary_store_named.
+  - eapply infer_env_roots_shadow_safe_assoc_boundary_sound. exact Hinfer.
+  - exact Hshadow.
+  - exact Hkeys.
+  - exact Hroots.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_assoc_boundary_store_named_prefix :
+  forall env f R0 T Gamma_out R_out roots s,
+    infer_env_roots_shadow_safe env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      (store_typed_prefix (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s /\
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots s Hinfer Hshadow Hkeys Hroots.
+  eapply typed_fn_env_roots_assoc_boundary_store_named_prefix.
+  - eapply infer_env_roots_shadow_safe_assoc_boundary_sound. exact Hinfer.
+  - exact Hshadow.
+  - exact Hkeys.
+  - exact Hroots.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_checked_assoc_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_env_roots_shadow_safe_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold typed_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  destruct (infer_env_roots_shadow_safe_checked_sound env f R0 T Gamma_out
+    R_out roots Hinfer) as [T_body [Gamma_body [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_body.
+  repeat split; try assumption.
+  apply TERCAssocBoundary_Checked.
+  eapply typed_env_roots_shadow_safe_checked_checked. exact Hbody.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_checked_assoc_boundary_store_named :
+  forall env f R0 T Gamma_out R_out roots s,
+    infer_env_roots_shadow_safe_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      (store_typed (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s /\
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots s Hinfer Hshadow Hkeys Hroots.
+  eapply typed_fn_env_roots_checked_assoc_boundary_store_named.
+  - eapply infer_env_roots_shadow_safe_checked_assoc_boundary_sound.
+    exact Hinfer.
+  - exact Hshadow.
+  - exact Hkeys.
+  - exact Hroots.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_checked_assoc_boundary_store_named_prefix :
+  forall env f R0 T Gamma_out R_out roots s,
+    infer_env_roots_shadow_safe_checked env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    root_env_no_shadow R0 ->
+    root_env_sctx_keys_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    root_env_sctx_roots_named R0 (sctx_of_ctx (fn_body_ctx f)) ->
+    exists T_body Gamma_body,
+      (store_typed_prefix (global_env_with_local_bounds env (fn_bounds f)) s
+         (sctx_of_ctx Gamma_body) ->
+       root_env_store_keys_named R_out s /\
+       root_env_store_roots_named R_out s /\
+       root_set_store_roots_named roots s) /\
+      ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+      params_ok_env_b env (fn_params f) Gamma_body = true.
+Proof.
+  intros env f R0 T Gamma_out R_out roots s Hinfer Hshadow Hkeys Hroots.
+  eapply typed_fn_env_roots_checked_assoc_boundary_store_named_prefix.
+  - eapply infer_env_roots_shadow_safe_checked_assoc_boundary_sound.
+    exact Hinfer.
+  - exact Hshadow.
+  - exact Hkeys.
+  - exact Hroots.
+Qed.
+
 Theorem infer_full_env_roots_assoc_boundary_sound :
   forall env f R0 T Gamma_out R_out roots,
     infer_full_env_roots env f R0 = infer_ok (T, Gamma_out, R_out, roots) ->

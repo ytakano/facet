@@ -58,6 +58,7 @@ theories/TypeSystem/AssocStructFieldBridgeReductionFacts.v
 theories/TypeSystem/AssocEnumPayloadTypingFacts.v
 theories/TypeSystem/AssocEnumPayloadBridgeReductionFacts.v
 theories/TypeSystem/AssocFnDefTypingFacts.v
+theories/TypeSystem/AssocFnDefBridgeReductionFacts.v
 theories/TypeSystem/AlphaEnvStructural.v
 theories/TypeSystem/AlphaRoots.v
 theories/TypeSystem/AlphaRootEnvFacts.v

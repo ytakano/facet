@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules
   EnvTypingSoundness AssocCompatibility AssocEnvStructural CheckerHrt.
-From Stdlib Require Import List.
+From Stdlib Require Import Bool List.
 Import ListNotations.
 
 Local Opaque ty_compatible_assoc_b.
@@ -46,4 +46,80 @@ Proof.
         -- right. exact Hin.
         -- exact Hinfer0.
       * exact Hcheck.
+Qed.
+
+Fixpoint infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args
+    (Σ : sctx) (fields : list Ty) (payloads : list expr)
+    : infer_result sctx :=
+  match fields, payloads with
+  | [], [] => infer_ok Σ
+  | T_field :: fields, e_payload :: payloads =>
+      match infer_core_env_state_fuel fuel env Ω n Σ e_payload with
+      | infer_err err => infer_err err
+      | infer_ok (T_payload, Σ1) =>
+          let T_expected := instantiate_enum_variant_field_ty lts variant_lts args T_field in
+          if ty_compatible_assoc_b env Ω T_payload T_expected
+          then infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args
+                 Σ1 fields payloads
+          else infer_err (compatible_error T_payload T_expected)
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Lemma infer_env_enum_payloads_collect_assoc_checked_sound :
+  forall fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out,
+    forallb struct_expr payloads = true ->
+    infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args Sigma fields payloads =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        struct_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e = infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_args_env_structural_assoc env Ω n Sigma payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) Sigma_out.
+Proof.
+  intros fuel env Ω n lts variant_lts args Sigma fields.
+  revert Sigma.
+  induction fields as [|T_field rest IH]; intros Sigma payloads Sigma_out Hpayloads Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads]; simpl in *; try discriminate.
+  - inversion Hcollect; subst. constructor.
+  - apply andb_true_iff in Hpayloads as [Hpayload Hpayloads].
+    destruct (infer_core_env_state_fuel fuel env Ω n Sigma e_payload)
+      as [[T_payload Sigma1] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_assoc_b env Ω T_payload
+      (instantiate_enum_variant_field_ty lts variant_lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    eapply TESArgsAssoc_Cons.
+    + eapply Hexpr; eassumption.
+    + exact Hcompat.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma infer_env_enum_payloads_collect_assoc_checked_call_sound :
+  forall fuel env Ω n lts variant_lts args Sigma fields payloads Sigma_out,
+    forallb call_expr payloads = true ->
+    infer_env_enum_payloads_collect_assoc fuel env Ω n lts variant_lts args Sigma fields payloads =
+      infer_ok Sigma_out ->
+    (forall Sigma0 e T Sigma1,
+        call_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Sigma0 e = infer_ok (T, Sigma1) ->
+        typed_env_structural env Ω n Sigma0 e T Sigma1) ->
+    typed_args_env_structural_assoc env Ω n Sigma payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts variant_lts args) fields)) Sigma_out.
+Proof.
+  intros fuel env Ω n lts variant_lts args Sigma fields.
+  revert Sigma.
+  induction fields as [|T_field rest IH]; intros Sigma payloads Sigma_out Hpayloads Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads]; simpl in *; try discriminate.
+  - inversion Hcollect; subst. constructor.
+  - apply andb_true_iff in Hpayloads as [Hpayload Hpayloads].
+    destruct (infer_core_env_state_fuel fuel env Ω n Sigma e_payload)
+      as [[T_payload Sigma1] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_assoc_b env Ω T_payload
+      (instantiate_enum_variant_field_ty lts variant_lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    eapply TESArgsAssoc_Cons.
+    + eapply Hexpr; eassumption.
+    + exact Hcompat.
+    + eapply IH; eassumption.
 Qed.

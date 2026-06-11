@@ -2,175 +2,96 @@
 
 ## Goal
 
-Implement Facet traits as a statically resolved system, keeping Rocq as the
-source of truth for accept/reject behavior. OCaml may parse and resolve names,
-but trait solving, method resolution, associated type normalization, and final
-validity checks belong in Rocq and the extracted checker.
+Implement Facet traits as a statically resolved system. Rocq remains the source
+of truth for accept/reject behavior: OCaml may parse and resolve names, but
+trait solving, method resolution, associated type compatibility, and final
+validity checks must be represented in Rocq and the extracted checker.
 
-## Current Status
+## Current State
 
-Completed:
+- Trait and impl items are parsed, lowered into Rocq/extracted environments,
+  and checked for duplicate, missing, extra, and mismatched associated types and
+  methods. Impl method bodies are elaborated to hidden functions and checked by
+  the extracted checker even when the method is not called.
+- Method-local type parameters are supported for trait and impl methods,
+  including method-local bounds and generic-trait impl remapping. Method-local
+  lifetime generics remain deferred and are rejected by tests.
+- Method calls use the ordinary Facet prefix call shape: `(callee args...)`.
+  Explicit UFCS is `(<Ty as Trait>::method receiver args...)`; short UFCS is
+  `(Trait::method receiver args...)`. The receiver is always the first
+  argument. Dot method-call syntax is intentionally rejected in this phase.
+- Short UFCS accepts receiver types known before checker execution: function
+  parameters, syntactically typed literals, and immutable pure local literals
+  after receiver-let elimination. Struct, enum, direct-call, generic direct-call,
+  non-pure inferred local, and general annotated local receivers remain gated by
+  tests until store/root-safe checker evidence is available.
+- Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
+  accepted inside the current trait/impl context. Generic projections under
+  local trait bounds are preserved and regression-tested.
+- Associated projections are still normalized by extracted Rocq raw/global-env
+  normalization before ordinary compatibility checks. OCaml no longer performs
+  a separate associated-type normalization pass.
+- Rocq has an env-aware associated compatibility layer:
+  `ty_compatible_assoc`, `ty_compatible_assoc_b`, and
+  `ty_compatible_assoc_checked`. The checked-to-Prop bridge is proved via
+  `ty_compatible_assoc_checked_sound` while keeping `normalize_assoc_ty` opaque
+  at proof boundaries.
+- Helper-level associated compatibility soundness is available for
+  `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,
+  function-value calls, HRT/type-forall/mixed-forall calls, trait method
+  signatures and resolution, values, function bodies, struct fields, enum
+  payloads, env/root argument collectors, field collectors, and payload
+  collectors. These wrappers do not change executable checker behavior.
+- Haskell-style `deriving` is reserved for a future surface form. Provisional
+  deriving syntax is rejected explicitly, and `deriving` is reserved as a
+  keyword.
 
-- Trait and impl item syntax is accepted and lowered into Rocq/extracted
-  environments. Trait associated types, impl associated type definitions,
-  trait method signatures, and impl method bodies are validated for duplicate,
-  missing, extra, and mismatched items. Associated type projections use the
-  explicit form `<Ty as Trait>::Assoc` and have syntax, lowering, core
-  representation, traversal, extraction, validation, and printer coverage.
-- Method-local type parameter syntax is accepted in trait and impl methods as
-  `fn name<T>(...) -> ... where T: Bound`; parameters, return types, and bounds
-  are converted into the existing Rocq method/function generic fields and
-  signature arity matching rejects non-generic impls for generic trait methods,
-  and method-local bounds are matched structurally after trait-argument
-  substitution, including the type-parameter index remapping needed when a
-  concrete generic-trait impl has method-local type parameters. All impl
-  method bodies are hidden-function elaborated and
-  checked through the extracted checker even when the method is not called;
-  the generated grammar documents method-local generics and bounds for trait
-  and impl methods.
-- Prefix UFCS method calls use the ordinary function-call shape, with the
-  receiver as the first argument: `(<Ty as Trait>::method receiver args...)`
-  and `(Trait::method receiver args...)`. Method-local type arguments use the
-  same layout, for example `(<Ty as Trait>::method<Arg> receiver args...)`;
-  lowering prepends the concrete `Self` type before calling the hidden generic
-  impl method. Dot calls are intentionally rejected for Roadmap 1-3, and generated grammar
-  output documents both short and explicit prefix UFCS forms.
-  Called impl methods lower to hidden functions checked through the extracted
-  direct-call path, hidden method bodies substitute `Self`, unresolved targets
-  report source-level `Trait::method` names, and Rocq exposes extracted method
-  resolution helpers for unique impl lookup. Short UFCS accepts receiver types
-  known during raw lowering: function-parameter variables, syntactically typed
-  literals, and immutable annotated or inferred pure local literals after
-  receiver-let elimination. Struct, enum, direct-call, generic direct-call,
-  and non-pure inferred local receivers remain at the documented safety-gate
-  boundary with invalid tests. Regression coverage includes generic-trait
-  explicit UFCS with method-local type args and bounds, extra method type args,
-  pure local receivers in short and explicit UFCS, including method-local
-  type arguments and bool/unit/float literal variants, and dot-syntax
-  rejection.
-  Generic trait arguments require the explicit `<Ty as Trait<...>>` spelling.
-- Concrete associated type projections are normalized by extracted Rocq
-  env/raw/core traversal helpers when a unique impl defines the associated
-  type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize` across value compatibility sites, aggregate fields and
-  payloads, function/closure/method signatures, explicit and short UFCS
-  method type arguments, generic call and aggregate type arguments, impl trait
-  arguments, and trait-bound positions including trait, function, trait-own,
-  and method-local bounds. Accepted cases and mismatch rejections are covered
-  by regression tests.
-  Global environment and raw function normalization now
-  happen inside the extracted Rocq raw-elaboration entrypoint before hidden
-  stubs and checked bodies are built; OCaml no longer runs an associated-type
-  normalization pass. In trait and impl items, `Self::Assoc` is accepted as
-  shorthand for the current trait projection, including current trait type
-  arguments. Rocq now has an `AssocCompatibility` bridge that names env-aware
-  compatibility and its executable boolean form over `normalize_assoc_ty`; a
-  lightweight `CompatBoolSoundness` module proves the boolean compatibility
-  soundness needed for normalized associated projections. `AssocCompatibility`
-  is ordered before checker helpers, and `CheckerHrt` exposes env-aware
-  `check_args_assoc` and `check_arg_tys_assoc` helpers. Checker call sites
-  still use ordinary compatibility and are not yet wired to those helpers. The
-  OCaml pre-elaboration validation defers impl method signature equality until
-  after extracted Rocq normalization so it does not reject normalizable
-  associated projections before the checker runs.
-  Generic projections such as `<affine T as Iterator>::Item` are
-  preserved under local trait bounds and covered by valid/invalid regression
-  tests for same-parameter and mismatched-parameter compatibility.
+## Remaining Tasks
 
-Key temporary limitations:
+1. Move associated compatibility to the typing/checker boundary.
+   - Introduce the minimal Rocq typing boundary that can mention `global_env`
+     and `ty_compatible_assoc` without weakening existing usage, borrow,
+     lifetime, or drop invariants.
+   - Only after that boundary is proved, wire checker call sites from ordinary
+     `check_args` / `check_arg_tys` to the env-aware assoc helpers.
+   - Preserve the required end-to-end checker soundness theorem names:
+     `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
+     `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
+   - Remove pre-compatibility normalization once checker-facing assoc
+     compatibility is the accepted path and tests still cover accepted concrete
+     projections and rejected mismatches.
 
-- Method-local lifetime generics are intentionally deferred beyond Roadmap 1-3;
-  trait and impl method lifetime generics are rejected by regression tests for
-  this phase.
-- Associated projection normalization still runs before ordinary compatibility
-  checks inside the extracted Rocq raw elaborator. Wiring checker call sites to
-  the env-aware helper layer and proving the corresponding soundness connection
-  remain pending.
-- Method calls intentionally use the same parenthesized prefix call shape as
-  functions: `(callee args...)`. Short UFCS uses `(Trait::method receiver args...)`,
-  and explicit UFCS uses `(<Ty as Trait>::method receiver args...)`; both treat
-  the receiver as the first argument. This is the canonical Roadmap 1-3 method
-  call surface; later receiver-oriented sugar must desugar to the same prefix
-  shape before Rocq checking. Dot method-call syntax remains out of phase and
-  is covered by rejection tests.
+2. Finish UFCS receiver hardening.
+   - Keep the canonical surface syntax as prefix calls with receiver-first
+     arguments.
+   - Add remaining receiver shapes only when the checker and safety proofs have
+     store/root-safe summary evidence. Do not add checker-only acceptance paths.
+   - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
+     roadmap slice.
 
-## Remaining Roadmap 1-3 Tasks
+3. Keep deriving deferred but well specified.
+   - Future deriving should expand to ordinary impl declarations validated by
+     the extracted checker.
+   - Start with structural traits whose generated bodies are deterministic.
+   - Defer deriving for traits with associated type defaults or equality
+     constraints until those features exist.
 
-1. Harden UFCS trait method calls.
-   - Continue extending short prefix UFCS only where the receiver type is known
-     before checker execution. Function-parameter variables, including struct
-     parameters, and syntactically typed literals are supported; generic trait
-     arguments stay explicit through `<Ty as Trait<...>>`, and Roadmap 1-3 does
-     not add a short form for them.
-   - Support the remaining receiver-let/generic-call safety-gate shapes.
-     Immutable annotated and inferred local receivers initialized by unrestricted
-     unit, int, float, or bool literals are accepted in short and explicit
-     UFCS by pure receiver-let elimination in raw lowering and covered by
-     focused valid regression tests.
-     Struct, enum, and direct function-call expression receivers now resolve in
-     raw lowering but still hit the end-to-end safety gate. Direct-call
-     receivers cannot be
-     completed by a raw temporary-let rewrite alone, because let-bound direct
-     calls still need store-safe summary evidence. Generic direct-call
-     receivers, local inferred direct-call receivers, and annotated local
-     struct receivers in short and explicit UFCS are covered by invalid tests
-     for this boundary.
-     General annotated local receivers still need a Prop-level summary plus
-     checker soundness and runtime safety branch; a checker-only clause
-     is insufficient. Non-pure inferred local receivers still fail earlier because
-     short UFCS has no checker-backed receiver type inference and remain covered by an
-     invalid regression test.
-   - Keep method calls aligned with ordinary function calls by using the
-     parenthesized prefix shape `(callee args...)`, with the receiver passed as
-     the first argument for trait methods. Keep dot method-call syntax out of
-     this phase; parser-level rejection is covered by regression tests.
+## Key Decisions
 
-2. Move associated type normalization into Rocq compatibility.
-   - Replace pre-compatibility normalization with env-aware Rocq compatibility
-     so associated projection equality is checked at the typing rule boundary;
-     call-argument, let-annotation, struct-field, enum-payload,
-     function-value-signature, closure-signature, and trait-method-signature
-     compatibility have regression coverage for accepted concrete projections
-     and rejected mismatches.
-   - Wire compatibility at the typing-rule boundary before changing helper
-     call sites. Helper-only wiring to `check_arg_tys_assoc` would make the
-     executable checker accept cases that the current typing and env/roots
-     relations cannot justify, so checker call sites must stay on ordinary
-     compatibility until the bridge is proved.
-   - The single-pair bridge from `ty_compatible_assoc_checked` to
-     `ty_compatible_assoc` is proved via `AssocCompatibilityBase` and
-     `ty_compatible_assoc_checked_sound`, keeping `normalize_assoc_ty` opaque at
-     proof boundaries. Bridge wrappers now expose ordinary associated
-     compatibility for checked arguments, HRT/generic argument witnesses, enum
-     payloads, trait-method signatures/resolution, value witnesses,
-     env/root arguments, fields, values, function bodies, and direct-call, function-value call, HRT, type-forall, mixed-forall argument collectors, and struct-field and enum-payload collectors. The low-level direct and function-value call argument facts also expose typed argument compatibility. The executable
-     assoc helpers `check_args_assoc` and `check_arg_tys_assoc` also have
-     helper-level soundness lemmas, and `infer_args_collect` now has a `typed_args_assoc` soundness bridge for `check_args_assoc`. Remaining work is to use these wrappers at
-     checker-facing call sites once the typing-rule boundary is ready, while
-     keeping executable checker behavior unchanged until then.
-   - Keep associated type defaults and equality constraints deferred.
+- Rocq definitions are the source of truth. Generated OCaml extraction artifacts
+  are not edited manually.
+- No handwritten OCaml checker fallback paths are allowed. `ErrNotImplemented`
+  from the extracted end-to-end checker is a rejection.
+- Parser/desugar may resolve names and build hidden calls, but must not become a
+  type-directed trait solver.
+- Associated type defaults and equality constraints are out of scope for the
+  current implementation pass.
+- Dot method calls remain syntax-level rejected until they can desugar to the
+  same receiver-first prefix form before Rocq checking.
 
-3. Keep Haskell-style deriving on the trait roadmap.
-   - `deriving` is reserved for a future surface form. For now, provisional
-     `struct ... deriving Trait { ... }` and
-     `enum ... deriving Trait { ... }` syntax are caught by the parser and
-     rejected with an explicit deferred error, and `deriving` cannot be used as
-     an identifier. Once associated compatibility and UFCS are checker-backed,
-     deriving should expand to ordinary impl declarations validated by the
-     extracted checker rather than by OCaml fallback logic. Initial candidates
-     are structural traits with deterministic generated bodies; traits with
-     associated type defaults or equality constraints wait until those features
-     exist.
+## Required Checks
 
-## Constraints and Checks
-
-- Do not add handwritten OCaml checker fallback paths.
-- Parser/desugar must not perform type-directed trait solving.
-- Do not weaken linearity, affine discard, borrow, lifetime, or drop rules.
-- Update Rocq rules/checker/proofs or record explicit proof gaps whenever
-  executable checker behavior changes.
-
-Required checks for implementation tasks:
+For type-system or checker-facing implementation tasks, run:
 
 ```sh
 cd rocq && make
@@ -181,6 +102,6 @@ git diff --check
 rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|TODO|DEBUG|idtac" rocq/theories
 ```
 
-The final search must not report new proof holes or debug leftovers. Existing
+The final search must not introduce new proof holes or debug leftovers. Existing
 legacy proof-script selector matches should be called out explicitly if they
 remain unrelated to the change.

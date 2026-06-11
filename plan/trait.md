@@ -64,12 +64,14 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Remaining Tasks
 
-1. Move associated compatibility to the typing/checker boundary.
-   - Introduce the minimal Rocq typing boundary that can mention `global_env`
-     and `ty_compatible_assoc` without weakening existing usage, borrow,
-     lifetime, or drop invariants.
-   - Only after that boundary is proved, wire checker call sites from ordinary
-     `check_args` / `check_arg_tys` to the env-aware assoc helpers.
+1. Move associated compatibility through the checker call-site boundary.
+   - Use the proved env/root assoc call boundaries and checker-facing wrapper
+     boundaries as the target for assoc-aware call-site soundness. Do not widen
+     the primary `typed_env_structural` relation until the preservation and
+     root-safety obligations are explicitly covered.
+   - Wire checker call sites from ordinary `check_args` / `check_arg_tys` to
+     the env-aware assoc helpers only where the corresponding wrapper-boundary
+     soundness is proved.
    - Preserve the required end-to-end checker soundness theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

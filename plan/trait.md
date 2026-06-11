@@ -148,7 +148,8 @@ Key temporary limitations:
      composition, arity, length, and inversion facts. Conditional bridge
      reductions now cover checked arguments,
      HRT/function-value/direct-call argument witnesses, enum payloads,
-     core struct fields, function bodies, trait-method signatures, and
+     core struct fields, function bodies, trait-method signatures,
+     trait-method resolutions, and
      env/roots checked argument, field, and function-body relations under
      explicit single-pair bridge assumptions.
    - Remaining blocker: prove the single-pair bridge from

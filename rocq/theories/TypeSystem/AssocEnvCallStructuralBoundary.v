@@ -560,3 +560,66 @@ Proof.
     + rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
       eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
 Qed.
+
+Lemma infer_env_fn_value_call_generic_assoc_structural_boundary :
+  forall fuel env Omega n callee callee_ty type_args args arg_tys T Sigma
+      Sigma1 Sigma_out,
+    typed_env_structural env Omega n Sigma callee callee_ty Sigma1 ->
+    infer_env_args_collect fuel env Omega n Sigma1 args =
+      infer_ok (arg_tys, Sigma_out) ->
+    (forall Sigma0 e T0 Sigma2,
+        In e args ->
+        infer_core_env_state_fuel fuel env Omega n Sigma0 e =
+          infer_ok (T0, Sigma2) ->
+        typed_env_structural env Omega n Sigma0 e T0 Sigma2) ->
+    infer_fn_value_call_generic_assoc env Omega callee_ty type_args arg_tys =
+      infer_ok T ->
+    typed_env_structural_assoc_call_boundary env Omega n Sigma
+      (ECallExprGeneric callee type_args args) T Sigma_out.
+Proof.
+  intros fuel env Omega n callee callee_ty type_args args arg_tys T Sigma
+    Sigma1 Sigma_out Hcallee Hcollect Hexpr Hcall.
+  destruct (infer_fn_value_call_generic_assoc_checked_args
+    env Omega callee_ty type_args arg_tys T Hcall) as
+    [type_params [bounds [body [param_tys [ret
+      [Hcore [Hbody [Hbounds [Hcheck [_ Hret]]]]]]]]]].
+  destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+  eapply TESAssocBoundary_CallExprGeneric_TypeForall.
+  - exact Hcallee.
+  - exact Hbody.
+  - exact Hbounds.
+  - rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+    eapply infer_env_args_collect_assoc_checked_sound; eassumption.
+Qed.
+
+Lemma infer_roots_fn_value_call_generic_assoc_structural_boundary :
+  forall fuel env Omega n callee callee_ty type_args R R1 Sigma Sigma1 args
+      arg_tys T Sigma_out R_out arg_roots roots_callee,
+    typed_env_roots env Omega n R Sigma callee callee_ty Sigma1 R1
+      roots_callee ->
+    infer_env_args_collect_roots fuel env Omega n R1 Sigma1 args =
+      infer_ok (arg_tys, Sigma_out, R_out, arg_roots) ->
+    (forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+        infer_core_env_state_fuel_roots fuel env Omega n R0 Sigma0 e =
+          infer_ok (T0, Sigma2, R2, roots1) ->
+        typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1) ->
+    infer_fn_value_call_generic_assoc env Omega callee_ty type_args arg_tys =
+      infer_ok T ->
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma
+      (ECallExprGeneric callee type_args args) T Sigma_out R_out
+      (root_set_union roots_callee (root_sets_union arg_roots)).
+Proof.
+  intros fuel env Omega n callee callee_ty type_args R R1 Sigma Sigma1 args
+    arg_tys T Sigma_out R_out arg_roots roots_callee Hcallee Hcollect Hexpr Hcall.
+  destruct (infer_fn_value_call_generic_assoc_checked_args
+    env Omega callee_ty type_args arg_tys T Hcall) as
+    [type_params [bounds [body [param_tys [ret
+      [Hcore [Hbody [Hbounds [Hcheck [_ Hret]]]]]]]]]].
+  destruct callee_ty as [u core]. simpl in Hcore. subst core T.
+  eapply TERAssocBoundary_CallExprGeneric_TypeForall.
+  - exact Hcallee.
+  - exact Hbody.
+  - exact Hbounds.
+  - rewrite check_arg_tys_assoc_params_of_tys in Hcheck.
+    eapply infer_env_args_collect_roots_assoc_checked_sound; eassumption.
+Qed.

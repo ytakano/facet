@@ -63,6 +63,23 @@ Fixpoint store_safe_function_value_call_args_b
           end
       | None => false
       end
+  | EEnum name variant _ _ _ [] :: rest =>
+      match lookup_enum name env with
+      | Some edef =>
+          match enum_bounds edef with
+          | [] =>
+              match lookup_enum_variant variant (enum_variants edef) with
+              | Some vdef =>
+                  match enum_variant_fields vdef with
+                  | [] => store_safe_function_value_call_args_b env rest
+                  | _ :: _ => false
+                  end
+              | None => false
+              end
+          | _ :: _ => false
+          end
+      | None => false
+      end
   | _ :: _ => false
   end.
 

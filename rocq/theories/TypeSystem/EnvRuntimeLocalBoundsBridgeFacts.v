@@ -28,7 +28,7 @@ Lemma store_safe_function_value_call_arg_global_env_with_local_bounds :
       (global_env_with_local_bounds env bounds) arg.
 Proof.
   intros env bounds arg Harg.
-  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds].
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds | name variant lts variant_lts tys edef vdef Hlookup Henum_bounds Hvariant Hfields].
   - constructor.
   - constructor.
   - constructor.
@@ -41,6 +41,12 @@ Proof.
     + change (lookup_struct name (global_env_with_local_bounds env bounds))
         with (lookup_struct name env). exact Hlookup.
     + exact Hbounds.
+  - eapply SSFVCArg_EmptyEnum.
+    + change (lookup_enum name (global_env_with_local_bounds env bounds))
+        with (lookup_enum name env). exact Hlookup.
+    + exact Henum_bounds.
+    + exact Hvariant.
+    + exact Hfields.
 Qed.
 
 Lemma store_safe_function_value_call_args_global_env_with_local_bounds :
@@ -152,6 +158,30 @@ Proof.
           rewrite Hbounds_safe; reflexivity
       end.
     + rewrite <- x. constructor.
+  - dependent destruction Htyped.
+    match goal with
+    | Hpayloads : typed_args_roots_shadow_safe _ _ _ _ _ [] _ _ _ _ |- _ =>
+        dependent destruction Hpayloads
+    end.
+    eapply TERS_Enum.
+    + change (lookup_enum name (global_env_with_local_bounds env bounds))
+        with (lookup_enum name env). exact H.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+    + match goal with
+      | Hlookup_typed : lookup_enum name env = Some edef,
+        Hlookup_safe : lookup_enum name env = Some ?edef_safe,
+        Hbounds_safe : enum_bounds ?edef_safe = [] |- _ =>
+          change (check_struct_bounds (global_env_with_local_bounds env bounds)
+            (enum_bounds edef) tys = None);
+          rewrite Hlookup_typed in Hlookup_safe;
+          inversion Hlookup_safe; subst;
+          rewrite Hbounds_safe; reflexivity
+      end.
+    + exact H5.
+    + rewrite <- x. constructor.
 Qed.
 
 Lemma typed_args_roots_shadow_safe_store_safe_global_env_with_local_bounds :
@@ -221,6 +251,30 @@ Proof.
           inversion Hlookup_safe; subst;
           rewrite Hbounds_safe; reflexivity
       end.
+    + rewrite <- x. constructor.
+  - dependent destruction Htyped.
+    match goal with
+    | Hpayloads : typed_args_roots _ _ _ _ _ [] _ _ _ _ |- _ =>
+        dependent destruction Hpayloads
+    end.
+    eapply TER_Enum.
+    + change (lookup_enum name (global_env_with_local_bounds env bounds))
+        with (lookup_enum name env). exact H.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+    + match goal with
+      | Hlookup_typed : lookup_enum name env = Some edef,
+        Hlookup_safe : lookup_enum name env = Some ?edef_safe,
+        Hbounds_safe : enum_bounds ?edef_safe = [] |- _ =>
+          change (check_struct_bounds (global_env_with_local_bounds env bounds)
+            (enum_bounds edef) tys = None);
+          rewrite Hlookup_typed in Hlookup_safe;
+          inversion Hlookup_safe; subst;
+          rewrite Hbounds_safe; reflexivity
+      end.
+    + exact H5.
     + rewrite <- x. constructor.
 Qed.
 
@@ -599,12 +653,20 @@ Proof.
   rewrite check_fn_root_shadow_provenance_summary_global_env_with_local_bounds.
   rewrite IH. reflexivity.
   + destruct l1 as [| field fields]; try reflexivity.
-  change (lookup_struct s (global_env_with_local_bounds env bounds))
-    with (lookup_struct s env).
-  destruct (lookup_struct s env) as [sdef |]; try reflexivity.
-  destruct (struct_bounds sdef); try reflexivity.
-  rewrite capture_ref_free_ty_b_global_env_with_local_bounds.
-  rewrite IH. reflexivity.
+    change (lookup_struct s (global_env_with_local_bounds env bounds))
+      with (lookup_struct s env).
+    destruct (lookup_struct s env) as [sdef |]; try reflexivity.
+    destruct (struct_bounds sdef); try reflexivity.
+    rewrite capture_ref_free_ty_b_global_env_with_local_bounds.
+    rewrite IH. reflexivity.
+  + destruct l2 as [| payload payloads]; try reflexivity.
+    change (lookup_enum s (global_env_with_local_bounds env bounds))
+      with (lookup_enum s env).
+    destruct (lookup_enum s env) as [edef |]; try reflexivity.
+    destruct (enum_bounds edef); try reflexivity.
+    destruct (lookup_enum_variant s0 (enum_variants edef)); try reflexivity.
+    destruct (enum_variant_fields e); try reflexivity.
+    rewrite IH. reflexivity.
 Qed.
 
 Lemma check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel_global_env_with_local_bounds :

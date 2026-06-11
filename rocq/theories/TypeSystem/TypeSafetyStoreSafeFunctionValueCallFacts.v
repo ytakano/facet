@@ -1,7 +1,8 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
-  TypeSafetyReadiness TypeSafetyDirectCallEvidenceFacts.
+  TypeSafetyReadiness TypeSafetyDirectCallEvidenceFacts
+  TypeSafetyRootsReadyRootSets.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -21,7 +22,14 @@ Inductive store_safe_function_value_call_arg
   | SSFVCArg_EmptyStruct : forall name lts tys sdef,
       lookup_struct name env = Some sdef ->
       struct_bounds sdef = [] ->
-      store_safe_function_value_call_arg env (EStruct name lts tys []).
+      store_safe_function_value_call_arg env (EStruct name lts tys [])
+  | SSFVCArg_EmptyEnum : forall name variant lts variant_lts tys edef vdef,
+      lookup_enum name env = Some edef ->
+      enum_bounds edef = [] ->
+      lookup_enum_variant variant (enum_variants edef) = Some vdef ->
+      enum_variant_fields vdef = [] ->
+      store_safe_function_value_call_arg env
+        (EEnum name variant lts variant_lts tys []).
 
 Inductive store_safe_function_value_call_args
     (env : global_env) : list expr -> Prop :=
@@ -38,8 +46,7 @@ Lemma store_safe_function_value_call_arg_preservation_ready :
     preservation_ready_expr arg.
 Proof.
   intros env arg Harg.
-  destruct Harg; try constructor.
-  constructor.
+  destruct Harg; constructor; constructor.
 Qed.
 
 Lemma store_safe_function_value_call_args_preservation_ready :
@@ -72,6 +79,17 @@ Proof.
   unfold root_set_store_roots_named.
   intros roots s s' Hnames Hnamed z Hin.
   rewrite Hnames. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_sets_union_store_roots_named :
+  forall roots s,
+    Forall (fun root_set => root_set_store_roots_named root_set s) roots ->
+    root_set_store_roots_named (root_sets_union roots) s.
+Proof.
+  intros roots s Hroots.
+  induction Hroots as [| roots rest Hhead Htail IH]; simpl.
+  - unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - apply root_set_store_roots_named_union; assumption.
 Qed.
 
 Lemma root_env_store_keys_named_store_names_eq :
@@ -144,6 +162,31 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma typed_args_roots_empty_exprs_ctx_names :
+  forall env Omega n R Sigma ps Sigma' R' roots,
+    typed_args_roots env Omega n R Sigma [] ps Sigma' R' roots ->
+    ctx_names Sigma' = ctx_names Sigma.
+Proof.
+  intros env Omega n R Sigma ps Sigma' R' roots Hargs.
+  dependent destruction Hargs.
+  reflexivity.
+Qed.
+
+Lemma typed_args_roots_empty_exprs_static_named :
+  forall env Omega n R Sigma ps Sigma' R' roots s,
+    typed_args_roots env Omega n R Sigma [] ps Sigma' R' roots ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    R' = R /\
+    Forall (fun roots => root_set_store_roots_named roots s) roots /\
+    root_env_store_roots_named R' s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros env Omega n R Sigma ps Sigma' R' roots s Hargs Hnamed Hkeys.
+  dependent destruction Hargs.
+  repeat split; try reflexivity; try constructor; assumption.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_call_generic_typed_args_roots :
   forall env Ω n R Σ fname type_args args T Σ' R' roots,
     typed_env_roots_shadow_safe env Ω n R Σ
@@ -191,7 +234,7 @@ Proof.
   - dependent destruction Hsafe.
     match goal with
     | Harg : store_safe_function_value_call_arg _ _ |- _ =>
-        destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds]
+        destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds | name variant lts variant_lts tys edef vdef Hlookup Henum_bounds Hvariant Hfields]
     end.
     + dependent destruction H.
       destruct (IHHtyped Hsafe s Hnamed Hkeys)
@@ -260,6 +303,20 @@ Proof.
         constructor.
         -- unfold root_set_store_roots_named. intros z Hin_z. contradiction.
         -- exact Hroots_rest.
+    + dependent destruction H.
+      match goal with
+      | Hpayloads : typed_args_roots _ _ _ _ _ [] _ _ _ _ |- _ =>
+          destruct (typed_args_roots_empty_exprs_static_named
+            _ _ _ _ _ _ _ _ _ s Hpayloads Hnamed Hkeys)
+            as [HR_payload [Hroots_payload [Hnamed_payload Hkeys_payload]]]
+      end.
+      destruct (IHHtyped Hsafe s Hnamed_payload Hkeys_payload)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- apply root_sets_union_store_roots_named. exact Hroots_payload.
+        -- exact Hroots_rest.
 
 Qed.
 
@@ -272,7 +329,7 @@ Lemma store_safe_function_value_call_arg_typed_roots_ctx_names :
     forall x, In x (free_vars_expr arg) -> In x (ctx_names Sigma).
 Proof.
   intros env Omega n R Sigma arg T Sigma' R' roots Hsafe Htyped.
-  destruct Hsafe as [| lit | y | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds];
+  destruct Hsafe as [| lit | y | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds | name variant lts variant_lts tys edef vdef Hlookup Henum_bounds Hvariant Hfields];
     dependent destruction Htyped; simpl;
     try solve [split; [reflexivity | intros x Hin; contradiction]];
     try solve [split; [reflexivity | intros x Hin; inversion Hin]].
@@ -296,6 +353,10 @@ Proof.
   | Hfields : typed_fields_roots _ _ _ _ _ _ _ [] _ _ _ _ |- _ =>
       split;
       [ eapply typed_fields_roots_empty_literal_ctx_names; exact Hfields
+      | intros x Hfalse; contradiction ]
+  | Hpayloads : typed_args_roots _ _ _ _ _ [] _ _ _ _ |- _ =>
+      split;
+      [ eapply typed_args_roots_empty_exprs_ctx_names; exact Hpayloads
       | intros x Hfalse; contradiction ]
   end.
   all: split; [reflexivity | intros x Hfalse; contradiction].
@@ -337,7 +398,7 @@ Lemma store_safe_function_value_call_arg_typed_roots_remove_unused_key :
       Sigma' (root_env_remove x R') roots.
 Proof.
   intros env Omega n R Sigma arg T Sigma' R' roots x Hsafe Htyped Hfree.
-  destruct Hsafe as [| lit | y | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds];
+  destruct Hsafe as [| lit | y | fname fdef Hin Hname Hsummary | name lts tys sdef Hlookup Hbounds | name variant lts variant_lts tys edef vdef Hlookup Henum_bounds Hvariant Hfields];
     dependent destruction Htyped; simpl in Hfree;
     try solve [constructor; eauto].
   - assert (Hyx : y <> x).
@@ -353,6 +414,12 @@ Proof.
         dependent destruction Hfields
     end.
     eapply TER_Struct; eauto.
+    rewrite <- x. constructor.
+  - match goal with
+    | Hpayloads : typed_args_roots _ _ _ _ _ [] _ _ _ _ |- _ =>
+        dependent destruction Hpayloads
+    end.
+    eapply TER_Enum; eauto.
     rewrite <- x. constructor.
 Qed.
 

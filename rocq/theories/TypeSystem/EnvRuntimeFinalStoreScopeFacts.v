@@ -385,11 +385,16 @@ Proof.
   - dependent destruction Htyped.
     assert (Hcover1 : root_env_covers_params ps R1).
     { destruct Harg; dependent destruction H; try exact Hcover.
-      match goal with
-      | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ [] _ _ _ _ |- _ =>
-          dependent destruction Hfields
-      end.
-      exact Hcover. }
+      - match goal with
+        | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ [] _ _ _ _ |- _ =>
+            dependent destruction Hfields
+        end.
+        exact Hcover.
+      - match goal with
+        | Hpayloads : typed_args_roots_shadow_safe _ _ _ _ _ [] _ _ _ _ |- _ =>
+            dependent destruction Hpayloads
+        end.
+        exact Hcover. }
     eapply IH; eassumption.
 Qed.
 

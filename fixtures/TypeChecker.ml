@@ -14071,6 +14071,22 @@ let rec store_safe_function_value_call_args_b env = function
             | _ :: _ -> false)
          | None -> false)
       | _ :: _ -> false)
+   | EEnum (name, variant, _, _, _, l2) ->
+     (match l2 with
+      | [] ->
+        (match lookup_enum name env with
+         | Some edef ->
+           (match edef.enum_bounds with
+            | [] ->
+              (match lookup_enum_variant variant edef.enum_variants with
+               | Some vdef ->
+                 (match vdef.enum_variant_fields with
+                  | [] -> store_safe_function_value_call_args_b env rest
+                  | _ :: _ -> false)
+               | None -> false)
+            | _ :: _ -> false)
+         | None -> false)
+      | _ :: _ -> false)
    | _ -> false)
 
 (** val direct_call_target_expr :

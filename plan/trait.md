@@ -148,7 +148,8 @@ Key temporary limitations:
      Prop-level argument relations, arity and params-of-tys bridges,
      param-type equality/back-bridges, env-structural and roots-aware
      argument/field relations, same-bindings facts, nil inversions, cons
-     inversions, and roots structural/length helpers. These compile while
+     inversions, roots structural/length helpers, and a downstream
+     assoc-aware env argument-collector soundness helper. These compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

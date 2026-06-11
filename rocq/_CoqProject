@@ -134,6 +134,7 @@ theories/TypeSystem/TypeSafetyClosureWrappers.v
 theories/TypeSystem/TypeSafetyDirectCallWrappers.v
 theories/TypeSystem/TypeSafety.v
 theories/TypeSystem/EnvTypingSoundness.v
+theories/TypeSystem/AssocEnvArgSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v
 theories/TypeSystem/EnvRootSoundness.v
 theories/TypeSystem/End2EndSafety.v

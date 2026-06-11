@@ -58,15 +58,15 @@ validity checks must be represented in Rocq and the extracted checker.
   invariants. Core, expression, function-level, root, shadow-safe root,
   and checked shadow-safe root checker soundness have entry theorems into
   these wrappers for the current checker behavior, including function-level
-  checked full-env roots. Ordinary compatibility is
-  not treated as an implicit proof
-  of associated compatibility; call-site wiring must dispatch through the
-  env-aware assoc helpers at each checker path being proved. The ctx/env
-  checker's top-level direct/generic direct calls, function-value calls,
-  explicit generic function-value calls, HRT calls, inferred type-forall calls,
-  and mixed-forall calls now dispatch through the env-aware associated call
-  helpers; root/shadow and end-to-end checker paths remain on ordinary
-  compatibility until their wrapper-boundary soundness is wired.
+  checked full-env roots and end-to-end program entrypoints. Ordinary
+  compatibility is not treated as an implicit proof of associated
+  compatibility; call-site wiring must dispatch through the env-aware assoc
+  helpers at each checker path being proved. The ctx/env checker's top-level
+  direct/generic direct calls, function-value calls, explicit generic
+  function-value calls, HRT calls, inferred type-forall calls, and
+  mixed-forall calls now dispatch through the env-aware associated call
+  helpers; root/shadow checker call sites remain on ordinary compatibility
+  until their direct assoc-helper soundness is proved.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   deriving syntax is rejected explicitly, and `deriving` is reserved as a
   keyword.

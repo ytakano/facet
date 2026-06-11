@@ -148,7 +148,7 @@ Key temporary limitations:
      Prop-level argument relations, arity and params-of-tys bridges,
      param-type equality/back-bridges, env-structural and roots-aware
      single-value, argument, and field relations, same-bindings facts, nil inversions, cons
-     inversions, roots structural/length helpers, single-value check helpers,
+     inversions, roots structural/length helpers, single-value check and collector helpers,
      and a downstream
      assoc-aware env/roots argument, enum-payload, struct-field collector, HRT, mixed-forall, non-HRT type-forall, direct top-level call, and plain function-value call helpers/facts. Success facts recover checked boolean argument witnesses, substituted parameter lists, arity where applicable, and env/root collector composition facts exposing `typed_args_env_structural_assoc` and `typed_args_roots_assoc` without bridging to `ty_compatible_assoc`. These compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from

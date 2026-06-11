@@ -1,5 +1,6 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program TypingRules CheckerBase AssocCompatibility
+  Lifetime Types Syntax Program TypingRules RootProvenance CheckerBase TypeChecker
+  AssocCompatibility
   EnvStructuralRules AssocEnvStructural.
 From Stdlib Require Import List.
 Import ListNotations.
@@ -51,4 +52,71 @@ Proof.
   econstructor.
   - exact Htyped.
   - apply check_value_assoc_true. exact Hcheck.
+Qed.
+
+Definition infer_env_value_assoc
+    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (Σ : sctx) (e : expr) (expected : Ty) : infer_result sctx :=
+  match infer_core_env_state_fuel fuel env Ω n Σ e with
+  | infer_err err => infer_err err
+  | infer_ok (actual, Σ') =>
+      match check_value_assoc env Ω actual expected with
+      | None => infer_ok Σ'
+      | Some err => infer_err err
+      end
+  end.
+
+Lemma infer_env_value_assoc_checked_sound :
+  forall fuel env Ω n Σ e expected Σ',
+    infer_env_value_assoc fuel env Ω n Σ e expected = infer_ok Σ' ->
+    (forall actual Σ0,
+        infer_core_env_state_fuel fuel env Ω n Σ e = infer_ok (actual, Σ0) ->
+        typed_env_structural env Ω n Σ e actual Σ0) ->
+    typed_value_env_structural_assoc env Ω n Σ e expected Σ'.
+Proof.
+  intros fuel env Ω n Σ e expected Σ' Hchecked Hexpr.
+  unfold infer_env_value_assoc in Hchecked.
+  destruct (infer_core_env_state_fuel fuel env Ω n Σ e)
+    as [[actual Σ0] | err] eqn:Hinfer; try discriminate.
+  destruct (check_value_assoc env Ω actual expected) as [err' |] eqn:Hcheck;
+    try discriminate.
+  inversion Hchecked; subst.
+  eapply check_value_env_structural_assoc_sound.
+  - eapply Hexpr. reflexivity.
+  - exact Hcheck.
+Qed.
+
+Definition infer_env_value_roots_assoc
+    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Σ : sctx) (e : expr) (expected : Ty)
+    : infer_result (sctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots fuel env Ω n R Σ e with
+  | infer_err err => infer_err err
+  | infer_ok (actual, Σ', R', roots) =>
+      match check_value_assoc env Ω actual expected with
+      | None => infer_ok (Σ', R', roots)
+      | Some err => infer_err err
+      end
+  end.
+
+Lemma infer_env_value_roots_assoc_checked_sound :
+  forall fuel env Ω n R Σ e expected Σ' R' roots,
+    infer_env_value_roots_assoc fuel env Ω n R Σ e expected =
+      infer_ok (Σ', R', roots) ->
+    (forall actual Σ0 R0 roots0,
+        infer_core_env_state_fuel_roots fuel env Ω n R Σ e =
+          infer_ok (actual, Σ0, R0, roots0) ->
+        typed_env_roots env Ω n R Σ e actual Σ0 R0 roots0) ->
+    typed_value_roots_assoc env Ω n R Σ e expected Σ' R' roots.
+Proof.
+  intros fuel env Ω n R Σ e expected Σ' R' roots Hchecked Hexpr.
+  unfold infer_env_value_roots_assoc in Hchecked.
+  destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e)
+    as [[[[actual Σ0] R0] roots0] | err] eqn:Hinfer; try discriminate.
+  destruct (check_value_assoc env Ω actual expected) as [err' |] eqn:Hcheck;
+    try discriminate.
+  inversion Hchecked; subst.
+  eapply check_value_roots_assoc_sound.
+  - eapply Hexpr. reflexivity.
+  - exact Hcheck.
 Qed.

@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program TypingRules TypeChecker AssocCompatibility
+  Lifetime Types Syntax Program TypingRules TypeChecker EnvStructuralRules AssocCompatibility
   AssocHrtFacts AssocTraitMethodSigFacts AssocTraitMethodResolutionFacts AssocValueTypingFacts
+  AssocEnvStructural AssocEnvValueBridgeReductionFacts
   AssocCheckedBridgeSoundness CompatBoolSoundness
   AssocHrtBridgeReductionFacts AssocEnumPayloadTypingFacts AssocEnumPayloadBridgeReductionFacts.
 From Stdlib Require Import List.
@@ -157,4 +158,34 @@ Proof.
   destruct (trait_method_sig_assoc_checked_sound env sig fn Hchecked)
     as [Hname [Hlts [Htparams [Hbounds [Hcaptures [Hparams Hret]]]]]].
   repeat split; assumption.
+Qed.
+
+Lemma typed_value_env_structural_assoc_sound :
+  forall env Ω n Σ e expected Σ',
+    typed_value_env_structural_assoc env Ω n Σ e expected Σ' ->
+    exists actual,
+      typed_env_structural env Ω n Σ e actual Σ' /\
+      ty_compatible_assoc env Ω actual expected.
+Proof.
+  intros env Ω n Σ e expected Σ' Hvalue.
+  destruct (typed_value_env_structural_assoc_inv _ _ _ _ _ _ _ Hvalue)
+    as [actual [Htyped Hchecked]].
+  exists actual. split.
+  - exact Htyped.
+  - exact (ty_compatible_assoc_checked_sound env Ω actual expected Hchecked).
+Qed.
+
+Lemma typed_value_roots_assoc_sound :
+  forall env Ω n R Σ e expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e expected Σ' R' roots ->
+    exists actual,
+      typed_env_roots env Ω n R Σ e actual Σ' R' roots /\
+      ty_compatible_assoc env Ω actual expected.
+Proof.
+  intros env Ω n R Σ e expected Σ' R' roots Hvalue.
+  destruct (typed_value_roots_assoc_inv _ _ _ _ _ _ _ _ _ _ Hvalue)
+    as [actual [Htyped Hchecked]].
+  exists actual. split.
+  - exact Htyped.
+  - exact (ty_compatible_assoc_checked_sound env Ω actual expected Hchecked).
 Qed.

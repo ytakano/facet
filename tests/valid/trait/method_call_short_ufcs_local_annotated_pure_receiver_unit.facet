@@ -1,0 +1,14 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted ();
+}
+
+impl Runner for unrestricted () {
+  fn run(self: Self) -> unrestricted () {
+    self
+  }
+}
+
+fn main() -> unrestricted () {
+  let x: unrestricted () = ();
+  (Runner::run x)
+}

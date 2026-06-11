@@ -45,7 +45,8 @@ Completed:
   boundary with invalid tests. Regression coverage includes generic-trait
   explicit UFCS with method-local type args and bounds, extra method type args,
   pure local receivers in short and explicit UFCS, including method-local
-  type arguments, and dot-syntax rejection.
+  type arguments and bool/unit/float literal variants, and dot-syntax
+  rejection.
   Generic trait arguments require the explicit `<Ty as Trait<...>>` spelling.
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
@@ -100,9 +101,9 @@ Key temporary limitations:
      not add a short form for them.
    - Support the remaining receiver-let/generic-call safety-gate shapes.
      Immutable annotated and inferred local receivers initialized by unrestricted
-     unit, int, float, or bool literals are now accepted in short and explicit
+     unit, int, float, or bool literals are accepted in short and explicit
      UFCS by pure receiver-let elimination in raw lowering and covered by
-     annotated and inferred valid regression tests.
+     focused valid regression tests.
      Struct, enum, and direct function-call expression receivers now resolve in
      raw lowering but still hit the end-to-end safety gate. Direct-call
      receivers cannot be

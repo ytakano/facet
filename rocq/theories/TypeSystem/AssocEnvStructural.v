@@ -154,6 +154,80 @@ Proof.
     + exact IHHargs.
 Qed.
 
+(* Single-expression compatibility boundaries for let/assign/replace wiring. *)
+Inductive typed_value_env_structural_assoc
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : sctx -> expr -> Ty -> sctx -> Prop :=
+  | TESValueAssoc : forall Σ e T_actual T_expected Σ',
+      typed_env_structural env Ω n Σ e T_actual Σ' ->
+      ty_compatible_assoc_checked env Ω T_actual T_expected ->
+      typed_value_env_structural_assoc env Ω n Σ e T_expected Σ'.
+
+Lemma typed_value_env_structural_assoc_inv :
+  forall env Ω n Σ e T_expected Σ',
+    typed_value_env_structural_assoc env Ω n Σ e T_expected Σ' ->
+    exists T_actual,
+      typed_env_structural env Ω n Σ e T_actual Σ' /\
+      ty_compatible_assoc_checked env Ω T_actual T_expected.
+Proof.
+  intros env Ω n Σ e T_expected Σ' Htyped.
+  inversion Htyped; subst.
+  exists T_actual. split; assumption.
+Qed.
+
+Lemma typed_value_env_structural_assoc_same_bindings :
+  forall env Ω n Σ e T_expected Σ',
+    typed_value_env_structural_assoc env Ω n Σ e T_expected Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  intros env Ω n Σ e T_expected Σ' Htyped.
+  inversion Htyped; subst.
+  eapply typed_env_structural_same_bindings. exact H.
+Qed.
+
+Inductive typed_value_roots_assoc
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty ->
+      sctx -> root_env -> root_set -> Prop :=
+  | TERValueAssoc : forall R Σ e T_actual T_expected Σ' R' roots,
+      typed_env_roots env Ω n R Σ e T_actual Σ' R' roots ->
+      ty_compatible_assoc_checked env Ω T_actual T_expected ->
+      typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots.
+
+Lemma typed_value_roots_assoc_inv :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    exists T_actual,
+      typed_env_roots env Ω n R Σ e T_actual Σ' R' roots /\
+      ty_compatible_assoc_checked env Ω T_actual T_expected.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped.
+  inversion Htyped; subst.
+  exists T_actual. split; assumption.
+Qed.
+
+Lemma typed_value_roots_assoc_structural :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    typed_value_env_structural_assoc env Ω n Σ e T_expected Σ'.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped.
+  inversion Htyped; subst.
+  econstructor.
+  - eapply typed_env_roots_structural. exact H.
+  - exact H0.
+Qed.
+
+Lemma typed_value_roots_assoc_same_bindings :
+  forall env Ω n R Σ e T_expected Σ' R' roots,
+    typed_value_roots_assoc env Ω n R Σ e T_expected Σ' R' roots ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  intros env Ω n R Σ e T_expected Σ' R' roots Htyped.
+  eapply typed_value_env_structural_assoc_same_bindings.
+  eapply typed_value_roots_assoc_structural. exact Htyped.
+Qed.
+
 (* Field-list typing with associated projection compatibility for struct fields.
    This is a specification bridge; struct literal checker rules are not wired to
    it yet. *)

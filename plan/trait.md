@@ -55,10 +55,10 @@ validity checks must be represented in Rocq and the extracted checker.
   shape, and the roots boundary projects to the env-structural boundary. A
   checker-facing wrapper boundary now admits either existing structural typing
   or an associated call boundary while preserving the same store-shape
-  invariants. Core, expression, and function-level full-env/root checker
-  soundness have entry theorems into these wrappers for the current checker
-  behavior. Ordinary compatibility is not treated as an implicit proof of
-  associated compatibility; call-site wiring must dispatch through the
+  invariants. Core, expression, function-level, root, and shadow-safe root
+  checker soundness have entry theorems into these wrappers for the current
+  checker behavior. Ordinary compatibility is not treated as an implicit proof
+  of associated compatibility; call-site wiring must dispatch through the
   env-aware assoc helpers at each checker path being proved. The ctx/env
   checker's top-level direct/generic direct calls, function-value calls,
   explicit generic function-value calls, HRT calls, inferred type-forall calls,

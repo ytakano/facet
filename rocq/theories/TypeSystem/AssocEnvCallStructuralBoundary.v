@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import
   Lifetime Types Syntax Program Renaming TypingRules TypeChecker RootProvenance
-  EnvStructuralRules EnvTypingSoundness EnvRootSoundness AssocEnvStructural
+  EnvStructuralRules AlphaRoots EnvTypingSoundness EnvRootSoundness AssocEnvStructural
   AssocDirectCallHelpers AssocFnValueCallHelpers
   AssocArgBoolFacts AssocFnValueCallFacts
   AssocHrtHelpers AssocHrtFacts AssocEnvArgSoundness
@@ -1530,4 +1530,29 @@ Proof.
   intros env Omega n R Gamma e T Gamma' R' roots Hinfer.
   apply TERAssocBoundary_Roots.
   eapply infer_core_env_roots_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_state_fuel_roots_shadow_safe_assoc_boundary_sound :
+  forall fuel env Omega n R Sigma e T Sigma' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =
+      infer_ok (T, Sigma', R', roots) ->
+    typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots.
+Proof.
+  intros fuel env Omega n R Sigma e T Sigma' R' roots Hinfer.
+  apply TERAssocBoundary_Roots.
+  eapply typed_env_roots_shadow_safe_roots.
+  eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_shadow_safe_assoc_boundary_sound :
+  forall env Omega n R Gamma e T Gamma' R' roots,
+    infer_core_env_roots_shadow_safe env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    typed_env_roots_assoc_boundary env Omega n R (sctx_of_ctx Gamma) e T
+      (sctx_of_ctx Gamma') R' roots.
+Proof.
+  intros env Omega n R Gamma e T Gamma' R' roots Hinfer.
+  apply TERAssocBoundary_Roots.
+  eapply typed_env_roots_shadow_safe_roots.
+  eapply infer_core_env_roots_shadow_safe_sound. exact Hinfer.
 Qed.

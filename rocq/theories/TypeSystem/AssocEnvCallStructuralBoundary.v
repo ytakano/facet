@@ -691,6 +691,35 @@ Proof.
   exact (proj1 Hchecked).
 Qed.
 
+Lemma typed_fn_env_roots_checked_assoc_boundary_structural :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    typed_fn_env_structural_assoc_boundary env f.
+Proof.
+  unfold typed_fn_env_roots_checked_assoc_boundary,
+    typed_fn_env_structural_assoc_boundary.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Gamma_out [Hbody [Hcompat Hparams]]]].
+  exists T_body, Gamma_out.
+  repeat split; try assumption.
+  eapply typed_env_roots_checked_assoc_boundary_structural.
+  exact Hbody.
+Qed.
+
+Lemma checked_fn_env_roots_checked_assoc_boundary_structural :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots ->
+    checked_fn_env_structural_assoc_boundary env f.
+Proof.
+  unfold checked_fn_env_roots_checked_assoc_boundary,
+    checked_fn_env_structural_assoc_boundary.
+  intros env f R0 R_out roots Hchecked.
+  destruct Hchecked as [Htyped [Hborrow Hnodup]].
+  repeat split; try assumption.
+  eapply typed_fn_env_roots_checked_assoc_boundary_structural.
+  exact Htyped.
+Qed.
+
 Lemma typed_fn_env_roots_checked_assoc_boundary_of_checked :
   forall env f R0 R_out roots,
     typed_fn_env_roots_checked env f R0 R_out roots ->

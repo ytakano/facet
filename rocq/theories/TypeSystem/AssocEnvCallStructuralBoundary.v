@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import
-  Lifetime Types Syntax Program Renaming TypingRules TypeChecker RootProvenance
-  EnvStructuralRules AlphaRootEnvFacts AlphaRoots TypeSafetyRootFacts
+  Lifetime Types Syntax Program Renaming TypingRules TypeChecker RuntimeTyping
+  RootProvenance EnvStructuralRules AlphaRootEnvFacts AlphaRoots TypeSafetyRootFacts
   TypeSafetyRootsReadyRootSets
   TypeSafetyRootsReadyCtx TypeSafetyRootsReadyMutual
   TypeSafetyCheckedRoots EnvTypingSoundness
@@ -729,6 +729,76 @@ Proof.
   unfold root_env_sctx_roots_named, root_set_sctx_roots_named,
     root_env_ctx_roots_named, root_set_ctx_roots_named in *.
   eapply typed_env_roots_checked_assoc_boundary_ctx_roots_named; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_store_keys_named :
+  forall env Omega n R Sigma e T Sigma' R' roots s,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma ->
+    store_typed env s Sigma' ->
+    root_env_store_keys_named R' s.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots s Hboundary Hshadow
+    Hkeys Hstore.
+  eapply root_env_sctx_keys_named_store_typed.
+  - exact Hstore.
+  - eapply typed_env_roots_checked_assoc_boundary_sctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_store_keys_named_prefix :
+  forall env Omega n R Sigma e T Sigma' R' roots s,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma ->
+    store_typed_prefix env s Sigma' ->
+    root_env_store_keys_named R' s.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots s Hboundary Hshadow
+    Hkeys Hstore.
+  eapply root_env_sctx_keys_named_store_typed_prefix.
+  - exact Hstore.
+  - eapply typed_env_roots_checked_assoc_boundary_sctx_keys_named; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_store_roots_named :
+  forall env Omega n R Sigma e T Sigma' R' roots s,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_roots_named R Sigma ->
+    store_typed env s Sigma' ->
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots s Hboundary Hshadow
+    Hnamed Hstore.
+  destruct (typed_env_roots_checked_assoc_boundary_sctx_roots_named env Omega n
+    R Sigma e T Sigma' R' roots Hboundary Hshadow Hnamed) as [Henv Hroots].
+  split.
+  - eapply root_env_sctx_roots_named_store_typed; eassumption.
+  - eapply root_set_sctx_roots_named_store_typed; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_assoc_boundary_store_roots_named_prefix :
+  forall env Omega n R Sigma e T Sigma' R' roots s,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_roots_named R Sigma ->
+    store_typed_prefix env s Sigma' ->
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots s Hboundary Hshadow
+    Hnamed Hstore.
+  destruct (typed_env_roots_checked_assoc_boundary_sctx_roots_named env Omega n
+    R Sigma e T Sigma' R' roots Hboundary Hshadow Hnamed) as [Henv Hroots].
+  split.
+  - eapply root_env_sctx_roots_named_store_typed_prefix; eassumption.
+  - eapply root_set_sctx_roots_named_store_typed_prefix; eassumption.
 Qed.
 
 Lemma typed_env_roots_assoc_boundary_of_assoc_call_boundary :

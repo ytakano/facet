@@ -141,12 +141,11 @@ Key temporary limitations:
      `global_env`, so the assoc-aware `typed_args_assoc`,
      `typed_args_env_structural_assoc`, and `typed_args_roots_assoc` relations
      now name the Prop, env-structural, and roots boundaries, but they still
-     need an env/root bridge or a
-     proved bridge from normalized raw elaboration to ordinary `typed_args`;
+     need an env/root bridge or a proved bridge from normalized raw elaboration to ordinary `typed_args`;
      only after that should checker helpers switch to assoc-aware compatibility.
      Boolean-witness, param-type-list, arity-length, params_of_tys,
-     assoc Prop/env-structural same-bindings, and roots-aware
-     argument helper proofs compile when
+     assoc Prop/env-structural same-bindings, roots-aware
+     argument helpers, and assoc field-list helper proofs compile when
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

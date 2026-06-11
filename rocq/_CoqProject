@@ -85,6 +85,7 @@ theories/TypeSystem/AssocHigherBridgeSoundness.v
 theories/TypeSystem/AssocDirectCallFacts.v
 theories/TypeSystem/AssocFnValueCallFacts.v
 theories/TypeSystem/AssocEnvCallTypingBoundary.v
+theories/TypeSystem/AssocEnvCallStructuralBoundary.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/TypeSafetyRootFacts.v
 theories/TypeSystem/TypeSafetyReadiness.v

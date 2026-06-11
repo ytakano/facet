@@ -43,8 +43,8 @@ validity checks must be represented in Rocq and the extracted checker.
   make-closure, and root-aware call paths, so future checker-facing wiring has
   targets that mention `global_env` without changing `typed` yet. Direct,
   generic direct-call, non-generic function-value, explicit generic
-  function-value, and inferred/elaborating type-forall helper results now bridge
-  to the env/root structural call boundary. HRT and mixed-forall structural
+  function-value, HRT, and inferred/elaborating type-forall helper results now
+  bridge to the env/root structural call boundary. Mixed-forall structural
   bridges remain to be added before checker wiring.
 - Helper-level associated compatibility soundness is available for
   `check_args_assoc`, `check_arg_tys_assoc`, `infer_args_collect`, direct calls,

@@ -146,8 +146,9 @@ Key temporary limitations:
      only after that should checker helpers switch to assoc-aware compatibility.
      Boolean-witness through `ty_compatible_assoc_checked`, param-type-list,
      arity-length, params_of_tys,
-     assoc Prop/env-structural same-bindings, roots-aware
-     argument helpers, and assoc field-list helper proofs compile while
+     assoc Prop/env-structural same-bindings, roots/field
+     same-bindings bridges, roots-aware argument helpers, and assoc field-list
+     helper proofs compile while
      `ty_compatible_assoc_b` stays opaque, but even a single-pair bridge from
      `ty_compatible_assoc_b = true` to `ty_compatible_assoc` stalls at `Qed`
      once it exposes `normalize_assoc_ty`.

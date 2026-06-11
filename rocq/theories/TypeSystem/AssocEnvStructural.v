@@ -135,6 +135,16 @@ Inductive typed_fields_env_structural_assoc
       typed_fields_env_structural_assoc env Ω n lts args Σ1 fields rest Σ2 ->
       typed_fields_env_structural_assoc env Ω n lts args Σ fields (f :: rest) Σ2.
 
+Lemma typed_args_roots_assoc_same_bindings :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots_assoc env Ω n R Σ args ps Σ' R' arg_roots ->
+    sctx_same_bindings Σ Σ' .
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Hargs.
+  eapply typed_args_env_structural_assoc_same_bindings.
+  eapply typed_args_roots_assoc_structural. exact Hargs.
+Qed.
+
 Lemma typed_fields_env_structural_assoc_same_bindings :
   forall env Ω n lts args Σ fields defs Σ',
     typed_fields_env_structural_assoc env Ω n lts args Σ fields defs Σ' ->
@@ -178,4 +188,14 @@ Proof.
     + eapply typed_env_roots_structural. exact H0.
     + exact H1.
     + exact IHHfields.
+Qed.
+
+Lemma typed_fields_roots_assoc_same_bindings :
+  forall env Ω n lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots_assoc env Ω n lts args R Σ fields defs Σ' R' roots ->
+    sctx_same_bindings Σ Σ' .
+Proof.
+  intros env Ω n lts args R Σ fields defs Σ' R' roots Hfields.
+  eapply typed_fields_env_structural_assoc_same_bindings.
+  eapply typed_fields_roots_assoc_structural. exact Hfields.
 Qed.

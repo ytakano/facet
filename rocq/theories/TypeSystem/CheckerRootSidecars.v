@@ -110,6 +110,36 @@ Definition let_bound_generic_direct_call_target_expr
   | _ => None
   end.
 
+Definition direct_call_receiver_method_target_expr
+    (e : expr) : option (ident * list Ty * ident * list expr * list expr * expr) :=
+  match e with
+  | ECallGeneric method_name type_args
+      (ECall receiver_name receiver_args :: method_args) =>
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        ECallGeneric method_name type_args
+          (ECall receiver_name receiver_args :: method_args))
+  | ECallGeneric method_name type_args
+      (ECallExpr (EFn receiver_name) receiver_args :: method_args) =>
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        ECallGeneric method_name type_args
+          (ECall receiver_name receiver_args :: method_args))
+  | _ => None
+  end.
+
+Definition generic_direct_call_receiver_method_target_expr
+    (e : expr)
+    : option (ident * list Ty * ident * list Ty * list expr * list expr * expr) :=
+  match e with
+  | ECallGeneric method_name type_args
+      (ECallGeneric receiver_name receiver_type_args receiver_args :: method_args) =>
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args,
+        ECallGeneric method_name type_args
+          (ECallGeneric receiver_name receiver_type_args receiver_args ::
+            method_args))
+  | _ => None
+  end.
+
 Definition if_literal_generic_direct_call_target_expr
     (e : expr)
     : option (bool * ident * list Ty * list expr *

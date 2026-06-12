@@ -37,8 +37,10 @@ validity checks must be represented in Rocq and the extracted checker.
   end-to-end checker entrypoints. These wrappers preserve store/root naming,
   no-shadow, parameter root coverage, and final-store param-scope coverage
   without converting back to ordinary `typed_env_roots`. There is also a
-  checked assoc-boundary wrapper for general function-value `ECallExpr` paths;
-  the remaining work is wiring these wrappers into the checker entrypoints.
+  checked assoc-boundary wrapper for general function-value `ECallExpr` paths.
+  That wrapper now lives in an executable checker module and is exported for
+  extraction; the proof file only proves its checked assoc-boundary soundness.
+  The remaining work is wiring it into the checker entrypoints.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -47,7 +49,9 @@ validity checks must be represented in Rocq and the extracted checker.
 
 1. Move associated compatibility through the checker call-site boundary.
    - Use the checked assoc-boundary wrappers for final-store scope and general
-     function-value `ECallExpr` paths as the bridge into safety consumers.
+     function-value `ECallExpr` paths as the bridge into safety consumers; the
+     latter is already executable and extracted, but is not yet the active
+     root/shadow call path.
    - Wire root/shadow checker entrypoints from ordinary `check_args` /
      `check_arg_tys` to env-aware assoc helpers without weakening the ordinary
      `typed_env_roots` soundness path.

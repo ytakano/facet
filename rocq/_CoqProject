@@ -29,6 +29,7 @@ theories/TypeSystem/CheckerStateCore.v
 theories/TypeSystem/CheckerElabCore.v
 theories/TypeSystem/CheckerRootsCore.v
 theories/TypeSystem/CheckerRootsShadow.v
+theories/TypeSystem/CheckerAssocRootsShadow.v
 theories/TypeSystem/CheckerProgram.v
 theories/TypeSystem/CheckerExamplesBasic.v
 theories/TypeSystem/CheckerBorrow.v

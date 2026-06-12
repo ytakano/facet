@@ -142,23 +142,6 @@ Proof.
   reflexivity.
 Qed.
 
-Fixpoint infer_env_args_collect_roots fuel env Ω n
-    (R : root_env) (Σ : sctx) (args : list expr)
-    : infer_result (list Ty * sctx * root_env * list root_set) :=
-  match args with
-  | [] => infer_ok ([], Σ, R, [])
-  | e :: rest =>
-      match infer_core_env_state_fuel_roots fuel env Ω n R Σ e with
-      | infer_err err => infer_err err
-      | infer_ok (T_e, Σ1, R1, roots_e) =>
-          match infer_env_args_collect_roots fuel env Ω n R1 Σ1 rest with
-          | infer_err err => infer_err err
-          | infer_ok (tys, Σ2, R2, roots_rest) =>
-              infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_rest)
-          end
-      end
-  end.
-
 Lemma infer_env_args_collect_roots_eq :
   forall fuel env Ω n args R Σ,
     (fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)

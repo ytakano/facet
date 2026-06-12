@@ -4553,6 +4553,13 @@ let rec check_struct_bounds env bounds args =
         | None -> check_struct_bounds env rest args)
      | None -> Some ErrArityMismatch)
 
+(** val ty_compatible_assoc_b :
+    global_env -> outlives_ctx -> ty -> ty -> bool **)
+
+let ty_compatible_assoc_b env _UU03a9_ t_actual t_expected =
+  ty_compatible_b _UU03a9_ (normalize_assoc_ty env t_actual)
+    (normalize_assoc_ty env t_expected)
+
 (** val list_set_nth0 : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
 
 let rec list_set_nth0 i v l =
@@ -4773,6 +4780,22 @@ let rec check_arg_tys _UU03a9_ arg_tys params =
      | p :: ps ->
        if ty_compatible_b _UU03a9_ t p
        then check_arg_tys _UU03a9_ ts ps
+       else Some (compatible_error t p))
+
+(** val check_arg_tys_assoc :
+    global_env -> outlives_ctx -> ty list -> ty list -> infer_error option **)
+
+let rec check_arg_tys_assoc env _UU03a9_ arg_tys params =
+  match arg_tys with
+  | [] -> (match params with
+           | [] -> None
+           | _ :: _ -> Some ErrArityMismatch)
+  | t :: ts ->
+    (match params with
+     | [] -> Some ErrArityMismatch
+     | p :: ps ->
+       if ty_compatible_assoc_b env _UU03a9_ t p
+       then check_arg_tys_assoc env _UU03a9_ ts ps
        else Some (compatible_error t p))
 
 (** val tys_depth : ty list -> Big_int_Z.big_int **)
@@ -5312,6 +5335,128 @@ let infer_mixed_forall_call_env_elab env _UU03a9_ n m lt_bounds type_params type
                                 type_args with
                         | Some err -> Infer_err err
                         | None -> Infer_ok (type_args, ret_open))
+                  else Infer_err ErrHrtBoundUnsatisfied)
+        | None -> Infer_err ErrLifetimeConflict)
+     | None -> Infer_err ErrTypeArgInferenceFailed)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
+(** val infer_fn_value_call_assoc :
+    global_env -> outlives_ctx -> ty -> ty list -> ty infer_result **)
+
+let infer_fn_value_call_assoc env _UU03a9_ callee_ty arg_tys =
+  match ty_core callee_ty with
+  | TFn (param_tys, ret) ->
+    (match check_arg_tys_assoc env _UU03a9_ arg_tys param_tys with
+     | Some err -> Infer_err err
+     | None -> Infer_ok ret)
+  | TClosure (_, param_tys, ret) ->
+    (match check_arg_tys_assoc env _UU03a9_ arg_tys param_tys with
+     | Some err -> Infer_err err
+     | None -> Infer_ok ret)
+  | x -> Infer_err (ErrNotAFunction x)
+
+(** val infer_hrt_call_env_assoc :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+    outlives_ctx -> ty -> ty list -> ty infer_result **)
+
+let infer_hrt_call_env_assoc env _UU03a9_ n m bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match build_bound_sigma (repeat None m) arg_tys param_tys with
+     | Some _UU03c3_ ->
+       (match check_arg_tys_assoc env _UU03a9_ arg_tys
+                (map (open_bound_ty _UU03c3_) param_tys) with
+        | Some err -> Infer_err err
+        | None ->
+          if (||) (contains_lbound_ty (open_bound_ty _UU03c3_ ret))
+               (contains_lbound_outlives
+                 (open_bound_outlives _UU03c3_ bounds))
+          then Infer_err ErrHrtUnresolvedBound
+          else if outlives_constraints_hold_b _UU03a9_
+                    (open_bound_outlives _UU03c3_ bounds)
+               then Infer_ok (open_bound_ty _UU03c3_ ret)
+               else Infer_err ErrHrtBoundUnsatisfied)
+     | None -> Infer_err ErrLifetimeConflict)
+  | TClosure (env_lt, param_tys, ret) ->
+    (match build_bound_sigma (repeat None m) arg_tys param_tys with
+     | Some _UU03c3_0 ->
+       let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0 in
+       (match check_arg_tys_assoc env _UU03a9_ arg_tys
+                (map (open_bound_ty _UU03c3_) param_tys) with
+        | Some err -> Infer_err err
+        | None ->
+          let env_open = open_bound_lifetime _UU03c3_ env_lt in
+          let ret_open = open_bound_ty _UU03c3_ ret in
+          let bounds_open = open_bound_outlives _UU03c3_ bounds in
+          if (||)
+               ((||) (contains_lbound_lifetime env_open)
+                 (contains_lbound_ty ret_open))
+               (contains_lbound_outlives bounds_open)
+          then Infer_err ErrHrtUnresolvedBound
+          else if outlives_constraints_hold_b _UU03a9_ bounds_open
+               then Infer_ok ret_open
+               else Infer_err ErrHrtBoundUnsatisfied)
+     | None -> Infer_err ErrLifetimeConflict)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
+(** val infer_type_forall_call_env_assoc :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound
+    list -> ty -> ty list -> ty infer_result **)
+
+let infer_type_forall_call_env_assoc env _UU03a9_ type_params bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match infer_type_forall_args type_params param_tys arg_tys with
+     | Some type_args ->
+       (match check_type_forall_bounds env bounds type_args with
+        | Some err -> Infer_err err
+        | None ->
+          (match check_arg_tys_assoc env _UU03a9_ arg_tys
+                   (map (subst_type_params_ty type_args) param_tys) with
+           | Some err -> Infer_err err
+           | None -> Infer_ok (subst_type_params_ty type_args ret)))
+     | None -> Infer_err ErrTypeArgInferenceFailed)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
+(** val infer_mixed_forall_call_env_assoc :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+    outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+    list -> ty infer_result **)
+
+let infer_mixed_forall_call_env_assoc env _UU03a9_ n m lt_bounds type_params type_bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match infer_type_forall_args type_params param_tys arg_tys with
+     | Some type_args ->
+       let param_tys_t = map (subst_type_params_ty type_args) param_tys in
+       (match build_bound_sigma (repeat None m) arg_tys param_tys_t with
+        | Some _UU03c3_0 ->
+          let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0 in
+          let param_tys_open = map (open_bound_ty _UU03c3_) param_tys_t in
+          (match check_arg_tys_assoc env _UU03a9_ arg_tys param_tys_open with
+           | Some err -> Infer_err err
+           | None ->
+             let ret_open =
+               open_bound_ty _UU03c3_ (subst_type_params_ty type_args ret)
+             in
+             let lt_bounds_open = open_bound_outlives _UU03c3_ lt_bounds in
+             let type_bounds_open =
+               open_core_trait_bounds _UU03c3_ type_bounds
+             in
+             if (||)
+                  ((||) (contains_lbound_ty ret_open)
+                    (contains_lbound_outlives lt_bounds_open))
+                  (existsb (fun b ->
+                    existsb (fun tr ->
+                      existsb contains_lbound_ty tr.core_trait_ref_args)
+                      b.core_bound_traits)
+                    type_bounds_open)
+             then Infer_err ErrHrtUnresolvedBound
+             else if outlives_constraints_hold_b _UU03a9_ lt_bounds_open
+                  then (match check_type_forall_bounds env type_bounds_open
+                                type_args with
+                        | Some err -> Infer_err err
+                        | None -> Infer_ok ret_open)
                   else Infer_err ErrHrtBoundUnsatisfied)
         | None -> Infer_err ErrLifetimeConflict)
      | None -> Infer_err ErrTypeArgInferenceFailed)
@@ -10511,6 +10656,28 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | Infer_err err -> Infer_err err))
     fuel
 
+(** val infer_env_args_collect_roots :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr list -> (((ty
+    list * sctx) * root_env) * root_set list) infer_result **)
+
+let rec infer_env_args_collect_roots fuel env _UU03a9_ n r _UU03a3_ = function
+| [] -> Infer_ok ((([], _UU03a3_), r), [])
+| e :: rest ->
+  (match infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e with
+   | Infer_ok p ->
+     let (p0, roots_e) = p in
+     let (p1, r1) = p0 in
+     let (t_e, _UU03a3_1) = p1 in
+     (match infer_env_args_collect_roots fuel env _UU03a9_ n r1 _UU03a3_1 rest with
+      | Infer_ok p2 ->
+        let (p3, roots_rest) = p2 in
+        let (p4, r2) = p3 in
+        let (tys, _UU03a3_2) = p4 in
+        Infer_ok ((((t_e :: tys), _UU03a3_2), r2), (roots_e :: roots_rest))
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+
 (** val infer_core_env_roots :
     global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
     expr -> (((ty * ctx) * root_env) * root_set) infer_result **)
@@ -13259,6 +13426,66 @@ let infer_core_env_roots_shadow_safe_checked env _UU03a9_ n r _UU0393_ e =
     let (t, _UU03a3_) = p1 in
     Infer_ok (((t, (ctx_of_sctx _UU03a3_)), r'), roots)
   | Infer_err err -> Infer_err err
+
+(** val infer_fn_value_call_expr_assoc_shadow_safe :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> expr list ->
+    (((ty * sctx) * root_env) * root_set) infer_result **)
+
+let infer_fn_value_call_expr_assoc_shadow_safe fuel env omega n r sigma callee args =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> Infer_err ErrNotImplemented)
+    (fun fuel' ->
+    match infer_core_env_state_fuel_roots_shadow_safe fuel' env omega n r
+            sigma callee with
+    | Infer_ok p ->
+      let (p0, roots_callee) = p in
+      let (p1, r1) = p0 in
+      let (callee_ty, sigma1) = p1 in
+      (match infer_env_args_collect_roots fuel' env omega n r1 sigma1 args with
+       | Infer_ok p2 ->
+         let (p3, arg_roots) = p2 in
+         let (p4, r') = p3 in
+         let (arg_tys, sigma') = p4 in
+         let roots = root_set_union roots_callee (root_sets_union arg_roots)
+         in
+         (match ty_core callee_ty with
+          | TFn (_, _) ->
+            (match infer_fn_value_call_assoc env omega callee_ty arg_tys with
+             | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+             | Infer_err err -> Infer_err err)
+          | TClosure (_, _, _) ->
+            (match infer_fn_value_call_assoc env omega callee_ty arg_tys with
+             | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+             | Infer_err err -> Infer_err err)
+          | TForall (m, bounds, body) ->
+            (match ty_core body with
+             | TFn (_, _) ->
+               (match infer_hrt_call_env_assoc env omega n m bounds body
+                        arg_tys with
+                | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+                | Infer_err err -> Infer_err err)
+             | TClosure (_, _, _) ->
+               (match infer_hrt_call_env_assoc env omega n m bounds body
+                        arg_tys with
+                | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+                | Infer_err err -> Infer_err err)
+             | TTypeForall (type_params, type_bounds, type_body) ->
+               (match infer_mixed_forall_call_env_assoc env omega n m bounds
+                        type_params type_bounds type_body arg_tys with
+                | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+                | Infer_err err -> Infer_err err)
+             | x -> Infer_err (ErrMalformedHrtBody x))
+          | TTypeForall (type_params, bounds, body) ->
+            (match infer_type_forall_call_env_assoc env omega type_params
+                     bounds body arg_tys with
+             | Infer_ok ret -> Infer_ok (((ret, sigma'), r'), roots)
+             | Infer_err err -> Infer_err err)
+          | _ -> Infer_err ErrNotImplemented)
+       | Infer_err err -> Infer_err err)
+    | Infer_err err -> Infer_err err)
+    fuel
 
 (** val wf_params_b : region_ctx -> param list -> bool **)
 

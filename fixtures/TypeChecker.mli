@@ -789,6 +789,8 @@ val infer_call_type_args_expected :
 val check_struct_bounds :
   global_env -> trait_bound list -> ty list -> infer_error option
 
+val ty_compatible_assoc_b : global_env -> outlives_ctx -> ty -> ty -> bool
+
 val list_set_nth0 : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
 
 val lt_subst_vec_add :
@@ -825,6 +827,9 @@ val complete_bound_sigma_with_vars :
 val check_args : outlives_ctx -> ty list -> param list -> infer_error option
 
 val check_arg_tys : outlives_ctx -> ty list -> ty list -> infer_error option
+
+val check_arg_tys_assoc :
+  global_env -> outlives_ctx -> ty list -> ty list -> infer_error option
 
 val tys_depth : ty list -> Big_int_Z.big_int
 
@@ -948,6 +953,22 @@ val infer_mixed_forall_call_env_elab :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
   outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
   list -> (ty list * ty) infer_result
+
+val infer_fn_value_call_assoc :
+  global_env -> outlives_ctx -> ty -> ty list -> ty infer_result
+
+val infer_hrt_call_env_assoc :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+  outlives_ctx -> ty -> ty list -> ty infer_result
+
+val infer_type_forall_call_env_assoc :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list
+  -> ty -> ty list -> ty infer_result
+
+val infer_mixed_forall_call_env_assoc :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+  outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+  list -> ty infer_result
 
 type sctx_entry = ctx_entry
 
@@ -1138,6 +1159,11 @@ val infer_core_env_state_fuel_roots :
   root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
   infer_result
 
+val infer_env_args_collect_roots :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr list -> (((ty list * sctx) * root_env) * root_set
+  list) infer_result
+
 val infer_core_env_roots :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> (((ty * ctx) * root_env) * root_set) infer_result
@@ -1159,6 +1185,11 @@ val infer_core_env_roots_shadow_safe :
 val infer_core_env_roots_shadow_safe_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_fn_value_call_expr_assoc_shadow_safe :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> expr list ->
+  (((ty * sctx) * root_env) * root_set) infer_result
 
 val wf_params_b : region_ctx -> param list -> bool
 

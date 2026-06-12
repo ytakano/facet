@@ -44,6 +44,8 @@ Extraction "../fixtures/TypeChecker.ml"
   check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
   check_program_env_alpha_validated_root_shadow_provenance
   infer_fn_env_end2end infer_program_env_end2end check_program_env_end2end
+  infer_fn_env_end2end_assoc infer_program_env_end2end_assoc
+  check_program_env_end2end_assoc
   infer_fn_env_end2end_strict_exact_closure
   infer_program_env_end2end_strict_exact_closure
   check_program_env_end2end_strict_exact_closure.

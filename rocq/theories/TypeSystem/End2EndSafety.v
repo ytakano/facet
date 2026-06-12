@@ -50,7 +50,7 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
-Theorem infer_program_env_end2end_sound :
+Theorem infer_program_env_end2end_ordinary_sound :
   forall env env' f,
     infer_program_env_end2end env = infer_ok env' ->
     In f (env_fns env') ->
@@ -72,7 +72,7 @@ Proof.
   eapply infer_fns_env_end2end_in_sound; eauto.
 Qed.
 
-Theorem check_program_env_end2end_sound :
+Theorem check_program_env_end2end_ordinary_sound :
   forall env env' f,
     check_program_env_end2end env = true ->
     infer_program_env_end2end env = infer_ok env' ->
@@ -84,7 +84,7 @@ Theorem check_program_env_end2end_sound :
         R_out roots.
 Proof.
   intros env env' f _ Hprog Hin.
-  eapply infer_program_env_end2end_sound; eauto.
+  eapply infer_program_env_end2end_ordinary_sound; eauto.
 Qed.
 
 Theorem infer_fn_env_end2end_assoc_sound :
@@ -139,6 +139,33 @@ Theorem check_program_env_end2end_assoc_sound :
 Proof.
   intros env env' f _ Hprog Hin.
   eapply infer_program_env_end2end_assoc_sound; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  eapply infer_program_env_end2end_assoc_sound.
+Qed.
+
+Theorem check_program_env_end2end_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc env = true ->
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  eapply check_program_env_end2end_assoc_sound.
 Qed.
 
 Lemma check_program_env_end2end_assoc_infer_ok :
@@ -2486,7 +2513,7 @@ Proof.
     eassumption.
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
+Theorem infer_program_env_end2end_ordinary_big_step_safe_checked_initial_ready :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -2618,6 +2645,24 @@ Proof.
     + exact Heval.
 Qed.
 
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready.
+Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->

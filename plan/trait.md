@@ -47,9 +47,10 @@ validity checks must be represented in Rocq and the extracted checker.
   module can also derive the same sidecar readiness checks from the assoc-aware
   path, and the base big-step checked-initial-ready safety theorem has an
   assoc-aware counterpart. The OCaml CLI now uses the extracted assoc-aware
-  end-to-end checker as its accept/reject authority. The remaining work is
-  connecting the required ordinary theorem names to that active path instead of
-  keeping them as separate wrappers.
+  end-to-end checker as its accept/reject authority. The required end-to-end
+  soundness and base checked-initial-ready theorem names now point at that
+  assoc-aware active path, while the old ordinary `typed_env_roots` path remains
+  available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -61,15 +62,9 @@ validity checks must be represented in Rocq and the extracted checker.
      function-value `ECallExpr` paths as the bridge into safety consumers; the
      latter is executable, extracted, and available through assoc-aware
      checked core/env/full entrypoints.
-   - Connect the required ordinary theorem names to the assoc-aware end-to-end
-     entrypoint, without weakening the ordinary `typed_env_roots` soundness
-     path.
    - Bridge or generalize the remaining derived big-step safety consumers that
      still require ordinary `checked_fn_env_roots_checked` so they can consume
      the assoc-boundary relation instead.
-   - Preserve the required theorem names:
-     `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
-     `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
    - Remove pre-compatibility normalization only after raw elaboration expected-
      type paths use assoc compatibility. A direct removal currently rejects valid
      projection compatibility cases before checker execution, so this remains a

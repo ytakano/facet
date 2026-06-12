@@ -53,8 +53,8 @@ validity checks must be represented in Rocq and the extracted checker.
   reachable route package/target providers, callback-height big-step safety,
   provider-style route/callback/store-safe bundles, top-level callback
   wrappers, component-body and local-bounds route-package providers,
-  route-package wrappers through prefix-scope consumers, and assoc-aware
-  summary-call-package wrappers. The old ordinary
+  route-package wrappers through prefix-scope consumers, assoc-aware
+  component-body summary-provider wrappers, and summary-call-package wrappers. The old ordinary
   `typed_env_roots` path remains available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is

@@ -4919,3 +4919,115 @@ Proof.
   eapply infer_core_env_roots_shadow_safe_checked_assoc_boundary_sound.
   exact Hinfer.
 Qed.
+
+Theorem infer_core_env_state_fuel_roots_shadow_safe_checked_assoc_entry_boundary_sound :
+  forall fuel env Omega n R Sigma e T Sigma' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe_checked_assoc
+      fuel env Omega n R Sigma e = infer_ok (T, Sigma', R', roots) ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R' roots.
+Proof.
+  intros fuel env Omega n R Sigma e T Sigma' R' roots Hinfer.
+  unfold infer_core_env_state_fuel_roots_shadow_safe_checked_assoc in Hinfer.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe_checked
+    fuel env Omega n R Sigma e) as [[[[T0 Sigma0] R0] roots0] | err]
+    eqn:Hchecked.
+  - inversion Hinfer; subst; clear Hinfer.
+    eapply infer_core_env_state_fuel_roots_shadow_safe_checked_assoc_boundary_sound.
+    exact Hchecked.
+  - destruct e; try discriminate.
+    eapply infer_fn_value_call_expr_assoc_shadow_safe_checked_boundary_sound.
+    exact Hinfer.
+Qed.
+
+Theorem infer_core_env_roots_shadow_safe_checked_assoc_entry_boundary_sound :
+  forall env Omega n R Gamma e T Gamma' R' roots,
+    infer_core_env_roots_shadow_safe_checked_assoc env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    typed_env_roots_checked_assoc_boundary env Omega n R (sctx_of_ctx Gamma) e T
+      (sctx_of_ctx Gamma') R' roots.
+Proof.
+  unfold infer_core_env_roots_shadow_safe_checked_assoc, sctx_of_ctx, ctx_of_sctx.
+  intros env Omega n R Gamma e T Gamma' R' roots Hinfer.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe_checked_assoc
+    10000 env Omega n R Gamma e) as [[[[T0 Sigma0] R0] roots0] | err]
+    eqn:Hcore; try discriminate.
+  inversion Hinfer; subst; clear Hinfer.
+  eapply infer_core_env_state_fuel_roots_shadow_safe_checked_assoc_entry_boundary_sound.
+  exact Hcore.
+Qed.
+
+Theorem infer_env_roots_shadow_safe_checked_assoc_entry_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_env_roots_shadow_safe_checked_assoc env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    typed_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold infer_env_roots_shadow_safe_checked_assoc,
+    typed_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
+    try discriminate.
+  destruct (infer_core_env_roots_shadow_safe_checked_assoc
+    (global_env_with_local_bounds env (fn_bounds f)) (fn_outlives f)
+    (fn_lifetimes f) R0 (fn_body_ctx f) (fn_body f))
+    as [[[[T_body Gamma_body] R_body] roots_body] | err] eqn:Hcore;
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
+    try discriminate.
+  destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
+    eqn:Hcompat; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Gamma_body) eqn:Hparams;
+    try discriminate.
+  inversion Hinfer; subst; clear Hinfer.
+  exists T_body, Gamma_out.
+  repeat split; try assumption.
+  eapply infer_core_env_roots_shadow_safe_checked_assoc_entry_boundary_sound.
+  exact Hcore.
+Qed.
+
+Lemma infer_env_roots_shadow_safe_checked_assoc_params_nodup :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_env_roots_shadow_safe_checked_assoc env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    NoDup (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros env f R0 T Gamma_out R_out roots Hinfer.
+  unfold infer_env_roots_shadow_safe_checked_assoc in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  unfold check_fn_binding_params in Hinfer.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_captures f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  unfold fn_binding_params in Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
+Qed.
+
+Theorem infer_full_env_roots_checked_assoc_entry_boundary_sound :
+  forall env f R0 T Gamma_out R_out roots,
+    infer_full_env_roots_checked_assoc env f R0 =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    checked_fn_env_roots_checked_assoc_boundary env f R0 R_out roots.
+Proof.
+  unfold infer_full_env_roots_checked_assoc, checked_fn_env_roots_checked_assoc_boundary.
+  intros env f R0 T Gamma_out R_out roots Hfull.
+  destruct (infer_env_roots_shadow_safe_checked_assoc env f R0)
+    as [[[[T0 Gamma0] R1] roots1] | err] eqn:Hinfer; try discriminate.
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
+    as [PBS' | err] eqn:Hborrow; try discriminate.
+  inversion Hfull; subst; clear Hfull.
+  repeat split.
+  - eapply infer_env_roots_shadow_safe_checked_assoc_entry_boundary_sound.
+    exact Hinfer.
+  - exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+  - eapply infer_env_roots_shadow_safe_checked_assoc_params_nodup. exact Hinfer.
+Qed.

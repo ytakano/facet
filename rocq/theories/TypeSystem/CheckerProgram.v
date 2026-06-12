@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore CheckerEnvCore CheckerState CheckerStateCore CheckerElabCore CheckerRootsCore CheckerRootsShadow.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance CheckerBase CheckerTraits CheckerHrt CheckerClosure CheckerOrdinary CheckerEnvHelpers CheckerCore CheckerEnvCore CheckerState CheckerStateCore CheckerElabCore CheckerRootsCore CheckerRootsShadow CheckerAssocRootsShadow.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -475,6 +475,37 @@ Definition infer_env_roots_shadow_safe_checked
   | Some err => infer_err err
   | None =>
   match infer_core_env_roots_shadow_safe_checked
+          body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out, R_out, roots) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
+      if ty_compatible_b Ω T_body (fn_ret f) then
+        if params_ok_env_b env (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out, R_out, roots)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
+  end
+  end.
+
+Definition infer_env_roots_shadow_safe_checked_assoc
+    (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
+  let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  match check_fn_binding_params Δ f with
+  | Some err => infer_err err
+  | None =>
+  match infer_core_env_roots_shadow_safe_checked_assoc
           body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>

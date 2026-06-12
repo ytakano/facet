@@ -59,3 +59,29 @@ Definition infer_fn_value_call_expr_assoc_shadow_safe
           end
       end
   end.
+
+Definition infer_core_env_state_fuel_roots_shadow_safe_checked_assoc
+    (fuel : nat) (env : global_env) (Omega : outlives_ctx) (n : nat)
+    (R : root_env) (Sigma : sctx) (e : expr)
+    : infer_result (Ty * sctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots_shadow_safe_checked
+          fuel env Omega n R Sigma e with
+  | infer_ok res => infer_ok res
+  | infer_err err =>
+      match e with
+      | ECallExpr callee args =>
+          infer_fn_value_call_expr_assoc_shadow_safe
+            fuel env Omega n R Sigma callee args
+      | _ => infer_err err
+      end
+  end.
+
+Definition infer_core_env_roots_shadow_safe_checked_assoc
+    (env : global_env) (Omega : outlives_ctx) (n : nat)
+    (R : root_env) (Gamma : ctx) (e : expr)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots_shadow_safe_checked_assoc
+          10000 env Omega n R (sctx_of_ctx Gamma) e with
+  | infer_ok (T, Sigma, R', roots) => infer_ok (T, ctx_of_sctx Sigma, R', roots)
+  | infer_err err => infer_err err
+  end.

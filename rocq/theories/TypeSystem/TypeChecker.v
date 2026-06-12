@@ -29,6 +29,8 @@ Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_state_fuel_roots_shadow_safe
   infer_core_env_roots_shadow_safe infer_env_roots_shadow_safe
   infer_fn_value_call_expr_assoc_shadow_safe
+  infer_core_env_roots_shadow_safe_checked_assoc
+  infer_env_roots_shadow_safe_checked_assoc infer_full_env_roots_checked_assoc
   check_fn_root_shadow_summary check_env_root_shadow_summary
   check_fn_root_shadow_provenance_summary
   check_env_root_shadow_provenance_summary

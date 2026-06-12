@@ -13487,6 +13487,36 @@ let infer_fn_value_call_expr_assoc_shadow_safe fuel env omega n r sigma callee a
     | Infer_err err -> Infer_err err)
     fuel
 
+(** val infer_core_env_state_fuel_roots_shadow_safe_checked_assoc :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+    infer_result **)
+
+let infer_core_env_state_fuel_roots_shadow_safe_checked_assoc fuel env omega n r sigma e =
+  match infer_core_env_state_fuel_roots_shadow_safe_checked fuel env omega n
+          r sigma e with
+  | Infer_ok res -> Infer_ok res
+  | Infer_err err ->
+    (match e with
+     | ECallExpr (callee, args) ->
+       infer_fn_value_call_expr_assoc_shadow_safe fuel env omega n r sigma
+         callee args
+     | _ -> Infer_err err)
+
+(** val infer_core_env_roots_shadow_safe_checked_assoc :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
+    expr -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_core_env_roots_shadow_safe_checked_assoc env omega n r gamma e =
+  match infer_core_env_state_fuel_roots_shadow_safe_checked_assoc
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env omega
+          n r (sctx_of_ctx gamma) e with
+  | Infer_ok p ->
+    let (p0, roots) = p in
+    let (p1, r') = p0 in
+    let (t, sigma) = p1 in Infer_ok (((t, (ctx_of_sctx sigma)), r'), roots)
+  | Infer_err err -> Infer_err err
+
 (** val wf_params_b : region_ctx -> param list -> bool **)
 
 let rec wf_params_b _UU0394_ = function
@@ -13753,6 +13783,38 @@ let infer_env_roots_shadow_safe_checked env f r0 =
              | Some err -> Infer_err err
              | None ->
                (match infer_core_env_roots_shadow_safe_checked body_env
+                        _UU03a9_ n r0 (fn_body_ctx f) f.fn_body with
+                | Infer_ok p ->
+                  let (p0, roots) = p in
+                  let (p1, r_out) = p0 in
+                  let (t_body, _UU0393__out) = p1 in
+                  if negb (wf_type_b _UU0394_ t_body)
+                  then Infer_err ErrLifetimeLeak
+                  else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                       then if params_ok_env_b env f.fn_params _UU0393__out
+                            then Infer_ok (((f.fn_ret, _UU0393__out), r_out),
+                                   roots)
+                            else Infer_err ErrContextCheckFailed
+                       else Infer_err (compatible_error t_body f.fn_ret)
+                | Infer_err err -> Infer_err err))
+
+(** val infer_env_roots_shadow_safe_checked_assoc :
+    global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+    infer_result **)
+
+let infer_env_roots_shadow_safe_checked_assoc env f r0 =
+  let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
+  let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
+  then Infer_err ErrLifetimeLeak
+  else if negb (wf_type_b _UU0394_ f.fn_ret)
+       then Infer_err ErrLifetimeLeak
+       else (match check_fn_binding_params _UU0394_ f with
+             | Some err -> Infer_err err
+             | None ->
+               (match infer_core_env_roots_shadow_safe_checked_assoc body_env
                         _UU03a9_ n r0 (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
@@ -14066,6 +14128,18 @@ let infer_full_env_roots env f r0 =
 
 let infer_full_env_roots_checked env f r0 =
   match infer_env_roots_shadow_safe_checked env f r0 with
+  | Infer_ok res ->
+    (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
+     | Infer_ok _ -> Infer_ok res
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
+
+(** val infer_full_env_roots_checked_assoc :
+    global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+    infer_result **)
+
+let infer_full_env_roots_checked_assoc env f r0 =
+  match infer_env_roots_shadow_safe_checked_assoc env f r0 with
   | Infer_ok res ->
     (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
      | Infer_ok _ -> Infer_ok res

@@ -1191,6 +1191,15 @@ val infer_fn_value_call_expr_assoc_shadow_safe :
   root_env -> sctx -> expr -> expr list ->
   (((ty * sctx) * root_env) * root_set) infer_result
 
+val infer_core_env_state_fuel_roots_shadow_safe_checked_assoc :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+  infer_result
+
+val infer_core_env_roots_shadow_safe_checked_assoc :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> (((ty * ctx) * root_env) * root_set) infer_result
+
 val wf_params_b : region_ctx -> param list -> bool
 
 val string_in : string -> string list -> bool
@@ -1242,6 +1251,10 @@ val infer_env_roots_shadow_safe_checked :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 
+val infer_env_roots_shadow_safe_checked_assoc :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
+
 type path_borrow_entry =
 | PBShared of ident * field_path
 | PBMut of ident * field_path
@@ -1289,6 +1302,10 @@ val infer_full_env_roots :
   infer_result
 
 val infer_full_env_roots_checked :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
+
+val infer_full_env_roots_checked_assoc :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 

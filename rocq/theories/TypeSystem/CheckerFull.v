@@ -63,3 +63,15 @@ Definition infer_full_env_roots_checked (env : global_env) (f : fn_def) (R0 : ro
       | infer_ok _ => infer_ok res
       end
   end.
+
+Definition infer_full_env_roots_checked_assoc
+    (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_env_roots_shadow_safe_checked_assoc env f R0 with
+  | infer_err err => infer_err err
+  | infer_ok res =>
+      match borrow_check_env env [] (fn_body_ctx f) (fn_body f) with
+      | infer_err err => infer_err err
+      | infer_ok _ => infer_ok res
+      end
+  end.

@@ -35,10 +35,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
   end-to-end checker entrypoints. These wrappers preserve store/root naming,
-  no-shadow, parameter root coverage, and now have a final-store scope bridge
-  that consumers can call without converting back to ordinary `typed_env_roots`.
-  Root/shadow checker call sites still need to be rewired from ordinary
-  `check_args` / `check_arg_tys` to assoc-aware helpers.
+  no-shadow, parameter root coverage, and final-store param-scope coverage
+  without converting back to ordinary `typed_env_roots`. There is also a
+  checked assoc-boundary wrapper for general function-value `ECallExpr` paths;
+  the remaining work is wiring these wrappers into the checker entrypoints.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -46,11 +46,11 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Move associated compatibility through the checker call-site boundary.
-   - Continue converting safety consumers that still demand ordinary
-     `typed_env_roots` so they can consume the checked assoc wrapper boundary
-     directly; final-store param-scope coverage has the first bridge.
-   - Then wire root/shadow checker call sites from ordinary
-     `check_args` / `check_arg_tys` to env-aware assoc helpers.
+   - Use the checked assoc-boundary wrappers for final-store scope and general
+     function-value `ECallExpr` paths as the bridge into safety consumers.
+   - Wire root/shadow checker entrypoints from ordinary `check_args` /
+     `check_arg_tys` to env-aware assoc helpers without weakening the ordinary
+     `typed_env_roots` soundness path.
    - Preserve the required theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

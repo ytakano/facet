@@ -31,7 +31,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Associated
-  projections are still normalized before ordinary compatibility checks.
+  projections are still normalized before most ordinary compatibility checks,
+  but impl method signature validation now compares params, returns, and
+  bounds with assoc-aware normalization.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
   end-to-end checker entrypoints. These wrappers preserve store/root naming,
@@ -65,9 +67,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Bridge or generalize the remaining deeper derived big-step safety
      consumers that still require ordinary `checked_fn_env_roots_checked` so
      they can consume the assoc-boundary relation instead.
-   - Remove pre-compatibility normalization only after raw elaboration expected-
-     type paths use assoc compatibility. A direct removal currently rejects valid
-     projection compatibility cases before checker execution, so this remains a
+   - Remove pre-compatibility normalization only after the remaining raw
+     elaboration expected-type paths use assoc compatibility. A direct removal
+     currently rejects valid projection compatibility cases before checker
+     execution, so this remains a
      raw-elaboration bridge task rather than a CLI switch.
 
 2. Finish UFCS receiver hardening.

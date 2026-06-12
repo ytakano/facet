@@ -2215,12 +2215,15 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
           let trait_method_names =
             List.map (fun m -> m.trait_method_name) trait_def.trait_methods
           in
+          let assoc_ty_eq actual expected =
+            ty_eqb (normalize_assoc_ty env actual) (normalize_assoc_ty env expected)
+          in
           let params_sig_equal actual expected =
             List.length actual = List.length expected &&
             List.for_all2
               (fun a e ->
                  a.param_mutability = e.param_mutability &&
-                 ty_eqb a.param_ty e.param_ty)
+                 assoc_ty_eq a.param_ty e.param_ty)
               actual expected
           in
           let hidden_method_type_params method_type_params =
@@ -2261,7 +2264,7 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
           let trait_ref_equal a b =
             a.trait_ref_name = b.trait_ref_name &&
             List.length a.trait_ref_args = List.length b.trait_ref_args &&
-            List.for_all2 ty_eqb a.trait_ref_args b.trait_ref_args
+            List.for_all2 assoc_ty_eq a.trait_ref_args b.trait_ref_args
           in
           let trait_bound_equal a b =
             Big_int_Z.eq_big_int a.bound_type_index b.bound_type_index &&
@@ -2289,7 +2292,7 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
                  (Big_int_Z.add_big_int i.impl_type_params
                     expected.trait_method_type_params)) &&
             params_sig_equal actual.fn_params expected_params &&
-            ty_eqb actual.fn_ret expected_ret &&
+            assoc_ty_eq actual.fn_ret expected_ret &&
             trait_bounds_equal actual.fn_bounds
               (List.map
                  (subst_trait_method_bound expected)

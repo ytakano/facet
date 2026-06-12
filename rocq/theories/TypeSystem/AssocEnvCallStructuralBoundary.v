@@ -3,7 +3,8 @@ From Facet.TypeSystem Require Import
   RootProvenance EnvStructuralRules AlphaRootEnvFacts AlphaRoots TypeSafetyRootFacts
   TypeSafetyRootsReadyRootSets
   TypeSafetyRootsReadyCtx TypeSafetyRootsReadyMutual
-  TypeSafetyCheckedRoots EnvTypingSoundness
+  TypeSafetyCheckedRoots TypeSafetyRootEnvParamsCovers
+  TypeSafetyParamScopeReady EnvTypingSoundness
   EnvRootSoundness AssocEnvStructural
   AssocDirectCallHelpers AssocFnValueCallHelpers
   AssocArgBoolFacts AssocFnValueCallFacts
@@ -846,6 +847,179 @@ Proof.
       eassumption.
 Qed.
 
+Theorem typed_roots_preserve_param_cover_mutual :
+  (forall env Omega n R Sigma e T Sigma' R' roots,
+    typed_env_roots env Omega n R Sigma e T Sigma' R' roots ->
+    forall ps,
+      root_env_covers_params ps R ->
+      root_env_covers_params ps R') /\
+  (forall env Omega n R Sigma args params Sigma' R' roots,
+    typed_args_roots env Omega n R Sigma args params Sigma' R' roots ->
+    forall ps,
+      root_env_covers_params ps R ->
+      root_env_covers_params ps R') /\
+  (forall env Omega n lts args R Sigma fields defs Sigma' R' roots,
+    typed_fields_roots env Omega n lts args R Sigma fields defs Sigma' R'
+      roots ->
+    forall ps,
+      root_env_covers_params ps R ->
+      root_env_covers_params ps R').
+Proof.
+  assert (Hmut : forall env Omega n,
+    (forall R Sigma e T Sigma' R' roots
+        (H : typed_env_roots env Omega n R Sigma e T Sigma' R' roots),
+      forall ps,
+        root_env_covers_params ps R ->
+        root_env_covers_params ps R') /\
+    (forall R Sigma args params Sigma' R' roots
+        (H : typed_args_roots env Omega n R Sigma args params Sigma' R'
+          roots),
+      forall ps,
+        root_env_covers_params ps R ->
+        root_env_covers_params ps R') /\
+    (forall lts args R Sigma fields defs Sigma' R' roots
+        (H : typed_fields_roots env Omega n lts args R Sigma fields defs
+          Sigma' R' roots),
+      forall ps,
+        root_env_covers_params ps R ->
+        root_env_covers_params ps R') /\
+    (forall lts args R roots_scrut Sigma branches variants expected_core
+        R_out Sigmas Ts rootss
+        (H : typed_match_tail_roots env Omega n lts args R roots_scrut Sigma
+          branches variants expected_core R_out Sigmas Ts rootss),
+      True)).
+  { intros env Omega n.
+    apply typed_roots_ind; intros; try exact I;
+      eauto using root_env_covers_params_update,
+        root_env_covers_params_add, root_env_covers_params_equiv,
+        root_env_covers_params_add_params_roots_same_preserve.
+    - subst.
+      pose proof (H ps H2) as Hcover1.
+      pose proof (root_env_lookup_params_none_b_disjoint_covers
+        ps_head ps R1 e10 Hcover1) as Hdisjoint.
+      pose proof (root_env_covers_params_add_params_roots_same_preserve
+        ps ps_head roots_scrut R1 Hcover1) as Hcover_payload.
+      pose proof (H0 ps Hcover_payload) as Hcover_head.
+      eapply root_env_covers_params_remove_match_params_non_params;
+        eassumption.
+    - match goal with
+      | Hpres1 : forall ps0, root_env_covers_params ps0 R ->
+            root_env_covers_params ps0 R1,
+        Hpres2 : forall ps0, root_env_covers_params ps0
+            (root_env_add x roots1 R1) -> root_env_covers_params ps0 R2,
+        Hnone : root_env_lookup x R1 = None,
+        Hcover : root_env_covers_params ps R |-_ =>
+          pose proof (Hpres1 ps Hcover) as Hcover1;
+          pose proof (root_env_covers_params_lookup_none_not_in
+            ps R1 x Hcover1 Hnone) as Hnotin;
+          pose proof (Hpres2 ps
+            (root_env_covers_params_add ps R1 x roots1 Hcover1)) as Hcover2;
+          eapply root_env_covers_params_remove_non_param; eassumption
+      end.
+    - match goal with
+      | Hpres1 : forall ps0, root_env_covers_params ps0 R ->
+            root_env_covers_params ps0 R1,
+        Hpres2 : forall ps0, root_env_covers_params ps0
+            (root_env_add x roots1 R1) -> root_env_covers_params ps0 R2,
+        Hnone : root_env_lookup x R1 = None,
+        Hcover : root_env_covers_params ps R |-_ =>
+          pose proof (Hpres1 ps Hcover) as Hcover1;
+          pose proof (root_env_covers_params_lookup_none_not_in
+            ps R1 x Hcover1 Hnone) as Hnotin;
+          pose proof (Hpres2 ps
+            (root_env_covers_params_add ps R1 x roots1 Hcover1)) as Hcover2;
+          eapply root_env_covers_params_remove_non_param; eassumption
+      end. }
+  repeat split; intros.
+  - destruct (Hmut env Omega n) as [Hexpr _].
+    eapply Hexpr; eassumption.
+  - destruct (Hmut env Omega n) as [_ [Hargs _]].
+    eapply Hargs; eassumption.
+  - destruct (Hmut env Omega n) as [_ [_ [Hfields _]]].
+    eapply Hfields; eassumption.
+Qed.
+
+Lemma typed_env_roots_preserves_param_cover :
+  forall env Omega n R Sigma e T Sigma' R' roots ps,
+    typed_env_roots env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ps Htyped Hcover.
+  exact (proj1 typed_roots_preserve_param_cover_mutual
+    env Omega n R Sigma e T Sigma' R' roots Htyped ps Hcover).
+Qed.
+
+Lemma typed_args_roots_assoc_preserves_param_cover :
+  forall env Omega n R Sigma args params Sigma' R' roots ps,
+    typed_args_roots_assoc env Omega n R Sigma args params Sigma' R' roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma args params Sigma' R' roots ps Hargs.
+  induction Hargs; intros Hcover.
+  - exact Hcover.
+  - apply IHHargs.
+    eapply typed_env_roots_preserves_param_cover; eassumption.
+Qed.
+
+Lemma typed_env_roots_assoc_call_boundary_preserves_param_cover :
+  forall env Omega n R Sigma e T Sigma' R' roots ps,
+    typed_env_roots_assoc_call_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ps Hboundary Hcover.
+  destruct Hboundary; eauto using typed_args_roots_assoc_preserves_param_cover.
+  all:
+    match goal with
+    | Hcallee : typed_env_roots _ _ _ _ _ _ _ _ ?R1 _,
+      Hargs : typed_args_roots_assoc _ _ _ ?R1 _ _ _ _ _ _ |- _ =>
+        eapply typed_args_roots_assoc_preserves_param_cover;
+          [exact Hargs | eapply typed_env_roots_preserves_param_cover;
+            [exact Hcallee | exact Hcover]]
+    end.
+Qed.
+
+Lemma typed_env_roots_assoc_boundary_preserves_param_cover :
+  forall env Omega n R Sigma e T Sigma' R' roots ps,
+    typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ps Hboundary Hcover.
+  destruct Hboundary.
+  - eapply typed_env_roots_preserves_param_cover; eassumption.
+  - eapply typed_env_roots_assoc_call_boundary_preserves_param_cover;
+      eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_preserves_param_cover :
+  forall env Omega n R Sigma e T Sigma' R' roots ps,
+    typed_env_roots_checked env Omega n R Sigma e T Sigma' R' roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ps Hchecked.
+  induction Hchecked; intros Hcover;
+    eauto using typed_env_roots_preserves_param_cover.
+  - pose proof (typed_env_roots_preserves_param_cover
+      _ _ _ _ _ _ _ _ _ _ ps H Hcover) as Hcover1.
+    pose proof (root_env_covers_params_lookup_none_not_in
+      ps R1 x Hcover1 H1) as Hnotin.
+    pose proof (IHHchecked
+      (root_env_covers_params_add ps R1 x roots1 Hcover1)) as Hcover2.
+    eapply root_env_covers_params_remove_non_param; eassumption.
+  - pose proof (typed_env_roots_preserves_param_cover
+      _ _ _ _ _ _ _ _ _ _ ps H Hcover) as Hcover1.
+    pose proof (root_env_covers_params_lookup_none_not_in
+      ps R1 x Hcover1 H0) as Hnotin.
+    pose proof (IHHchecked
+      (root_env_covers_params_add ps R1 x roots1 Hcover1)) as Hcover2.
+    eapply root_env_covers_params_remove_non_param; eassumption.
+Qed.
+
 Inductive typed_env_roots_checked_assoc_boundary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=
@@ -855,6 +1029,19 @@ Inductive typed_env_roots_checked_assoc_boundary
   | TERCAssocBoundary_RootBoundary : forall R Sigma e T Sigma' R' roots,
       typed_env_roots_assoc_boundary env Omega n R Sigma e T Sigma' R' roots ->
       typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R' roots.
+
+Lemma typed_env_roots_checked_assoc_boundary_preserves_param_cover :
+  forall env Omega n R Sigma e T Sigma' R' roots ps,
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T Sigma' R'
+      roots ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ps Hboundary Hcover.
+  destruct Hboundary.
+  - eapply typed_env_roots_checked_preserves_param_cover; eassumption.
+  - eapply typed_env_roots_assoc_boundary_preserves_param_cover; eassumption.
+Qed.
 
 Lemma typed_env_roots_checked_assoc_boundary_structural :
   forall env Omega n R Sigma e T Sigma' R' roots,

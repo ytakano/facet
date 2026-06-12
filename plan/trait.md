@@ -34,14 +34,14 @@ validity checks must be represented in Rocq and the extracted checker.
   projections are still normalized before ordinary compatibility checks.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
-  end-to-end checker entrypoints. These wrappers preserve the store/root naming
-  and no-shadow invariants needed by safety consumers, but root/shadow checker
-  call sites still ultimately require the primary ordinary `typed_env_roots`
-  relation. This is the current blocker for replacing pre-compatibility
-  normalization with associated-compatible call typing.
+  end-to-end checker entrypoints. These wrappers preserve the store/root naming,
+  no-shadow, and parameter root-coverage invariants needed by safety consumers,
+  but root/shadow checker call sites still ultimately require the primary
+  ordinary `typed_env_roots` relation. This is the current blocker for replacing
+  pre-compatibility normalization with associated-compatible call typing.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
-  deriving syntax is rejected explicitly, and `deriving` is reserved as a
-  keyword.
+  struct/enum deriving syntax is rejected explicitly, and `deriving` is
+  reserved as a keyword.
 
 ## Remaining Tasks
 
@@ -69,13 +69,6 @@ validity checks must be represented in Rocq and the extracted checker.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 
-3. Keep deriving deferred but well specified.
-   - Future deriving should expand to ordinary impl declarations validated by
-     the extracted checker.
-   - Start with structural traits whose generated bodies are deterministic.
-   - Defer deriving for traits with associated type defaults or equality
-     constraints until those features exist.
-
 ## Key Decisions
 
 - Rocq definitions are the source of truth. Generated OCaml extraction artifacts
@@ -88,6 +81,8 @@ validity checks must be represented in Rocq and the extracted checker.
   current implementation pass.
 - Dot method calls remain syntax-level rejected until they can desugar to the
   same receiver-first prefix form before Rocq checking.
+- Future deriving must expand to ordinary impl declarations validated by the
+  extracted checker; no parser-only generated acceptance path is allowed.
 
 ## Required Checks
 

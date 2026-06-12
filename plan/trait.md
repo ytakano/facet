@@ -49,7 +49,7 @@ validity checks must be represented in Rocq and the extracted checker.
   shallow call-route big-step wrappers, component/provider local-bounds facts,
   seen/direct-callee bridges, component-body route/callback providers,
   reachable route package/target providers, callback-height big-step safety,
-  and provider-style route/callback bundles. The old ordinary
+  and provider-style route/callback/store-safe bundles. The old ordinary
   `typed_env_roots` path remains available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is

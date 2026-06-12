@@ -2534,7 +2534,7 @@ Proof.
   - rewrite apply_type_params_nil. exact Hexcl_env.
 Qed.
 
-Definition callee_body_root_shadow_captured_call_store_safe_summary
+Definition callee_body_root_shadow_captured_call_base_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_captured_call_provenance_summary env fdef \/
   callee_body_root_shadow_captured_call_direct_narrow_store_safe_summary
@@ -2558,6 +2558,10 @@ Definition callee_body_root_shadow_captured_call_store_safe_summary
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
+
+Definition callee_body_root_shadow_captured_call_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_captured_call_base_store_safe_summary env fdef.
 
 Lemma check_fn_root_shadow_generic_direct_store_safe_summary_sound :
   forall env fdef,
@@ -2936,13 +2940,13 @@ Proof.
   exact Hcombined.
 Qed.
 
-Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
+Lemma check_fn_root_shadow_captured_call_base_store_safe_summary_sound :
   forall env fdef,
-    check_fn_root_shadow_captured_call_store_safe_summary env fdef = true ->
-    callee_body_root_shadow_captured_call_store_safe_summary env fdef.
+    check_fn_root_shadow_captured_call_base_store_safe_summary env fdef = true ->
+    callee_body_root_shadow_captured_call_base_store_safe_summary env fdef.
 Proof.
   intros env fdef Hcheck.
-  unfold check_fn_root_shadow_captured_call_store_safe_summary in Hcheck.
+  unfold check_fn_root_shadow_captured_call_base_store_safe_summary in Hcheck.
   apply orb_true_iff in Hcheck as [Hprefix_local | Hnarrow].
   - apply orb_true_iff in Hprefix_local as [Hprefix_if | Hlocal].
     { apply orb_true_iff in Hprefix_if as [Hprefix_let | Hif].
@@ -3253,6 +3257,18 @@ Proof.
     + exact Hcompat.
     + apply fn_params_roots_exclude_b_sound. exact Hroots.
     + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = true ->
+    callee_body_root_shadow_captured_call_store_safe_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary in Hcheck.
+  unfold callee_body_root_shadow_captured_call_store_safe_summary.
+  eapply check_fn_root_shadow_captured_call_base_store_safe_summary_sound.
+  exact Hcheck.
 Qed.
 
 Definition env_fns_root_shadow_captured_call_store_safe_summary_check_ready

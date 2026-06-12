@@ -1533,6 +1533,48 @@ Proof.
   exists s1, v, s2, vs. split; assumption.
 Qed.
 
+Lemma direct_call_receiver_method_eval_synthetic :
+  forall env s raw_body method_name type_args receiver_name receiver_args
+      method_args synthetic_body s' v,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) ->
+    eval env s raw_body s' v ->
+    eval env s synthetic_body s' v.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_args
+    method_args synthetic_body s' v Htarget Heval.
+  destruct (direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_args method_args
+    synthetic_body Htarget) as [[Hraw | Hraw] Hsynthetic].
+  - rewrite Hsynthetic. rewrite Hraw in Heval. exact Heval.
+  - rewrite Hsynthetic.
+    rewrite Hraw in Heval.
+    dependent destruction Heval.
+    dependent destruction H1.
+    eapply Eval_CallGeneric; try eassumption.
+    eapply EvalArgs_Cons.
+    + apply eval_call_expr_fn_as_call. exact H1.
+    + exact H2.
+Qed.
+
+Lemma generic_direct_call_receiver_method_eval_synthetic :
+  forall env s raw_body method_name type_args receiver_name receiver_type_args
+      receiver_args method_args synthetic_body s' v,
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) ->
+    eval env s raw_body s' v ->
+    eval env s synthetic_body s' v.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body s' v Htarget Heval.
+  destruct (generic_direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body Htarget) as [Hraw Hsynthetic].
+  rewrite Hsynthetic. rewrite Hraw in Heval. exact Heval.
+Qed.
+
 Lemma eval_direct_receiver_call_store_safe_narrow_summary_value_prefix_named :
   forall env Omega n R Sigma fname args T Sigma_out R_out roots
       s s' v fdef,

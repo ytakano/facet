@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness EnvRuntimeValidatorFacts EnvRuntimeCapturedCallSummaryFacts EnvRuntimeCapturedSafety.
+From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness AssocEnvCallStructuralBoundary EnvRuntimeValidatorFacts EnvRuntimeCapturedCallSummaryFacts EnvRuntimeCapturedSafety.
 From Stdlib Require Import List Bool.
 Import ListNotations.
 
@@ -85,6 +85,60 @@ Theorem check_program_env_end2end_sound :
 Proof.
   intros env env' f _ Hprog Hin.
   eapply infer_program_env_end2end_sound; eauto.
+Qed.
+
+Theorem infer_fn_env_end2end_assoc_sound :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end_assoc env f = infer_ok (T, Γ_out, R_out, roots) ->
+    checked_fn_env_roots_checked_assoc_boundary env f
+      (initial_root_env_for_params (fn_params f ++ fn_captures f))
+      R_out roots.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  eapply infer_fn_env_end2end_assoc_entry_boundary_sound. exact Hend.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_in_sound :
+  forall env fns f,
+    infer_fns_env_end2end_assoc env fns = infer_ok tt ->
+    In f fns ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env fns f Hinfer Hin.
+  eapply infer_fns_env_end2end_assoc_in_boundary_sound; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_entry_boundary_sound; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc env = true ->
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_sound; eauto.
 Qed.
 
 Lemma check_program_env_end2end_infer_ok :

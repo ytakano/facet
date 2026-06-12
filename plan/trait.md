@@ -42,7 +42,8 @@ validity checks must be represented in Rocq and the extracted checker.
   extraction; the proof file only proves its checked assoc-boundary soundness.
   Assoc-aware checked core/env/full entrypoints are also executable, exported,
   and covered by assoc-boundary soundness. An assoc-aware end-to-end checker
-  variant is exported and has program-level assoc-boundary soundness. The
+  variant is exported and has program-level assoc-boundary soundness, now also
+  surfaced from the end-to-end safety module for downstream consumers. The
   remaining work is making that path the active safety-backed checker path.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
@@ -58,7 +59,7 @@ validity checks must be represented in Rocq and the extracted checker.
    - Switch the active end-to-end checker path from ordinary checked roots to
      the assoc-aware end-to-end entrypoint, without weakening the ordinary
      `typed_env_roots` soundness path.
-   - Bridge or generalize the existing end-to-end safety consumers that still
+   - Bridge or generalize the remaining end-to-end safety consumers that still
      require ordinary `checked_fn_env_roots_checked` so they can consume the
      assoc-boundary relation instead.
    - Preserve the required theorem names:

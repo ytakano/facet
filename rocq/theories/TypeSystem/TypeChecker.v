@@ -48,4 +48,7 @@ Extraction "../fixtures/TypeChecker.ml"
   check_program_env_end2end_assoc
   infer_fn_env_end2end_strict_exact_closure
   infer_program_env_end2end_strict_exact_closure
-  check_program_env_end2end_strict_exact_closure.
+  check_program_env_end2end_strict_exact_closure
+  infer_fn_env_end2end_assoc_strict_exact_closure
+  infer_program_env_end2end_assoc_strict_exact_closure
+  check_program_env_end2end_assoc_strict_exact_closure.

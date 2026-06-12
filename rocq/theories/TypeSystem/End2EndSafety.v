@@ -330,6 +330,130 @@ Proof.
 Qed.
 
 
+
+Theorem infer_fn_env_end2end_assoc_strict_exact_closure_sound :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end_assoc_strict_exact_closure env f =
+      infer_ok (T, Γ_out, R_out, roots) ->
+    checked_fn_env_roots_checked_assoc_boundary env f
+      (initial_root_env_for_params (fn_params f ++ fn_captures f))
+      R_out roots.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  unfold infer_fn_env_end2end_assoc_strict_exact_closure in Hend.
+  remember (initial_root_env_for_params (fn_params f ++ fn_captures f))
+    as R0 eqn:HR0.
+  destruct (infer_full_env_roots_checked_assoc env f R0)
+    as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
+  destruct (check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+              env f); try discriminate.
+  injection Hend as <- <- <- <-.
+  subst R0.
+  eapply infer_full_env_roots_checked_assoc_entry_boundary_sound.
+  exact Hroots.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_strict_exact_closure_in_sound :
+  forall env fns f,
+    infer_fns_env_end2end_assoc_strict_exact_closure env fns = infer_ok tt ->
+    In f fns ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_strict_exact_closure env f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env fns.
+  induction fns as [| f0 rest IH]; intros f Hinfer Hin.
+  - contradiction.
+  - simpl in Hinfer, Hin.
+    destruct (infer_fn_env_end2end_assoc_strict_exact_closure env f0)
+      as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hhead; try discriminate.
+    destruct Hin as [Heq | Hin].
+    + subst f0.
+      exists T0, Γ0, R0_out, roots0. split.
+      * exact Hhead.
+      * eapply infer_fn_env_end2end_assoc_strict_exact_closure_sound.
+        exact Hhead.
+    + eapply IH; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_strict_exact_closure_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_strict_exact_closure env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  unfold infer_program_env_end2end_assoc_strict_exact_closure in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_assoc_strict_exact_closure
+              env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  inversion Hprog; subst env'.
+  eapply infer_fns_env_end2end_assoc_strict_exact_closure_in_sound; eauto.
+Qed.
+
+Lemma check_program_env_end2end_assoc_strict_exact_closure_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_strict_exact_closure env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_strict_exact_closure in Hcheck.
+  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
+    as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_strict_exact_closure_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_strict_exact_closure env = true ->
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_strict_exact_closure env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_sound; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_strict_exact_closure_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_strict_exact_closure env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc_strict_exact_closure env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct (check_program_env_end2end_assoc_strict_exact_closure_infer_ok
+              env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_sound; eauto.
+Qed.
+
 Lemma infer_fn_env_end2end_assoc_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end_assoc env f = infer_ok (T, Γ_out, R_out, roots) ->

@@ -16386,6 +16386,52 @@ let check_program_env_end2end_strict_exact_closure env =
   | Infer_ok _ -> true
   | Infer_err _ -> false
 
+(** val infer_fn_env_end2end_assoc_strict_exact_closure :
+    global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_fn_env_end2end_assoc_strict_exact_closure env f =
+  let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
+  (match infer_full_env_roots_checked_assoc env f r0 with
+   | Infer_ok res ->
+     if check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+          env f
+     then Infer_ok res
+     else Infer_err ErrEndToEndSafetyGateFailed
+   | Infer_err err -> Infer_err err)
+
+(** val infer_fns_env_end2end_assoc_strict_exact_closure :
+    global_env -> fn_def list -> unit infer_result **)
+
+let rec infer_fns_env_end2end_assoc_strict_exact_closure env = function
+| [] -> Infer_ok ()
+| f :: rest ->
+  (match infer_fn_env_end2end_assoc_strict_exact_closure env f with
+   | Infer_ok _ -> infer_fns_env_end2end_assoc_strict_exact_closure env rest
+   | Infer_err err -> Infer_err (ErrInFunction (f.fn_name, err)))
+
+(** val infer_program_env_end2end_assoc_strict_exact_closure :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_strict_exact_closure env =
+  let env_alpha = alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha
+  then (match infer_program_env_alpha_elab env with
+        | Infer_ok env_elab ->
+          (match infer_fns_env_end2end_assoc_strict_exact_closure env_elab
+                   env_elab.env_fns with
+           | Infer_ok _ -> Infer_ok env_elab
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+  else Infer_err ErrGlobalNamesNotUnique
+
+(** val check_program_env_end2end_assoc_strict_exact_closure :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_strict_exact_closure env =
+  match infer_program_env_end2end_assoc_strict_exact_closure env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
 type raw_expr =
 | RawUnit
 | RawLit of literal

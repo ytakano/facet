@@ -1533,6 +1533,17 @@ val infer_program_env_end2end_strict_exact_closure :
 
 val check_program_env_end2end_strict_exact_closure : global_env -> bool
 
+val infer_fn_env_end2end_assoc_strict_exact_closure :
+  global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_fns_env_end2end_assoc_strict_exact_closure :
+  global_env -> fn_def list -> unit infer_result
+
+val infer_program_env_end2end_assoc_strict_exact_closure :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_assoc_strict_exact_closure : global_env -> bool
+
 type raw_expr =
 | RawUnit
 | RawLit of literal

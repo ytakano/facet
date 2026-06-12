@@ -1523,6 +1523,93 @@ Proof.
   exact Hpayload.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_target_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_target_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_target_check_in_provider_of_exact_closure_check_in_provider.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_exact_closure_check_in_provider.
+    exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_summary_at_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_synthetic_direct_call_ready_summary_at_check_in_provider_of_target_check_in_provider.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_target_check_in_provider.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_route_summary_in_local_bounds_family :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcomponent_check.
+  split.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_component_summary_in_local_bounds_family.
+    + exact Hprog.
+    + eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
+      exact Hprog.
+    + exact Hbase.
+    + exact Henv.
+    + exact Hin.
+    + exact Hcomponent_check.
+  - intros fcall used used' fname_body args_body synthetic_body Hrename Htarget.
+    destruct Hbase as (bounds_base & ->).
+    destruct Henv as (bounds & ->).
+    change (env_fns
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env' bounds_base) bounds))
+      with (env_fns env') in Hin.
+    destruct (direct_call_target_expr_alpha_rename_fn_def_inv
+                used fdef fcall used' fname_body args_body synthetic_body
+                Hrename Htarget) as (args0 & Htarget_original).
+    pose proof (alpha_rename_fn_def_bounds used fdef fcall used' Hrename)
+      as Hbounds.
+    rewrite Hbounds.
+    change (fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env' (fn_bounds fdef)) fname_body).
+    eapply infer_program_env_end2end_assoc_strict_exact_closure_summary_at_check_in_provider;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcomponent_check.
+  split.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_component_route_summary_in_local_bounds_family;
+      eassumption.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_exact_body_target_in_local_bounds_family;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_route_summary_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

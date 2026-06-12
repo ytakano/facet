@@ -1729,7 +1729,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
       end)
   end.
 
-Definition check_fn_root_shadow_captured_call_base_store_safe_summary
+Definition check_fn_root_shadow_captured_call_core_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   (check_fn_root_shadow_captured_call_provenance_summary env fdef ||
   (match direct_call_target_expr (fn_body fdef) with
@@ -1936,6 +1936,10 @@ Definition check_fn_root_shadow_captured_call_base_store_safe_summary
       fn_params_root_env_excludes_b (fn_params fdef) R_out
   | _, _ => false
   end.
+
+Definition check_fn_root_shadow_captured_call_base_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_captured_call_core_store_safe_summary env fdef.
 
 Definition check_fn_root_shadow_captured_call_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=

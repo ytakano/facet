@@ -15813,10 +15813,10 @@ let check_fn_root_shadow_captured_call_provenance_summary env fdef =
                  | None -> false)
             | None -> false))
 
-(** val check_fn_root_shadow_captured_call_base_store_safe_summary :
+(** val check_fn_root_shadow_captured_call_core_store_safe_summary :
     global_env -> fn_def -> bool **)
 
-let check_fn_root_shadow_captured_call_base_store_safe_summary env fdef =
+let check_fn_root_shadow_captured_call_core_store_safe_summary env fdef =
   (||)
     ((||)
       ((||)
@@ -16146,6 +16146,12 @@ let check_fn_root_shadow_captured_call_base_store_safe_summary env fdef =
             (fn_params_root_env_excludes_b fdef.fn_params r_out)
         | Infer_err _ -> false)
      | Infer_err _ -> false)
+
+(** val check_fn_root_shadow_captured_call_base_store_safe_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_base_store_safe_summary =
+  check_fn_root_shadow_captured_call_core_store_safe_summary
 
 (** val check_fn_root_shadow_captured_call_store_safe_summary :
     global_env -> fn_def -> bool **)

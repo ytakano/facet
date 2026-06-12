@@ -33,10 +33,11 @@ validity checks must be represented in Rocq and the extracted checker.
   definitions, standalone executable checker helpers, helper soundness lemmas,
   runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas,
   hidden-let synthetic receiver body constructors, hidden receiver `EVar`
-  evaluation helpers, and a behavior-preserving split between the active captured-call core
-  gate and its public base wrapper. The direct and generic receiver-method checker
-  summaries remain factored but inactive until their dedicated runtime safety
-  branch is proved.
+  evaluation helpers, structured receiver-method checker view lemmas, and a
+  behavior-preserving split between the active captured-call core gate and its
+  public base wrapper. The direct and generic receiver-method checker summaries
+  remain factored but inactive until their dedicated runtime safety branch is
+  proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -89,11 +90,11 @@ validity checks must be represented in Rocq and the extracted checker.
      definitions, standalone checker helpers, helper soundness lemmas, runtime
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
      constructors, hidden receiver `EVar` evaluation helpers, hidden-let
-     receiver-method checker summaries, and the active-core/public-base gate
-     split now isolate direct and generic direct-call receiver method shapes
-     without changing accepted programs. Next, prove the receiver-method-specific
-     runtime branch, then enable those summaries as outer alternatives on the
-     public base checker gate.
+     receiver-method checker summaries, structured checker view lemmas, and the
+     active-core/public-base gate split now isolate direct and generic
+     direct-call receiver method shapes without changing accepted programs.
+     Next, prove the receiver-method-specific runtime branch, then enable those
+     summaries as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

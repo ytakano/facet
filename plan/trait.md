@@ -26,8 +26,10 @@ validity checks must be represented in Rocq and the extracted checker.
   constructors whose store-safe argument evidence is checked in Rocq.
   Field-bearing struct literals, payload-bearing enum constructors, direct-call
   receivers, generic direct-call receivers, non-pure inferred locals, and
-  general annotated locals remain gated by tests until store/root-safe checker
-  evidence is available.
+  general annotated locals remain gated. Direct-call receivers cannot be
+  unlocked by OCaml desugaring alone: lowering the receiver through a hidden let
+  still fails the extracted end-to-end safety gate, so the next step must add
+  Rocq checker sidecar evidence for that shape.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -73,9 +75,12 @@ validity checks must be represented in Rocq and the extracted checker.
      store/root-safe summary evidence. Field-bearing struct literals,
      payload-bearing enum constructors, direct-call receivers, generic
      direct-call receivers, and non-pure locals are still gated.
-   - Direct-call receivers are not a checker-only switch: existing store-safe
+   - Direct-call receivers are not an OCaml-only switch: existing store-safe
      argument facts assume arg evaluation preserves static root/store shape,
-     while direct calls need the separate direct-call route package.
+     and a hidden-let receiver lowering still fails the extracted end-to-end
+     gate. Add a Rocq sidecar/checker branch that recognizes the direct-call
+     receiver shape, reuses the direct-call route package for receiver
+     evaluation, and then checks the method call with an `EVar` receiver.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

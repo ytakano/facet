@@ -3534,6 +3534,85 @@ Proof.
   - exact Htarget_body.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_body_reachable_exact_body_route_package_provider_of_component_check :
+  forall env env' f_component fname args synthetic_body fdef,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fname.
+Proof.
+  intros env env' f_component fname args synthetic_body fdef Hprog
+    Hin_component Hcomponent_check Htarget Hlookup env0 fname0 Hreachable
+    fcur fcall used used' fname_body args_body Hin Hname Hrename
+    Htarget_body.
+  assert (Hbody_base :
+    global_env_local_bounds_family env'
+      (global_env_with_local_bounds env' (fn_bounds f_component))).
+  { exists (fn_bounds f_component). reflexivity. }
+  destruct
+    (infer_program_env_end2end_assoc_strict_exact_closure_component_body_reachable_component_check_in_local_bounds_family
+      env env' f_component fname args synthetic_body fdef env0 fname0 fcur
+      Hprog Hin_component Hcomponent_check Htarget Hlookup Hreachable Hin
+      Hname)
+    as [Hfamily Hcheck].
+  pose proof
+    (infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family
+      env env' (global_env_with_local_bounds env' (fn_bounds f_component))
+      env0 fname0 fcur Hprog Hbody_base Hfamily Hin Hname Hcheck)
+    as Hpackage.
+  eapply Hpackage; eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_body_reachable_exact_body_target_provider_of_component_check :
+  forall env env' f_component fname args synthetic_body fdef,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_exact_body_target_provider
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fname.
+Proof.
+  intros env env' f_component fname args synthetic_body fdef Hprog
+    Hin_component Hcomponent_check Htarget Hlookup env0 fname0 Hreachable
+    fcur fcall used used' fname_body args_body synthetic_body0 Hin Hname
+    Hrename Htarget_body.
+  assert (Hbody_base :
+    global_env_local_bounds_family env'
+      (global_env_with_local_bounds env' (fn_bounds f_component))).
+  { exists (fn_bounds f_component). reflexivity. }
+  destruct
+    (infer_program_env_end2end_assoc_strict_exact_closure_component_body_reachable_component_check_in_local_bounds_family
+      env env' f_component fname args synthetic_body fdef env0 fname0 fcur
+      Hprog Hin_component Hcomponent_check Htarget Hlookup Hreachable Hin
+      Hname)
+    as [Hfamily Hcheck].
+  destruct
+    (infer_program_env_end2end_assoc_strict_exact_closure_component_ready_payload_in_local_bounds_family
+      env env' (global_env_with_local_bounds env' (fn_bounds f_component))
+      env0 fcur Hprog Hbody_base Hfamily Hin Hcheck)
+    as [_ [_ Hexact]].
+  eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any.
+  - destruct
+      (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+        env0 fcur Hexact) as [_ Hexact_target].
+    exact Hexact_target.
+  - exact Hrename.
+  - exact Htarget_body.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_callbacks_of_component_check :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

@@ -70,8 +70,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Preserve the required theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
-   - Remove pre-compatibility normalization once associated compatibility is
-     the accepted checker path and projection mismatch tests still reject.
+   - Remove pre-compatibility normalization only after raw elaboration expected-
+     type paths use assoc compatibility. A direct removal currently rejects valid
+     projection compatibility cases before checker execution, so this remains a
+     raw-elaboration bridge task rather than a CLI switch.
 
 2. Finish UFCS receiver hardening.
    - Keep the canonical surface syntax as prefix calls with receiver-first

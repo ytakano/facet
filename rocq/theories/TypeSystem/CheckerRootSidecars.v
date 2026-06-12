@@ -126,6 +126,26 @@ Definition direct_call_receiver_method_target_expr
   | _ => None
   end.
 
+Definition receiver_method_hidden_receiver_name : ident :=
+  ("__facet_method_receiver"%string, 0).
+
+Definition direct_call_receiver_method_hidden_let_synthetic_body
+    (T_receiver : Ty) (method_name : ident) (type_args : list Ty)
+    (receiver_name : ident) (receiver_args method_args : list expr) : expr :=
+  ELet MImmutable receiver_method_hidden_receiver_name T_receiver
+    (ECall receiver_name receiver_args)
+    (ECallGeneric method_name type_args
+      (EVar receiver_method_hidden_receiver_name :: method_args)).
+
+Definition generic_direct_call_receiver_method_hidden_let_synthetic_body
+    (T_receiver : Ty) (method_name : ident) (type_args : list Ty)
+    (receiver_name : ident) (receiver_type_args : list Ty)
+    (receiver_args method_args : list expr) : expr :=
+  ELet MImmutable receiver_method_hidden_receiver_name T_receiver
+    (ECallGeneric receiver_name receiver_type_args receiver_args)
+    (ECallGeneric method_name type_args
+      (EVar receiver_method_hidden_receiver_name :: method_args)).
+
 Definition generic_direct_call_receiver_method_target_expr
     (e : expr)
     : option (ident * list Ty * ident * list Ty * list expr * list expr * expr) :=

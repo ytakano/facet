@@ -1533,6 +1533,109 @@ Proof.
   exists s1, v, s2, vs. split; assumption.
 Qed.
 
+Lemma direct_call_receiver_method_eval_args_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_args
+      method_args synthetic_body s' v,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_method_args v_receiver vs_method,
+      eval_args env s (ECall receiver_name receiver_args :: method_args)
+        s_method_args (v_receiver :: vs_method).
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_args
+    method_args synthetic_body s' v Htarget Heval.
+  destruct (direct_call_receiver_method_eval_receiver_inv
+    env s raw_body method_name type_args receiver_name receiver_args
+    method_args synthetic_body s' v Htarget Heval)
+    as (s_receiver & v_receiver & s_method_args & vs_method &
+      Heval_receiver & Heval_method_args).
+  exists s_method_args, v_receiver, vs_method.
+  eapply EvalArgs_Cons; eassumption.
+Qed.
+
+Lemma generic_direct_call_receiver_method_eval_args_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_type_args
+      receiver_args method_args synthetic_body s' v,
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_method_args v_receiver vs_method,
+      eval_args env s
+        (ECallGeneric receiver_name receiver_type_args receiver_args ::
+          method_args) s_method_args (v_receiver :: vs_method).
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body s' v Htarget Heval.
+  destruct (generic_direct_call_receiver_method_eval_receiver_inv
+    env s raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body s' v Htarget Heval)
+    as (s_receiver & v_receiver & s_method_args & vs_method &
+      Heval_receiver & Heval_method_args).
+  exists s_method_args, v_receiver, vs_method.
+  eapply EvalArgs_Cons; eassumption.
+Qed.
+
+Lemma eval_bound_receiver_var_copy :
+  forall env x T v s,
+    needs_consume T = false ->
+    eval env (store_add x T v s) (EVar x) (store_add x T v s) v.
+Proof.
+  intros env x T v s Hcopy.
+  eapply Eval_Var_Copy with
+    (e := MkStoreEntry x T v (binding_state_of_bool false)).
+  - unfold store_add, store_lookup. simpl. rewrite ident_eqb_refl.
+    reflexivity.
+  - exact Hcopy.
+Qed.
+
+Lemma eval_bound_receiver_var_consume :
+  forall env x T v s,
+    needs_consume T = true ->
+    eval env (store_add x T v s) (EVar x)
+      (store_mark_used x (store_add x T v s)) v.
+Proof.
+  intros env x T v s Hconsume.
+  eapply Eval_Var_Consume with
+    (e := MkStoreEntry x T v (binding_state_of_bool false)).
+  - unfold store_add, store_lookup. simpl. rewrite ident_eqb_refl.
+    reflexivity.
+  - exact Hconsume.
+  - unfold se_used, se_state. simpl. reflexivity.
+Qed.
+
+Lemma eval_args_bound_receiver_var_cons :
+  forall env x T v s s_var method_args s_method_args vs_method,
+    eval env (store_add x T v s) (EVar x) s_var v ->
+    eval_args env s_var method_args s_method_args vs_method ->
+    eval_args env (store_add x T v s) (EVar x :: method_args)
+      s_method_args (v :: vs_method).
+Proof.
+  intros env x T v s s_var method_args s_method_args vs_method
+    Heval_var Heval_args.
+  eapply EvalArgs_Cons; eassumption.
+Qed.
+
+Lemma hidden_let_receiver_method_eval :
+  forall env s m x T_receiver receiver_expr method_name type_args
+      method_args s_receiver v_receiver s_method v,
+    eval env s receiver_expr s_receiver v_receiver ->
+    eval env (store_add x T_receiver v_receiver s_receiver)
+      (ECallGeneric method_name type_args (EVar x :: method_args))
+      s_method v ->
+    eval env s
+      (ELet m x T_receiver receiver_expr
+        (ECallGeneric method_name type_args (EVar x :: method_args)))
+      (store_remove x s_method) v.
+Proof.
+  intros env s m x T_receiver receiver_expr method_name type_args
+    method_args s_receiver v_receiver s_method v Heval_receiver
+    Heval_method.
+  eapply Eval_Let; eassumption.
+Qed.
+
 Lemma direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_args
       method_args synthetic_body s' v,

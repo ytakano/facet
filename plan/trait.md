@@ -31,11 +31,12 @@ validity checks must be represented in Rocq and the extracted checker.
   still fails the extracted end-to-end safety gate. Rocq now has executable
   sidecar recognizers, proof-side shape lemmas, summary package
   definitions, standalone executable checker helpers, helper soundness lemmas,
-  runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas, and
-  a behavior-preserving base checker/summary gate split for direct and generic
-  direct-call receiver method-call shapes. The remaining step is to add the
-  receiver-method branches around that base gate and prove the main runtime
-  safety branch.
+  runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas,
+  hidden-let synthetic receiver body constructors, hidden receiver `EVar`
+  evaluation helpers, and a behavior-preserving base checker/summary gate split
+  for direct and generic direct-call receiver method-call shapes. The remaining
+  step is to switch the receiver-method checker branches to hidden-let bodies,
+  add them around the base gate, and prove the main runtime safety branch.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -86,10 +87,12 @@ validity checks must be represented in Rocq and the extracted checker.
      and a hidden-let receiver lowering still fails the extracted end-to-end
      gate. The executable sidecar recognizers, shape lemmas, summary package
      definitions, standalone checker helpers, helper soundness lemmas, runtime
-     receiver wrappers, synthetic-body evaluation lemmas, and base gate split
-     now identify and isolate direct and generic direct-call receiver method
-     shapes. Connect those helpers as outer branches on the main checker gate
-     and prove the main runtime safety branch with receiver-method-specific
+     receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
+     constructors, hidden receiver `EVar` evaluation helpers, and base gate
+     split now identify and isolate direct and generic direct-call receiver
+     method shapes. Next, make the checker summaries use the hidden-let body,
+     connect those helpers as outer branches on the main checker gate, and
+     prove the main runtime safety branch with receiver-method-specific
      evidence instead of treating the nested receiver call as an ordinary
      store-safe function-value argument.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

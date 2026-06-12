@@ -45,8 +45,9 @@ validity checks must be represented in Rocq and the extracted checker.
   variant is exported and has program-level assoc-boundary soundness, now also
   surfaced from the end-to-end safety module for downstream consumers. That
   module can also derive the same sidecar readiness checks from the assoc-aware
-  path. The remaining work is making that path the active safety-backed checker
-  path.
+  path, and the base big-step checked-initial-ready safety theorem has an
+  assoc-aware counterpart. The remaining work is making that path the active
+  safety-backed checker path.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -61,9 +62,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Switch the active end-to-end checker path from ordinary checked roots to
      the assoc-aware end-to-end entrypoint, without weakening the ordinary
      `typed_env_roots` soundness path.
-   - Bridge or generalize the remaining big-step safety consumers that still
-     require ordinary `checked_fn_env_roots_checked` so they can consume the
-     assoc-boundary relation instead.
+   - Bridge or generalize the remaining derived big-step safety consumers that
+     still require ordinary `checked_fn_env_roots_checked` so they can consume
+     the assoc-boundary relation instead.
    - Preserve the required theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and
      `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

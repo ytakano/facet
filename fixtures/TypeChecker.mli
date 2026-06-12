@@ -1445,6 +1445,9 @@ val check_expr_root_shadow_store_safe_narrow_summary_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 
+val check_fn_root_shadow_generic_direct_store_safe_summary_target :
+  global_env -> fn_def -> ident -> ty list -> expr list -> expr -> bool
+
 val check_fn_root_shadow_generic_direct_store_safe_summary :
   global_env -> fn_def -> bool
 

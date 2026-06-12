@@ -46,6 +46,8 @@ The current history uses short imperative commit messages, for example `add dock
 
 Respect generated files: edit Rocq sources first and let `make` update extraction outputs. Avoid broad rewrites of proof files unless required by the change, and keep module order consistent with `_CoqProject`. Keep Rocq and OCaml pipelines in order: run Rocq extraction before relying on dune builds that consume `fixtures/TypeChecker.ml`.
 
+When a Rocq compile is slow, times out, appears OOM-killed, or clearly regresses, use the `rocq-compile-time-profiler` skill before continuing proof edits. Prefer targeted profiling first, for example `rocq compile -time-file /tmp/name.txt -R theories Facet -o /tmp/File.vo -noglob theories/TypeSystem/File.v` under an appropriate `timeout`, so tracked `.vo`/`.glob` outputs are not churned while diagnosing the bottleneck. Avoid repeated full `make` runs until the specific slow file or proof command has been identified.
+
 # Sub-agent policy
 
 Use sub-agents only for implementation tasks.

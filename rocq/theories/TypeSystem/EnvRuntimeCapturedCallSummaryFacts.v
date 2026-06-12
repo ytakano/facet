@@ -80,115 +80,19 @@ Proof.
 Qed.
 Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
-  exists fname type_args args raw_body synthetic_body fcallee T_body Gamma_out
-      R_body roots_body,
-    fn_body fdef = raw_body /\
-    generic_direct_call_target_expr raw_body =
-      Some (fname, type_args, args, synthetic_body) /\
-    synthetic_body = ECallGeneric fname type_args args /\
-    store_safe_function_value_call_args env args /\
-    In fcallee (env_fns env) /\
-    fn_name fcallee = fname /\
-    Datatypes.length type_args = fn_type_params fcallee /\
-    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_bounds fcallee) type_args = None /\
-    preservation_ready_expr
-      (subst_type_params_expr type_args (fn_body fcallee)) /\
-    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
-      env 10000 fcallee type_args /\
-    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
-    typed_env_roots_shadow_safe
-      (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_outlives fdef)
-      (fn_lifetimes fdef)
-      (initial_root_env_for_fn fdef)
-      (sctx_of_ctx (fn_body_ctx fdef))
-      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
-    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
-    roots_exclude_params (fn_params fdef) roots_body /\
-    root_env_excludes_params (fn_params fdef) R_body.
+  check_fn_root_shadow_generic_direct_store_safe_summary env fdef = true.
+
 
 Definition callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
-  exists method_name type_args receiver_name receiver_args method_args raw_body
-      synthetic_body freceiver fmethod T_body Gamma_out R_body roots_body,
-    fn_body fdef = raw_body /\
-    direct_call_receiver_method_target_expr raw_body =
-      Some (method_name, type_args, receiver_name, receiver_args, method_args,
-        synthetic_body) /\
-    store_safe_function_value_call_args env receiver_args /\
-    store_safe_function_value_call_args env method_args /\
-    In freceiver (env_fns env) /\
-    fn_name freceiver = receiver_name /\
-    callee_body_root_shadow_store_safe_narrow_summary env freceiver /\
-    In fmethod (env_fns env) /\
-    fn_name fmethod = method_name /\
-    Datatypes.length type_args = fn_type_params fmethod /\
-    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_bounds fmethod) type_args = None /\
-    preservation_ready_expr
-      (subst_type_params_expr type_args (fn_body fmethod)) /\
-    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
-      env 10000 fmethod type_args /\
-    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
-    typed_env_roots_shadow_safe
-      (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_outlives fdef)
-      (fn_lifetimes fdef)
-      (initial_root_env_for_fn fdef)
-      (sctx_of_ctx (fn_body_ctx fdef))
-      (direct_call_receiver_method_hidden_let_synthetic_body
-        (fn_ret freceiver) method_name type_args receiver_name receiver_args
-        method_args)
-      T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
-    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
-    roots_exclude_params (fn_params fdef) roots_body /\
-    root_env_excludes_params (fn_params fdef) R_body.
+  check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef = true.
+
 
 Definition callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
-  exists method_name type_args receiver_name receiver_type_args receiver_args
-      method_args raw_body synthetic_body freceiver fmethod T_body Gamma_out
-      R_body roots_body,
-    fn_body fdef = raw_body /\
-    generic_direct_call_receiver_method_target_expr raw_body =
-      Some (method_name, type_args, receiver_name, receiver_type_args,
-        receiver_args, method_args, synthetic_body) /\
-    store_safe_function_value_call_args env receiver_args /\
-    store_safe_function_value_call_args env method_args /\
-    In freceiver (env_fns env) /\
-    fn_name freceiver = receiver_name /\
-    Datatypes.length receiver_type_args = fn_type_params freceiver /\
-    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_bounds freceiver) receiver_type_args = None /\
-    preservation_ready_expr
-      (subst_type_params_expr receiver_type_args (fn_body freceiver)) /\
-    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
-      env 10000 freceiver receiver_type_args /\
-    In fmethod (env_fns env) /\
-    fn_name fmethod = method_name /\
-    Datatypes.length type_args = fn_type_params fmethod /\
-    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_bounds fmethod) type_args = None /\
-    preservation_ready_expr
-      (subst_type_params_expr type_args (fn_body fmethod)) /\
-    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
-      env 10000 fmethod type_args /\
-    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
-    typed_env_roots_shadow_safe
-      (global_env_with_local_bounds env (fn_bounds fdef))
-      (fn_outlives fdef)
-      (fn_lifetimes fdef)
-      (initial_root_env_for_fn fdef)
-      (sctx_of_ctx (fn_body_ctx fdef))
-      (generic_direct_call_receiver_method_hidden_let_synthetic_body
-        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
-        method_name type_args receiver_name receiver_type_args receiver_args
-        method_args)
-      T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
-    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
-    roots_exclude_params (fn_params fdef) roots_body /\
-    root_env_excludes_params (fn_params fdef) R_body.
+  check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary env fdef = true.
+
+
 
 Definition callee_body_root_shadow_captured_call_generic_direct_let_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
@@ -2514,32 +2418,54 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_instantiated_nil_fuel
       env 10001 fdef [].
 Proof.
   intros env fdef Hsummary.
-  destruct Hsummary as
-    (fname & type_args & args & raw_body & synthetic_body & fcallee &
-      T_body & Gamma_out & R_body & roots_body & Hbody & Htarget &
-      Hsynthetic & Hsafe & Hin & Hname & Harity & Hbounds & Hcallee_ready &
-      Hcallee_summary & Hnodup & Htyped & Hcompat & Hexcl_roots & Hexcl_env).
+  unfold callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary in Hsummary.
+  unfold check_fn_root_shadow_generic_direct_store_safe_summary in Hsummary.
+  destruct (generic_direct_call_target_expr (fn_body fdef))
+    as [[[[fname type_args] args] synthetic_body] |] eqn:Htarget;
+    try discriminate.
+  pose proof
+    (check_fn_root_shadow_generic_direct_store_safe_summary_target_view_sound
+      env fdef fname type_args args synthetic_body Hsummary) as Htarget_view.
+  destruct Htarget_view as
+    [fcallee T_body Gamma_body R_body roots_body Hsafe_args Hin_callee
+      Hname_callee Htype_params Hbounds Hbody_env Hcallee_ready Hcallee_expr
+      Hroots Henv].
+  pose proof (infer_env_roots_shadow_safe_params_nodup_sidecar env
+    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+    T_body Gamma_body R_body roots_body Hbody_env) as Hnodup.
+  unfold fn_with_body in Hnodup. simpl in Hnodup.
+  destruct (infer_env_roots_shadow_safe_core_success_sidecar env
+    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+    T_body Gamma_body R_body roots_body Hbody_env)
+    as (T_body_core & Hbody_core & Hbody_compat).
   eapply CBRSSNI_GenericDirect with
-    (raw_body := raw_body) (synthetic_body := synthetic_body)
-    (fcallee := fcallee) (T_body := T_body) (Gamma_out := Gamma_out)
+    (raw_body := fn_body fdef) (synthetic_body := synthetic_body)
+    (fcallee := fcallee) (T_body := T_body_core) (Gamma_out := Gamma_body)
     (R_body := R_body) (roots_body := roots_body).
-  - rewrite subst_type_params_expr_nil. symmetry. exact Hbody.
+  - rewrite subst_type_params_expr_nil. reflexivity.
   - exact Htarget.
-  - exact Hsynthetic.
-  - exact Hsafe.
-  - exact Hin.
-  - exact Hname.
-  - exact Harity.
+  - unfold generic_direct_call_target_expr in Htarget.
+    destruct (fn_body fdef); try discriminate.
+    inversion Htarget. reflexivity.
+  - apply store_safe_function_value_call_args_b_sound. exact Hsafe_args.
+  - exact Hin_callee.
+  - exact Hname_callee.
+  - exact Htype_params.
   - rewrite subst_type_params_trait_bounds_nil. exact Hbounds.
-  - exact Hcallee_summary.
+  - apply check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound.
+    exact Hcallee_expr.
   - rewrite apply_type_params_nil. exact Hnodup.
   - rewrite subst_type_params_trait_bounds_nil.
     rewrite subst_type_params_ctx_nil.
-    exact Htyped.
-  - rewrite subst_type_params_ty_nil. exact Hcompat.
-  - rewrite apply_type_params_nil. exact Hexcl_roots.
-  - rewrite apply_type_params_nil. exact Hexcl_env.
+    eapply infer_core_env_roots_shadow_safe_sound.
+    exact Hbody_core.
+  - rewrite subst_type_params_ty_nil. exact Hbody_compat.
+  - rewrite apply_type_params_nil.
+    apply fn_params_roots_exclude_b_sound. exact Hroots.
+  - rewrite apply_type_params_nil.
+    apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
+
 
 Definition callee_body_root_shadow_captured_call_base_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
@@ -2566,321 +2492,44 @@ Definition callee_body_root_shadow_captured_call_base_store_safe_summary
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
-Definition callee_body_root_shadow_captured_call_store_safe_summary
-    (env : global_env) (fdef : fn_def) : Prop :=
-  callee_body_root_shadow_captured_call_base_store_safe_summary env fdef.
 
-Lemma check_fn_root_shadow_generic_direct_store_safe_summary_sound :
+
+Lemma generic_direct_call_target_expr_synthetic :
+  forall body fname type_args args synthetic_body,
+    generic_direct_call_target_expr body =
+      Some (fname, type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname type_args args.
+Proof.
+  intros body fname type_args args synthetic_body Htarget.
+  unfold generic_direct_call_target_expr in Htarget.
+  destruct body; try discriminate.
+  inversion Htarget. reflexivity.
+Qed.
+
+
+Definition check_fn_root_shadow_generic_direct_store_safe_summary_sound :
   forall env fdef,
     check_fn_root_shadow_generic_direct_store_safe_summary env fdef = true ->
     callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
-      env fdef.
-Proof.
-  intros env fdef Hgeneric.
-  unfold check_fn_root_shadow_generic_direct_store_safe_summary in Hgeneric.
-  destruct (generic_direct_call_target_expr (fn_body fdef))
-    as [[[[fname type_args] args] synthetic_body] |] eqn:Htarget;
-    try discriminate.
-  apply andb_true_iff in Hgeneric as [Hsafe_args Hgeneric].
-  destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
-    try discriminate.
-  apply andb_true_iff in Hgeneric as [Htype_params Hgeneric].
-  apply Nat.eqb_eq in Htype_params.
-  destruct (check_struct_bounds
-    (global_env_with_local_bounds env (fn_bounds fdef))
-    (fn_bounds fcallee) type_args)
-    as [bounds_err |] eqn:Hbounds; try discriminate.
-  remember (global_env_with_local_bounds env
-    (subst_type_params_trait_bounds type_args (fn_bounds fcallee)))
-    as callee_body_env.
-  destruct (infer_core_env_roots_shadow_safe callee_body_env
-    (fn_outlives fcallee) (fn_lifetimes fcallee)
-    (initial_root_env_for_fn fcallee)
-    (subst_type_params_ctx type_args (fn_body_ctx fcallee))
-    (subst_type_params_expr type_args (fn_body fcallee)))
-    as [[[[T_callee Gamma_callee] R_callee] roots_callee] | err]
-    eqn:Hcallee_core; try discriminate.
-  destruct (infer_env_roots_shadow_safe env fcallee
-    (initial_root_env_for_fn fcallee))
-    as [[[[T_callee_env Gamma_callee_env] R_callee_env]
-          roots_callee_env] | err] eqn:Hcallee_env; try discriminate.
-  destruct (infer_env_roots_shadow_safe env
-    (fn_with_body fdef synthetic_body)
-    (initial_root_env_for_fn fdef))
-    as [[[[T_body Gamma_body] R_body] roots_body] | err]
-    eqn:Hbody_env; try discriminate.
-  repeat rewrite andb_true_iff in Hgeneric.
-  destruct Hgeneric as
-    [[[[[[[Hcallee_ready Hcallee_expr] Hcallee_compat] Hcallee_roots]
-         Hcallee_env_excl] Hcompat] Hroots] Henv].
-  apply lookup_fn_b_sound in Hlookup_b.
-  destruct Hlookup_b as [Hin_callee Hname_callee].
-  pose proof
-    (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
-      env fcallee type_args Hcallee_expr) as Hcallee_summary.
-  pose proof (infer_env_roots_shadow_safe_sound env
-    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
-    T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
-  unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
-  destruct Htyped_fn as
-    (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_body & _).
-  exists fname, type_args, args, (fn_body fdef), synthetic_body, fcallee,
-    T_body_actual, Gamma_out_actual, R_body, roots_body.
-  split; [reflexivity |].
-  split; [exact Htarget |].
-  split.
-  { unfold generic_direct_call_target_expr in Htarget.
-    destruct (fn_body fdef); try discriminate.
-    inversion Htarget. reflexivity. }
-  split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_args |].
-  split; [exact Hin_callee |].
-  split; [exact Hname_callee |].
-  split; [exact Htype_params |].
-  split; [exact Hbounds |].
-  split.
-  { apply preservation_ready_expr_b_sound. exact Hcallee_ready. }
-  split; [exact Hcallee_summary |].
-  split.
-  { change (NoDup
-      (ctx_names
-        (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
-    eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
-  split; [exact Htyped_body |].
-  split; [exact Hcompat_body |].
-  split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
-  apply fn_params_root_env_excludes_b_sound. exact Henv.
-Qed.
+      env fdef :=
+  fun env fdef Hgeneric => Hgeneric.
 
-Lemma check_fn_root_shadow_direct_receiver_method_store_safe_summary_sound :
+
+Definition check_fn_root_shadow_direct_receiver_method_store_safe_summary_sound :
   forall env fdef,
     check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef = true ->
     callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
-      env fdef.
-Proof.
-  intros env fdef Hcheck.
-  unfold check_fn_root_shadow_direct_receiver_method_store_safe_summary in Hcheck.
-  destruct (direct_call_receiver_method_target_expr (fn_body fdef))
-    as [[[[[[method_name type_args] receiver_name] receiver_args]
-          method_args] synthetic_body] |] eqn:Htarget; try discriminate.
-  repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[Hsafe_receiver Hsafe_method] Hcheck].
-  destruct (lookup_fn_b receiver_name (env_fns env)) as [freceiver |]
-    eqn:Hlookup_receiver; try discriminate.
-  destruct (lookup_fn_b method_name (env_fns env)) as [fmethod |]
-    eqn:Hlookup_method; try discriminate; simpl in Hcheck.
-  apply andb_true_iff in Hcheck as [Htype_params Hcheck].
-  apply Nat.eqb_eq in Htype_params.
-  destruct (check_struct_bounds
-    (global_env_with_local_bounds env (fn_bounds fdef))
-    (fn_bounds fmethod) type_args) as [bounds_err |]
-    eqn:Hbounds; try discriminate.
-  remember (global_env_with_local_bounds env
-    (subst_type_params_trait_bounds type_args (fn_bounds fmethod)))
-    as method_body_env.
-  destruct (infer_core_env_roots_shadow_safe env
-    (fn_outlives freceiver) (fn_lifetimes freceiver)
-    (initial_root_env_for_fn freceiver) (fn_body_ctx freceiver)
-    (fn_body freceiver))
-    as [[[[T_receiver Gamma_receiver] R_receiver] roots_receiver] | err]
-    eqn:Hreceiver_core; try discriminate.
-  destruct (infer_env_roots_shadow_safe env freceiver
-    (initial_root_env_for_fn freceiver))
-    as [[[[T_receiver_env Gamma_receiver_env] R_receiver_env]
-          roots_receiver_env] | err] eqn:Hreceiver_env; try discriminate.
-  destruct (infer_core_env_roots_shadow_safe method_body_env
-    (fn_outlives fmethod) (fn_lifetimes fmethod)
-    (initial_root_env_for_fn fmethod)
-    (subst_type_params_ctx type_args (fn_body_ctx fmethod))
-    (subst_type_params_expr type_args (fn_body fmethod)))
-    as [[[[T_method Gamma_method] R_method] roots_method] | err]
-    eqn:Hmethod_core; try discriminate.
-  destruct (infer_env_roots_shadow_safe env fmethod
-    (initial_root_env_for_fn fmethod))
-    as [[[[T_method_env Gamma_method_env] R_method_env]
-          roots_method_env] | err] eqn:Hmethod_env; try discriminate.
-  destruct (infer_env_roots_shadow_safe env
-    (fn_with_body fdef
-      (direct_call_receiver_method_hidden_let_synthetic_body
-        (fn_ret freceiver) method_name type_args receiver_name receiver_args
-        method_args))
-    (initial_root_env_for_fn fdef))
-    as [[[[T_body Gamma_body] R_body] roots_body] | err]
-    eqn:Hbody_env; try discriminate.
-  repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as
-    [[[[[[[[[[[Hreceiver_expr Hreceiver_compat] Hreceiver_roots]
-              Hreceiver_env_excl] Hmethod_ready] Hmethod_summary]
-            Hmethod_compat] Hmethod_roots] Hmethod_env_excl]
-          Hcompat_body] Hroots_body] Henv_body].
-  apply lookup_fn_b_sound in Hlookup_receiver.
-  destruct Hlookup_receiver as [Hin_receiver Hname_receiver].
-  apply lookup_fn_b_sound in Hlookup_method.
-  destruct Hlookup_method as [Hin_method Hname_method].
-  destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
-    env (fn_outlives freceiver) (fn_lifetimes freceiver)
-    (initial_root_env_for_fn freceiver) (fn_body_ctx freceiver)
-    (fn_body freceiver) T_receiver Gamma_receiver R_receiver roots_receiver
-    Hreceiver_core Hreceiver_expr) as [ret_roots_receiver Hreceiver_summary].
-  pose proof (infer_env_roots_shadow_safe_sound env
-    (fn_with_body fdef
-      (direct_call_receiver_method_hidden_let_synthetic_body
-        (fn_ret freceiver) method_name type_args receiver_name receiver_args
-        method_args))
-    (initial_root_env_for_fn fdef)
-    T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
-  unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
-  destruct Htyped_fn as
-    (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_actual & _).
-  pose proof
-    (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
-      env fmethod type_args Hmethod_summary) as Hmethod_summary_prop.
-  exists method_name, type_args, receiver_name, receiver_args, method_args,
-    (fn_body fdef), synthetic_body, freceiver, fmethod,
-    T_body_actual, Gamma_out_actual, R_body, roots_body.
-  split; [reflexivity |].
-  split; [exact Htarget |].
-  split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_receiver |].
-  split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_method |].
-  split; [exact Hin_receiver |].
-  split; [exact Hname_receiver |].
-  split.
-  { exists T_receiver, Gamma_receiver, R_receiver, roots_receiver,
-      ret_roots_receiver.
-    repeat split.
-    - eapply infer_env_roots_shadow_safe_params_nodup. exact Hreceiver_env.
-    - exact Hreceiver_summary.
-    - exact Hreceiver_compat.
-    - apply fn_params_roots_exclude_b_sound. exact Hreceiver_roots.
-    - apply fn_params_root_env_excludes_b_sound. exact Hreceiver_env_excl. }
-  split; [exact Hin_method |].
-  split; [exact Hname_method |].
-  split; [exact Htype_params |].
-  split; [exact Hbounds |].
-  split; [apply preservation_ready_expr_b_sound; exact Hmethod_ready |].
-  split; [exact Hmethod_summary_prop |].
-  split.
-  { change (NoDup
-      (ctx_names
-        (params_ctx (fn_params
-          (fn_with_body fdef
-            (direct_call_receiver_method_hidden_let_synthetic_body
-              (fn_ret freceiver) method_name type_args receiver_name
-              receiver_args method_args)))))).
-    eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
-  split; [exact Htyped_body |].
-  split; [exact Hcompat_actual |].
-  split; [apply fn_params_roots_exclude_b_sound; exact Hroots_body |].
-  apply fn_params_root_env_excludes_b_sound. exact Henv_body.
-Qed.
+      env fdef :=
+  fun env fdef Hcheck => Hcheck.
 
-Lemma check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary_sound :
+
+Definition check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary_sound :
   forall env fdef,
     check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary env fdef = true ->
     callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
-      env fdef.
-Proof.
-  intros env fdef Hcheck.
-  unfold check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary in Hcheck.
-  destruct (generic_direct_call_receiver_method_target_expr (fn_body fdef))
-    as [[[[[[[method_name type_args] receiver_name] receiver_type_args]
-            receiver_args] method_args] synthetic_body] |] eqn:Htarget;
-    try discriminate.
-  repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[Hsafe_receiver Hsafe_method] Hcheck].
-  destruct (lookup_fn_b receiver_name (env_fns env)) as [freceiver |]
-    eqn:Hlookup_receiver; try discriminate.
-  destruct (lookup_fn_b method_name (env_fns env)) as [fmethod |]
-    eqn:Hlookup_method; try discriminate; simpl in Hcheck.
-  apply andb_true_iff in Hcheck as [Htype_params_pair Hcheck].
-  apply andb_true_iff in Htype_params_pair as
-    [Hreceiver_type_params Hmethod_type_params].
-  apply Nat.eqb_eq in Hreceiver_type_params.
-  apply Nat.eqb_eq in Hmethod_type_params.
-  destruct (check_struct_bounds
-    (global_env_with_local_bounds env (fn_bounds fdef))
-    (fn_bounds freceiver) receiver_type_args) as [receiver_bounds_err |]
-    eqn:Hreceiver_bounds; try discriminate.
-  destruct (check_struct_bounds
-    (global_env_with_local_bounds env (fn_bounds fdef))
-    (fn_bounds fmethod) type_args) as [method_bounds_err |]
-    eqn:Hmethod_bounds; try discriminate.
-  destruct (infer_env_roots_shadow_safe env freceiver
-    (initial_root_env_for_fn freceiver))
-    as [[[[T_receiver_env Gamma_receiver_env] R_receiver_env]
-          roots_receiver_env] | err] eqn:Hreceiver_env; try discriminate.
-  destruct (infer_env_roots_shadow_safe env fmethod
-    (initial_root_env_for_fn fmethod))
-    as [[[[T_method_env Gamma_method_env] R_method_env]
-          roots_method_env] | err] eqn:Hmethod_env; try discriminate.
-  destruct (infer_env_roots_shadow_safe env
-    (fn_with_body fdef
-      (generic_direct_call_receiver_method_hidden_let_synthetic_body
-        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
-        method_name type_args receiver_name receiver_type_args receiver_args
-        method_args))
-    (initial_root_env_for_fn fdef))
-    as [[[[T_body Gamma_body] R_body] roots_body] | err]
-    eqn:Hbody_env; try discriminate.
-  repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as
-    [[[[[[Hreceiver_ready Hreceiver_summary] Hmethod_ready] Hmethod_summary]
-        Hcompat_body] Hroots_body] Henv_body].
-  apply lookup_fn_b_sound in Hlookup_receiver.
-  destruct Hlookup_receiver as [Hin_receiver Hname_receiver].
-  apply lookup_fn_b_sound in Hlookup_method.
-  destruct Hlookup_method as [Hin_method Hname_method].
-  pose proof
-    (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
-      env freceiver receiver_type_args Hreceiver_summary)
-    as Hreceiver_summary_prop.
-  pose proof
-    (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
-      env fmethod type_args Hmethod_summary) as Hmethod_summary_prop.
-  pose proof (infer_env_roots_shadow_safe_sound env
-    (fn_with_body fdef
-      (generic_direct_call_receiver_method_hidden_let_synthetic_body
-        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
-        method_name type_args receiver_name receiver_type_args receiver_args
-        method_args))
-    (initial_root_env_for_fn fdef)
-    T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
-  unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
-  destruct Htyped_fn as
-    (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_actual & _).
-  exists method_name, type_args, receiver_name, receiver_type_args,
-    receiver_args, method_args, (fn_body fdef), synthetic_body,
-    freceiver, fmethod, T_body_actual, Gamma_out_actual, R_body, roots_body.
-  split; [reflexivity |].
-  split; [exact Htarget |].
-  split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_receiver |].
-  split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_method |].
-  split; [exact Hin_receiver |].
-  split; [exact Hname_receiver |].
-  split; [exact Hreceiver_type_params |].
-  split; [exact Hreceiver_bounds |].
-  split; [apply preservation_ready_expr_b_sound; exact Hreceiver_ready |].
-  split; [exact Hreceiver_summary_prop |].
-  split; [exact Hin_method |].
-  split; [exact Hname_method |].
-  split; [exact Hmethod_type_params |].
-  split; [exact Hmethod_bounds |].
-  split; [apply preservation_ready_expr_b_sound; exact Hmethod_ready |].
-  split; [exact Hmethod_summary_prop |].
-  split.
-  { change (NoDup
-      (ctx_names
-        (params_ctx (fn_params
-          (fn_with_body fdef
-            (generic_direct_call_receiver_method_hidden_let_synthetic_body
-              (subst_type_params_ty receiver_type_args (fn_ret freceiver))
-              method_name type_args receiver_name receiver_type_args
-              receiver_args method_args)))))).
-    eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
-  split; [exact Htyped_body |].
-  split; [exact Hcompat_actual |].
-  split; [apply fn_params_roots_exclude_b_sound; exact Hroots_body |].
-  apply fn_params_root_env_excludes_b_sound. exact Henv_body.
-Qed.
+      env fdef :=
+  fun env fdef Hcheck => Hcheck.
+
 
 Lemma check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound :
   forall env fdef,
@@ -3291,6 +2940,10 @@ Proof.
     + apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Definition callee_body_root_shadow_captured_call_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_captured_call_base_store_safe_summary env fdef.
+
 Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
   forall env fdef,
     check_fn_root_shadow_captured_call_store_safe_summary env fdef = true ->
@@ -3302,6 +2955,7 @@ Proof.
   eapply check_fn_root_shadow_captured_call_base_store_safe_summary_sound.
   exact Hcheck.
 Qed.
+
 
 Definition env_fns_root_shadow_captured_call_store_safe_summary_check_ready
     (env : global_env) : Prop :=

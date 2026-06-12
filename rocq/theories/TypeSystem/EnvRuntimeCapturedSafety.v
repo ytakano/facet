@@ -3862,16 +3862,16 @@ Proof.
     eapply VHT_Compatible.
     + exact Hv_env.
     + apply ty_compatible_b_sound. exact Hcompat.
-  - destruct Hgeneric as
-      (fname & type_args & args & raw_body & synthetic_body & fcallee &
-        T_body & Gamma_out & R_body & roots_body & Hbody & Htarget &
-        Hsynthetic & Hsafe_args & Hin_callee & Hname_callee & Htype_params &
-        Hbounds & Hcallee_ready & Hcallee_summary & Hnodup &
-        Htyped_shadow & Hcompat & _ & _).
+  - destruct (check_fn_root_shadow_generic_direct_store_safe_summary_view_prop
+        env f Hgeneric) as
+      (fname & type_args & args & synthetic_body & fcallee & T_body &
+        Gamma_out & R_body & roots_body & T_body_core & Htarget &
+        Hsynthetic & Hsafe_args_b & Hin_callee & Hname_callee &
+        Htype_params & Hbounds & Hbody_env & Hnodup & Hbody_core &
+        Hcompat & Hcallee_ready_b & Hcallee_summary_b & _ & _).
     destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
       [Hroots [Hshadow [Hnamed Hkeys]]].
     pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
-    rewrite Hbody in Heval.
     pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
     assert (Hstore_body_env :
       store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
@@ -3883,20 +3883,34 @@ Proof.
     { subst body_env.
       apply store_function_closure_targets_summary_global_env_with_local_bounds.
       eapply initial_store_for_fn_closure_targets_summary. exact Hstore. }
-    assert (Heval_body_env : eval body_env s raw_body s' v).
+    assert (Heval_body_env : eval body_env s (fn_body f) s' v).
     { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+    assert (Htyped_shadow :
+      typed_env_roots_shadow_safe body_env
+        (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (fn_body_ctx f)) synthetic_body
+        T_body_core (sctx_of_ctx Gamma_out) R_body roots_body).
+    { subst body_env.
+      unfold fn_with_body in Hbody_core. simpl in Hbody_core.
+      eapply infer_core_env_roots_shadow_safe_sound.
+      exact Hbody_core. }
     assert (Htyped_call_shadow :
       typed_env_roots_shadow_safe body_env
         (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
         (sctx_of_ctx (fn_body_ctx f))
         (ECallGeneric fname type_args args)
-        T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+        T_body_core (sctx_of_ctx Gamma_out) R_body roots_body).
     { rewrite <- Hsynthetic. exact Htyped_shadow. }
     assert (Heval_call : eval body_env s
       (ECallGeneric fname type_args args) s' v).
     { unfold generic_direct_call_target_expr in Htarget.
-      destruct raw_body; try discriminate.
+      destruct (fn_body f); try discriminate.
       inversion Htarget; subst. exact Heval_body_env. }
+    assert (Hcallee_summary :
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        env 10000 fcallee type_args).
+    { apply check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound.
+      exact Hcallee_summary_b. }
     assert (Hcallee_summary_body :
       callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
         body_env 10000 fcallee type_args).
@@ -3904,6 +3918,8 @@ Proof.
       eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
       - exact Hunique.
       - exact Hcallee_summary. }
+    assert (Hsafe_args : store_safe_function_value_call_args env args).
+    { apply store_safe_function_value_call_args_b_sound. exact Hsafe_args_b. }
     assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.
@@ -3911,7 +3927,7 @@ Proof.
     pose proof (typed_env_roots_shadow_safe_roots
       body_env (fn_outlives f) (fn_lifetimes f)
       (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-      (ECallGeneric fname type_args args) T_body (sctx_of_ctx Gamma_out)
+      (ECallGeneric fname type_args args) T_body_core (sctx_of_ctx Gamma_out)
       R_body roots_body Htyped_call_shadow) as Htyped_call.
     dependent destruction Htyped_call.
     assert (fdef = fcallee) as ->.
@@ -4380,17 +4396,23 @@ Proof.
         { eapply lookup_fn_unique_by_name;
             [ exact Hlookup_outer | exact Hin_callee | reflexivity
             | exact Hunique ]. }
-        destruct Hcallee_summary as
-          (fname_nested & type_args_nested & args_static & raw_body_nested &
-            synthetic_body_nested & fcallee_nested & T_body_nested &
-            Gamma_nested & R_nested & roots_nested & Hbody_nested &
-            Htarget_nested & Hsynthetic_nested & Hsafe_nested & Hin_nested &
-            Hname_nested & Harity_nested & Hbounds_nested & Hready_nested &
-            Hsummary_nested & Hnodup_nested & Htyped_nested & Hcompat_nested &
-            Hexcl_roots_nested & Hexcl_env_nested).
+        destruct (check_fn_root_shadow_generic_direct_store_safe_summary_view_prop
+          env fcallee Hcallee_summary) as
+          (fname_nested & type_args_nested & args_static &
+            synthetic_body_nested & fcallee_nested & T_body_nested_env &
+            Gamma_nested & R_nested & roots_nested & T_body_nested &
+            Htarget_nested & Hsynthetic_nested & Hsafe_nested_b & Hin_nested &
+            Hname_nested & Harity_nested & Hbounds_nested & Hbody_env_nested &
+            Hnodup_nested & Hbody_core_nested & Hcompat_nested &
+            Hready_nested_b & Hsummary_nested_b & Hexcl_roots_nested_b & _).
+        pose (raw_body_nested := fn_body fcallee).
         assert (Hbody_nested_nil :
           raw_body_nested = subst_type_params_expr [] (fn_body fcallee)).
-        { rewrite subst_type_params_expr_nil. symmetry. exact Hbody_nested. }
+        { subst raw_body_nested. rewrite subst_type_params_expr_nil. reflexivity. }
+        assert (Hsafe_nested :
+          store_safe_function_value_call_args env args_static).
+        { apply store_safe_function_value_call_args_b_sound.
+          exact Hsafe_nested_b. }
         assert (Hsafe_nested_body :
           store_safe_function_value_call_args body_env args_static).
         { subst body_env.
@@ -4400,10 +4422,23 @@ Proof.
           NoDup (ctx_names
             (params_ctx (apply_type_params [] (fn_params fcallee))))).
         { rewrite apply_type_params_nil. exact Hnodup_nested. }
+        assert (Hexcl_roots_nested :
+          roots_exclude_params (fn_params fcallee) roots_nested).
+        { apply fn_params_roots_exclude_b_sound.
+          exact Hexcl_roots_nested_b. }
         assert (Hexcl_roots_nested_nil :
           roots_exclude_params (apply_type_params [] (fn_params fcallee))
             roots_nested).
         { rewrite apply_type_params_nil. exact Hexcl_roots_nested. }
+        assert (Hready_nested :
+          preservation_ready_expr
+            (subst_type_params_expr type_args_nested (fn_body fcallee_nested))).
+        { apply preservation_ready_expr_b_sound. exact Hready_nested_b. }
+        assert (Hsummary_nested :
+          callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+            env 10000 fcallee_nested type_args_nested).
+        { apply check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound.
+          exact Hsummary_nested_b. }
         assert (Htyped_nested_body :
           typed_env_roots_shadow_safe
             (global_env_with_local_bounds body_env
@@ -4416,7 +4451,9 @@ Proof.
         { subst body_env.
           rewrite subst_type_params_trait_bounds_nil.
           rewrite subst_type_params_ctx_nil.
-          exact Htyped_nested. }
+          unfold fn_with_body in Hbody_core_nested. simpl in Hbody_core_nested.
+          eapply infer_core_env_roots_shadow_safe_sound.
+          exact Hbody_core_nested. }
         pose proof (preservation_ready_args_implies_provenance_ready_closure
           args (store_safe_function_value_call_args_preservation_ready
             body_env args Hsafe_args_body)) as Hprov_args_outer.

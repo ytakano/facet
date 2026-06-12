@@ -1143,6 +1143,140 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
   | None => false
   end.
 
+Definition check_fn_root_shadow_direct_receiver_method_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match direct_call_receiver_method_target_expr (fn_body fdef) with
+  | Some (method_name, type_args, receiver_name, receiver_args, method_args,
+      synthetic_body) =>
+      store_safe_function_value_call_args_b env receiver_args &&
+      store_safe_function_value_call_args_b env method_args &&
+      match lookup_fn_b receiver_name (env_fns env),
+            lookup_fn_b method_name (env_fns env) with
+      | Some receiver_callee, Some method_callee =>
+          Nat.eqb (Datatypes.length type_args) (fn_type_params method_callee) &&
+          match check_struct_bounds
+                  (global_env_with_local_bounds env (fn_bounds fdef))
+                  (fn_bounds method_callee) type_args with
+          | Some _ => false
+          | None =>
+              let method_body_env :=
+                global_env_with_local_bounds env
+                  (subst_type_params_trait_bounds type_args
+                    (fn_bounds method_callee)) in
+              match infer_core_env_roots_shadow_safe env
+                        (fn_outlives receiver_callee)
+                        (fn_lifetimes receiver_callee)
+                        (initial_root_env_for_fn receiver_callee)
+                        (fn_body_ctx receiver_callee)
+                        (fn_body receiver_callee),
+                    infer_env_roots_shadow_safe env receiver_callee
+                      (initial_root_env_for_fn receiver_callee),
+                    infer_core_env_roots_shadow_safe method_body_env
+                        (fn_outlives method_callee)
+                        (fn_lifetimes method_callee)
+                        (initial_root_env_for_fn method_callee)
+                        (subst_type_params_ctx type_args
+                          (fn_body_ctx method_callee))
+                        (subst_type_params_expr type_args
+                          (fn_body method_callee)),
+                    infer_env_roots_shadow_safe env method_callee
+                      (initial_root_env_for_fn method_callee),
+                    infer_env_roots_shadow_safe env
+                      (fn_with_body fdef synthetic_body)
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok (T_receiver, _, R_receiver, roots_receiver),
+                infer_ok _,
+                infer_ok (T_method, _, R_method, roots_method),
+                infer_ok _,
+                infer_ok (T_body, _, R_out, roots) =>
+                  check_expr_root_shadow_store_safe_narrow_summary
+                    env (fn_outlives receiver_callee)
+                    (fn_lifetimes receiver_callee)
+                    (initial_root_env_for_fn receiver_callee)
+                    (fn_body_ctx receiver_callee)
+                    (fn_body receiver_callee) &&
+                  ty_compatible_b (fn_outlives receiver_callee) T_receiver
+                    (fn_ret receiver_callee) &&
+                  fn_params_roots_exclude_b (fn_params receiver_callee)
+                    roots_receiver &&
+                  fn_params_root_env_excludes_b (fn_params receiver_callee)
+                    R_receiver &&
+                  preservation_ready_expr_b
+                    (subst_type_params_expr type_args
+                      (fn_body method_callee)) &&
+                  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                    env method_callee type_args &&
+                  ty_compatible_b (fn_outlives method_callee) T_method
+                    (subst_type_params_ty type_args (fn_ret method_callee)) &&
+                  fn_params_roots_exclude_b
+                    (apply_type_params type_args (fn_params method_callee))
+                    roots_method &&
+                  fn_params_root_env_excludes_b
+                    (apply_type_params type_args (fn_params method_callee))
+                    R_method &&
+                  ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | _, _, _, _, _ => false
+              end
+          end
+      | _, _ => false
+      end
+  | None => false
+  end.
+
+Definition check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match generic_direct_call_receiver_method_target_expr (fn_body fdef) with
+  | Some (method_name, type_args, receiver_name, receiver_type_args,
+      receiver_args, method_args, synthetic_body) =>
+      store_safe_function_value_call_args_b env receiver_args &&
+      store_safe_function_value_call_args_b env method_args &&
+      match lookup_fn_b receiver_name (env_fns env),
+            lookup_fn_b method_name (env_fns env) with
+      | Some receiver_callee, Some method_callee =>
+          Nat.eqb (Datatypes.length receiver_type_args)
+            (fn_type_params receiver_callee) &&
+          Nat.eqb (Datatypes.length type_args) (fn_type_params method_callee) &&
+          match check_struct_bounds
+                  (global_env_with_local_bounds env (fn_bounds fdef))
+                  (fn_bounds receiver_callee) receiver_type_args,
+                check_struct_bounds
+                  (global_env_with_local_bounds env (fn_bounds fdef))
+                  (fn_bounds method_callee) type_args with
+          | None, None =>
+              match infer_env_roots_shadow_safe env receiver_callee
+                      (initial_root_env_for_fn receiver_callee),
+                    infer_env_roots_shadow_safe env method_callee
+                      (initial_root_env_for_fn method_callee),
+                    infer_env_roots_shadow_safe env
+                      (fn_with_body fdef synthetic_body)
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok _,
+                infer_ok _,
+                infer_ok (T_body, _, R_out, roots) =>
+                  preservation_ready_expr_b
+                    (subst_type_params_expr receiver_type_args
+                      (fn_body receiver_callee)) &&
+                  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                    env receiver_callee receiver_type_args &&
+                  preservation_ready_expr_b
+                    (subst_type_params_expr type_args
+                      (fn_body method_callee)) &&
+                  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                    env method_callee type_args &&
+                  ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | _, _, _ => false
+              end
+          | _, _ => false
+          end
+      | _, _ => false
+      end
+  | None => false
+  end.
+
 Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match fn_captures fdef with

@@ -29,10 +29,10 @@ validity checks must be represented in Rocq and the extracted checker.
   general annotated locals remain gated. Direct-call receivers cannot be
   unlocked by OCaml desugaring alone: lowering the receiver through a hidden let
   still fails the extracted end-to-end safety gate. Rocq now has executable
-  sidecar recognizers, proof-side shape lemmas, and summary package
-  definitions for direct and generic direct-call receiver method-call shapes;
-  the remaining step is to connect those shapes to checker and soundness
-  evidence.
+  sidecar recognizers, proof-side shape lemmas, summary package
+  definitions, and standalone executable checker helpers for direct and generic
+  direct-call receiver method-call shapes; the remaining step is to connect
+  those helpers to soundness evidence and then to the main checker gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -81,11 +81,12 @@ validity checks must be represented in Rocq and the extracted checker.
    - Direct-call receivers are not an OCaml-only switch: existing store-safe
      argument facts assume arg evaluation preserves static root/store shape,
      and a hidden-let receiver lowering still fails the extracted end-to-end
-     gate. The executable sidecar recognizers, shape lemmas, and summary
-     package definitions now identify direct and generic direct-call receiver
-     method shapes. Add the checker/proof branch that uses those packages,
-     reuses the direct-call route package for receiver evaluation, and then
-     checks the method call with an `EVar` receiver.
+     gate. The executable sidecar recognizers, shape lemmas, summary package
+     definitions, and standalone checker helpers now identify direct and
+     generic direct-call receiver method shapes. Prove those helpers sound,
+     connect them to the main checker gate, reuse the direct-call route package
+     for receiver evaluation, and then check the method call with an `EVar`
+     receiver.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

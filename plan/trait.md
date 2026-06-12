@@ -50,7 +50,9 @@ validity checks must be represented in Rocq and the extracted checker.
   end-to-end checker as its accept/reject authority. The required end-to-end
   soundness and base checked-initial-ready theorem names now point at that
   assoc-aware active path, while the old ordinary `typed_env_roots` path remains
-  available under explicit ordinary names.
+  available under explicit ordinary names. The first shallow derived big-step
+  safety wrappers, covering call-statement routes and summary exact-package
+  component evidence, also have assoc-aware counterparts.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -62,9 +64,9 @@ validity checks must be represented in Rocq and the extracted checker.
      function-value `ECallExpr` paths as the bridge into safety consumers; the
      latter is executable, extracted, and available through assoc-aware
      checked core/env/full entrypoints.
-   - Bridge or generalize the remaining derived big-step safety consumers that
-     still require ordinary `checked_fn_env_roots_checked` so they can consume
-     the assoc-boundary relation instead.
+   - Bridge or generalize the remaining deeper derived big-step safety
+     consumers that still require ordinary `checked_fn_env_roots_checked` so
+     they can consume the assoc-boundary relation instead.
    - Remove pre-compatibility normalization only after raw elaboration expected-
      type paths use assoc compatibility. A direct removal currently rejects valid
      projection compatibility cases before checker execution, so this remains a

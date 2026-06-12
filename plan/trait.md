@@ -34,11 +34,11 @@ validity checks must be represented in Rocq and the extracted checker.
   projections are still normalized before ordinary compatibility checks.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
-  end-to-end checker entrypoints. These wrappers preserve the store/root naming,
-  no-shadow, and parameter root-coverage invariants needed by safety consumers,
-  but root/shadow checker call sites still ultimately require the primary
-  ordinary `typed_env_roots` relation. This is the current blocker for replacing
-  pre-compatibility normalization with associated-compatible call typing.
+  end-to-end checker entrypoints. These wrappers preserve store/root naming,
+  no-shadow, parameter root coverage, and now have a final-store scope bridge
+  that consumers can call without converting back to ordinary `typed_env_roots`.
+  Root/shadow checker call sites still need to be rewired from ordinary
+  `check_args` / `check_arg_tys` to assoc-aware helpers.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -46,9 +46,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Move associated compatibility through the checker call-site boundary.
-   - Convert safety consumers that still demand ordinary `typed_env_roots` so
-     they can consume the checked assoc wrapper boundary instead.
-   - Only then wire root/shadow checker call sites from ordinary
+   - Continue converting safety consumers that still demand ordinary
+     `typed_env_roots` so they can consume the checked assoc wrapper boundary
+     directly; final-store param-scope coverage has the first bridge.
+   - Then wire root/shadow checker call sites from ordinary
      `check_args` / `check_arg_tys` to env-aware assoc helpers.
    - Preserve the required theorem names:
      `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and

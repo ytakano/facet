@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
   TypeSafetyBasePreservationMutual TypeSafetyDirectCallWrappers
-  TypeSafetyCheckedRoots.
+  TypeSafetyCheckedRoots AssocEnvCallStructuralBoundary.
 From Facet.TypeSystem Require Export EnvRuntimeCheckedPrefixRuntimePackage.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
@@ -1400,6 +1400,40 @@ Proof.
     eapply (proj1 eval_preserves_param_scope_roots_ready_mutual);
       try eassumption.
     apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_checked_assoc_boundary_preserves_param_scope_cover_prefix_named :
+  forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary env Omega n R Sigma e T
+      Sigma' R' roots ret_roots ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma e T
+      Sigma' R' roots ->
+    forall s s' ret ps frame,
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s e s' ret ->
+      fn_env_unique_by_name env ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame',
+        store_param_scope ps s' frame' /\ root_env_covers_params ps R'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary
+    Hboundary s s' ret ps frame Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary_store Heval Hunique Hcover Hscope.
+  destruct (expr_root_shadow_store_safe_narrow_summary_preserves_param_scope_prefix_named
+    env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary
+    s s' ret ps frame Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary_store Heval Hunique Hcover Hscope) as [frame' Hscope'].
+  exists frame'. split.
+  - exact Hscope'.
+  - eapply typed_env_roots_checked_assoc_boundary_preserves_param_cover;
+      eassumption.
 Qed.
 
 

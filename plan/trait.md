@@ -52,8 +52,8 @@ validity checks must be represented in Rocq and the extracted checker.
   assoc-aware active path, while the old ordinary `typed_env_roots` path remains
   available under explicit ordinary names. The first shallow derived big-step
   safety wrappers, covering call-statement routes, summary exact-package
-  component evidence, and the summary call-package store-safe provider step,
-  also have assoc-aware counterparts.
+  component evidence, component-body summary providers, and the summary
+  call-package store-safe provider step, also have assoc-aware counterparts.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

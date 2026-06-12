@@ -2944,6 +2944,37 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_provider
+      env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env env' f s s' v Hprog
+    Hbody_summary Hinitial Hin Hstore Heval.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_combined_check_env_ready.
+    exact Hprog.
+  - exact Hbody_summary.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_evidence :
   eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
   forall env env' f s s' v,

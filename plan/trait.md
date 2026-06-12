@@ -30,10 +30,13 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence is available.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
-  local trait bounds are preserved and regression-tested. Associated
-  projections are still normalized before most ordinary compatibility checks,
-  but impl method signature validation and duplicate impl key detection now
-  compare through assoc-aware normalization.
+  local trait bounds are preserved and regression-tested. Raw elaboration no
+  longer rewrites the entire raw function AST with `normalize_assoc_raw_*`; it
+  preserves surface raw expressions and normalizes only at core checker
+  boundaries such as function headers, expected types, annotations, explicit
+  type arguments, closure/letrec signatures, and `RawCore` embedding. Impl
+  method signature validation and duplicate impl key detection compare through
+  assoc-aware normalization.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
   end-to-end checker entrypoints. These wrappers preserve store/root naming,
@@ -63,16 +66,7 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Remaining Tasks
 
-1. Move associated compatibility fully out of pre-normalization.
-   - Keep the checked assoc-boundary wrappers as the safety bridge for
-     final-store scope, function-value `ECallExpr`, and derived end-to-end
-     safety consumers.
-   - Replace the remaining raw-elaboration expected-type paths that rely on
-     `normalize_assoc_raw_*` with assoc compatibility. A direct removal still
-     rejects valid projection compatibility cases before checker execution, so
-     this is a raw-elaboration bridge task rather than a CLI switch.
-
-2. Finish UFCS receiver hardening.
+1. Finish UFCS receiver hardening.
    - Keep the canonical surface syntax as prefix calls with receiver-first
      arguments.
    - Add remaining receiver shapes only when the checker and safety proofs have

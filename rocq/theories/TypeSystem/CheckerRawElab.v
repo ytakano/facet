@@ -173,10 +173,12 @@ Definition normalize_assoc_raw_fn
      raw_fn_type_params := raw_fn_type_params f;
      raw_fn_bounds := map (normalize_assoc_trait_bound env) (raw_fn_bounds f) |}.
 
-Definition fn_stub_of_raw (f : raw_fn_def) : fn_def :=
+Definition fn_stub_of_raw (env : global_env) (f : raw_fn_def) : fn_def :=
   MkFnDef (raw_fn_name f) (raw_fn_lifetimes f) (raw_fn_outlives f)
-    [] (raw_fn_params f) (raw_fn_ret f) EUnit
-    (raw_fn_type_params f) (raw_fn_bounds f).
+    [] (map (normalize_assoc_param env) (raw_fn_params f))
+    (normalize_assoc_ty env (raw_fn_ret f)) EUnit
+    (raw_fn_type_params f)
+    (map (normalize_assoc_trait_bound env) (raw_fn_bounds f)).
 
 Definition append_env_fns (env : global_env) (fns : list fn_def) : global_env :=
   MkGlobalEnv (env_structs env) (env_enums env) (env_traits env) (env_impls env)
@@ -322,6 +324,11 @@ Fixpoint elaborate_raw_expr_fuel
     | infer_err err => infer_err err
     | infer_ok Σ' => infer_ok (e', Σ', extras, next')
     end in
+  let expected_core :=
+    match expected with
+    | Some T => Some (normalize_assoc_ty env T)
+    | None => None
+    end in
   let fix go_args fuel0 env0 Σ0 next0 args :=
     match args with
     | [] => infer_ok ([], Σ0, [], next0)
@@ -398,14 +405,14 @@ Fixpoint elaborate_raw_expr_fuel
                 if negb (no_captures_b fdef)
                 then infer_err ErrNotImplemented
                 else
-                  match expected with
+                  match expected_core with
                   | Some T_expected =>
                       if ty_compatible_b Ω (fn_value_ty fdef) T_expected
                       then finish env (EFn fname) [] next
                       else if negb (Nat.eqb (fn_lifetimes fdef) 0)
                       then infer_err ErrTypeArgInferenceFailed
                       else
-                        match infer_fn_value_type_args_expected fdef expected with
+                        match infer_fn_value_type_args_expected fdef expected_core with
                         | None => infer_err ErrTypeArgInferenceFailed
                         | Some (type_args, param_tys, ret) =>
                             match check_struct_bounds env (fn_bounds fdef) type_args with
@@ -414,7 +421,7 @@ Fixpoint elaborate_raw_expr_fuel
                                 let wrapper_name := generic_fn_value_wrapper_name next in
                                 let wrapper_params := wrapper_params_from_tys param_tys in
                                 let wrapper_body :=
-                                  ECallGeneric fname type_args
+                                  ECallGeneric fname (map (normalize_assoc_ty env) type_args)
                                     (expr_vars_of_params wrapper_params) in
                                 let wrapper :=
                                   MkFnDef wrapper_name 0 [] [] wrapper_params ret
@@ -427,26 +434,27 @@ Fixpoint elaborate_raw_expr_fuel
                   end
           end
       | RawPlace p => finish env (EPlace p) [] next
-      | RawCore ecore => finish env ecore [] next
+      | RawCore ecore => finish env (normalize_assoc_expr env ecore) [] next
       | RawBorrow rk p => finish env (EBorrow rk p) [] next
       | RawLet m x T e1 e2 =>
-          match elaborate_raw_expr_fuel fuel' (Some T) env Ω n Σ next e1 with
+          let T_core := normalize_assoc_ty env T in
+          match elaborate_raw_expr_fuel fuel' (Some T_core) env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', Σ1, extras1, next1) =>
               let env1 := append_env_fns env extras1 in
-              match elaborate_raw_expr_fuel fuel' expected env1 Ω n
-                      (sctx_add x T m Σ1) next1 e2 with
+              match elaborate_raw_expr_fuel fuel' expected_core env1 Ω n
+                      (sctx_add x T_core m Σ1) next1 e2 with
               | infer_err err => infer_err err
               | infer_ok (e2', Σ2, extras2, next2) =>
                   let extras := extras1 ++ extras2 in
                   let env2 := append_env_fns env extras in
                   match infer_core_env_state_fuel fuel' env2 Ω n
-                          (sctx_add x T m Σ1) e2' with
+                          (sctx_add x T_core m Σ1) e2' with
                   | infer_err err => infer_err err
                   | infer_ok (T2, _) =>
                       let '(e2'', next3) :=
-                        wrap_let_body_auto_drops env2 x T Σ2 T2 e2' next2 in
-                      let e' := ELet m x T e1' e2'' in
+                        wrap_let_body_auto_drops env2 x T_core Σ2 T2 e2' next2 in
+                      let e' := ELet m x T_core e1' e2'' in
                       finish env2 e' extras next3
                   end
               end
@@ -460,7 +468,7 @@ Fixpoint elaborate_raw_expr_fuel
               | infer_err err => infer_err err
               | infer_ok (T1, _) =>
                   let env1 := append_env_fns env extras1 in
-                  match elaborate_raw_expr_fuel fuel' expected env1 Ω n
+                  match elaborate_raw_expr_fuel fuel' expected_core env1 Ω n
                           (sctx_add x T1 m Σ1) next1 e2 with
                   | infer_err err => infer_err err
                   | infer_ok (e2', Σ2, extras2, next2) =>
@@ -493,7 +501,7 @@ Fixpoint elaborate_raw_expr_fuel
                       match infer_arg_tys_state fuel' env' Σ args' with
                       | infer_err err => infer_err err
                       | infer_ok (arg_tys, _) =>
-                          match infer_call_type_args_expected fdef arg_tys expected with
+                          match infer_call_type_args_expected fdef arg_tys expected_core with
                           | None => infer_err ErrTypeArgInferenceFailed
                           | Some type_args =>
                               match check_struct_bounds env' (fn_bounds fdef) type_args with
@@ -502,10 +510,10 @@ Fixpoint elaborate_raw_expr_fuel
                                   match specialize_simple_generic_wrapper_call env' fname type_args args' with
                                   | Some (target, target_type_args, target_args) =>
                                       finish env'
-                                        (ECallGeneric target target_type_args target_args)
+                                        (ECallGeneric target (map (normalize_assoc_ty env') target_type_args) target_args)
                                         extras next'
                                   | None =>
-                                      finish env' (ECallGeneric fname type_args args')
+                                      finish env' (ECallGeneric fname (map (normalize_assoc_ty env') type_args) args')
                                         extras next'
                                   end
                               end
@@ -531,12 +539,13 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_err err => infer_err err
           | infer_ok (args', _, extras, next') =>
               let env' := append_env_fns env extras in
-              match specialize_simple_generic_wrapper_call env' fname type_args args' with
+              let type_args_core := map (normalize_assoc_ty env') type_args in
+              match specialize_simple_generic_wrapper_call env' fname type_args_core args' with
               | Some (target, target_type_args, target_args) =>
-                  finish env' (ECallGeneric target target_type_args target_args)
+                  finish env' (ECallGeneric target (map (normalize_assoc_ty env') target_type_args) target_args)
                     extras next'
               | None =>
-                  finish env' (ECallGeneric fname type_args args')
+                  finish env' (ECallGeneric fname type_args_core args')
                     extras next'
               end
           end
@@ -557,15 +566,18 @@ Fixpoint elaborate_raw_expr_fuel
           match go_fields fuel' env Σ next fields with
           | infer_err err => infer_err err
           | infer_ok (fields', _, extras, next') =>
-              finish (append_env_fns env extras)
-                (EStruct sname lts tys fields') extras next'
+              let env' := append_env_fns env extras in
+              finish env'
+                (EStruct sname lts (map (normalize_assoc_ty env') tys) fields') extras next'
           end
       | RawEnum enum_name variant_name lts variant_lts tys payloads =>
           match go_args fuel' env Σ next payloads with
           | infer_err err => infer_err err
           | infer_ok (payloads', _, extras, next') =>
-              finish (append_env_fns env extras)
-                (EEnum enum_name variant_name lts variant_lts tys payloads') extras next'
+              let env' := append_env_fns env extras in
+              finish env'
+                (EEnum enum_name variant_name lts variant_lts
+                  (map (normalize_assoc_ty env') tys) payloads') extras next'
           end
       | RawMatch scrut branches =>
           match elaborate_raw_expr_fuel fuel' None env Ω n Σ next scrut with
@@ -593,7 +605,7 @@ Fixpoint elaborate_raw_expr_fuel
                                         if params_names_nodup_b ps &&
                                            ctx_lookup_params_none_b ps Σ1
                                         then
-                                        match elaborate_raw_expr_fuel fuel' expected env0 Ω n
+                                        match elaborate_raw_expr_fuel fuel' expected_core env0 Ω n
                                                 (sctx_add_params ps Σ1) next0 e_branch with
                                         | infer_err err => infer_err err
                                         | infer_ok (e_branch', _, extras_branch, next_branch) =>
@@ -666,11 +678,11 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_err err => infer_err err
           | infer_ok (e1', Σ1, extras1, next1) =>
               let env1 := append_env_fns env extras1 in
-              match elaborate_raw_expr_fuel fuel' expected env1 Ω n Σ1 next1 e2 with
+              match elaborate_raw_expr_fuel fuel' expected_core env1 Ω n Σ1 next1 e2 with
               | infer_err err => infer_err err
               | infer_ok (e2', _, extras2, next2) =>
                   let env2 := append_env_fns env1 extras2 in
-                  match elaborate_raw_expr_fuel fuel' expected env2 Ω n Σ1 next2 e3 with
+                  match elaborate_raw_expr_fuel fuel' expected_core env2 Ω n Σ1 next2 e3 with
                   | infer_err err => infer_err err
                   | infer_ok (e3', _, extras3, next3) =>
                       let extras := extras1 ++ extras2 ++ extras3 in
@@ -684,11 +696,13 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_err err => infer_err err
           | infer_ok cap_params =>
               let fname := closure_elab_name next in
-              let body_ctx := sctx_of_ctx (params_ctx (cap_params ++ params)) in
-              match elaborate_raw_expr_fuel fuel' (Some ret) env Ω n body_ctx (S next) body with
+              let params_core := map (normalize_assoc_param env) params in
+              let ret_core := normalize_assoc_ty env ret in
+              let body_ctx := sctx_of_ctx (params_ctx (cap_params ++ params_core)) in
+              match elaborate_raw_expr_fuel fuel' (Some ret_core) env Ω n body_ctx (S next) body with
               | infer_err err => infer_err err
               | infer_ok (body', _, body_extras, next') =>
-                  let fdef := MkFnDef fname n Ω cap_params params ret body' 0 [] in
+                  let fdef := MkFnDef fname n Ω cap_params params_core ret_core body' 0 [] in
                   let env_with_closure := append_env_fns env (body_extras ++ [fdef]) in
                   match infer_full_env env_with_closure fdef with
                   | infer_err err => infer_err err
@@ -705,7 +719,8 @@ Fixpoint elaborate_raw_expr_fuel
               let stubs :=
                 map (fun rf =>
                   MkFnDef (raw_rec_fn_name rf) n Ω cap_params
-                    (raw_rec_fn_params rf) (raw_rec_fn_ret rf) EUnit 0 [])
+                    (map (normalize_assoc_param env) (raw_rec_fn_params rf))
+                    (normalize_assoc_ty env (raw_rec_fn_ret rf)) EUnit 0 [])
                   rec_fns in
               let env_stubs := append_env_fns env stubs in
               let fix go_rec_fns fuel0 env0 next0 rfs :=
@@ -713,13 +728,15 @@ Fixpoint elaborate_raw_expr_fuel
                 | [] => infer_ok ([], next0)
                 | rf :: rest =>
                     let body_ctx :=
-                      sctx_of_ctx (params_ctx (cap_params ++ raw_rec_fn_params rf)) in
-                    match elaborate_raw_expr_fuel fuel0 (Some (raw_rec_fn_ret rf))
+                      sctx_of_ctx (params_ctx (cap_params ++
+                        map (normalize_assoc_param env0) (raw_rec_fn_params rf))) in
+                    let ret_core := normalize_assoc_ty env0 (raw_rec_fn_ret rf) in
+                    match elaborate_raw_expr_fuel fuel0 (Some ret_core)
                             env0 Ω n body_ctx next0 (raw_rec_fn_body rf) with
                     | infer_err err => infer_err err
                     | infer_ok (body', _, body_extras, next1) =>
                         let fdef := MkFnDef (raw_rec_fn_name rf) n Ω cap_params
-                                      (raw_rec_fn_params rf) (raw_rec_fn_ret rf)
+                                      (map (normalize_assoc_param env0) (raw_rec_fn_params rf)) ret_core
                                       body' 0 [] in
                         let env1 := append_env_fns env0 (body_extras ++ [fdef]) in
                         match infer_full_env env1 fdef with
@@ -737,7 +754,7 @@ Fixpoint elaborate_raw_expr_fuel
               | infer_err err => infer_err err
               | infer_ok (rec_extras, next1) =>
                   let env_rec := append_env_fns env rec_extras in
-                  match elaborate_raw_expr_fuel fuel' expected env_rec Ω n Σ next1 body with
+                  match elaborate_raw_expr_fuel fuel' expected_core env_rec Ω n Σ next1 body with
                   | infer_err err => infer_err err
                   | infer_ok (body', _, body_extras, next2) =>
                       let extras := rec_extras ++ body_extras in
@@ -767,17 +784,20 @@ Fixpoint elaborate_raw_fns_fuel
   | [] => infer_ok ([], next)
   | f :: rest =>
       let env0 := append_env_fns base_env done in
-      let body_env := global_env_with_local_bounds env0 (raw_fn_bounds f) in
-      match elaborate_raw_expr_fuel fuel (Some (raw_fn_ret f))
+      let bounds_core := map (normalize_assoc_trait_bound env0) (raw_fn_bounds f) in
+      let body_env := global_env_with_local_bounds env0 bounds_core in
+      let params_core := map (normalize_assoc_param body_env) (raw_fn_params f) in
+      let ret_core := normalize_assoc_ty body_env (raw_fn_ret f) in
+      match elaborate_raw_expr_fuel fuel (Some ret_core)
               body_env (raw_fn_outlives f)
-              (raw_fn_lifetimes f) (sctx_of_ctx (raw_fn_body_ctx f))
+              (raw_fn_lifetimes f) (sctx_of_ctx (params_ctx params_core))
               next (raw_fn_body f) with
       | infer_err err => infer_err err
       | infer_ok (body', _, extras, next1) =>
           let f' := MkFnDef (raw_fn_name f) (raw_fn_lifetimes f)
-                      (raw_fn_outlives f) [] (raw_fn_params f)
-                      (raw_fn_ret f) body'
-                      (raw_fn_type_params f) (raw_fn_bounds f) in
+                      (raw_fn_outlives f) [] params_core
+                      ret_core body'
+                      (raw_fn_type_params f) bounds_core in
           match elaborate_raw_fns_fuel fuel base_env (done ++ extras ++ [f'])
                   next1 rest with
           | infer_err err => infer_err err
@@ -789,8 +809,8 @@ Fixpoint elaborate_raw_fns_fuel
 Definition elaborate_raw_global_env (env : global_env) (fs : list raw_fn_def)
     : infer_result global_env :=
   let env_norm := normalize_assoc_global_env env in
-  let fs_norm := map (normalize_assoc_raw_fn env_norm) fs in
-  let stubs := map fn_stub_of_raw fs_norm in
+  let fs_norm := fs in
+  let stubs := map (fn_stub_of_raw env_norm) fs_norm in
   let base := MkGlobalEnv (env_structs env_norm) (env_enums env_norm)
     (env_traits env_norm) (env_impls env_norm)
     [] stubs in

@@ -1593,7 +1593,7 @@ val normalize_assoc_raw_rec_fn : global_env -> raw_rec_fn -> raw_rec_fn
 
 val normalize_assoc_raw_fn : global_env -> raw_fn_def -> raw_fn_def
 
-val fn_stub_of_raw : raw_fn_def -> fn_def
+val fn_stub_of_raw : global_env -> raw_fn_def -> fn_def
 
 val append_env_fns : global_env -> fn_def list -> global_env
 
@@ -1646,8 +1646,6 @@ val elaborate_raw_expr_fuel :
 val elaborate_raw_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> sctx -> raw_expr ->
   (expr * fn_def list) infer_result
-
-val raw_fn_body_ctx : raw_fn_def -> ctx
 
 val elaborate_raw_fns_fuel :
   Big_int_Z.big_int -> global_env -> fn_def list -> Big_int_Z.big_int ->

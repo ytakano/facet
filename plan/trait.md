@@ -53,29 +53,24 @@ validity checks must be represented in Rocq and the extracted checker.
   reachable route package/target providers, callback-height big-step safety,
   provider-style route/callback/store-safe bundles, top-level callback
   wrappers, component-body and local-bounds route-package providers,
-  route-package wrappers through prefix-scope consumers, assoc-aware
-  component-body summary-provider wrappers, branch-local strict-closure
-  and exact-body branch wrappers, and summary-call-package wrappers. The old ordinary
-  `typed_env_roots` path remains available under explicit ordinary names.
+  route-package wrappers through prefix-scope consumers, branch-local and
+  exact-body branch wrappers, component-body summary-provider wrappers, and
+  summary-call-package wrappers. Ordinary baseline theorem names remain
+  available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
 
 ## Remaining Tasks
 
-1. Move associated compatibility through the checker call-site boundary.
-   - Use the checked assoc-boundary wrappers for final-store scope and general
-     function-value `ECallExpr` paths as the bridge into safety consumers; the
-     latter is executable, extracted, and available through assoc-aware
-     checked core/env/full entrypoints.
-   - Bridge or generalize the remaining deeper derived big-step safety
-     consumers that still require ordinary `checked_fn_env_roots_checked` so
-     they can consume the assoc-boundary relation instead.
-   - Remove pre-compatibility normalization only after the remaining raw
-     elaboration expected-type paths use assoc compatibility. A direct removal
-     currently rejects valid projection compatibility cases before checker
-     execution, so this remains a
-     raw-elaboration bridge task rather than a CLI switch.
+1. Move associated compatibility fully out of pre-normalization.
+   - Keep the checked assoc-boundary wrappers as the safety bridge for
+     final-store scope, function-value `ECallExpr`, and derived end-to-end
+     safety consumers.
+   - Replace the remaining raw-elaboration expected-type paths that rely on
+     `normalize_assoc_raw_*` with assoc compatibility. A direct removal still
+     rejects valid projection compatibility cases before checker execution, so
+     this is a raw-elaboration bridge task rather than a CLI switch.
 
 2. Finish UFCS receiver hardening.
    - Keep the canonical surface syntax as prefix calls with receiver-first

@@ -61,8 +61,9 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds exact-body route payload facts, local-bounds route-summary
   facts, exact-body route scoped-package wrappers, seen/callee-seen bridge facts, direct-callee component/summary facts, alpha direct-callee facts, component-body callback/ready providers, component-body route-package
   providers, reachable route component-check facts, and reachable route
-  package/target providers, plus the summary call-package store-safe provider
-  step, also have assoc-aware counterparts.
+  package/target providers, and component-body store-safe callback bundles,
+  plus the summary call-package store-safe provider step, also have assoc-aware
+  counterparts.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

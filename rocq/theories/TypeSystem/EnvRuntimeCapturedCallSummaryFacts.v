@@ -137,7 +137,10 @@ Definition callee_body_root_shadow_captured_call_direct_receiver_method_narrow_s
       (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
-      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+      (direct_call_receiver_method_hidden_let_synthetic_body
+        (fn_ret freceiver) method_name type_args receiver_name receiver_args
+        method_args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
@@ -178,7 +181,11 @@ Definition callee_body_root_shadow_captured_call_generic_direct_receiver_method_
       (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
-      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+      (generic_direct_call_receiver_method_hidden_let_synthetic_body
+        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
+        method_name type_args receiver_name receiver_type_args receiver_args
+        method_args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
@@ -2692,7 +2699,10 @@ Proof.
     as [[[[T_method_env Gamma_method_env] R_method_env]
           roots_method_env] | err] eqn:Hmethod_env; try discriminate.
   destruct (infer_env_roots_shadow_safe env
-    (fn_with_body fdef synthetic_body)
+    (fn_with_body fdef
+      (direct_call_receiver_method_hidden_let_synthetic_body
+        (fn_ret freceiver) method_name type_args receiver_name receiver_args
+        method_args))
     (initial_root_env_for_fn fdef))
     as [[[[T_body Gamma_body] R_body] roots_body] | err]
     eqn:Hbody_env; try discriminate.
@@ -2712,7 +2722,11 @@ Proof.
     (fn_body freceiver) T_receiver Gamma_receiver R_receiver roots_receiver
     Hreceiver_core Hreceiver_expr) as [ret_roots_receiver Hreceiver_summary].
   pose proof (infer_env_roots_shadow_safe_sound env
-    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+    (fn_with_body fdef
+      (direct_call_receiver_method_hidden_let_synthetic_body
+        (fn_ret freceiver) method_name type_args receiver_name receiver_args
+        method_args))
+    (initial_root_env_for_fn fdef)
     T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
   unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
   destruct Htyped_fn as
@@ -2747,7 +2761,11 @@ Proof.
   split.
   { change (NoDup
       (ctx_names
-        (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+        (params_ctx (fn_params
+          (fn_with_body fdef
+            (direct_call_receiver_method_hidden_let_synthetic_body
+              (fn_ret freceiver) method_name type_args receiver_name
+              receiver_args method_args)))))).
     eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
   split; [exact Htyped_body |].
   split; [exact Hcompat_actual |].
@@ -2795,7 +2813,11 @@ Proof.
     as [[[[T_method_env Gamma_method_env] R_method_env]
           roots_method_env] | err] eqn:Hmethod_env; try discriminate.
   destruct (infer_env_roots_shadow_safe env
-    (fn_with_body fdef synthetic_body)
+    (fn_with_body fdef
+      (generic_direct_call_receiver_method_hidden_let_synthetic_body
+        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
+        method_name type_args receiver_name receiver_type_args receiver_args
+        method_args))
     (initial_root_env_for_fn fdef))
     as [[[[T_body Gamma_body] R_body] roots_body] | err]
     eqn:Hbody_env; try discriminate.
@@ -2815,7 +2837,12 @@ Proof.
     (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
       env fmethod type_args Hmethod_summary) as Hmethod_summary_prop.
   pose proof (infer_env_roots_shadow_safe_sound env
-    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+    (fn_with_body fdef
+      (generic_direct_call_receiver_method_hidden_let_synthetic_body
+        (subst_type_params_ty receiver_type_args (fn_ret freceiver))
+        method_name type_args receiver_name receiver_type_args receiver_args
+        method_args))
+    (initial_root_env_for_fn fdef)
     T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
   unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
   destruct Htyped_fn as
@@ -2842,7 +2869,12 @@ Proof.
   split.
   { change (NoDup
       (ctx_names
-        (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+        (params_ctx (fn_params
+          (fn_with_body fdef
+            (generic_direct_call_receiver_method_hidden_let_synthetic_body
+              (subst_type_params_ty receiver_type_args (fn_ret freceiver))
+              method_name type_args receiver_name receiver_type_args
+              receiver_args method_args)))))).
     eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
   split; [exact Htyped_body |].
   split; [exact Hcompat_actual |].

@@ -1202,7 +1202,10 @@ Definition check_fn_root_shadow_direct_receiver_method_store_safe_summary
                     infer_env_roots_shadow_safe env method_callee
                       (initial_root_env_for_fn method_callee),
                     infer_env_roots_shadow_safe env
-                      (fn_with_body fdef synthetic_body)
+                      (fn_with_body fdef
+                        (direct_call_receiver_method_hidden_let_synthetic_body
+                          (fn_ret receiver_callee) method_name type_args
+                          receiver_name receiver_args method_args))
                       (initial_root_env_for_fn fdef) with
               | infer_ok (T_receiver, _, R_receiver, roots_receiver),
                 infer_ok _,
@@ -1270,7 +1273,12 @@ Definition check_fn_root_shadow_generic_direct_receiver_method_store_safe_summar
                     infer_env_roots_shadow_safe env method_callee
                       (initial_root_env_for_fn method_callee),
                     infer_env_roots_shadow_safe env
-                      (fn_with_body fdef synthetic_body)
+                      (fn_with_body fdef
+                        (generic_direct_call_receiver_method_hidden_let_synthetic_body
+                          (subst_type_params_ty receiver_type_args
+                            (fn_ret receiver_callee))
+                          method_name type_args receiver_name
+                          receiver_type_args receiver_args method_args))
                       (initial_root_env_for_fn fdef) with
               | infer_ok _,
                 infer_ok _,

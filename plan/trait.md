@@ -88,11 +88,11 @@ validity checks must be represented in Rocq and the extracted checker.
      gate. The executable sidecar recognizers, shape lemmas, summary package
      definitions, standalone checker helpers, helper soundness lemmas, runtime
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
-     constructors, hidden receiver `EVar` evaluation helpers, and base gate
-     split now identify and isolate direct and generic direct-call receiver
-     method shapes. Next, make the checker summaries use the hidden-let body,
-     connect those helpers as outer branches on the main checker gate, and
-     prove the main runtime safety branch with receiver-method-specific
+     constructors, hidden receiver `EVar` evaluation helpers, hidden-let
+     receiver-method checker summaries, and base gate split now identify and
+     isolate direct and generic direct-call receiver method shapes. Next,
+     connect those helpers as outer branches on the main checker gate and prove
+     the main runtime safety branch with receiver-method-specific
      evidence instead of treating the nested receiver call as an ordinary
      store-safe function-value argument.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

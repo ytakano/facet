@@ -40,31 +40,17 @@ validity checks must be represented in Rocq and the extracted checker.
   checked assoc-boundary wrapper for general function-value `ECallExpr` paths.
   That wrapper now lives in an executable checker module and is exported for
   extraction; the proof file only proves its checked assoc-boundary soundness.
-  Assoc-aware checked core/env/full entrypoints are also executable, exported,
-  and covered by assoc-boundary soundness. An assoc-aware end-to-end checker
-  variant is exported and has program-level assoc-boundary soundness, now also
-  surfaced from the end-to-end safety module for downstream consumers. That
-  module can also derive the same sidecar readiness checks from the assoc-aware
-  path, and the base big-step checked-initial-ready safety theorem has an
-  assoc-aware counterpart. The OCaml CLI now uses the extracted assoc-aware
-  end-to-end checker as its accept/reject authority. The required end-to-end
-  soundness and base checked-initial-ready theorem names now point at that
-  assoc-aware active path, while the old ordinary `typed_env_roots` path remains
-  available under explicit ordinary names. The first shallow derived big-step
-  safety wrappers, covering call-statement routes, summary exact-package
-  component evidence, component-body summary providers, summary-at exact-package
-  providers, summary-at call-route nested providers, alpha nested call-route
-  providers, alpha-evidence summary and closure providers, strict-exact
-  closure check-boundary wrappers, an assoc strict-exact checker entrypoint
-  with assoc-boundary soundness, unique/ready sidecars, component
-  exact-closure provider facts, local-bounds summary/target facts,
-  local-bounds exact-body route payload facts, local-bounds route-summary
-  facts, exact-body route scoped-package wrappers, seen/callee-seen bridge facts, direct-callee component/summary facts, alpha direct-callee facts, component-body callback/ready providers, component-body route-package
-  providers, reachable route component-check facts, and reachable route
-  package/target providers, and component-body store-safe callback bundles, and the callback-height
-  big-step safety wrapper, and provider-style component check/ready facts and provider-style
-  local-bounds route helpers, plus the summary call-package store-safe provider
-  step, also have assoc-aware counterparts.
+  Assoc-aware checked core/env/full entrypoints are executable, exported, and
+  covered by assoc-boundary soundness. The OCaml CLI uses the extracted
+  assoc-aware end-to-end checker as its accept/reject authority, and the
+  required end-to-end soundness and base checked-initial-ready theorem names
+  point at that active path. The end-to-end safety module now has assoc-aware
+  counterparts for the strict-exact closure checker path, sidecar readiness,
+  shallow call-route big-step wrappers, component/provider local-bounds facts,
+  seen/direct-callee bridges, component-body route/callback providers,
+  reachable route package/target providers, callback-height big-step safety,
+  and provider-style route/callback bundles. The old ordinary
+  `typed_env_roots` path remains available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

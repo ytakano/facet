@@ -1712,6 +1712,31 @@ Proof.
   eapply hidden_let_receiver_method_eval; eassumption.
 Qed.
 
+Lemma direct_receiver_method_eval_args_hidden_receiver_strip :
+  forall env s_receiver T_receiver v_receiver method_args s_args_hidden vs,
+    eval_args env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      method_args s_args_hidden vs ->
+    preservation_ready_args method_args ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_local_store_names method_args) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver ->
+    exists s_args,
+      s_args_hidden =
+        store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_args /\
+      eval_args env s_receiver method_args s_args vs /\
+      store_refs_exclude_root receiver_method_hidden_receiver_name s_args /\
+      Forall (value_refs_exclude_root receiver_method_hidden_receiver_name) vs.
+Proof.
+  intros env s_receiver T_receiver v_receiver method_args s_args_hidden vs
+    Heval_args Hready Hfree Hlocal Hrefs.
+  eapply preservation_ready_eval_args_hidden_frame_strip; eassumption.
+Qed.
+
 Lemma generic_direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_type_args
       receiver_args method_args synthetic_body s' v,

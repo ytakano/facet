@@ -6014,6 +6014,57 @@ Proof.
     + exact Hin.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_check_provider_of_check_env_no_capture :
+  forall env' env0 fdef,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true ->
+    global_env_local_bounds_family env' env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true.
+Proof.
+  intros env' env0 fdef Hcheck Hfamily Hin.
+  eapply infer_program_env_end2end_strict_exact_closure_component_check_provider_of_check_env_no_capture;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_ready_provider_of_component_check_provider :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    (forall env0 fdef,
+      global_env_local_bounds_family env' env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' fdef = true) ->
+    forall env0 fname fdef fcall used used' fname_body args_body synthetic_body,
+      global_env_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component)) env0 ->
+      In fdef (env_fns env0) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      fn_env_unique_by_name env0 /\
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env0 fdef /\
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env0 fdef = true.
+Proof.
+  intros env env' f_component Hprog Hcomponent_check_provider env0 fname
+    fdef fcall used used' fname_body args_body synthetic_body Hfamily Hin
+    _Hname _Hrename _Htarget.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_component_ready_payload_in_local_bounds_family.
+  - exact Hprog.
+  - exists (fn_bounds f_component). reflexivity.
+  - exact Hfamily.
+  - exact Hin.
+  - eapply Hcomponent_check_provider.
+    + eapply global_env_local_bounds_family_of_local_bounds_base.
+      exact Hfamily.
+    + exact Hin.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_ready_provider :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

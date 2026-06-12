@@ -33,8 +33,9 @@ validity checks must be represented in Rocq and the extracted checker.
   definitions, standalone executable checker helpers, helper soundness lemmas,
   runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas,
   hidden-let synthetic receiver body constructors, hidden receiver `EVar`
-  evaluation helpers, structured receiver-method checker view lemmas, and a
-  behavior-preserving split between the active captured-call core gate and its
+  evaluation helpers, structured receiver-method checker view lemmas, a typed hidden-body
+  package for direct receiver-method summaries, and a behavior-preserving split
+  between the active captured-call core gate and its
   public base wrapper. The direct and generic receiver-method checker summaries
   remain factored but inactive until their dedicated runtime safety branch is
   proved.
@@ -90,11 +91,13 @@ validity checks must be represented in Rocq and the extracted checker.
      definitions, standalone checker helpers, helper soundness lemmas, runtime
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
      constructors, hidden receiver `EVar` evaluation helpers, hidden-let
-     receiver-method checker summaries, structured checker view lemmas, and the
-     active-core/public-base gate split now isolate direct and generic
-     direct-call receiver method shapes without changing accepted programs.
-     Next, prove the receiver-method-specific runtime branch, then enable those
-     summaries as outer alternatives on the public base checker gate.
+     receiver-method checker summaries, structured checker view lemmas, a typed
+     hidden-body package for direct receiver-method summaries, and the active-core/public-base gate split now
+     isolate direct and generic direct-call receiver method shapes without
+     changing accepted programs. Next, prove the evaluation bridge from the
+     original receiver-first method call to the hidden-let body, use it to prove
+     the direct receiver-method runtime branch, then enable the summaries as
+     outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

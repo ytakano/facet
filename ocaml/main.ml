@@ -474,7 +474,7 @@ let () =
   let env_for_checker = alpha_normalize_global_env env in
   let diagnostics = diagnostic_map_of_envs env env_for_checker in
   let checked_env =
-    match infer_program_env_end2end env_for_checker with
+    match infer_program_env_end2end_assoc env_for_checker with
     | Infer_ok env' ->
       List.iter (fun f ->
         let (fname, _) = f.fn_name in

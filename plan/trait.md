@@ -46,8 +46,10 @@ validity checks must be represented in Rocq and the extracted checker.
   surfaced from the end-to-end safety module for downstream consumers. That
   module can also derive the same sidecar readiness checks from the assoc-aware
   path, and the base big-step checked-initial-ready safety theorem has an
-  assoc-aware counterpart. The remaining work is making that path the active
-  safety-backed checker path.
+  assoc-aware counterpart. The OCaml CLI now uses the extracted assoc-aware
+  end-to-end checker as its accept/reject authority. The remaining work is
+  connecting the required ordinary theorem names to that active path instead of
+  keeping them as separate wrappers.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -59,9 +61,9 @@ validity checks must be represented in Rocq and the extracted checker.
      function-value `ECallExpr` paths as the bridge into safety consumers; the
      latter is executable, extracted, and available through assoc-aware
      checked core/env/full entrypoints.
-   - Switch the active end-to-end checker path from ordinary checked roots to
-     the assoc-aware end-to-end entrypoint, without weakening the ordinary
-     `typed_env_roots` soundness path.
+   - Connect the required ordinary theorem names to the assoc-aware end-to-end
+     entrypoint, without weakening the ordinary `typed_env_roots` soundness
+     path.
    - Bridge or generalize the remaining derived big-step safety consumers that
      still require ordinary `checked_fn_env_roots_checked` so they can consume
      the assoc-boundary relation instead.

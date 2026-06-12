@@ -4766,6 +4766,161 @@ Proof.
   eapply infer_core_env_state_fuel_roots_shadow_safe_checked_sound. exact Hinfer.
 Qed.
 
+Definition infer_fn_value_call_expr_assoc_shadow_safe
+    (fuel : nat) (env : global_env) (Omega : outlives_ctx) (n : nat)
+    (R : root_env) (Sigma : sctx) (callee : expr) (args : list expr)
+    : infer_result (Ty * sctx * root_env * root_set) :=
+  match fuel with
+  | 0 => infer_err ErrNotImplemented
+  | S fuel' =>
+      match infer_core_env_state_fuel_roots_shadow_safe
+              fuel' env Omega n R Sigma callee with
+      | infer_err err => infer_err err
+      | infer_ok (callee_ty, Sigma1, R1, roots_callee) =>
+          match infer_env_args_collect_roots
+                  fuel' env Omega n R1 Sigma1 args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Sigma', R', arg_roots) =>
+              let roots :=
+                root_set_union roots_callee (root_sets_union arg_roots) in
+              match ty_core callee_ty with
+              | TFn _ _ | TClosure _ _ _ =>
+                  match infer_fn_value_call_assoc
+                          env Omega callee_ty arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Sigma', R', roots)
+                  end
+              | TTypeForall type_params bounds body =>
+                  match infer_type_forall_call_env_assoc
+                          env Omega type_params bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Sigma', R', roots)
+                  end
+              | TForall m bounds body =>
+                  match ty_core body with
+                  | TTypeForall type_params type_bounds type_body =>
+                      match infer_mixed_forall_call_env_assoc
+                              env Omega n m bounds type_params type_bounds
+                              type_body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Sigma', R', roots)
+                      end
+                  | TFn _ _ | TClosure _ _ _ =>
+                      match infer_hrt_call_env_assoc
+                              env Omega n m bounds body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Sigma', R', roots)
+                      end
+                  | c => infer_err (ErrMalformedHrtBody c)
+                  end
+              | _ => infer_err ErrNotImplemented
+              end
+          end
+      end
+  end.
+
+Theorem infer_fn_value_call_expr_assoc_shadow_safe_checked_boundary_sound :
+  forall fuel env Omega n R Sigma callee args T Sigma' R' roots,
+    infer_fn_value_call_expr_assoc_shadow_safe
+      fuel env Omega n R Sigma callee args =
+      infer_ok (T, Sigma', R', roots) ->
+    typed_env_roots_checked_assoc_boundary env Omega n R Sigma
+      (ECallExpr callee args) T Sigma' R' roots.
+Proof.
+  intros fuel env Omega n R Sigma callee args T Sigma' R' roots Hinfer.
+  unfold infer_fn_value_call_expr_assoc_shadow_safe in Hinfer.
+  destruct fuel as [|fuel']; try discriminate.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe
+    fuel' env Omega n R Sigma callee)
+    as [[[[callee_ty Sigma1] R1] roots_callee] | err_callee]
+    eqn:Hcallee; try discriminate.
+  destruct (infer_env_args_collect_roots fuel' env Omega n R1 Sigma1 args)
+    as [[[[arg_tys Sigma_args] R_args] arg_roots] | err_args]
+    eqn:Hargs; try discriminate.
+  assert (Hcallee_typed :
+    typed_env_roots env Omega n R Sigma callee callee_ty Sigma1 R1
+      roots_callee).
+  { eapply typed_env_roots_shadow_safe_roots.
+    eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+    exact Hcallee. }
+  assert (Hargs_typed :
+    forall R0 Sigma0 e T0 Sigma2 R2 roots1,
+      infer_core_env_state_fuel_roots fuel' env Omega n R0 Sigma0 e =
+        infer_ok (T0, Sigma2, R2, roots1) ->
+      typed_env_roots env Omega n R0 Sigma0 e T0 Sigma2 R2 roots1).
+  { intros. eapply infer_core_env_state_fuel_roots_sound. eassumption. }
+  destruct callee_ty as [u callee_core]. simpl in Hinfer, Hcallee_typed.
+  destruct callee_core as
+    [| | | | named | param | struct_name struct_lts struct_args
+     | enum_name enum_lts enum_args | param_tys ret
+     | env_lt param_tys ret | m bounds body | type_params type_bounds body
+     | assoc_base assoc_trait assoc_args assoc_name | ref_lt ref_kind ref_ty];
+    try discriminate.
+  - destruct (infer_fn_value_call_assoc env Omega
+      (MkTy u (TFn param_tys ret)) arg_tys) as [T_call | err_call]
+      eqn:Hcall; try discriminate.
+    inversion Hinfer; subst; clear Hinfer.
+    eapply infer_roots_fn_value_call_checked_assoc_boundary; eassumption.
+  - destruct (infer_fn_value_call_assoc env Omega
+      (MkTy u (TClosure env_lt param_tys ret)) arg_tys) as [T_call | err_call]
+      eqn:Hcall; try discriminate.
+    inversion Hinfer; subst; clear Hinfer.
+    eapply infer_roots_fn_value_call_checked_assoc_boundary; eassumption.
+  - destruct body as [body_u body_core]. simpl in Hinfer, Hcallee_typed.
+    destruct body_core as
+      [| | | | body_named | body_param
+       | body_struct_name body_struct_lts body_struct_args
+       | body_enum_name body_enum_lts body_enum_args
+       | body_param_tys body_ret
+       | body_env_lt body_param_tys body_ret
+       | body_m body_bounds body_inner
+       | body_type_params body_type_bounds body_type_body
+       | body_assoc_base body_assoc_trait body_assoc_args body_assoc_name
+       | body_ref_lt body_ref_kind body_ref_ty].
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TUnits)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TIntegers)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TFloats)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TBooleans)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TNamed body_named)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TParam body_param)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TStruct body_struct_name body_struct_lts body_struct_args)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TEnum body_enum_name body_enum_lts body_enum_args)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TFn body_param_tys body_ret)) arg_tys) as [T_call | err_call]
+        eqn:Hcall; try discriminate.
+      inversion Hinfer; subst; clear Hinfer.
+      eapply infer_roots_hrt_checked_assoc_boundary; eassumption.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TClosure body_env_lt body_param_tys body_ret)) arg_tys) as [T_call | err_call]
+        eqn:Hcall; try discriminate.
+      inversion Hinfer; subst; clear Hinfer.
+      eapply infer_roots_hrt_checked_assoc_boundary; eassumption.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TForall body_m body_bounds body_inner)) arg_tys); discriminate.
+    + destruct (infer_mixed_forall_call_env_assoc
+        env Omega n m bounds body_type_params body_type_bounds body_type_body
+        arg_tys) as [T_call | err_call] eqn:Hcall; try discriminate.
+      inversion Hinfer; subst; clear Hinfer.
+      eapply infer_roots_mixed_forall_checked_assoc_boundary; eassumption.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TAssoc body_assoc_base body_assoc_trait body_assoc_args body_assoc_name)) arg_tys); discriminate.
+    + destruct (infer_hrt_call_env_assoc env Omega n m bounds
+        (MkTy body_u (TRef body_ref_lt body_ref_kind body_ref_ty)) arg_tys); discriminate.
+  - destruct (infer_type_forall_call_env_assoc
+      env Omega type_params type_bounds body arg_tys) as [T_call | err_call]
+      eqn:Hcall; try discriminate.
+    inversion Hinfer; subst; clear Hinfer.
+    eapply infer_roots_type_forall_checked_assoc_boundary; eassumption.
+Qed.
+
 Theorem infer_core_env_roots_shadow_safe_checked_assoc_boundary_sound :
   forall env Omega n R Gamma e T Gamma' R' roots,
     infer_core_env_roots_shadow_safe_checked env Omega n R Gamma e =

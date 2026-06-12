@@ -141,6 +141,40 @@ Proof.
   eapply infer_program_env_end2end_assoc_sound; eauto.
 Qed.
 
+Lemma check_program_env_end2end_assoc_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc env = true ->
+    exists env', infer_program_env_end2end_assoc env = infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc in Hcheck.
+  destruct (infer_program_env_end2end_assoc env) as [env' | err] eqn:Hprog;
+    try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc env = true ->
+    exists env',
+      infer_program_env_end2end_assoc env = infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct (check_program_env_end2end_assoc_infer_ok env Hcheck)
+    as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_sound; eauto.
+Qed.
+
 Lemma check_program_env_end2end_infer_ok :
   forall env,
     check_program_env_end2end env = true ->
@@ -268,6 +302,142 @@ Proof.
   eapply infer_program_env_end2end_strict_exact_closure_sound; eauto.
 Qed.
 
+
+Lemma infer_fn_env_end2end_assoc_gate :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end_assoc env f = infer_ok (T, Γ_out, R_out, roots) ->
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env f = true.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  unfold infer_fn_env_end2end_assoc in Hend.
+  destruct (infer_full_env_roots_checked_assoc env f
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)))
+    as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
+  destruct (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+              env f) eqn:Hgate; try discriminate.
+  reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_check_env_ready :
+  forall env fns,
+    infer_fns_env_end2end_assoc env fns = infer_ok tt ->
+    forallb
+      (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+        env) fns = true.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; intros Hinfer; simpl in *.
+  - reflexivity.
+  - destruct (infer_fn_env_end2end_assoc env f)
+      as [[[[T Γ] R] roots] | err] eqn:Hhead; try discriminate.
+    apply andb_true_iff. split.
+    + eapply infer_fn_env_end2end_assoc_gate. exact Hhead.
+    + eapply IH. exact Hinfer.
+Qed.
+
+Lemma infer_fn_env_end2end_assoc_combined_gate :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end_assoc env f = infer_ok (T, Γ_out, R_out, roots) ->
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env f = true.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  pose proof (infer_fn_env_end2end_assoc_gate env f T Γ_out R_out roots Hend)
+    as Hexact.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hexact.
+  apply orb_true_iff in Hexact as [Hcaptured | Hexact].
+  - rewrite Hcaptured. reflexivity.
+  - assert (Hcomponent :
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f = true).
+    { unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        in Hexact.
+      eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check;
+        try exact Hexact.
+      reflexivity. }
+    rewrite Hcomponent. rewrite orb_true_r. reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_combined_check_env_ready :
+  forall env fns,
+    infer_fns_env_end2end_assoc env fns = infer_ok tt ->
+    forallb
+      (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+        env) fns = true.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; intros Hinfer; simpl in *.
+  - reflexivity.
+  - destruct (infer_fn_env_end2end_assoc env f)
+      as [[[[T Γ] R] roots] | err] eqn:Hhead; try discriminate.
+    apply andb_true_iff. split.
+    + eapply infer_fn_env_end2end_assoc_combined_gate. exact Hhead.
+    + eapply IH. exact Hinfer.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  apply andb_true_iff in Hunique_global as [Hunique_top _].
+  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
+  eapply infer_fns_env_end2end_assoc_check_env_ready.
+  exact Hfns.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_combined_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  eapply infer_fns_env_end2end_assoc_combined_check_env_ready.
+  exact Hfns.
+Qed.
 
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,

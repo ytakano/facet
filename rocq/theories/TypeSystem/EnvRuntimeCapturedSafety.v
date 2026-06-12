@@ -1332,6 +1332,61 @@ Proof.
   exists m, x. split; reflexivity.
 Qed.
 
+Lemma direct_call_receiver_method_target_expr_shape :
+  forall raw_body method_name type_args receiver_name receiver_args method_args
+      synthetic_body,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) ->
+    (raw_body = ECallGeneric method_name type_args
+        (ECall receiver_name receiver_args :: method_args) \/
+     raw_body = ECallGeneric method_name type_args
+        (ECallExpr (EFn receiver_name) receiver_args :: method_args)) /\
+    synthetic_body = ECallGeneric method_name type_args
+      (ECall receiver_name receiver_args :: method_args).
+Proof.
+  intros raw_body method_name type_args receiver_name receiver_args method_args
+    synthetic_body Htarget.
+  unfold direct_call_receiver_method_target_expr in Htarget.
+  destruct raw_body; try discriminate.
+  match goal with
+  | H : match ?args with _ => _ end = _ |- _ =>
+      destruct args as [| receiver method_args0]; try discriminate
+  end.
+  destruct receiver; try discriminate.
+  - inversion Htarget; subst; clear Htarget.
+    split; [left; reflexivity | reflexivity].
+  - destruct receiver; try discriminate.
+    inversion Htarget; subst; clear Htarget.
+    split; [right; reflexivity | reflexivity].
+Qed.
+
+Lemma generic_direct_call_receiver_method_target_expr_shape :
+  forall raw_body method_name type_args receiver_name receiver_type_args
+      receiver_args method_args synthetic_body,
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) ->
+    raw_body = ECallGeneric method_name type_args
+      (ECallGeneric receiver_name receiver_type_args receiver_args ::
+        method_args) /\
+    synthetic_body = ECallGeneric method_name type_args
+      (ECallGeneric receiver_name receiver_type_args receiver_args ::
+        method_args).
+Proof.
+  intros raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body Htarget.
+  unfold generic_direct_call_receiver_method_target_expr in Htarget.
+  destruct raw_body; try discriminate.
+  match goal with
+  | H : match ?args with _ => _ end = _ |- _ =>
+      destruct args as [| receiver method_args0]; try discriminate
+  end.
+  destruct receiver; try discriminate.
+  inversion Htarget; subst; clear Htarget.
+  split; reflexivity.
+Qed.
+
 Lemma eval_let_bound_generic_direct_call_inv :
   forall env s m x T_hidden fname type_args args s' v,
     eval env s

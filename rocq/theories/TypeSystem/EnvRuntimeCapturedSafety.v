@@ -1661,6 +1661,57 @@ Proof.
     + exact H2.
 Qed.
 
+Lemma direct_receiver_method_eval_hidden_let_bridge_replay :
+  forall env s raw_body method_name type_args receiver_name receiver_args
+      method_args target_synthetic_body hidden_synthetic_body T_receiver s' v,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args,
+        method_args, target_synthetic_body) ->
+    hidden_synthetic_body =
+      direct_call_receiver_method_hidden_let_synthetic_body
+        T_receiver method_name type_args receiver_name receiver_args
+        method_args ->
+    eval env s raw_body s' v ->
+    (forall s_receiver v_receiver,
+      eval env s (ECall receiver_name receiver_args)
+        s_receiver v_receiver ->
+      exists s_method_hidden,
+        eval env
+          (store_add receiver_method_hidden_receiver_name T_receiver
+            v_receiver s_receiver)
+          (ECallGeneric method_name type_args
+            (EVar receiver_method_hidden_receiver_name :: method_args))
+          s_method_hidden v) ->
+    exists s_hidden s_receiver v_receiver s_method_hidden,
+      eval env s hidden_synthetic_body s_hidden v /\
+      eval env s (ECall receiver_name receiver_args)
+        s_receiver v_receiver /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (ECallGeneric method_name type_args
+          (EVar receiver_method_hidden_receiver_name :: method_args))
+        s_method_hidden v /\
+      s_hidden =
+        store_remove receiver_method_hidden_receiver_name s_method_hidden.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_args
+    method_args target_synthetic_body hidden_synthetic_body T_receiver s' v
+    Htarget Hhidden Heval Hreplay.
+  destruct (direct_call_receiver_method_eval_receiver_inv
+    env s raw_body method_name type_args receiver_name receiver_args
+    method_args target_synthetic_body s' v Htarget Heval)
+    as (s_receiver & v_receiver & _s_method_args & _vs_method &
+      Heval_receiver & _Heval_method_args).
+  destruct (Hreplay s_receiver v_receiver Heval_receiver)
+    as (s_method_hidden & Heval_method_hidden).
+  exists (store_remove receiver_method_hidden_receiver_name s_method_hidden),
+    s_receiver, v_receiver, s_method_hidden.
+  repeat split; try reflexivity; try eassumption.
+  rewrite Hhidden.
+  eapply hidden_let_receiver_method_eval; eassumption.
+Qed.
+
 Lemma generic_direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_type_args
       receiver_args method_args synthetic_body s' v,

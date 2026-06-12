@@ -2356,11 +2356,14 @@ let validate_env ?(check_impl_method_sigs = true) ?(check_trait_own_bounds = tru
                       List.map validate_fn env.env_fns) with
     | Some _ as err -> err
     | None ->
+      let assoc_ty_eq actual expected =
+        ty_eqb (normalize_assoc_ty env actual) (normalize_assoc_ty env expected)
+      in
       let impl_key_eq a b =
         a.impl_trait_name = b.impl_trait_name &&
         List.length a.impl_trait_args = List.length b.impl_trait_args &&
-        List.for_all2 ty_eqb a.impl_trait_args b.impl_trait_args &&
-        ty_eqb a.impl_for_ty b.impl_for_ty
+        List.for_all2 assoc_ty_eq a.impl_trait_args b.impl_trait_args &&
+        assoc_ty_eq a.impl_for_ty b.impl_for_ty
       in
       let rec dup_impl = function
         | [] -> false

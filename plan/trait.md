@@ -32,8 +32,8 @@ validity checks must be represented in Rocq and the extracted checker.
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Associated
   projections are still normalized before most ordinary compatibility checks,
-  but impl method signature validation now compares params, returns, and
-  bounds with assoc-aware normalization.
+  but impl method signature validation and duplicate impl key detection now
+  compare through assoc-aware normalization.
 - Rocq has env-aware associated compatibility helpers and checked wrapper
   boundaries for core, env, root, shadow-safe root, function-level, and
   end-to-end checker entrypoints. These wrappers preserve store/root naming,
@@ -51,7 +51,8 @@ validity checks must be represented in Rocq and the extracted checker.
   shallow call-route big-step wrappers, component/provider local-bounds facts,
   seen/direct-callee bridges, component-body route/callback providers,
   reachable route package/target providers, callback-height big-step safety,
-  and provider-style route/callback/store-safe bundles, lower callback wrappers, and top-level store-safe callback and provider-callback wrappers, and route-package base and exact-body scoped and exact-closure and component-body-summary and synthetic-evidence and prefix-scope route wrappers. The old ordinary
+  provider-style route/callback/store-safe bundles, top-level callback
+  wrappers, and route-package wrappers through prefix-scope consumers. The old ordinary
   `typed_env_roots` path remains available under explicit ordinary names.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is

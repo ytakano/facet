@@ -1,0 +1,17 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = isize;
+}
+
+trait Marker<T>;
+
+impl Marker<unrestricted <unrestricted isize as Provider>::Item> for unrestricted isize;
+
+impl Marker<unrestricted isize> for unrestricted isize;
+
+fn main() -> unrestricted isize {
+  0
+}

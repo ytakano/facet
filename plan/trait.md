@@ -56,8 +56,9 @@ validity checks must be represented in Rocq and the extracted checker.
   providers, summary-at call-route nested providers, alpha nested call-route
   providers, alpha-evidence summary and closure providers, strict-exact
   closure check-boundary wrappers, an assoc strict-exact checker entrypoint
-  with assoc-boundary soundness and unique/ready sidecars, and the summary
-  call-package store-safe provider step, also have assoc-aware counterparts.
+  with assoc-boundary soundness, unique/ready sidecars, and component
+  exact-closure provider facts, plus the summary call-package store-safe
+  provider step, also have assoc-aware counterparts.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

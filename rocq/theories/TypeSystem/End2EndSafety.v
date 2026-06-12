@@ -1181,6 +1181,99 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_ready_when_not_captured :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcaptured.
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
+    exact Hprog.
+  - exact Hin.
+  - exact Hcaptured.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_ready :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcomponent_check.
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
+    exact Hprog.
+  - exact Hin.
+  - exact Hcomponent_check.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_component_exact_closure :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcomponent_check.
+  destruct (infer_program_env_end2end_assoc_strict_exact_closure_component_ready
+              env env' f_component Hprog Hin Hcomponent_check)
+    as [_ Hexact].
+  exact Hexact.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name_in_local_bounds_family :
+  forall env env' base env0,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    fn_env_unique_by_name env0.
+Proof.
+  intros env env' base env0 Hprog Hbase Henv.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_closure_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_exact_closure_check_in_provider_of_strict_exact_closure_check.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_target_in_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_exact_body_target_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_strict_exact_closure_check.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

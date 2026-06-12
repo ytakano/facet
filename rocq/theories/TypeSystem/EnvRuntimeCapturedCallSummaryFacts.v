@@ -108,6 +108,81 @@ Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_saf
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists method_name type_args receiver_name receiver_args method_args raw_body
+      synthetic_body freceiver fmethod T_body Gamma_out R_body roots_body,
+    fn_body fdef = raw_body /\
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) /\
+    store_safe_function_value_call_args env receiver_args /\
+    store_safe_function_value_call_args env method_args /\
+    In freceiver (env_fns env) /\
+    fn_name freceiver = receiver_name /\
+    callee_body_root_shadow_store_safe_narrow_summary env freceiver /\
+    In fmethod (env_fns env) /\
+    fn_name fmethod = method_name /\
+    Datatypes.length type_args = fn_type_params fmethod /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds fmethod) type_args = None /\
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fmethod)) /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 fmethod type_args /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Definition callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists method_name type_args receiver_name receiver_type_args receiver_args
+      method_args raw_body synthetic_body freceiver fmethod T_body Gamma_out
+      R_body roots_body,
+    fn_body fdef = raw_body /\
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) /\
+    store_safe_function_value_call_args env receiver_args /\
+    store_safe_function_value_call_args env method_args /\
+    In freceiver (env_fns env) /\
+    fn_name freceiver = receiver_name /\
+    Datatypes.length receiver_type_args = fn_type_params freceiver /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds freceiver) receiver_type_args = None /\
+    preservation_ready_expr
+      (subst_type_params_expr receiver_type_args (fn_body freceiver)) /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 freceiver receiver_type_args /\
+    In fmethod (env_fns env) /\
+    fn_name fmethod = method_name /\
+    Datatypes.length type_args = fn_type_params fmethod /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds fmethod) type_args = None /\
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fmethod)) /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 fmethod type_args /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
 Definition callee_body_root_shadow_captured_call_generic_direct_let_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   exists fname type_args args T_hidden raw_body synthetic_body fcallee T_body Gamma_out

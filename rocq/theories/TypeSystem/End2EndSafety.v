@@ -1925,6 +1925,162 @@ Proof.
     exact Hlookup.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_seen_component_check_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef fuel seen _Hprog _Hbase _Henv Hseen
+    Hnot_seen.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_seen_exact_body_target_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef fuel seen _Hprog _Hbase _Henv Hseen
+    Hnot_seen.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_checks
+              fuel seen env' fdef Hseen Hnot_seen) as [_Hcomponent Hexact].
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound.
+  exact Hexact.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_seen_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef fuel seen Hprog Hbase Henv Hin Hseen
+    Hnot_seen.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family.
+  - exact Hprog.
+  - exact Hbase.
+  - exact Henv.
+  - exact Hin.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_seen_component_check_in_local_bounds_family;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_single_seen_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 f_component fdef,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env') ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) [fn_name f_component] = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 f_component fdef Hprog Hbase Henv
+    Hin_component Hin Hcomponent_check Hseen.
+  simpl in Hseen.
+  destruct (ident_eqb (fn_name fdef) (fn_name f_component)) eqn:Hname;
+    try discriminate.
+  apply ident_eqb_eq in Hname.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  assert (Heq : fdef = f_component).
+  { eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
+    - exact Hprog.
+    - exact Hin.
+    - exact Hin_component.
+    - exact Hname. }
+  subst fdef.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family.
+  - exact Hprog.
+  - exists bounds_base. reflexivity.
+  - exists bounds. reflexivity.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_callee_seen_in_local_bounds_family :
+  forall env env' base env0 f_component fname args synthetic_body fcallee,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn_b fname (env_fns env') = Some fcallee ->
+    exists fuel',
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+        fuel' [fn_name f_component] env' fcallee = true.
+Proof.
+  intros env env' base env0 f_component fname args synthetic_body fcallee
+    _Hprog _Hbase _Henv Hexact Htarget Hlookup.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_callee_seen_of_lookup_in_local_bounds_family :
+  forall env env' base env0 f_component fname args synthetic_body fcallee,
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname (env_fns env0) = Some fcallee ->
+    exists fuel',
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+        fuel' [fn_name f_component] env' fcallee = true.
+Proof.
+  intros env env' base env0 f_component fname args synthetic_body fcallee
+    Hprog Hbase Henv Hexact Htarget Hlookup.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hlookup.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_callee_seen_in_local_bounds_family.
+  - exact Hprog.
+  - exists bounds_base. reflexivity.
+  - exists bounds. reflexivity.
+  - exact Hexact.
+  - exact Htarget.
+  - eapply lookup_fn_b_of_lookup_fn.
+    exact Hlookup.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_direct_callee_component_check_of_lookup_in_local_bounds_family :
   forall env env' base env0 f_component fname args synthetic_body fcallee,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

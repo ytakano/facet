@@ -1481,6 +1481,132 @@ Proof.
   assumption.
 Qed.
 
+Lemma direct_call_receiver_method_eval_receiver_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_args
+      method_args synthetic_body s' v,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_receiver v_receiver s_method_args vs_method,
+      eval env s (ECall receiver_name receiver_args) s_receiver v_receiver /\
+      eval_args env s_receiver method_args s_method_args vs_method.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_args
+    method_args synthetic_body s' v Htarget Heval.
+  destruct (direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_args method_args
+    synthetic_body Htarget) as [[Hraw | Hraw] _].
+  - rewrite Hraw in Heval.
+    dependent destruction Heval.
+    dependent destruction H1.
+    exists s1, v, s2, vs. split; assumption.
+  - rewrite Hraw in Heval.
+    dependent destruction Heval.
+    dependent destruction H1.
+    exists s1, v, s2, vs. split.
+    + apply eval_call_expr_fn_as_call. exact H1.
+    + exact H2.
+Qed.
+
+Lemma generic_direct_call_receiver_method_eval_receiver_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_type_args
+      receiver_args method_args synthetic_body s' v,
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_receiver v_receiver s_method_args vs_method,
+      eval env s
+        (ECallGeneric receiver_name receiver_type_args receiver_args)
+        s_receiver v_receiver /\
+      eval_args env s_receiver method_args s_method_args vs_method.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body s' v Htarget Heval.
+  destruct (generic_direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body Htarget) as [Hraw _].
+  rewrite Hraw in Heval.
+  dependent destruction Heval.
+  dependent destruction H1.
+  exists s1, v, s2, vs. split; assumption.
+Qed.
+
+Lemma eval_direct_receiver_call_store_safe_narrow_summary_value_prefix_named :
+  forall env Omega n R Sigma fname args T Sigma_out R_out roots
+      s s' v fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECall fname args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (ECall fname args)
+      T Sigma_out R_out roots ->
+    value_has_type env s' v T.
+Proof.
+  intros env Omega n R Sigma fname args T Sigma_out R_out roots
+    s s' v fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef Htyped_shadow.
+  pose proof (typed_env_roots_shadow_safe_roots env Omega n R Sigma
+    (ECall fname args) T Sigma_out R_out roots Htyped_shadow) as Htyped.
+  dependent destruction Htyped.
+  assert (fdef0 = fdef) as ->.
+  { eapply Hunique.
+    - exact H.
+    - exact Hin_fdef.
+    - exact (eq_sym Hname_fdef). }
+  eapply eval_direct_call_store_safe_narrow_summary_value_prefix_named;
+    eassumption.
+Qed.
+
+Lemma eval_generic_direct_receiver_call_store_safe_narrow_summary_value_prefix_named_fuel :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' v fdef fuel,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    value_has_type env s' v
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))).
+Proof.
+  intros env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' v fdef fuel Hsafe_args Hsummary Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef
+    Hcaps Htyped_args Houtlives.
+  destruct (eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel
+    env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' v fdef fuel Hsafe_args Hsummary Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef
+    Hcaps Htyped_args Houtlives) as [Hpkg _].
+  exact (generic_direct_call_package_value _ _ _ _ _ _ _ _ Hpkg).
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary_instantiated_nil :
   forall env fdef,
     callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary

@@ -30,10 +30,10 @@ validity checks must be represented in Rocq and the extracted checker.
   unlocked by OCaml desugaring alone: lowering the receiver through a hidden let
   still fails the extracted end-to-end safety gate. Rocq now has executable
   sidecar recognizers, proof-side shape lemmas, summary package
-  definitions, standalone executable checker helpers, and helper soundness
-  lemmas for direct and generic direct-call receiver method-call shapes; the
-  remaining step is to connect those helpers to the main checker gate and
-  runtime safety branch.
+  definitions, standalone executable checker helpers, helper soundness lemmas,
+  and runtime evaluation/value helper lemmas for direct and generic direct-call
+  receiver method-call shapes; the remaining step is to connect those helpers
+  to the main checker gate and main runtime safety branch.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -86,8 +86,9 @@ validity checks must be represented in Rocq and the extracted checker.
      definitions, standalone checker helpers, and helper soundness lemmas now
      identify direct and generic direct-call receiver method shapes. Connect
      those helpers to the main checker gate, reuse the direct-call route
-     package for receiver evaluation, and then check the method call with an
-     `EVar` receiver.
+     package for receiver evaluation, use the runtime receiver evaluation/value
+     wrappers to discharge the receiver step, and then check the method call
+     with an `EVar` receiver.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

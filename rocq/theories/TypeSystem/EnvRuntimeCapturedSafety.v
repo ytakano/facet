@@ -7812,7 +7812,8 @@ Qed.
 Lemma generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call :
   forall env Omega n R Sigma receiver_name receiver_type_args receiver_args
       sigma Sigma_receiver_args R_receiver_args receiver_arg_roots
-      T_receiver Sigma_receiver R_receiver receiver_roots s s_receiver
+      T_receiver_call Sigma_receiver R_receiver receiver_roots T_hidden
+      s s_receiver
       v_receiver receiver_callee method_name type_args method_args
       s_method_hidden v,
     env_fns_root_shadow_provenance_summary_evidence env ->
@@ -7830,7 +7831,7 @@ Lemma generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call
     eval env s (ECallGeneric receiver_name receiver_type_args receiver_args)
       s_receiver v_receiver ->
     eval env
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)
       (ECallGeneric method_name type_args
         (EVar receiver_method_hidden_receiver_name :: method_args))
@@ -7845,7 +7846,7 @@ Lemma generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call
       Sigma_receiver_args R_receiver_args receiver_arg_roots ->
     typed_env_roots_shadow_safe env Omega n R Sigma
       (ECallGeneric receiver_name receiver_type_args receiver_args)
-      T_receiver Sigma_receiver R_receiver receiver_roots ->
+      T_receiver_call Sigma_receiver R_receiver receiver_roots ->
     Forall (fun '(a, b) => outlives Omega a b)
       (apply_lt_outlives sigma (fn_outlives receiver_callee)) ->
     ~ In receiver_method_hidden_receiver_name (store_names s) ->
@@ -7855,19 +7856,19 @@ Lemma generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call
     ty_compatible_b Omega
       (apply_lt_ty sigma
         (subst_type_params_ty receiver_type_args (fn_ret receiver_callee)))
-      T_receiver = true ->
+      T_hidden = true ->
     store_typed_prefix env
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)
-      (sctx_add receiver_method_hidden_receiver_name T_receiver MImmutable
+      (sctx_add receiver_method_hidden_receiver_name T_hidden MImmutable
         Sigma_receiver) /\
     store_roots_within
       (root_env_add receiver_method_hidden_receiver_name receiver_roots
         R_receiver)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver) /\
     store_no_shadow
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver) /\
     root_env_no_shadow
       (root_env_add receiver_method_hidden_receiver_name receiver_roots
@@ -7875,20 +7876,21 @@ Lemma generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call
     root_env_store_roots_named
       (root_env_add receiver_method_hidden_receiver_name receiver_roots
         R_receiver)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver) /\
     root_env_store_keys_named
       (root_env_add receiver_method_hidden_receiver_name receiver_roots
         R_receiver)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver) /\
     store_function_closure_targets_summary env
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver).
 Proof.
   intros env Omega n R Sigma receiver_name receiver_type_args receiver_args
     sigma Sigma_receiver_args R_receiver_args receiver_arg_roots
-    T_receiver Sigma_receiver R_receiver receiver_roots s s_receiver
+    T_receiver_call Sigma_receiver R_receiver receiver_roots T_hidden
+    s s_receiver
     v_receiver receiver_callee method_name type_args method_args
     s_method_hidden v Hevidence Henv_ready Hsafe_receiver Hreceiver_summary
     Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store Heval_receiver
@@ -7942,9 +7944,9 @@ Proof.
     eapply store_lookup_some_in_store_names. exact Hlookup_some. }
   assert (Hstore_add :
     store_typed_prefix env
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)
-      (sctx_add receiver_method_hidden_receiver_name T_receiver MImmutable
+      (sctx_add receiver_method_hidden_receiver_name T_hidden MImmutable
         Sigma_receiver_args)).
   { eapply store_typed_prefix_add_compatible.
     - exact (generic_direct_call_package_store _ _ _ _ _ _ _ _ Hpkg).
@@ -7956,7 +7958,7 @@ Proof.
     store_roots_within
       (root_env_add receiver_method_hidden_receiver_name
         (root_sets_union receiver_arg_roots) R_receiver_args)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)).
   { eapply store_add_roots_within.
     - exact (generic_direct_call_package_roots _ _ _ _ _ _ _ _ Hpkg).
@@ -7964,7 +7966,7 @@ Proof.
     - exact (generic_direct_call_package_value_roots _ _ _ _ _ _ _ _ Hpkg). }
   assert (Hshadow_add :
     store_no_shadow
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)).
   { apply store_no_shadow_add.
     - exact (generic_direct_call_package_shadow _ _ _ _ _ _ _ _ Hpkg).
@@ -7980,7 +7982,7 @@ Proof.
     root_env_store_roots_named
       (root_env_add receiver_method_hidden_receiver_name
         (root_sets_union receiver_arg_roots) R_receiver_args)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)).
   { eapply root_env_store_roots_named_add_env_store_add.
     - exact (generic_direct_call_package_roots_named _ _ _ _ _ _ _ _ Hpkg).
@@ -7989,18 +7991,18 @@ Proof.
     root_env_store_keys_named
       (root_env_add receiver_method_hidden_receiver_name
         (root_sets_union receiver_arg_roots) R_receiver_args)
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)).
   { eapply root_env_store_keys_named_add_env_store_add.
     exact (generic_direct_call_package_keys_named _ _ _ _ _ _ _ _ Hpkg). }
   assert (Hvalue_receiver_hidden :
-    value_has_type env s_receiver v_receiver T_receiver).
+    value_has_type env s_receiver v_receiver T_hidden).
   { eapply VHT_Compatible.
     - exact (generic_direct_call_package_value _ _ _ _ _ _ _ _ Hpkg).
     - apply ty_compatible_b_sound. exact Hcompat_receiver. }
   assert (Hsummary_add :
     store_function_closure_targets_summary env
-      (store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
         s_receiver)).
   { eapply store_function_closure_targets_summary_add_value_summary.
     - exact (generic_direct_call_package_closure_summary
@@ -8264,6 +8266,125 @@ Proof.
   - constructor.
   - exact Hsafe_method.
 Qed.
+
+
+Lemma generic_direct_receiver_method_hidden_start_store_facts_from_checked_initial_body_env :
+  forall env fdef s receiver_name receiver_type_args receiver_args
+      T_receiver_call Sigma_receiver R_receiver receiver_roots T_hidden
+      s_receiver v_receiver receiver_callee method_name type_args method_args
+      s_method_hidden v,
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      10000 receiver_callee receiver_type_args ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    root_env_no_shadow (initial_root_env_for_fn fdef) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s (ECallGeneric receiver_name receiver_type_args receiver_args)
+      s_receiver v_receiver ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver)
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    fn_env_unique_by_name
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    In receiver_callee
+      (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) ->
+    fn_name receiver_callee = receiver_name ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (ECallGeneric receiver_name receiver_type_args receiver_args)
+      T_receiver_call Sigma_receiver R_receiver receiver_roots ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    ty_compatible_b (fn_outlives fdef) T_receiver_call T_hidden = true ->
+    store_typed_prefix
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver)
+      (sctx_add receiver_method_hidden_receiver_name T_hidden MImmutable
+        Sigma_receiver) /\
+    store_roots_within
+      (root_env_add receiver_method_hidden_receiver_name receiver_roots
+        R_receiver)
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver) /\
+    store_no_shadow
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver) /\
+    root_env_no_shadow
+      (root_env_add receiver_method_hidden_receiver_name receiver_roots
+        R_receiver) /\
+    root_env_store_roots_named
+      (root_env_add receiver_method_hidden_receiver_name receiver_roots
+        R_receiver)
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver) /\
+    root_env_store_keys_named
+      (root_env_add receiver_method_hidden_receiver_name receiver_roots
+        R_receiver)
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver) /\
+    store_function_closure_targets_summary
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (store_add receiver_method_hidden_receiver_name T_hidden v_receiver
+        s_receiver).
+Proof.
+  intros env fdef s receiver_name receiver_type_args receiver_args
+    T_receiver_call Sigma_receiver R_receiver receiver_roots T_hidden
+    s_receiver v_receiver receiver_callee method_name type_args method_args
+    s_method_hidden v Hevidence_body Henv_ready_body Hsafe_receiver
+    Hreceiver_summary_body Hinitial Hstore_initial Hrn Heval_receiver
+    Heval_method Hunique_body Hin_receiver Hname_receiver Htyped_receiver
+    Hfresh_hidden Hcompat_receiver.
+  destruct (typed_env_roots_shadow_safe_call_generic_typed_args_roots
+    _ _ _ _ _ _ _ _ _ _ _ _ Htyped_receiver) as
+    (receiver_fdef & sigma & receiver_arg_roots & Hin_typed &
+      Hname_typed & Hcaptures_typed & _Harity & _Hbounds &
+      Htyped_receiver_args & Houtlives_receiver & Hret_receiver &
+      Hreceiver_roots).
+  assert (Heq_receiver : receiver_fdef = receiver_callee).
+  { eapply Hunique_body.
+    - exact Hin_typed.
+    - exact Hin_receiver.
+    - rewrite Hname_typed. symmetry. exact Hname_receiver. }
+  subst receiver_fdef T_receiver_call receiver_roots.
+  destruct (check_initial_root_runtime_ready_sound fdef s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  assert (Hstore_body :
+    store_typed (global_env_with_local_bounds env (fn_bounds fdef))
+      s (sctx_of_ctx (fn_body_ctx fdef))).
+  { eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore_initial. }
+  assert (Hsummary_store :
+    store_function_closure_targets_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) s).
+  { apply store_function_closure_targets_summary_global_env_with_local_bounds.
+    eapply initial_store_for_fn_closure_targets_summary.
+    exact Hstore_initial. }
+  eapply (generic_direct_receiver_method_hidden_start_store_facts_from_receiver_call
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef)
+    (sctx_of_ctx (fn_body_ctx fdef)) receiver_name receiver_type_args
+    receiver_args sigma Sigma_receiver R_receiver receiver_arg_roots
+    (apply_lt_ty sigma
+      (subst_type_params_ty receiver_type_args (fn_ret receiver_callee)))
+    Sigma_receiver R_receiver (root_sets_union receiver_arg_roots) T_hidden
+    s s_receiver v_receiver receiver_callee method_name type_args method_args
+    s_method_hidden v); try eassumption; reflexivity.
+Qed.
+
 
 Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runtime_replay_branch_value :
   forall env fdef s s' v method_name type_args receiver_name

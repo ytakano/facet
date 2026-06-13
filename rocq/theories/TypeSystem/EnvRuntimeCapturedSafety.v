@@ -4458,6 +4458,64 @@ Proof.
     rewrite <- Heq. apply store_names_in_store_entry. exact Hin.
 Qed.
 
+Lemma eval_direct_receiver_call_store_hidden_root_refs_exclude_ready_prefix_named :
+  forall env Omega n R Sigma fname args T Sigma_out R_out roots
+      s s' v fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_provenance_summary env fdef ->
+    store_typed env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    eval env s (ECall fname args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (ECall fname args)
+      T Sigma_out R_out roots ->
+    ~ In receiver_method_hidden_receiver_name (store_names s') ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s'.
+Proof.
+  intros env Omega n R Sigma fname args T Sigma_out R_out roots
+    s s' v fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Heval_call Hunique Hin_fdef Hname_fdef Htyped_shadow
+    Hfresh_hidden.
+  assert (Hctx_named : root_env_sctx_roots_named R Sigma).
+  { unfold root_env_sctx_roots_named, root_env_ctx_roots_named.
+    intros x roots0 z Hlookup Hin.
+    rewrite <- (store_typed_names env s Sigma Hstore).
+    eapply Hnamed; eassumption. }
+  pose proof (typed_env_roots_shadow_safe_roots env Omega n R Sigma
+    (ECall fname args) T Sigma_out R_out roots Htyped_shadow)
+    as Htyped_roots.
+  destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
+    env s s' v fname args Heval_call Omega n R Sigma T Sigma_out R_out
+    roots fdef
+    (store_safe_function_value_call_args_preservation_ready env args
+      Hsafe_args)
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped_roots Hunique Hin_fdef
+    Hname_fdef Hsummary)
+    as [Hstore_out [_ [_ [Hroots_out [_ [_ Hrn_out]]]]]].
+  destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+    as [Htyped_named _].
+  destruct (Htyped_named R Sigma (ECall fname args) T Sigma_out R_out
+    roots Htyped_shadow Hrn Hctx_named)
+    as [Hctx_named_out _].
+  assert (Hstore_prefix_out : store_typed_prefix env s' Sigma_out).
+  { exists s', []. split.
+    - rewrite app_nil_r. reflexivity.
+    - exact Hstore_out. }
+  assert (Hnamed_out : root_env_store_roots_named R_out s').
+  { eapply root_env_sctx_roots_named_store_typed_prefix; eassumption. }
+  eapply store_roots_exclude_root.
+  - exact Hroots_out.
+  - eapply root_env_store_roots_named_excludes_name; eassumption.
+  - intros se Hin Heq. apply Hfresh_hidden.
+    rewrite <- Heq. apply store_names_in_store_entry. exact Hin.
+Qed.
+
 Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_roots_inv :
   forall env Omega n R Sigma receiver_name receiver_args T_receiver
       Sigma_receiver_out R_receiver_out receiver_roots s s_receiver

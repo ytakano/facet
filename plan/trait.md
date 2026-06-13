@@ -49,8 +49,10 @@ validity checks must be represented in Rocq and the extracted checker.
   active captured-call core gate and its public base wrapper. Hidden receiver
   freshness for method arguments is now enforced by the inactive direct and
   generic receiver-method sidecar summaries and exposed by their view facts.
-  Runtime theorem wiring remains before those summaries can be enabled in the
-  public gate.
+  The direct receiver-method runtime replay package now also exposes the
+  receiver callee's body-env store-safe summary and method-argument hidden-name
+  freshness as top-level package fields. Runtime theorem wiring remains before
+  those summaries can be enabled in the public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -102,10 +104,13 @@ validity checks must be represented in Rocq and the extracted checker.
      the extracted end-to-end safety gate. The next proof step is
      connecting the direct and generic receiver-method runtime replay packages
      into the runtime branch with the existing argument-strip, checked-body,
-     return-roots, and hidden-let bridge packages. Only after the direct and
-     generic receiver-method runtime safety branch is proved should the
-     receiver-method summaries be enabled as outer alternatives on the public
-     base checker gate.
+     return-roots, and hidden-let bridge packages. The direct branch still needs
+     derivable initial hidden-receiver store freshness, receiver provenance/env
+     readiness evidence in the body environment, raw-to-hidden method replay,
+     and final-store transport from the hidden cleanup store to the raw final
+     store. Only after the direct and generic receiver-method runtime safety
+     branch is proved should the receiver-method summaries be enabled as outer
+     alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

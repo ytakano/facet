@@ -5951,9 +5951,16 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
       In receiver_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name receiver_callee = receiver_name /\
+      callee_body_root_shadow_store_safe_narrow_summary
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        receiver_callee /\
       In method_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name method_callee = method_name /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
       preservation_ready_expr
         (subst_type_params_expr type_args (fn_body method_callee)) /\
       callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
@@ -6098,8 +6105,8 @@ Proof.
       R_method & roots_method & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body_checked & Gamma_body_checked &
       R_out_checked & roots_checked & Htarget & Hhidden &
-      Hsafe_receiver_args & Hsafe_method_args & _Hnot_free_method_args &
-      _Hnot_local_method_args & Hin_receiver &
+      Hsafe_receiver_args & Hsafe_method_args & Hnot_free_method_args &
+      Hnot_local_method_args & Hin_receiver &
       Hname_receiver & Hin_method & Hname_method & _Harity & _Hbounds &
       _Hreceiver_core & _Hreceiver_env & Hreceiver_summary &
       _Hreceiver_compat & _Hreceiver_roots & _Hreceiver_env_excl &
@@ -6121,6 +6128,19 @@ Proof.
       (global_env_with_local_bounds env (fn_bounds fdef)) method_args).
   { apply store_safe_function_value_call_args_global_env_with_local_bounds.
     exact Hsafe_method_args. }
+  assert (Hreceiver_summary_env :
+    callee_body_root_shadow_store_safe_narrow_summary env receiver_callee).
+  { exists T_receiver, Gamma_receiver, R_receiver, roots_receiver,
+      ret_roots_receiver.
+    repeat split; try eassumption.
+    eapply infer_env_roots_shadow_safe_params_nodup.
+    exact _Hreceiver_env. }
+  assert (Hreceiver_summary_lbounds :
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee).
+  { eapply callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
+    - exact Hunique.
+    - exact Hreceiver_summary_env. }
   assert (Hmethod_summary_body :
     callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
       (global_env_with_local_bounds env (fn_bounds fdef))

@@ -3838,6 +3838,182 @@ Proof.
     eassumption.
 Qed.
 
+Lemma eval_direct_receiver_call_store_safe_narrow_summary_value_roots_prefix_named :
+  forall env Omega n R Sigma fname args T Sigma_out R_out roots
+      s s' v fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECall fname args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (ECall fname args)
+      T Sigma_out R_out roots ->
+    value_roots_within roots v.
+Proof.
+  intros env Omega n R Sigma fname args T Sigma_out R_out roots
+    s s' ret fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Hsummary_store Heval_call Hunique Hin_fdef Hname_fdef
+    Htyped_shadow.
+  pose proof (typed_env_roots_shadow_safe_roots env Omega n R Sigma
+    (ECall fname args) T Sigma_out R_out roots Htyped_shadow) as Htyped.
+  dependent destruction Htyped.
+  assert (fdef0 = fdef) as ->.
+  { eapply Hunique.
+    - exact H.
+    - exact Hin_fdef.
+    - exact (eq_sym Hname_fdef). }
+  dependent destruction Heval_call.
+  match goal with
+  | Hlookup_fn : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
+      assert (f_runtime = fdef) as -> by
+        (eapply lookup_fn_unique_by_name; [exact Hlookup_fn | exact Hin_fdef | exact Hname_fdef | exact Hunique])
+  | Hlookup_fn : lookup_fn ?fname_call ?fns = Some ?f_runtime |- _ =>
+      assert (f_runtime = fdef) as -> by
+        (eapply lookup_fn_unique_by_name; [exact Hlookup_fn | exact Hin_fdef | exact Hname_fdef | exact Hunique])
+  end.
+  match goal with
+  | H : eval_args _ _ _ ?s_args0 ?vs0 |- _ =>
+      rename H into Heval_args;
+      rename s_args0 into s_args;
+      rename vs0 into vs
+  end.
+  match goal with
+  | H : alpha_rename_fn_def (store_names s_args) fdef =
+        (?fcall0, ?used0) |- _ =>
+      rename H into Hrename;
+      rename fcall0 into fcall;
+      rename used0 into used'
+  end.
+  match goal with
+  | H : eval _ (bind_params (fn_params fcall) vs s_args)
+        (fn_body fcall) ?s_body0 ret |- _ =>
+      rename H into Heval_body;
+      rename s_body0 into s_body
+  end.
+  pose proof (typed_args_roots_params_of_tys_map_param_ty
+    env Omega n R _ args (apply_lt_params σ (fn_params fdef))
+    _ _ arg_roots H3) as Htyped_args_param_tys.
+  pose proof (runtime_tfn_signature_bridge_apply_lt_params
+    σ (fn_params fdef) (fn_ret fdef)) as Hbridge.
+  pose proof (store_safe_function_value_call_args_preservation_ready
+    env args Hsafe_args) as Hready_args.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+    args Hready_args) as Hprov_args.
+  destruct (direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named
+    env Omega n R _ _ _ arg_roots args fdef fcall
+    (map param_ty (apply_lt_params σ (fn_params fdef)))
+    (apply_lt_ty σ (fn_ret fdef)) s s_args vs used'
+    Hsummary H0 Hbridge Hsafe_args Htyped_args_param_tys Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+    as (T_body & Sigma_body_out & R_body & roots_body & ret_roots &
+        Hsummary_body & Hcompat_body & Hexclude_roots & Hexclude_env &
+        Hresult_subset).
+  destruct (proj1 (proj2 eval_preserves_typing_roots_ready_prefix_mutual)
+              env s args s_args vs Heval_args Omega n R _
+              (apply_lt_params σ (fn_params fdef)) _ _
+              arg_roots Hprov_args Hstore Hroots Hshadow Hrn H3)
+    as [Hstore_args [Hargs_values_sigma [Hpres_args
+        [Hroots_args [_ [Hshadow_args Hrn_args]]]]]].
+  assert (Hargs_values_fdef :
+    eval_args_values_have_types env Omega s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_values_sigma. }
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [Hret_alpha Hparams_alpha]].
+  assert (Hargs_values_fcall :
+    eval_args_values_have_types env Omega s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha; eassumption. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  destruct (eval_args_bind_params_call_param_root_env_ready
+              env s args s_args vs Omega n R _
+              (apply_lt_params σ (fn_params fdef)) _ _
+              arg_roots (fn_params fcall) Heval_args Hprov_args H3
+              Hroots Hshadow Hrn Hnodup Hfresh Hargs_values_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_bind Hcover_bind]]].
+  destruct (store_safe_function_value_call_args_typed_roots_store_named
+              env Omega n R _ args
+              (apply_lt_params σ (fn_params fdef)) _ _
+              arg_roots s s_args vs Hsafe_args H3 Heval_args
+              Hnamed Hkeys)
+    as [Hnamed_args [Harg_roots_named Hkeys_args]].
+  assert (Hnamed_bind :
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R')
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply root_env_store_roots_named_call_param_bind_params;
+      eassumption. }
+  assert (Hkeys_bind :
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R')
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply root_env_store_keys_named_call_param_bind_params;
+      eassumption. }
+  assert (Hstore_bind :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  assert (Hsummary_bind :
+    store_function_closure_targets_summary env
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply store_safe_function_value_call_args_bind_params_summary;
+      eassumption. }
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  assert (Hsummary_body_env :
+    expr_root_shadow_store_safe_narrow_summary body_env
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R')
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body Sigma_body_out R_body roots_body ret_roots).
+  { subst body_env.
+    eapply expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
+    - exact Hunique.
+    - exact Hsummary_body. }
+  assert (Hstore_bind_body_env :
+    store_typed_prefix body_env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { subst body_env.
+    eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind. }
+  assert (Heval_body_body_env :
+    eval body_env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret).
+  { subst body_env.
+    eapply direct_call_eval_global_env_with_local_bounds.
+    exact Heval_body. }
+  assert (Hsummary_bind_body_env :
+    store_function_closure_targets_summary body_env
+      (bind_params (fn_params fcall) vs s_args)).
+  { subst body_env.
+    apply store_function_closure_targets_summary_global_env_with_local_bounds.
+    exact Hsummary_bind. }
+  assert (Hunique_body_env : fn_env_unique_by_name body_env).
+  { subst body_env. unfold fn_env_unique_by_name in *. simpl. exact Hunique. }
+  destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named
+    body_env (fn_outlives fcall) (fn_lifetimes fcall)
+    (call_param_root_env (fn_params fcall) arg_roots R')
+    (sctx_of_ctx (params_ctx (fn_params fcall)))
+    (fn_body fcall) T_body Sigma_body_out R_body roots_body ret_roots
+    Hsummary_body_env
+    (bind_params (fn_params fcall) vs s_args) s_body ret
+    Hstore_bind_body_env Hroots_bind Hshadow_bind Hrn_bind Hnamed_bind
+    Hkeys_bind Hsummary_bind_body_env Heval_body_body_env Hunique_body_env)
+    as [_ [_ [_ [_ [Hret_roots _]]]]].
+  eapply direct_call_value_roots_within_store_subset; eassumption.
+Qed.
+
 Lemma eval_generic_direct_receiver_call_store_safe_narrow_summary_value_prefix_named_fuel :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' v fdef fuel,

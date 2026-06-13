@@ -5061,6 +5061,153 @@ Proof.
     rewrite <- Heq. apply store_names_in_store_entry. exact Hin.
 Qed.
 
+
+Lemma generic_direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_inv :
+  forall env Omega n R Sigma receiver_name receiver_type_args receiver_args
+      sigma Sigma_receiver_args R_receiver_args receiver_arg_roots T_receiver
+      s s_receiver v_receiver receiver_callee method_name type_args
+      method_args s_method_hidden v method_callee,
+    env_fns_preservation_ready env ->
+    store_safe_function_value_call_args env receiver_args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 receiver_callee receiver_type_args ->
+    store_typed env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric receiver_name receiver_type_args receiver_args)
+      s_receiver v_receiver ->
+    fn_env_unique_by_name env ->
+    In receiver_callee (env_fns env) ->
+    fn_name receiver_callee = receiver_name ->
+    fn_captures receiver_callee = [] ->
+    typed_args_roots env Omega n R Sigma receiver_args
+      (apply_lt_params sigma
+        (apply_type_params receiver_type_args (fn_params receiver_callee)))
+      Sigma_receiver_args R_receiver_args receiver_arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives receiver_callee)) ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    In method_callee (env_fns env) ->
+    fn_name method_callee = method_name ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body method_callee)) ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 method_callee type_args ->
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    preservation_ready_args method_args ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_local_store_names method_args) ->
+    exists s_var_hidden s_args_hidden s_body_hidden fcall used'
+        v_receiver_arg vs_method s_args_base s_body_base,
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name)
+        s_var_hidden v_receiver_arg /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver_arg :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden v /\
+      s_method_hidden =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden /\
+      v_receiver_arg = v_receiver /\
+      eval_args env s_receiver method_args s_args_base vs_method /\
+      store_refs_exclude_root receiver_method_hidden_receiver_name
+        s_args_base /\
+      Forall (value_refs_exclude_root receiver_method_hidden_receiver_name)
+        vs_method /\
+      ((s_args_hidden =
+          store_add receiver_method_hidden_receiver_name T_receiver
+            v_receiver s_args_base) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_args_hidden s_args_base) /\
+      In receiver_method_hidden_receiver_name (store_names s_args_hidden) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (params_ctx
+            (apply_type_params type_args (fn_params fcall)))) /\
+      ~ In receiver_method_hidden_receiver_name
+          (expr_local_store_names
+            (subst_type_params_expr type_args (fn_body fcall))) /\
+      store_remove receiver_method_hidden_receiver_name s_method_hidden =
+        store_remove_params (apply_type_params type_args (fn_params fcall))
+          (store_remove receiver_method_hidden_receiver_name s_body_hidden) /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver :: vs_method) s_args_base)
+        (subst_type_params_expr type_args (fn_body fcall)) s_body_base v /\
+      store_refs_exclude_root receiver_method_hidden_receiver_name
+        s_body_base /\
+      value_refs_exclude_root receiver_method_hidden_receiver_name v /\
+      ((store_hidden_frame_rel receiver_method_hidden_receiver_name
+          T_receiver v_receiver s_body_hidden s_body_base) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_body_hidden s_body_base) /\
+      store_remove receiver_method_hidden_receiver_name s_method_hidden =
+        store_remove_params (apply_type_params type_args (fn_params fcall))
+          (store_remove receiver_method_hidden_receiver_name s_body_hidden).
+Proof.
+  intros env Omega n R Sigma receiver_name receiver_type_args receiver_args
+    sigma Sigma_receiver_args R_receiver_args receiver_arg_roots T_receiver
+    s s_receiver v_receiver receiver_callee method_name type_args
+    method_args s_method_hidden v method_callee Henv_ready Hsafe_receiver
+    Hsummary_receiver Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary_store Heval_receiver Hunique Hin_receiver Hname_receiver
+    Hcaptures_receiver Htyped_receiver_args Houtlives_receiver Hfresh_hidden
+    Hin_method Hname_method Hready_method Hsummary_method Heval_method
+    Hready_args Hfree_args Hlocal_args.
+  assert (Hstore_prefix : store_typed_prefix env s Sigma).
+  { eapply store_typed_prefix_exact. exact Hstore. }
+  assert (Hvalue_receiver :
+    value_refs_exclude_root receiver_method_hidden_receiver_name v_receiver).
+  { eapply (eval_generic_direct_receiver_call_value_hidden_root_exclude_prefix_named_fuel
+      env Omega n R Sigma receiver_name receiver_type_args receiver_args sigma
+      Sigma_receiver_args R_receiver_args receiver_arg_roots s s_receiver
+      v_receiver receiver_callee 10000);
+      eassumption. }
+  assert (Hrefs_receiver :
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver).
+  { eapply (eval_generic_direct_receiver_call_store_hidden_root_refs_exclude_prefix_named_fuel
+      env Omega n R Sigma receiver_name receiver_type_args receiver_args sigma
+      Sigma_receiver_args R_receiver_args receiver_arg_roots s s_receiver
+      v_receiver receiver_callee 10000);
+      eassumption. }
+  destruct (direct_receiver_method_hidden_call_eval_body_strip_summary_cases_inv
+    env s_receiver T_receiver v_receiver method_name type_args method_args
+    s_method_hidden v method_callee Hunique Hin_method Hname_method
+    Hready_method Hsummary_method Heval_method Hready_args Hfree_args
+    Hlocal_args Hrefs_receiver)
+    as (s_var_hidden & s_args_hidden & s_body_hidden & fcall & used' &
+      v_receiver_arg & vs_method & s_args_base & Hlookup & Hcaptures &
+      Heval_hidden_receiver & Heval_args & Halpha & Heval_body_hidden &
+      Hremove_params & Hreceiver_eq & Heval_args_base & Hrefs_args &
+      Hvalues_args & Hhidden_args & Hhidden_in_args & Hnotin_params &
+      Hnotin_body_locals & Hcleanup_remove & Hbody_replay).
+  destruct (Hbody_replay Hvalue_receiver)
+    as (s_body_base & Heval_body_base & Hrefs_body & Hvalue_body &
+      Hbody_rel & Hcleanup_remove_body).
+  exists s_var_hidden, s_args_hidden, s_body_hidden, fcall, used',
+    v_receiver_arg, vs_method, s_args_base, s_body_base.
+  repeat split; eassumption.
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary_instantiated_nil :
   forall env fdef,
     callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary

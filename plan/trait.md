@@ -36,10 +36,10 @@ validity checks must be represented in Rocq and the extracted checker.
   argument-frame replay, direct receiver return-roots, hidden-root
   exclusion, direct receiver store-ref exclusion packaging with exact-start final
   root naming derived, ready direct-call receiver-store freshness preservation,
-  composed hidden body replay packaging that derives receiver-store refs under
-  exact ready premises, root-set naming transport, generic
-  return-root, hidden-root exclusion, receiver-store freshness, and store-ref
-  exclusion packaging,
+  composed hidden body replay packaging that derives direct and generic
+  receiver-store refs/value refs internally under exact ready premises,
+  root-set naming transport, generic return-root, hidden-root exclusion,
+  receiver-store freshness, and store-ref exclusion packaging,
   consumed-frame support, and a
   behavior-preserving split between the active captured-call core gate and its
   public base wrapper. Those summaries remain inactive until their dedicated
@@ -93,10 +93,9 @@ validity checks must be represented in Rocq and the extracted checker.
      argument facts assume arg evaluation preserves static root/store shape,
      and a hidden-let receiver lowering still lacks the runtime proof needed by
      the extracted end-to-end safety gate. The next proof step is
-     using the direct replay package that now derives receiver-store refs
-     internally under exact ready premises, adding the analogous generic replay
-     composition over the generic receiver-store freshness/ref package, then
-     wiring both into the runtime branch with the existing argument-strip,
+     wiring the direct and generic replay packages that now derive
+     receiver-store refs/value refs internally under exact ready premises into
+     the runtime branch with the existing argument-strip,
      checked-body, return-roots, and hidden-let bridge packages.
      Only after the direct and generic receiver-method runtime
      safety branch is proved should the receiver-method summaries be enabled as

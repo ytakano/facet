@@ -81,11 +81,10 @@ validity checks must be represented in Rocq and the extracted checker.
   facts needed to invoke those wrappers after the replayed receiver call. The
   direct and generic paths also have checked-initial body-env providers, and
   checked-initial branch-value consumers now supply those provider facts to the
-  direct/generic replay-final wrappers, and the direct runtime package branch
-  has a checked-initial consumer that composes final-store cleanup with the
-  direct branch-value wrapper. The actual receiver-method branch still needs the
-  generic package consumer before the receiver-method summaries can be enabled
-  in the public gate.
+  direct/generic replay-final wrappers. Both direct and generic runtime package
+  branches now have checked-initial consumers that compose final-store cleanup
+  with their branch-value wrappers. The receiver-method summaries are still
+  inactive until the public runtime safety branch is wired to these consumers.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -152,10 +151,11 @@ validity checks must be represented in Rocq and the extracted checker.
      now derive the store/root/naming/no-shadow/closure-summary facts needed at
      the replayed method-call start store; the direct and generic paths also
      have checked-initial body-env providers, and checked-initial branch-value
-     consumers feed those facts to the replay-final wrappers. The direct runtime
-     package branch now has a checked-initial consumer that composes final-store
-     cleanup with the branch-value wrapper; the generic package branch still
-     needs the same wiring. Only after the direct and generic receiver-method runtime safety branch is proved should
+     consumers feed those facts to the replay-final wrappers. Both runtime
+     package branches now have checked-initial consumers that compose final-store
+     cleanup with their branch-value wrappers. The remaining proof step is to
+     wire the public receiver-method runtime safety branch to those consumers.
+     Only after the direct and generic receiver-method runtime safety branch is proved should
      the receiver-method summaries be enabled as outer alternatives on the public
      base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

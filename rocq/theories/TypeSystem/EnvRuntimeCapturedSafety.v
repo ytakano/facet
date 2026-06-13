@@ -4149,6 +4149,60 @@ Proof.
   exact (generic_direct_call_package_value _ _ _ _ _ _ _ _ Hpkg).
 Qed.
 
+Lemma eval_generic_direct_receiver_call_value_hidden_root_exclude_prefix_named_fuel :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' v fdef fuel,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    value_refs_exclude_root receiver_method_hidden_receiver_name v.
+Proof.
+  intros env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef fuel Hsafe_args Hsummary Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef
+    Hcaps Htyped_args Houtlives Hfresh_hidden.
+  destruct (eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel
+    env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef fuel Hsafe_args Hsummary Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef
+    Hcaps Htyped_args Houtlives) as [Hpkg Hexists_args].
+  destruct Hexists_args as (s_args & vs & Heval_args & Hfinal).
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args
+                (store_safe_function_value_call_args_preservation_ready
+                   env args Hsafe_args)) as Hnames_args.
+  destruct (store_safe_function_value_call_args_typed_roots_store_named
+              env Omega n R Sigma args
+              (apply_lt_params sigma
+                (apply_type_params type_args (fn_params fdef)))
+              Sigma_args R_args arg_roots s s_args vs Hsafe_args
+              Htyped_args Heval_args Hnamed Hkeys)
+    as [_ [Harg_roots_named _]].
+  eapply value_roots_within_store_named_exclude_root with (s := s_args).
+  - exact (generic_direct_call_package_value_roots _ _ _ _ _ _ _ _ Hpkg).
+  - apply root_sets_store_roots_named_union. exact Harg_roots_named.
+  - rewrite Hnames_args. exact Hfresh_hidden.
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary_instantiated_nil :
   forall env fdef,
     callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary

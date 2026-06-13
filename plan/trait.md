@@ -33,8 +33,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summaries, proof-side shape/view lemmas, hidden-let/body packages,
   replay bridge, inversion/strip/replay-prep, conditional body-strip,
   direct summary/body-replay wrapper packages, direct receiver return-roots
-  and hidden-root exclusion packaging, root-set naming transport, a generic
-  value-roots-to-hidden-root-exclusion bridge,
+  and hidden-root exclusion packaging, root-set naming transport, generic
+  return-root and hidden-root exclusion packaging,
   consumed-frame support, and a
   behavior-preserving split between the active captured-call core gate and its
   public base wrapper. Those summaries remain inactive until their dedicated
@@ -87,9 +87,8 @@ validity checks must be represented in Rocq and the extracted checker.
    - Direct-call receivers are not an OCaml-only switch: existing store-safe
      argument facts assume arg evaluation preserves static root/store shape,
      and a hidden-let receiver lowering still lacks the runtime proof needed by
-     the extracted end-to-end safety gate. The next proof step is to discharge
-     generic/consumed-frame hidden-root exclusion and replay wiring,
-     then combine that result with the
+     the extracted end-to-end safety gate. The next proof step is
+     consumed-frame/general replay wiring, then combining that result with the
      existing argument-strip,
      checked-body, direct summary/body-replay, return-roots, and hidden-let
      bridge packages. Only after the direct and generic receiver-method runtime

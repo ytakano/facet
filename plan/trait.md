@@ -91,10 +91,12 @@ validity checks must be represented in Rocq and the extracted checker.
   replay-facts variants that expose hidden/base relation, cleanup, freshness,
   and base body evaluation evidence to future final-store matching providers.
   The direct and generic checked-initial branch wrappers can now consume
-  those strengthened matching continuations at the checked-initial boundary.
-  Public runtime branch wiring still needs direct/generic replay/final-store
-  matching providers; receiver-method summaries remain inactive until that
-  public runtime safety branch is proved and wired.
+  those strengthened matching continuations at the checked-initial boundary,
+  and the direct summary-to-value bridge has a replay-facts variant that carries
+  the same provider shape up to the summary boundary. Public runtime branch
+  wiring still needs the generic summary replay-facts variant plus direct/generic
+  replay/final-store matching providers; receiver-method summaries remain
+  inactive until that public runtime safety branch is proved and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -165,10 +167,11 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is adding provider lemmas
-     that supply replay/final-store matching continuations for the direct and
-     generic summary consumers, then wiring the public receiver-method runtime
-     safety branch through those providers. Only after the direct and generic
+     over their package consumers. The next proof step is adding the generic
+     summary replay-facts variant, then provider lemmas that supply
+     replay/final-store matching continuations for the direct and generic summary
+     consumers, then wiring the public receiver-method runtime safety branch
+     through those providers. Only after the direct and generic
      receiver-method runtime safety branch is proved should the receiver-method
      summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

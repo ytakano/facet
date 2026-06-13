@@ -104,10 +104,12 @@ validity checks must be represented in Rocq and the extracted checker.
   replayed body runs once both sides use the same base-store alpha rename,
   and the hidden receiver's index-0 name is proved not to change
   `fresh_ident` when inserted into an alpha-renaming seed. That invariant now
-  reaches the function-definition seed and preserves the full parameter-renaming
-  output parameters and rename environment. Public runtime branch wiring still
-  needs the invariant lifted through body alpha-renaming and the remaining
-  hidden/base alpha transport before the direct/generic replay/final-store
+  reaches the function-definition seed, preserves the full parameter-renaming
+  output parameters and rename environment, and carries the final parameter
+  `used` lists as the same hidden-receiver insertion relation. Public runtime
+  branch wiring still needs that relation lifted through body alpha-renaming
+  and remaining hidden/base alpha transport before the direct/generic
+  replay/final-store
   matching providers can close; receiver-method
   summaries remain inactive until that public runtime safety branch is proved
   and wired.
@@ -181,8 +183,8 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is carrying the receiver
-     seed invariant through body alpha-renaming and final `used` transport, then
+     over their package consumers. The next proof step is carrying the preserved
+     post-parameter hidden/base `used` relation through body alpha-renaming, then
      using that hidden/base alpha transport with the shared body-final helper to
      complete the direct and generic final-store matching providers before
      wiring the public receiver-method runtime safety branch through those

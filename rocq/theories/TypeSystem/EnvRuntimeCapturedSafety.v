@@ -6808,7 +6808,7 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
-Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_package_consumer :
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_ready_consumer :
   forall env fdef s v method_name type_args receiver_name receiver_args
       method_args target_synthetic_body hidden_synthetic_body
       receiver_callee (method_callee : fn_def) T_body Gamma_body R_out roots
@@ -6835,28 +6835,22 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s hidden_synthetic_body s_hidden v ->
-    exists s_hidden,
-      eval (global_env_with_local_bounds env (fn_bounds fdef))
-        s hidden_synthetic_body s_hidden v /\
-      value_has_type env s_hidden v (fn_ret fdef).
+    value_has_type env s_hidden v (fn_ret fdef).
 Proof.
   intros env fdef s v method_name type_args receiver_name receiver_args
     method_args target_synthetic_body hidden_synthetic_body
     receiver_callee method_callee T_body Gamma_body R_out roots s_hidden
     Hunique Hsummary Hinitial Hstore Htarget Hhidden Hready_hidden
     Htyped_hidden Hcompat Heval_hidden.
-  exists s_hidden.
-  split.
-  - exact Heval_hidden.
-  - eapply callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
-      try eassumption.
-    exists method_name, type_args, receiver_name, receiver_args, method_args,
-      target_synthetic_body, hidden_synthetic_body, receiver_callee,
-      method_callee, T_body, Gamma_body, R_out, roots.
-    repeat split; eassumption.
+  eapply callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
+    try eassumption.
+  exists method_name, type_args, receiver_name, receiver_args, method_args,
+    target_synthetic_body, hidden_synthetic_body, receiver_callee,
+    method_callee, T_body, Gamma_body, R_out, roots.
+  repeat split; eassumption.
 Qed.
 
-Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runtime_replay_package_consumer :
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runtime_replay_ready_consumer :
   forall env fdef s v method_name type_args receiver_name receiver_type_args
       receiver_args method_args target_synthetic_body hidden_synthetic_body
       receiver_callee (method_callee : fn_def) T_body Gamma_body R_out roots
@@ -6884,26 +6878,20 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runti
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s hidden_synthetic_body s_hidden v ->
-    exists s_hidden,
-      eval (global_env_with_local_bounds env (fn_bounds fdef))
-        s hidden_synthetic_body s_hidden v /\
-      value_has_type env s_hidden v (fn_ret fdef).
+    value_has_type env s_hidden v (fn_ret fdef).
 Proof.
   intros env fdef s v method_name type_args receiver_name receiver_type_args
     receiver_args method_args target_synthetic_body hidden_synthetic_body
     receiver_callee method_callee T_body Gamma_body R_out roots s_hidden
     Hunique Hsummary Hinitial Hstore Htarget Hhidden Hready_hidden
     Htyped_hidden Hcompat Heval_hidden.
-  exists s_hidden.
-  split.
-  - exact Heval_hidden.
-  - eapply callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
-      try eassumption.
-    exists method_name, type_args, receiver_name, receiver_type_args,
-      receiver_args, method_args, target_synthetic_body,
-      hidden_synthetic_body, receiver_callee, method_callee, T_body,
-      Gamma_body, R_out, roots.
-    repeat split; eassumption.
+  eapply callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
+    try eassumption.
+  exists method_name, type_args, receiver_name, receiver_type_args,
+    receiver_args, method_args, target_synthetic_body,
+    hidden_synthetic_body, receiver_callee, method_callee, T_body,
+    Gamma_body, R_out, roots.
+  repeat split; eassumption.
 Qed.
 
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready :

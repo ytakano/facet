@@ -8,6 +8,17 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 
+Lemma root_set_store_roots_named_stores_subset :
+  forall roots roots_bound s,
+    root_set_stores_subset roots roots_bound ->
+    root_set_store_roots_named roots_bound s ->
+    root_set_store_roots_named roots s.
+Proof.
+  unfold root_set_stores_subset, root_set_store_roots_named.
+  intros roots roots_bound s Hsubset Hnamed z Hin.
+  apply Hnamed. apply Hsubset. exact Hin.
+Qed.
+
 Lemma value_roots_within_store_named_exclude_root :
   forall roots v s x,
     value_roots_within roots v ->

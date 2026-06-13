@@ -90,9 +90,11 @@ validity checks must be represented in Rocq and the extracted checker.
   generic receiver-method replay-package final-store consumers now also have
   replay-facts variants that expose hidden/base relation, cleanup, freshness,
   and base body evaluation evidence to future final-store matching providers.
-  Public runtime branch wiring still needs direct/generic replay/final-store
-  matching providers; receiver-method summaries remain inactive until that
-  public runtime safety branch is proved and wired.
+  The direct checked-initial branch wrapper can now consume that strengthened
+  direct matching continuation at the checked-initial boundary. Public runtime
+  branch wiring still needs the generic checked-initial replay-facts wrapper and
+  direct/generic replay/final-store matching providers; receiver-method summaries
+  remain inactive until that public runtime safety branch is proved and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -163,10 +165,11 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is adding provider lemmas
-     that supply replay/final-store matching continuations for the direct and
-     generic summary consumers, then wiring the public receiver-method runtime
-     safety branch through those providers. Only after the direct and generic
+     over their package consumers. The next proof step is threading the strengthened
+     replay-facts continuation through the generic checked-initial branch wrapper,
+     then adding provider lemmas that supply replay/final-store matching
+     continuations for the direct and generic summary consumers, then wiring the
+     public receiver-method runtime safety branch through those providers. Only after the direct and generic
      receiver-method runtime safety branch is proved should the receiver-method
      summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

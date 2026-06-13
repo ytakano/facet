@@ -8,6 +8,20 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 
+Lemma value_roots_within_store_named_exclude_root :
+  forall roots v s x,
+    value_roots_within roots v ->
+    root_set_store_roots_named roots s ->
+    ~ In x (store_names s) ->
+    value_refs_exclude_root x v.
+Proof.
+  intros roots v s x Hroots Hnamed Hfresh.
+  eapply value_roots_exclude_root.
+  - exact Hroots.
+  - eapply root_set_store_roots_named_excludes_name; eassumption.
+Qed.
+
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary.

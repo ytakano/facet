@@ -8,6 +8,16 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 
+Lemma env_fns_preservation_ready_global_env_with_local_bounds :
+  forall env bounds,
+    env_fns_preservation_ready env ->
+    env_fns_preservation_ready (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hready f Hin.
+  apply Hready. exact Hin.
+Qed.
+
+
 Lemma initial_store_for_fn_store_names_not_in_body_ctx :
   forall env fdef s x,
     initial_store_for_fn env fdef s ->
@@ -5982,6 +5992,13 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
       callee_body_root_shadow_store_safe_narrow_summary
         (global_env_with_local_bounds env (fn_bounds fdef))
         receiver_callee /\
+      (callee_body_root_shadow_provenance_summary env receiver_callee ->
+       callee_body_root_shadow_provenance_summary
+         (global_env_with_local_bounds env (fn_bounds fdef))
+         receiver_callee) /\
+      (env_fns_preservation_ready env ->
+       env_fns_preservation_ready
+         (global_env_with_local_bounds env (fn_bounds fdef))) /\
       In method_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name method_callee = method_name /\
@@ -6177,6 +6194,18 @@ Proof.
   { eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
     - exact Hunique.
     - exact Hmethod_summary. }
+  assert (Hreceiver_provenance_to_body :
+    callee_body_root_shadow_provenance_summary env receiver_callee ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee).
+  { intros Hprov.
+    eapply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+    exact Hprov. }
+  assert (Henv_ready_to_body :
+    env_fns_preservation_ready env ->
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef))).
+  { apply env_fns_preservation_ready_global_env_with_local_bounds. }
   assert (Heval_body :
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s (fn_body fdef) s' v).
@@ -6192,7 +6221,14 @@ Proof.
   exists method_name, type_args, receiver_name, receiver_args, method_args,
     target_synthetic_body, hidden_synthetic_body, receiver_callee,
     method_callee, T_body, Gamma_body, R_out_checked, roots_checked.
-  repeat split; try eassumption.
+  repeat match goal with
+  | |- _ /\ _ => split
+  | |- callee_body_root_shadow_provenance_summary env receiver_callee -> _ =>
+      exact Hreceiver_provenance_to_body
+  | |- env_fns_preservation_ready env -> _ =>
+      exact Henv_ready_to_body
+  | _ => eassumption
+  end.
   intros T_receiver_call Sigma_receiver_out R_receiver_out receiver_roots
     Htyped_receiver _Hreceiver_compat_call Hreceiver_summary_body
     Hreceiver_provenance_body Henv_ready_body Hrn Hfresh_hidden Hfree_args
@@ -6275,6 +6311,13 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runti
       In receiver_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name receiver_callee = receiver_name /\
+      (callee_body_root_shadow_provenance_summary env receiver_callee ->
+       callee_body_root_shadow_provenance_summary
+         (global_env_with_local_bounds env (fn_bounds fdef))
+         receiver_callee) /\
+      (env_fns_preservation_ready env ->
+       env_fns_preservation_ready
+         (global_env_with_local_bounds env (fn_bounds fdef))) /\
       In method_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name method_callee = method_name /\
@@ -6481,6 +6524,18 @@ Proof.
   { eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
     - exact Hunique.
     - exact Hmethod_summary. }
+  assert (Hreceiver_provenance_to_body :
+    callee_body_root_shadow_provenance_summary env receiver_callee ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee).
+  { intros Hprov.
+    eapply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+    exact Hprov. }
+  assert (Henv_ready_to_body :
+    env_fns_preservation_ready env ->
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef))).
+  { apply env_fns_preservation_ready_global_env_with_local_bounds. }
   assert (Heval_body :
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s (fn_body fdef) s' v).
@@ -6496,7 +6551,14 @@ Proof.
   exists method_name, type_args, receiver_name, receiver_type_args,
     receiver_args, method_args, target_synthetic_body, hidden_synthetic_body,
     receiver_callee, method_callee, T_body, Gamma_body, R_out, roots.
-  repeat split; try eassumption.
+  repeat match goal with
+  | |- _ /\ _ => split
+  | |- callee_body_root_shadow_provenance_summary env receiver_callee -> _ =>
+      exact Hreceiver_provenance_to_body
+  | |- env_fns_preservation_ready env -> _ =>
+      exact Henv_ready_to_body
+  | _ => eassumption
+  end.
   intros sigma Sigma_receiver_args R_receiver_args receiver_arg_roots
     Henv_ready Hcaptures_receiver Htyped_receiver_args Houtlives_receiver
     Hrn Hfresh_hidden Hfree_args Hlocal_args Hreplay.

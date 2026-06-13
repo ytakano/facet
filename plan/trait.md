@@ -51,11 +51,13 @@ validity checks must be represented in Rocq and the extracted checker.
   now enforced by the inactive direct and generic receiver-method sidecar
   summaries and exposed by their view facts. The direct receiver-method runtime
   replay package now also exposes the receiver callee's body-env store-safe
-  summary, method-argument hidden-name freshness, and derivable initial
-  hidden-receiver store freshness as top-level package fields; the generic
-  runtime replay package exposes the same hidden-name freshness and initial
-  store freshness prerequisites. Runtime theorem wiring remains before those
-  summaries can be enabled in the public gate.
+  summary, method-argument hidden-name freshness, derivable initial
+  hidden-receiver store freshness, and transport functions for receiver
+  provenance/env readiness into the body environment as top-level package
+  fields; the generic runtime replay package exposes the same hidden-name
+  freshness, initial store freshness, and body-env transport prerequisites.
+  Runtime theorem wiring remains before those summaries can be enabled in the
+  public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -108,7 +110,7 @@ validity checks must be represented in Rocq and the extracted checker.
      connecting the direct and generic receiver-method runtime replay packages
      into the runtime branch with the existing argument-strip, checked-body,
      return-roots, and hidden-let bridge packages. The direct branch still needs
-     receiver provenance/env readiness evidence in the body environment,
+     the runtime branch to source receiver provenance/env readiness evidence,
      raw-to-hidden method replay, and final-store transport from the hidden
      cleanup store to the raw final store. Only after the direct and generic
      receiver-method runtime safety branch is proved should the receiver-method

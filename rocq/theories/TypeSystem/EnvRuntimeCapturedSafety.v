@@ -1606,6 +1606,41 @@ Proof.
   - unfold se_used, se_state. simpl. reflexivity.
 Qed.
 
+Lemma hidden_receiver_var_eval_inv :
+  forall env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (EVar receiver_method_hidden_receiver_name) s_var_hidden
+      v_receiver_arg ->
+    v_receiver_arg = v_receiver /\
+    ((needs_consume T_receiver = false /\
+      s_var_hidden =
+        store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver) \/
+     (needs_consume T_receiver = true /\
+      s_var_hidden =
+        store_mark_used receiver_method_hidden_receiver_name
+          (store_add receiver_method_hidden_receiver_name T_receiver
+            v_receiver s_receiver))).
+Proof.
+  intros env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg
+    Heval.
+  dependent destruction Heval.
+  - unfold store_add, store_lookup in *. simpl in *.
+    try rewrite ident_eqb_refl in *.
+    repeat match goal with
+    | Hsome : Some _ = Some _ |- _ => inversion Hsome; subst; clear Hsome
+    end.
+    split; [reflexivity | left; split; [assumption | reflexivity]].
+  - unfold store_add, store_lookup in *. simpl in *.
+    try rewrite ident_eqb_refl in *.
+    repeat match goal with
+    | Hsome : Some _ = Some _ |- _ => inversion Hsome; subst; clear Hsome
+    end.
+    split; [reflexivity | right; split; [assumption | reflexivity]].
+Qed.
+
 Lemma eval_args_bound_receiver_var_cons :
   forall env x T v s s_var method_args s_method_args vs_method,
     eval env (store_add x T v s) (EVar x) s_var v ->

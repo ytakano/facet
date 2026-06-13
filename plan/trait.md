@@ -28,19 +28,13 @@ validity checks must be represented in Rocq and the extracted checker.
   receivers, generic direct-call receivers, non-pure inferred locals, and
   general annotated locals remain gated. Direct-call receivers cannot be
   unlocked by OCaml desugaring alone: lowering the receiver through a hidden let
-  still fails the extracted end-to-end safety gate. Rocq now has executable
-  sidecar recognizers, proof-side shape lemmas, summary package
-  definitions, standalone executable checker helpers, helper soundness lemmas,
-  runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas,
-  hidden-let synthetic receiver body constructors, hidden receiver `EVar`
-  evaluation, consumed-frame, parameter-cleanup, method-args store-name,
-  method-param/body freshness, and final-cleanup helpers, and inversion helpers, structured receiver-method checker view lemmas, direct and generic typed
-  hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let
-  evaluation bridges, a method-argument hidden-receiver strip helper, hidden receiver method-call inversion, receiver-cleanup, method-arg store-name, method-param/body freshness, and final-cleanup helpers, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and a behavior-preserving split
-  between the active captured-call core gate and its
-  public base wrapper. The direct and generic receiver-method checker summaries
-  remain factored but inactive until their dedicated runtime safety branch is
-  proved.
+  still fails the extracted end-to-end safety gate. Rocq now has the direct and
+  generic receiver-method path factored into executable sidecar/checker
+  summaries, proof-side shape and view lemmas, hidden-let and hidden-body
+  packages, replay-parameterized bridge lemmas, receiver/method-call inversion
+  and cleanup helpers, and a behavior-preserving split between the active
+  captured-call core gate and its public base wrapper. Those summaries remain
+  inactive until their dedicated runtime safety branch is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -88,20 +82,15 @@ validity checks must be represented in Rocq and the extracted checker.
      direct-call receivers, and non-pure locals are still gated.
    - Direct-call receivers are not an OCaml-only switch: existing store-safe
      argument facts assume arg evaluation preserves static root/store shape,
-     and a hidden-let receiver lowering still fails the extracted end-to-end
-     gate. The executable sidecar recognizers, shape lemmas, summary package
-     definitions, standalone checker helpers, helper soundness lemmas, runtime
-     receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
-     constructors, hidden receiver `EVar` evaluation, consumed-frame, parameter-cleanup, method-args store-name, method-param/body freshness, and final-cleanup helpers, and inversion helpers, hidden-let
-     receiver-method checker summaries, structured checker view lemmas, direct and generic typed
-     hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let evaluation bridges, a method-argument hidden-receiver strip helper, hidden receiver method-call inversion, receiver-cleanup, method-arg store-name, method-param/body freshness, and final-cleanup helpers, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and the active-core/public-base gate split
-     now isolate direct and generic direct-call receiver method shapes without
-     changing accepted programs. Next, remove the remaining conditional premises by using the hidden-let
-     inversions to prove callee-body replay under the added hidden receiver binding and by routing the hidden
-     `ELet`/call body through call-specific preservation instead of ordinary
-     `preservation_ready_expr`; then combine that result with the method-argument
-     strip helper, direct and generic checked hidden-body packages, and hidden-let bridge for the direct receiver-method runtime branch and enable the
-     summaries as outer alternatives on the public base checker gate.
+     and a hidden-let receiver lowering still lacks the runtime proof needed by
+     the extracted end-to-end safety gate. The next proof step is to remove the
+     remaining conditional premises: prove callee-body replay under the added
+     hidden receiver binding, route the hidden `ELet`/call body through
+     call-specific preservation instead of ordinary `preservation_ready_expr`,
+     then combine that result with the existing argument-strip, checked-body,
+     and hidden-let bridge packages. Only after the direct and generic
+     receiver-method runtime safety branch is proved should the receiver-method
+     summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

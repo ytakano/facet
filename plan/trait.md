@@ -31,10 +31,11 @@ validity checks must be represented in Rocq and the extracted checker.
   still fails the extracted end-to-end safety gate. Rocq now has the direct and
   generic receiver-method path factored into executable sidecar/checker
   summaries, proof-side shape/view lemmas, hidden-let/body packages,
-  replay bridge, inversion/strip/replay-prep and conditional body-strip
-  packages, consumed-frame support, and a behavior-preserving split between the active captured-call core gate and its
-  public base wrapper. Those summaries remain
-  inactive until their dedicated runtime safety branch is proved.
+  replay bridge, inversion/strip/replay-prep, conditional body-strip, and
+  direct summary/body-replay wrapper packages, consumed-frame support, and a
+  behavior-preserving split between the active captured-call core gate and its
+  public base wrapper. Those summaries remain inactive until their dedicated
+  runtime safety branch is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -83,14 +84,13 @@ validity checks must be represented in Rocq and the extracted checker.
    - Direct-call receivers are not an OCaml-only switch: existing store-safe
      argument facts assume arg evaluation preserves static root/store shape,
      and a hidden-let receiver lowering still lacks the runtime proof needed by
-     the extracted end-to-end safety gate. The next proof step is to remove the
-     remaining conditional premises: prove callee-body replay under the added
-     hidden receiver binding, route the hidden `ELet`/call body through
-     call-specific preservation instead of ordinary `preservation_ready_expr`,
-     then combine that result with the existing argument-strip, checked-body,
-     and hidden-let bridge packages. Only after the direct and generic
-     receiver-method runtime safety branch is proved should the receiver-method
-     summaries be enabled as outer alternatives on the public base checker gate.
+     the extracted end-to-end safety gate. The next proof step is to discharge
+     the remaining receiver value-root exclusion and consumed-frame/general
+     replay obligations, then combine that result with the existing
+     argument-strip, checked-body, direct summary/body-replay, and hidden-let
+     bridge packages. Only after the direct and generic receiver-method runtime
+     safety branch is proved should the receiver-method summaries be enabled as
+     outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

@@ -35,7 +35,7 @@ validity checks must be represented in Rocq and the extracted checker.
   hidden-let synthetic receiver body constructors, hidden receiver `EVar`
   evaluation helpers, structured receiver-method checker view lemmas, a typed
   hidden-body package for direct receiver-method summaries, a replay-parameterized hidden-let
-  evaluation bridge, a method-argument hidden-receiver strip helper, and a behavior-preserving split
+  evaluation bridge, a method-argument hidden-receiver strip helper, a checked hidden-body package, and a behavior-preserving split
   between the active captured-call core gate and its
   public base wrapper. The direct and generic receiver-method checker summaries
   remain factored but inactive until their dedicated runtime safety branch is
@@ -93,12 +93,12 @@ validity checks must be represented in Rocq and the extracted checker.
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
      constructors, hidden receiver `EVar` evaluation helpers, hidden-let
      receiver-method checker summaries, structured checker view lemmas, a typed
-     hidden-body package for direct receiver-method summaries, a replay-parameterized hidden-let evaluation bridge, a method-argument hidden-receiver strip helper, and the active-core/public-base gate split
+     hidden-body package for direct receiver-method summaries, a replay-parameterized hidden-let evaluation bridge, a method-argument hidden-receiver strip helper, a checked hidden-body package, and the active-core/public-base gate split
      now isolate direct and generic direct-call receiver method shapes without
      changing accepted programs. Next, prove the remaining replay-lifting lemma that
      transports callee-body evaluation under the added hidden receiver binding
      and erases it with `store_remove`; then combine it with the method-argument
-     strip helper and hidden-let bridge for the direct receiver-method runtime branch and enable the
+     strip helper, checked hidden-body package, and hidden-let bridge for the direct receiver-method runtime branch and enable the
      summaries as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.

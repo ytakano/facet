@@ -1855,6 +1855,95 @@ Proof.
   dependent destruction Hready.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_checked :
+  forall env fdef,
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    exists method_name type_args receiver_name receiver_args method_args
+      target_synthetic_body hidden_synthetic_body receiver_callee
+      method_callee T_body Gamma_body R_out roots,
+      direct_call_receiver_method_target_expr (fn_body fdef) =
+        Some (method_name, type_args, receiver_name, receiver_args,
+          method_args, target_synthetic_body) /\
+      hidden_synthetic_body =
+        direct_call_receiver_method_hidden_let_synthetic_body
+          (fn_ret receiver_callee) method_name type_args receiver_name
+          receiver_args method_args /\
+      store_safe_function_value_call_args env receiver_args /\
+      store_safe_function_value_call_args env method_args /\
+      In receiver_callee (env_fns env) /\
+      fn_name receiver_callee = receiver_name /\
+      In method_callee (env_fns env) /\
+      fn_name method_callee = method_name /\
+      preservation_ready_expr
+        (subst_type_params_expr type_args (fn_body method_callee)) /\
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        env 10000 method_callee type_args /\
+      infer_core_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (fn_body_ctx fdef) hidden_synthetic_body =
+        infer_ok (T_body, Gamma_body, R_out, roots) /\
+      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+      roots_exclude_params (fn_params fdef) roots /\
+      root_env_excludes_params (fn_params fdef) R_out.
+Proof.
+  intros env fdef Hsummary.
+  destruct (check_fn_root_shadow_direct_receiver_method_store_safe_summary_view_prop
+    env fdef Hsummary) as
+    (method_name & type_args & receiver_name & receiver_args & method_args &
+      target_synthetic_body & hidden_synthetic_body & receiver_callee &
+      method_callee & T_receiver & Gamma_receiver & R_receiver &
+      roots_receiver & T_receiver_env & Gamma_receiver_env & R_receiver_env &
+      roots_receiver_env & ret_roots_receiver & T_method & Gamma_method &
+      R_method & roots_method & T_method_env & Gamma_method_env &
+      R_method_env & roots_method_env & T_body_env & Gamma_body_env & R_out &
+      roots & Htarget & Hhidden & Hsafe_receiver_args & Hsafe_method_args &
+      Hin_receiver & Hname_receiver & Hin_method & Hname_method &
+      _Harity & _Hbounds & _Hreceiver_core & _Hreceiver_env &
+      _Hreceiver_summary & _Hreceiver_compat & _Hreceiver_roots &
+      _Hreceiver_env_excl & _Hmethod_core & _Hmethod_env & Hmethod_ready &
+      Hmethod_summary & _Hmethod_compat & _Hmethod_roots &
+      _Hmethod_env_excl & Hbody_env & _Hcompat & Hroots & Henv).
+  unfold infer_env_roots_shadow_safe in Hbody_env.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes
+    (fn_with_body fdef hidden_synthetic_body)))
+    (fn_outlives (fn_with_body fdef hidden_synthetic_body))));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes
+    (fn_with_body fdef hidden_synthetic_body)))
+    (fn_ret (fn_with_body fdef hidden_synthetic_body))));
+    try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes
+    (fn_with_body fdef hidden_synthetic_body)))
+    (fn_with_body fdef hidden_synthetic_body)); try discriminate.
+  destruct (infer_core_env_roots_shadow_safe
+    (global_env_with_local_bounds env
+      (fn_bounds (fn_with_body fdef hidden_synthetic_body)))
+    (fn_outlives (fn_with_body fdef hidden_synthetic_body))
+    (fn_lifetimes (fn_with_body fdef hidden_synthetic_body))
+    (initial_root_env_for_fn fdef)
+    (fn_body_ctx (fn_with_body fdef hidden_synthetic_body))
+    (fn_body (fn_with_body fdef hidden_synthetic_body)))
+    as [[[[T_body Gamma_body] R_body] roots_body] | err]
+    eqn:Hbody_core; try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes
+    (fn_with_body fdef hidden_synthetic_body))) T_body)); try discriminate.
+  destruct (ty_compatible_b
+    (fn_outlives (fn_with_body fdef hidden_synthetic_body)) T_body
+    (fn_ret (fn_with_body fdef hidden_synthetic_body)))
+    eqn:Hcompat_body; try discriminate.
+  destruct (params_ok_env_b env
+    (fn_params (fn_with_body fdef hidden_synthetic_body)) Gamma_body);
+    try discriminate.
+  inversion Hbody_env; subst Gamma_body_env R_out roots; clear Hbody_env.
+  exists method_name, type_args, receiver_name, receiver_args, method_args,
+    target_synthetic_body, hidden_synthetic_body, receiver_callee,
+    method_callee, T_body, Gamma_body, R_body, roots_body.
+  repeat split; try eassumption.
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_typed :
   forall env fdef,
     callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary

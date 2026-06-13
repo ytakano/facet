@@ -63,11 +63,13 @@ validity checks must be represented in Rocq and the extracted checker.
   those raw evaluation/final-cleanup components as top-level fields alongside
   the hidden-let replay evidence. Env-consumer wrappers source body-env
   provenance/readiness premises from env-level evidence for the replay
-  continuations, and conditional package-consumer lemmas record how a
+  continuations, conditional package-consumer lemmas record how a
   preservation-ready hidden replay would yield value typing at the
-  hidden-cleaned store. The actual receiver-method branch still needs the
-  non-ready hidden `ELet`/call runtime path and final raw-store transport before
-  those summaries can be enabled in the public gate.
+  hidden-cleaned store, and a cleanup algebra bridge equates the raw/base final
+  store with the hidden-cleaned store once the hidden-frame relation and both
+  cleanup equations are available. The actual receiver-method branch still
+  needs the non-ready hidden `ELet`/call runtime path before those summaries can
+  be enabled in the public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -121,14 +123,15 @@ validity checks must be represented in Rocq and the extracted checker.
      into the runtime branch with the existing argument-strip, checked-body,
      return-roots, and hidden-let bridge packages. The raw and hidden cleanup
      evidence is now packaged together, env-level receiver provenance/readiness
-     can be transported through package consumers, and the conditional
-     hidden-store typing helper is available when a preservation-ready replay is
-     in hand. The runtime branch still needs to handle the non-ready hidden
-     `ELet`/call body, connect raw receiver-method evaluation to hidden method
-     replay, and transport the final store from hidden cleanup to the raw final
-     store. Only after the direct and generic receiver-method runtime safety
-     branch is proved should the receiver-method summaries be enabled as outer
-     alternatives on the public base checker gate.
+     can be transported through package consumers, the conditional hidden-store
+     typing helper is available when a preservation-ready replay is in hand,
+     and final-store cleanup has a conditional algebra bridge once raw/base and
+     hidden replay evidence are matched. The runtime branch still needs to
+     handle the non-ready hidden `ELet`/call body and connect raw
+     receiver-method evaluation to hidden method replay. Only after the direct
+     and generic receiver-method runtime safety branch is proved should the
+     receiver-method summaries be enabled as outer alternatives on the public
+     base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

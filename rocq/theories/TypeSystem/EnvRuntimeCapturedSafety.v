@@ -1623,6 +1623,26 @@ Proof.
 Qed.
 
 
+Lemma receiver_method_hidden_cleanup_matches_base_final_store :
+  forall ps x T hidden s_method_hidden s_body_hidden s_body_base s_final,
+    (store_hidden_frame_rel x T hidden s_body_hidden s_body_base \/
+     store_consumed_hidden_frame_rel x T hidden s_body_hidden s_body_base) ->
+    store_remove x s_method_hidden =
+      store_remove_params ps (store_remove x s_body_hidden) ->
+    s_final = store_remove_params ps s_body_base ->
+    s_final = store_remove x s_method_hidden.
+Proof.
+  intros ps x T hidden s_method_hidden s_body_hidden s_body_base s_final
+    Hrel Hhidden_cleanup Hraw_final.
+  subst s_final. rewrite Hhidden_cleanup.
+  destruct Hrel as [Hrel | Hrel].
+  - rewrite (store_hidden_frame_rel_remove_base x T hidden
+      s_body_hidden s_body_base Hrel). reflexivity.
+  - rewrite (store_consumed_hidden_frame_rel_remove_base x T hidden
+      s_body_hidden s_body_base Hrel). reflexivity.
+Qed.
+
+
 Lemma store_consumed_hidden_frame_rel_lookup :
   forall x T hidden s_with s_without y,
     store_consumed_hidden_frame_rel x T hidden s_with s_without ->

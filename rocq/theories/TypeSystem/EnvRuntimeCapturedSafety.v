@@ -17,6 +17,18 @@ Proof.
   apply Hready. exact Hin.
 Qed.
 
+Lemma env_fns_root_shadow_provenance_summary_evidence_global_env_with_local_bounds :
+  forall env bounds,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hevidence fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  eapply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+  exact (Hevidence fname fdef Hlookup).
+Qed.
+
 
 Lemma initial_store_for_fn_store_names_not_in_body_ctx :
   forall env fdef s x,

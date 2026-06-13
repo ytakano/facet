@@ -1554,6 +1554,138 @@ Proof.
     destruct (ident_eqb y (se_name se)); constructor; assumption.
 Qed.
 
+
+Lemma store_consumed_hidden_frame_rel_update_state :
+  forall x T hidden s_with s_without y f s_with',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_update_state y f s_with = Some s_with' ->
+    exists s_without',
+      store_update_state y f s_without = Some s_without' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y f s_with' Hrel.
+  revert y f s_with'.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH];
+    intros y f s_with' Hyx Hupdate.
+  - destruct (store_update_state_store_mark_used_add_inv
+      y x f T hidden s s_with' Hyx Hupdate) as
+      [s_without' [Hwith' Hwithout']].
+    subst s_with'. exists s_without'. split; [exact Hwithout' | constructor].
+  - simpl in Hupdate.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + inversion Hupdate; subst s_with'.
+      exists (MkStoreEntry (se_name se) (se_ty se) (se_val se)
+        (f (se_state se)) :: s_without).
+      split; [simpl; rewrite Hy; reflexivity |].
+      constructor; assumption.
+    + destruct (store_update_state y f s_with) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s_with'.
+      destruct (IH y f tail' Hyx Htail) as [tail0 [Htail0 Hrel0]].
+      exists (se :: tail0). split.
+      * simpl. rewrite Hy, Htail0. reflexivity.
+      * constructor; assumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_update_val :
+  forall x T hidden s_with s_without y v_new s_with',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_update_val y v_new s_with = Some s_with' ->
+    exists s_without',
+      store_update_val y v_new s_without = Some s_without' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y v_new s_with' Hrel.
+  revert y v_new s_with'.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH];
+    intros y v_new s_with' Hyx Hupdate.
+  - destruct (store_update_val_store_mark_used_add_inv
+      y x T hidden v_new s s_with' Hyx Hupdate) as
+      [s_without' [Hwith' Hwithout']].
+    subst s_with'. exists s_without'. split; [exact Hwithout' | constructor].
+  - simpl in Hupdate.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + inversion Hupdate; subst s_with'.
+      exists (MkStoreEntry (se_name se) (se_ty se) v_new (se_state se) :: s_without).
+      split; [simpl; rewrite Hy; reflexivity |].
+      constructor; assumption.
+    + destruct (store_update_val y v_new s_with) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s_with'.
+      destruct (IH y v_new tail' Hyx Htail) as [tail0 [Htail0 Hrel0]].
+      exists (se :: tail0). split.
+      * simpl. rewrite Hy, Htail0. reflexivity.
+      * constructor; assumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_update_path :
+  forall x T hidden s_with s_without y path v_new s_with',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_update_path y path v_new s_with = Some s_with' ->
+    exists s_without',
+      store_update_path y path v_new s_without = Some s_without' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path v_new s_with' Hrel.
+  revert y path v_new s_with'.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH];
+    intros y path v_new s_with' Hyx Hupdate.
+  - destruct (store_update_path_store_mark_used_add_inv
+      y x path T hidden v_new s s_with' Hyx Hupdate) as
+      [s_without' [Hwith' Hwithout']].
+    subst s_with'. exists s_without'. split; [exact Hwithout' | constructor].
+  - simpl in Hupdate.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + destruct (value_update_path (se_val se) path v_new) as [v' |] eqn:Hval;
+        try discriminate.
+      inversion Hupdate; subst s_with'.
+      exists (MkStoreEntry (se_name se) (se_ty se) v' (se_state se) :: s_without).
+      split; [simpl; rewrite Hy, Hval; reflexivity |].
+      constructor; assumption.
+    + destruct (store_update_path y path v_new s_with) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s_with'.
+      destruct (IH y path v_new tail' Hyx Htail) as [tail0 [Htail0 Hrel0]].
+      exists (se :: tail0). split.
+      * simpl. rewrite Hy, Htail0. reflexivity.
+      * constructor; assumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_restore_path :
+  forall x T hidden s_with s_without y path s_with',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_restore_path y path s_with = Some s_with' ->
+    exists s_without',
+      store_restore_path y path s_without = Some s_without' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_with' Hrel Hyx Hrestore.
+  unfold store_restore_path in *.
+  eapply store_consumed_hidden_frame_rel_update_state; eassumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_consume_path :
+  forall x T hidden s_with s_without y path s_with',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consume_path y path s_with = Some s_with' ->
+    exists s_without',
+      store_consume_path y path s_without = Some s_without' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_with' Hrel Hyx Hconsume.
+  unfold store_consume_path in *.
+  rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with s_without y Hrel Hyx)
+    in Hconsume.
+  destruct (store_lookup y s_without) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havail; try discriminate.
+  eapply store_consumed_hidden_frame_rel_update_state; eassumption.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

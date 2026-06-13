@@ -1479,6 +1479,81 @@ Proof.
   eapply store_update_state_store_mark_used_add_inv; eassumption.
 Qed.
 
+Inductive store_consumed_hidden_frame_rel
+    (x : ident) (T : Ty) (hidden : value) : store -> store -> Prop :=
+  | SCHFR_Here : forall s,
+      store_consumed_hidden_frame_rel x T hidden
+        (store_mark_used x (store_add x T hidden s)) s
+  | SCHFR_Keep : forall se s_with s_without,
+      se_name se <> x ->
+      store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+      store_consumed_hidden_frame_rel x T hidden
+        (se :: s_with) (se :: s_without).
+
+Lemma store_consumed_hidden_frame_rel_here :
+  forall x T hidden s,
+    store_consumed_hidden_frame_rel x T hidden
+      (store_mark_used x (store_add x T hidden s)) s.
+Proof.
+  intros x T hidden s. constructor.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_remove_base :
+  forall x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    store_remove x s_with = s_without.
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without Hsex _ IH].
+  - apply store_remove_mark_used_store_add_same.
+  - simpl. destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x. contradiction.
+    + rewrite IH. reflexivity.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_name_in :
+  forall x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    In x (store_names s_with).
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without _ _ IH].
+  - rewrite store_names_mark_used_readiness.
+    unfold store_add. simpl. left. reflexivity.
+  - simpl. right. exact IH.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_lookup :
+  forall x T hidden s_with s_without y,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_lookup y s_with = store_lookup y s_without.
+Proof.
+  intros x T hidden s_with s_without y Hrel Hyx.
+  induction Hrel as [s | se s_with s_without Hsex _ IH].
+  - apply store_lookup_store_mark_used_add_diff.
+    intro Heq. apply Hyx. exact Heq.
+  - simpl.
+    destruct (ident_eqb y (se_name se)); try reflexivity.
+    exact IH.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_mark_used :
+  forall x T hidden s_with s_without y,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_mark_used y s_with) (store_mark_used y s_without).
+Proof.
+  intros x T hidden s_with s_without y Hrel Hyx.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH].
+  - rewrite store_mark_used_store_mark_used_add_diff.
+    + constructor.
+    + intro Heq. apply Hyx. exact Heq.
+  - simpl.
+    destruct (ident_eqb y (se_name se)); constructor; assumption.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

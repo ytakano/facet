@@ -10243,6 +10243,70 @@ Proof.
 Qed.
 
 
+Lemma fresh_ident_receiver_method_fn_def_seed_insert :
+  forall fdef x used,
+    fresh_ident x
+      (param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++
+       receiver_method_hidden_receiver_name :: used) =
+    fresh_ident x
+      (param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++ used).
+Proof.
+  intros fdef x used.
+  set (A := param_names (fn_params fdef)).
+  set (B := param_names (fn_captures fdef)).
+  set (C := free_vars_expr (fn_body fdef)).
+  assert (Hleft : A ++ B ++ C ++ receiver_method_hidden_receiver_name :: used =
+    (A ++ B ++ C) ++ receiver_method_hidden_receiver_name :: used).
+  { repeat rewrite <- app_assoc. reflexivity. }
+  assert (Hright : A ++ B ++ C ++ used = (A ++ B ++ C) ++ used).
+  { repeat rewrite <- app_assoc. reflexivity. }
+  rewrite Hleft. rewrite Hright.
+  apply fresh_ident_receiver_method_hidden_receiver_name_insert.
+Qed.
+
+Lemma alpha_rename_params_receiver_method_hidden_receiver_head_name :
+  forall rho fdef p ps used,
+    fresh_ident (param_name p)
+      (param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++
+       receiver_method_hidden_receiver_name :: used) =
+    fresh_ident (param_name p)
+      (param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++ used) /\
+    alpha_rename_params rho
+      (fresh_ident (param_name p)
+        (param_names (fn_params fdef) ++
+         param_names (fn_captures fdef) ++
+         free_vars_expr (fn_body fdef) ++
+         receiver_method_hidden_receiver_name :: used) ::
+       param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++
+       receiver_method_hidden_receiver_name :: used) ps =
+    alpha_rename_params rho
+      (fresh_ident (param_name p)
+        (param_names (fn_params fdef) ++
+         param_names (fn_captures fdef) ++
+         free_vars_expr (fn_body fdef) ++ used) ::
+       param_names (fn_params fdef) ++
+       param_names (fn_captures fdef) ++
+       free_vars_expr (fn_body fdef) ++
+       receiver_method_hidden_receiver_name :: used) ps.
+Proof.
+  intros rho fdef p ps used.
+  split.
+  - apply fresh_ident_receiver_method_fn_def_seed_insert.
+  - rewrite fresh_ident_receiver_method_fn_def_seed_insert.
+    reflexivity.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

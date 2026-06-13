@@ -1676,6 +1676,31 @@ Proof.
   - apply store_remove_mark_used_store_add_same.
 Qed.
 
+Lemma hidden_receiver_var_eval_remove_params_inv :
+  forall env ps T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (EVar receiver_method_hidden_receiver_name) s_var_hidden
+      v_receiver_arg ->
+    ~ In receiver_method_hidden_receiver_name
+      (ctx_names (params_ctx ps)) ->
+    v_receiver_arg = v_receiver /\
+    store_remove receiver_method_hidden_receiver_name
+      (store_remove_params ps s_var_hidden) =
+      store_remove_params ps s_receiver.
+Proof.
+  intros env ps T_receiver v_receiver s_receiver s_var_hidden
+    v_receiver_arg Heval Hnotin.
+  destruct (hidden_receiver_var_eval_inv env T_receiver v_receiver
+    s_receiver s_var_hidden v_receiver_arg Heval)
+    as (Hvalue & Hcases).
+  split; [exact Hvalue |].
+  destruct Hcases as [[_ Hstore] | [_ Hstore]]; subst.
+  - eapply store_remove_hidden_after_params; exact Hnotin.
+  - eapply store_remove_hidden_after_params_mark_used; exact Hnotin.
+Qed.
+
 Lemma eval_args_bound_receiver_var_cons :
   forall env x T v s s_var method_args s_method_args vs_method,
     eval env (store_add x T v s) (EVar x) s_var v ->

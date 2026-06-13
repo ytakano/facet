@@ -33,7 +33,7 @@ validity checks must be represented in Rocq and the extracted checker.
   definitions, standalone executable checker helpers, helper soundness lemmas,
   runtime evaluation/value helper lemmas, synthetic-body evaluation lemmas,
   hidden-let synthetic receiver body constructors, hidden receiver `EVar`
-  evaluation, consumed-frame cleanup, and inversion helpers, structured receiver-method checker view lemmas, direct and generic typed
+  evaluation, consumed-frame and parameter-cleanup helpers, and inversion helpers, structured receiver-method checker view lemmas, direct and generic typed
   hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let
   evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion and receiver-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and a behavior-preserving split
   between the active captured-call core gate and its
@@ -91,7 +91,7 @@ validity checks must be represented in Rocq and the extracted checker.
      gate. The executable sidecar recognizers, shape lemmas, summary package
      definitions, standalone checker helpers, helper soundness lemmas, runtime
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
-     constructors, hidden receiver `EVar` evaluation, consumed-frame cleanup, and inversion helpers, hidden-let
+     constructors, hidden receiver `EVar` evaluation, consumed-frame and parameter-cleanup helpers, and inversion helpers, hidden-let
      receiver-method checker summaries, structured checker view lemmas, direct and generic typed
      hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion and receiver-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and the active-core/public-base gate split
      now isolate direct and generic direct-call receiver method shapes without

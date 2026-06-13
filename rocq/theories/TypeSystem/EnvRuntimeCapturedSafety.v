@@ -10206,6 +10206,43 @@ Qed.
 
 
 
+Lemma max_ident_index_receiver_method_hidden_receiver_name_cons :
+  forall base used,
+    max_ident_index base (receiver_method_hidden_receiver_name :: used) =
+    max_ident_index base used.
+Proof.
+  intros base used.
+  unfold receiver_method_hidden_receiver_name. simpl.
+  destruct (String.eqb base "__facet_method_receiver"%string); simpl.
+  - apply Nat.max_0_l.
+  - reflexivity.
+Qed.
+
+Lemma max_ident_index_receiver_method_hidden_receiver_name_insert :
+  forall base prefix suffix,
+    max_ident_index base
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) =
+    max_ident_index base (prefix ++ suffix).
+Proof.
+  intros base prefix.
+  induction prefix as [| x prefix IH]; intros suffix; simpl.
+  - apply max_ident_index_receiver_method_hidden_receiver_name_cons.
+  - destruct x as [base_x idx_x]. simpl.
+    destruct (String.eqb base base_x); rewrite IH; reflexivity.
+Qed.
+
+Lemma fresh_ident_receiver_method_hidden_receiver_name_insert :
+  forall x prefix suffix,
+    fresh_ident x (prefix ++ receiver_method_hidden_receiver_name :: suffix) =
+    fresh_ident x (prefix ++ suffix).
+Proof.
+  intros [base idx] prefix suffix.
+  unfold fresh_ident. simpl.
+  rewrite max_ident_index_receiver_method_hidden_receiver_name_insert.
+  reflexivity.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

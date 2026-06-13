@@ -1636,6 +1636,32 @@ Proof.
   eapply Eval_Let; eassumption.
 Qed.
 
+Lemma direct_receiver_method_hidden_let_eval_inv :
+  forall env s T_receiver receiver_name receiver_args method_name type_args
+      method_args s_hidden v,
+    eval env s
+      (direct_call_receiver_method_hidden_let_synthetic_body
+        T_receiver method_name type_args receiver_name receiver_args
+        method_args)
+      s_hidden v ->
+    exists s_receiver v_receiver s_method_hidden,
+      eval env s (ECall receiver_name receiver_args) s_receiver v_receiver /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (ECallGeneric method_name type_args
+          (EVar receiver_method_hidden_receiver_name :: method_args))
+        s_method_hidden v /\
+      s_hidden = store_remove receiver_method_hidden_receiver_name s_method_hidden.
+Proof.
+  intros env s T_receiver receiver_name receiver_args method_name type_args
+    method_args s_hidden v Heval.
+  unfold direct_call_receiver_method_hidden_let_synthetic_body in Heval.
+  dependent destruction Heval.
+  exists s1, v1, s2.
+  repeat split; try eassumption; reflexivity.
+Qed.
+
 Lemma direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_args
       method_args synthetic_body s' v,

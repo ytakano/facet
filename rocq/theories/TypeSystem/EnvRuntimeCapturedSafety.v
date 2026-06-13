@@ -2096,6 +2096,77 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_typed :
+  forall env fdef,
+    callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    exists method_name type_args receiver_name receiver_type_args receiver_args
+      method_args target_synthetic_body hidden_synthetic_body receiver_callee
+      method_callee T_body Gamma_body R_out roots,
+      generic_direct_call_receiver_method_target_expr (fn_body fdef) =
+        Some (method_name, type_args, receiver_name, receiver_type_args,
+          receiver_args, method_args, target_synthetic_body) /\
+      hidden_synthetic_body =
+        generic_direct_call_receiver_method_hidden_let_synthetic_body
+          (subst_type_params_ty receiver_type_args (fn_ret receiver_callee))
+          method_name type_args receiver_name receiver_type_args receiver_args
+          method_args /\
+      store_safe_function_value_call_args env receiver_args /\
+      store_safe_function_value_call_args env method_args /\
+      In receiver_callee (env_fns env) /\
+      fn_name receiver_callee = receiver_name /\
+      In method_callee (env_fns env) /\
+      fn_name method_callee = method_name /\
+      Datatypes.length receiver_type_args = fn_type_params receiver_callee /\
+      Datatypes.length type_args = fn_type_params method_callee /\
+      check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_bounds receiver_callee) receiver_type_args = None /\
+      check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_bounds method_callee) type_args = None /\
+      preservation_ready_expr
+        (subst_type_params_expr receiver_type_args
+          (fn_body receiver_callee)) /\
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        env 10000 receiver_callee receiver_type_args /\
+      preservation_ready_expr
+        (subst_type_params_expr type_args (fn_body method_callee)) /\
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        env 10000 method_callee type_args /\
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (fn_body_ctx fdef))
+        hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots /\
+      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+      roots_exclude_params (fn_params fdef) roots /\
+      root_env_excludes_params (fn_params fdef) R_out.
+Proof.
+  intros env fdef Hsummary.
+  destruct
+    (callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_checked
+      env fdef Hsummary) as
+    (method_name & type_args & receiver_name & receiver_type_args &
+      receiver_args & method_args & target_synthetic_body &
+      hidden_synthetic_body & receiver_callee & method_callee & T_body &
+      Gamma_body & R_out & roots & Htarget & Hhidden &
+      Hsafe_receiver_args & Hsafe_method_args & Hin_receiver &
+      Hname_receiver & Hin_method & Hname_method & Hreceiver_arity &
+      Hmethod_arity & Hreceiver_bounds & Hmethod_bounds & Hreceiver_ready &
+      Hreceiver_summary & Hmethod_ready & Hmethod_summary & Hbody_core &
+      Hcompat & Hroots & Henv).
+  pose proof (infer_core_env_roots_shadow_safe_sound
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
+    hidden_synthetic_body T_body Gamma_body R_out roots Hbody_core)
+    as Htyped_body.
+  exists method_name, type_args, receiver_name, receiver_type_args,
+    receiver_args, method_args, target_synthetic_body, hidden_synthetic_body,
+    receiver_callee, method_callee, T_body, Gamma_body, R_out, roots.
+  repeat split; try eassumption.
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_typed :
   forall env fdef,
     callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary

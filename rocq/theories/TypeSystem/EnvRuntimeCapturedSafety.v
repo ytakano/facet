@@ -1686,6 +1686,40 @@ Proof.
   eapply store_consumed_hidden_frame_rel_update_state; eassumption.
 Qed.
 
+Lemma eval_place_consumed_hidden_frame_rel_strip :
+  forall s_with s_without p y path x T hidden,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_without ->
+    eval_place s_with p y path ->
+    y <> x /\ eval_place s_without p y path.
+Proof.
+  intros s_with s_without p y path x T hidden Hrel Hfresh Hrefs Heval.
+  induction Heval.
+  - split.
+    + exact Hfresh.
+    + eapply EvalPlace_Var.
+      rewrite <- (store_consumed_hidden_frame_rel_lookup x T hidden s s_without x0
+                    Hrel Hfresh).
+      exact H.
+  - simpl in Hfresh.
+    destruct IHHeval as [Hyx Hbase].
+    + exact Hrel.
+    + exact Hfresh.
+    + split; [exact Hyx | constructor; exact Hbase].
+  - simpl in Hfresh.
+    destruct IHHeval as [Hrx Hbase].
+    + exact Hrel.
+    + exact Hfresh.
+    + rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_without r
+                 Hrel Hrx) in H.
+      split.
+      * eapply value_refs_exclude_lookup_ref_neq.
+        -- eapply store_refs_exclude_lookup_value; eassumption.
+        -- exact H0.
+      * eapply EvalPlace_Deref; eassumption.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

@@ -8,6 +8,21 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 
+Lemma initial_store_for_fn_store_names_not_in_body_ctx :
+  forall env fdef s x,
+    initial_store_for_fn env fdef s ->
+    ~ In x (ctx_names (fn_body_ctx fdef)) ->
+    ~ In x (store_names s).
+Proof.
+  intros env fdef s x Hstore Hfresh Hin.
+  pose proof (initial_store_for_fn_store_typed env fdef s Hstore)
+    as Htyped.
+  rewrite (store_typed_names env s (sctx_of_ctx (fn_body_ctx fdef))
+    Htyped) in Hin.
+  exact (Hfresh Hin).
+Qed.
+
+
 Lemma root_set_store_roots_named_stores_subset :
   forall roots roots_bound s,
     root_set_stores_subset roots roots_bound ->
@@ -5518,7 +5533,7 @@ Proof.
       R_method_env & roots_method_env & T_body_env & Gamma_body_env & R_out &
       roots & Htarget & Hhidden & Hsafe_receiver_args & Hsafe_method_args &
       _Hnot_free_method_args & _Hnot_local_method_args &
-      Hin_receiver & Hname_receiver & Hin_method & Hname_method &
+      _Hnot_body_ctx & Hin_receiver & Hname_receiver & Hin_method & Hname_method &
       _Harity & _Hbounds & _Hreceiver_core & _Hreceiver_env &
       _Hreceiver_summary & _Hreceiver_compat & _Hreceiver_roots &
       _Hreceiver_env_excl & _Hmethod_core & _Hmethod_env & Hmethod_ready &
@@ -5579,6 +5594,12 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_store
           method_args /\
       store_safe_function_value_call_args env receiver_args /\
       store_safe_function_value_call_args env method_args /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (fn_body_ctx fdef)) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -5618,8 +5639,8 @@ Proof.
       roots_receiver_env & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body_env & Gamma_body_env &
       R_out & roots & Htarget & Hhidden & Hsafe_receiver_args &
-      Hsafe_method_args & _Hnot_free_method_args & _Hnot_local_method_args &
-      Hin_receiver & Hname_receiver & Hin_method &
+      Hsafe_method_args & Hnot_free_method_args & Hnot_local_method_args &
+      Hnot_body_ctx & Hin_receiver & Hname_receiver & Hin_method &
       Hname_method & Hreceiver_arity & Hmethod_arity & Hreceiver_bounds &
       Hmethod_bounds & _Hreceiver_env & _Hmethod_env & Hreceiver_ready &
       Hreceiver_summary & Hmethod_ready & Hmethod_summary & Hbody_env &
@@ -5679,6 +5700,12 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_store
           method_args /\
       store_safe_function_value_call_args env receiver_args /\
       store_safe_function_value_call_args env method_args /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (fn_body_ctx fdef)) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -5716,7 +5743,8 @@ Proof.
       receiver_args & method_args & target_synthetic_body &
       hidden_synthetic_body & receiver_callee & method_callee & T_body &
       Gamma_body & R_out & roots & Htarget & Hhidden &
-      Hsafe_receiver_args & Hsafe_method_args & Hin_receiver &
+      Hsafe_receiver_args & Hsafe_method_args & Hnot_free_method_args &
+      Hnot_local_method_args & Hnot_body_ctx & Hin_receiver &
       Hname_receiver & Hin_method & Hname_method & Hreceiver_arity &
       Hmethod_arity & Hreceiver_bounds & Hmethod_bounds & Hreceiver_ready &
       Hreceiver_summary & Hmethod_ready & Hmethod_summary & Hbody_core &
@@ -5779,7 +5807,7 @@ Proof.
       R_method_env & roots_method_env & T_body & Gamma_body & R_out & roots &
       Htarget & Hhidden & Hsafe_receiver_args & Hsafe_method_args &
       _Hnot_free_method_args & _Hnot_local_method_args &
-      Hin_receiver & Hname_receiver & Hin_method & Hname_method &
+      _Hnot_body_ctx & Hin_receiver & Hname_receiver & Hin_method & Hname_method &
       _Harity & _Hbounds & _Hreceiver_core & _Hreceiver_env &
       _Hreceiver_summary & _Hreceiver_compat & _Hreceiver_roots &
       _Hreceiver_env_excl & _Hmethod_core & _Hmethod_env & Hmethod_ready &
@@ -5961,6 +5989,7 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
           (args_free_vars_ts method_args) /\
       ~ In receiver_method_hidden_receiver_name
           (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name (store_names s) /\
       preservation_ready_expr
         (subst_type_params_expr type_args (fn_body method_callee)) /\
       callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
@@ -6106,7 +6135,7 @@ Proof.
       R_method_env & roots_method_env & T_body_checked & Gamma_body_checked &
       R_out_checked & roots_checked & Htarget & Hhidden &
       Hsafe_receiver_args & Hsafe_method_args & Hnot_free_method_args &
-      Hnot_local_method_args & Hin_receiver &
+      Hnot_local_method_args & Hnot_body_ctx & Hin_receiver &
       Hname_receiver & Hin_method & Hname_method & _Harity & _Hbounds &
       _Hreceiver_core & _Hreceiver_env & Hreceiver_summary &
       _Hreceiver_compat & _Hreceiver_roots & _Hreceiver_env_excl &
@@ -6152,6 +6181,9 @@ Proof.
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s (fn_body fdef) s' v).
   { eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Hfresh_initial :
+    ~ In receiver_method_hidden_receiver_name (store_names s)).
+  { eapply initial_store_for_fn_store_names_not_in_body_ctx; eassumption. }
   assert (Hunique_body :
     fn_env_unique_by_name
       (global_env_with_local_bounds env (fn_bounds fdef))).
@@ -6246,6 +6278,11 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runti
       In method_callee
         (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) /\
       fn_name method_callee = method_name /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name (store_names s) /\
       Datatypes.length receiver_type_args =
         fn_type_params receiver_callee /\
       Datatypes.length type_args = fn_type_params method_callee /\
@@ -6414,7 +6451,8 @@ Proof.
       receiver_args & method_args & target_synthetic_body &
       hidden_synthetic_body & receiver_callee & method_callee & T_body &
       Gamma_body & R_out & roots & Htarget & Hhidden &
-      Hsafe_receiver_args & Hsafe_method_args & Hin_receiver &
+      Hsafe_receiver_args & Hsafe_method_args & Hnot_free_method_args &
+      Hnot_local_method_args & Hnot_body_ctx & Hin_receiver &
       Hname_receiver & Hin_method & Hname_method & Hreceiver_arity &
       Hmethod_arity & Hreceiver_bounds & Hmethod_bounds & Hreceiver_ready &
       Hreceiver_summary & Hmethod_ready & Hmethod_summary & Htyped_hidden &
@@ -6447,6 +6485,9 @@ Proof.
     eval (global_env_with_local_bounds env (fn_bounds fdef))
       s (fn_body fdef) s' v).
   { eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Hfresh_initial :
+    ~ In receiver_method_hidden_receiver_name (store_names s)).
+  { eapply initial_store_for_fn_store_names_not_in_body_ctx; eassumption. }
   assert (Hunique_body :
     fn_env_unique_by_name
       (global_env_with_local_bounds env (fn_bounds fdef))).

@@ -47,12 +47,15 @@ validity checks must be represented in Rocq and the extracted checker.
   proof-side direct/generic hidden-let typing inversion helpers for receiver
   and method-body root typing, and a behavior-preserving split between the
   active captured-call core gate and its public base wrapper. Hidden receiver
-  freshness for method arguments is now enforced by the inactive direct and
-  generic receiver-method sidecar summaries and exposed by their view facts.
-  The direct receiver-method runtime replay package now also exposes the
-  receiver callee's body-env store-safe summary and method-argument hidden-name
-  freshness as top-level package fields. Runtime theorem wiring remains before
-  those summaries can be enabled in the public gate.
+  freshness for method arguments and for the enclosing function body context is
+  now enforced by the inactive direct and generic receiver-method sidecar
+  summaries and exposed by their view facts. The direct receiver-method runtime
+  replay package now also exposes the receiver callee's body-env store-safe
+  summary, method-argument hidden-name freshness, and derivable initial
+  hidden-receiver store freshness as top-level package fields; the generic
+  runtime replay package exposes the same hidden-name freshness and initial
+  store freshness prerequisites. Runtime theorem wiring remains before those
+  summaries can be enabled in the public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -105,12 +108,11 @@ validity checks must be represented in Rocq and the extracted checker.
      connecting the direct and generic receiver-method runtime replay packages
      into the runtime branch with the existing argument-strip, checked-body,
      return-roots, and hidden-let bridge packages. The direct branch still needs
-     derivable initial hidden-receiver store freshness, receiver provenance/env
-     readiness evidence in the body environment, raw-to-hidden method replay,
-     and final-store transport from the hidden cleanup store to the raw final
-     store. Only after the direct and generic receiver-method runtime safety
-     branch is proved should the receiver-method summaries be enabled as outer
-     alternatives on the public base checker gate.
+     receiver provenance/env readiness evidence in the body environment,
+     raw-to-hidden method replay, and final-store transport from the hidden
+     cleanup store to the raw final store. Only after the direct and generic
+     receiver-method runtime safety branch is proved should the receiver-method
+     summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

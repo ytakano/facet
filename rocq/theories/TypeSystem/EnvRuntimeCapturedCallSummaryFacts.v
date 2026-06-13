@@ -2535,6 +2535,8 @@ Lemma check_fn_root_shadow_direct_receiver_method_store_safe_summary_view_prop :
           (args_free_vars_ts method_args) /\
       ~ In receiver_method_hidden_receiver_name
           (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (fn_body_ctx fdef)) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -2602,6 +2604,7 @@ Proof.
            method_args] target_synthetic_body] |] eqn:Htarget;
     try discriminate.
   apply andb_true_iff in Hcheck as [Hsafe_args Hcheck].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_body_ctx].
   apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_local_method_args].
   apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_free_method_args].
   apply andb_true_iff in Hsafe_args as
@@ -2707,6 +2710,8 @@ Lemma check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary_vie
           (args_free_vars_ts method_args) /\
       ~ In receiver_method_hidden_receiver_name
           (args_local_store_names method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (fn_body_ctx fdef)) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -2750,6 +2755,7 @@ Proof.
             receiver_args] method_args] target_synthetic_body] |]
     eqn:Htarget; try discriminate.
   apply andb_true_iff in Hcheck as [Hsafe_args Hcheck].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_body_ctx].
   apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_local_method_args].
   apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_free_method_args].
   apply andb_true_iff in Hsafe_args as

@@ -40,10 +40,13 @@ validity checks must be represented in Rocq and the extracted checker.
   receiver-store refs/value refs internally under exact ready premises,
   root-set naming transport, generic return-root, hidden-root exclusion,
   receiver-store freshness, and store-ref exclusion packaging,
-  consumed-frame support, generic receiver-method runtime replay packaging, and
-  a behavior-preserving split between the active captured-call core gate and its
-  public base wrapper. Those summaries remain inactive until their dedicated
-  runtime safety branch is proved.
+  consumed-frame support, generic receiver-method runtime replay packaging,
+  proof-side direct/generic hidden-let typing inversion helpers for receiver
+  and method-body root typing, and a behavior-preserving split between the
+  active captured-call core gate and its public base wrapper. Hidden receiver
+  freshness for method arguments remains an explicit side condition rather than
+  a fact derived from typing. Those summaries remain inactive until their
+  dedicated runtime safety branch is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no

@@ -2415,6 +2415,114 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_direct_receiver_method_hidden_let_inv :
+  forall env Omega n R Sigma T_receiver method_name type_args receiver_name
+      receiver_args method_args T_body Sigma_out R_out roots,
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (direct_call_receiver_method_hidden_let_synthetic_body
+        T_receiver method_name type_args receiver_name receiver_args
+        method_args)
+      T_body Sigma_out R_out roots ->
+    exists T_call Sigma_receiver R_receiver receiver_roots Sigma_method
+        R_method method_roots,
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECall receiver_name receiver_args) T_call Sigma_receiver R_receiver
+        receiver_roots /\
+      typed_env_roots env Omega n R Sigma
+        (ECall receiver_name receiver_args) T_call Sigma_receiver R_receiver
+        receiver_roots /\
+      ty_compatible_b Omega T_call T_receiver = true /\
+      root_env_lookup receiver_method_hidden_receiver_name R_receiver =
+        None /\
+      roots_exclude receiver_method_hidden_receiver_name receiver_roots /\
+      root_env_excludes receiver_method_hidden_receiver_name R_receiver /\
+      typed_env_roots_shadow_safe env Omega n
+        (root_env_add receiver_method_hidden_receiver_name receiver_roots
+          R_receiver)
+        (sctx_add receiver_method_hidden_receiver_name T_receiver MImmutable
+          Sigma_receiver)
+        (ECallGeneric method_name type_args
+          (EVar receiver_method_hidden_receiver_name :: method_args))
+        T_body Sigma_method R_method method_roots /\
+      sctx_check_ok env receiver_method_hidden_receiver_name T_receiver
+        Sigma_method = true /\
+      roots_exclude receiver_method_hidden_receiver_name method_roots /\
+      root_env_excludes receiver_method_hidden_receiver_name
+        (root_env_remove receiver_method_hidden_receiver_name R_method) /\
+      Sigma_out =
+        sctx_remove receiver_method_hidden_receiver_name Sigma_method /\
+      R_out = root_env_remove receiver_method_hidden_receiver_name R_method /\
+      roots = method_roots.
+Proof.
+  intros env Omega n R Sigma T_receiver method_name type_args receiver_name
+    receiver_args method_args T_body Sigma_out R_out roots Htyped.
+  unfold direct_call_receiver_method_hidden_let_synthetic_body in Htyped.
+  dependent destruction Htyped.
+  match goal with
+  | H : typed_env_roots_shadow_safe _ _ _ _ _
+      (ECall receiver_name receiver_args) _ _ _ _ |- _ =>
+      pose proof (typed_env_roots_shadow_safe_roots _ _ _ _ _ _ _ _ _ _ H)
+        as Htyped_receiver_roots
+  end.
+  exists T1, Σ1, R1, roots1, Σ2, R2, roots2.
+  repeat split; try eassumption; reflexivity.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_generic_receiver_method_hidden_let_inv :
+  forall env Omega n R Sigma T_receiver method_name type_args receiver_name
+      receiver_type_args receiver_args method_args T_body Sigma_out R_out
+      roots,
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (generic_direct_call_receiver_method_hidden_let_synthetic_body
+        T_receiver method_name type_args receiver_name receiver_type_args
+        receiver_args method_args)
+      T_body Sigma_out R_out roots ->
+    exists T_call Sigma_receiver R_receiver receiver_roots Sigma_method
+        R_method method_roots,
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECallGeneric receiver_name receiver_type_args receiver_args)
+        T_call Sigma_receiver R_receiver receiver_roots /\
+      typed_env_roots env Omega n R Sigma
+        (ECallGeneric receiver_name receiver_type_args receiver_args)
+        T_call Sigma_receiver R_receiver receiver_roots /\
+      ty_compatible_b Omega T_call T_receiver = true /\
+      root_env_lookup receiver_method_hidden_receiver_name R_receiver =
+        None /\
+      roots_exclude receiver_method_hidden_receiver_name receiver_roots /\
+      root_env_excludes receiver_method_hidden_receiver_name R_receiver /\
+      typed_env_roots_shadow_safe env Omega n
+        (root_env_add receiver_method_hidden_receiver_name receiver_roots
+          R_receiver)
+        (sctx_add receiver_method_hidden_receiver_name T_receiver MImmutable
+          Sigma_receiver)
+        (ECallGeneric method_name type_args
+          (EVar receiver_method_hidden_receiver_name :: method_args))
+        T_body Sigma_method R_method method_roots /\
+      sctx_check_ok env receiver_method_hidden_receiver_name T_receiver
+        Sigma_method = true /\
+      roots_exclude receiver_method_hidden_receiver_name method_roots /\
+      root_env_excludes receiver_method_hidden_receiver_name
+        (root_env_remove receiver_method_hidden_receiver_name R_method) /\
+      Sigma_out =
+        sctx_remove receiver_method_hidden_receiver_name Sigma_method /\
+      R_out = root_env_remove receiver_method_hidden_receiver_name R_method /\
+      roots = method_roots.
+Proof.
+  intros env Omega n R Sigma T_receiver method_name type_args receiver_name
+    receiver_type_args receiver_args method_args T_body Sigma_out R_out roots
+    Htyped.
+  unfold generic_direct_call_receiver_method_hidden_let_synthetic_body in Htyped.
+  dependent destruction Htyped.
+  match goal with
+  | H : typed_env_roots_shadow_safe _ _ _ _ _
+      (ECallGeneric receiver_name receiver_type_args receiver_args) _ _ _ _ |- _ =>
+      pose proof (typed_env_roots_shadow_safe_roots _ _ _ _ _ _ _ _ _ _ H)
+        as Htyped_receiver_roots
+  end.
+  exists T1, Σ1, R1, roots1, Σ2, R2, roots2.
+  repeat split; try eassumption; reflexivity.
+Qed.
+
 Lemma let_bound_generic_direct_call_target_expr_shape :
   forall raw_body fname type_args args T_hidden synthetic_body,
     let_bound_generic_direct_call_target_expr raw_body =

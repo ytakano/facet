@@ -8074,8 +8074,17 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
       (sctx_of_ctx (fn_body_ctx fdef))
       hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots ->
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
-    (forall Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
-        s_method_hidden,
+    (forall T_receiver_call Sigma_receiver R_receiver receiver_roots
+        s_receiver v_receiver s_method_hidden,
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (fn_body_ctx fdef))
+        (ECall receiver_name receiver_args) T_receiver_call
+        Sigma_receiver R_receiver receiver_roots ->
+      ty_compatible_b (fn_outlives fdef) T_receiver_call
+        (fn_ret receiver_callee) = true ->
       eval (global_env_with_local_bounds env (fn_bounds fdef))
         s (ECall receiver_name receiver_args) s_receiver v_receiver ->
       eval (global_env_with_local_bounds env (fn_bounds fdef))
@@ -8138,8 +8147,9 @@ Proof.
     callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_final_store_value_consumer;
     [ exact Hreplay_final | ].
   intros s_receiver v_receiver s_method_hidden Heval_receiver Heval_method.
-  destruct (Hmethod_store_facts _Sigma_receiver _R_receiver _receiver_roots
-    s_receiver v_receiver s_method_hidden Heval_receiver Heval_method) as
+  destruct (Hmethod_store_facts _T_call _Sigma_receiver _R_receiver
+    _receiver_roots s_receiver v_receiver s_method_hidden _Htyped_receiver
+    _Hcompat_receiver Heval_receiver Heval_method) as
     (Hstore_method & Hroots_method & Hshadow_method & Hrn_method &
       Hnamed_method & Hkeys_method & Hsummary_store_method).
   eapply value_has_type_clear_global_env_local_bounds.
@@ -8226,8 +8236,18 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runti
       (sctx_of_ctx (fn_body_ctx fdef))
       hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots ->
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
-    (forall Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
-        s_method_hidden,
+    (forall T_receiver_call Sigma_receiver R_receiver receiver_roots
+        s_receiver v_receiver s_method_hidden,
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (fn_body_ctx fdef))
+        (ECallGeneric receiver_name receiver_type_args receiver_args)
+        T_receiver_call Sigma_receiver R_receiver receiver_roots ->
+      ty_compatible_b (fn_outlives fdef) T_receiver_call
+        (subst_type_params_ty receiver_type_args
+          (fn_ret receiver_callee)) = true ->
       eval (global_env_with_local_bounds env (fn_bounds fdef))
         s
         (ECallGeneric receiver_name receiver_type_args receiver_args)
@@ -8302,8 +8322,9 @@ Proof.
     callee_body_root_shadow_captured_call_generic_direct_receiver_method_runtime_replay_final_store_value_consumer;
     [ exact Hreplay_final | ].
   intros s_receiver v_receiver s_method_hidden Heval_receiver Heval_method.
-  destruct (Hmethod_store_facts _Sigma_receiver _R_receiver _receiver_roots
-    s_receiver v_receiver s_method_hidden Heval_receiver Heval_method) as
+  destruct (Hmethod_store_facts _T_call _Sigma_receiver _R_receiver
+    _receiver_roots s_receiver v_receiver s_method_hidden _Htyped_receiver
+    _Hcompat_receiver Heval_receiver Heval_method) as
     (Hstore_method & Hroots_method & Hshadow_method & Hrn_method &
       Hnamed_method & Hkeys_method & Hsummary_store_method).
   eapply value_has_type_clear_global_env_local_bounds.

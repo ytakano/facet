@@ -75,10 +75,10 @@ validity checks must be represented in Rocq and the extracted checker.
   replayed method-call result type from the typed `ECallGeneric` subexpression
   plus the method callee summary, direct/generic branch-level value wrappers
   now compose the final replay witness with hidden-let typing inversion, method
-  call typing, and hidden cleanup, and direct/generic hidden-start-store
-  invariant providers derive the store typing, root, naming, no-shadow, and
-  closure-summary facts needed to invoke those wrappers after the replayed
-  receiver call. The actual receiver-method branch still needs those providers
+  call typing, and hidden cleanup while exposing the typed receiver-call evidence
+  needed by provider wiring, and direct/generic hidden-start-store invariant
+  providers derive the store typing, root, naming, no-shadow, and closure-summary
+  facts needed to invoke those wrappers after the replayed receiver call. The actual receiver-method branch still needs those providers
   and wrappers wired into the runtime package branches before the receiver-method
   summaries can be enabled in the public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
@@ -142,9 +142,10 @@ validity checks must be represented in Rocq and the extracted checker.
      store, hidden-call value bridges derive that replayed method-call type
      from the typed `ECallGeneric` subexpression plus the method callee summary,
      direct/generic branch-level value wrappers now compose those facts for
-     the replay-final witness, and direct/generic hidden-start-store invariant
-     providers now derive the store/root/naming/no-shadow/closure-summary facts
-     needed at the replayed method-call start store. The runtime branch still
+     the replay-final witness while accepting typed receiver-call evidence for
+     provider wiring, and direct/generic hidden-start-store invariant providers
+     now derive the store/root/naming/no-shadow/closure-summary facts needed at
+     the replayed method-call start store. The runtime branch still
      needs those providers and wrappers wired to the package branches. Only after
      the direct and generic receiver-method runtime safety branch is proved should
      the receiver-method summaries be enabled as outer alternatives on the public

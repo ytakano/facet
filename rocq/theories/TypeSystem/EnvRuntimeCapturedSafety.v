@@ -2775,6 +2775,84 @@ Proof.
   exists s1, v, s2, vs. split; assumption.
 Qed.
 
+Lemma direct_call_receiver_method_raw_call_eval_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_args
+      method_args synthetic_body s' v,
+    direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+        synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_receiver v_receiver s_args_base vs_method method_callee fcall
+        used' s_body_base,
+      eval env s (ECall receiver_name receiver_args) s_receiver v_receiver /\
+      eval_args env s_receiver method_args s_args_base vs_method /\
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      alpha_rename_fn_def (store_names s_args_base) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver :: vs_method) s_args_base)
+        (subst_type_params_expr type_args (fn_body fcall)) s_body_base v /\
+      s' =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_base.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_args
+    method_args synthetic_body s' v Htarget Heval.
+  destruct (direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_args method_args
+    synthetic_body Htarget) as [[Hraw | Hraw] _].
+  - rewrite Hraw in Heval.
+    dependent destruction Heval.
+    dependent destruction H1.
+    exists s1, v, s2, vs, fdef, fcall, used', s_body.
+    repeat split; try assumption; reflexivity.
+  - rewrite Hraw in Heval.
+    dependent destruction Heval.
+    dependent destruction H1.
+    exists s1, v, s2, vs, fdef, fcall, used', s_body.
+    repeat split; try assumption; try reflexivity.
+    apply eval_call_expr_fn_as_call. exact H1.
+Qed.
+
+Lemma generic_direct_call_receiver_method_raw_call_eval_inv :
+  forall env s raw_body method_name type_args receiver_name receiver_type_args
+      receiver_args method_args synthetic_body s' v,
+    generic_direct_call_receiver_method_target_expr raw_body =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, synthetic_body) ->
+    eval env s raw_body s' v ->
+    exists s_receiver v_receiver s_args_base vs_method method_callee fcall
+        used' s_body_base,
+      eval env s
+        (ECallGeneric receiver_name receiver_type_args receiver_args)
+        s_receiver v_receiver /\
+      eval_args env s_receiver method_args s_args_base vs_method /\
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      alpha_rename_fn_def (store_names s_args_base) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver :: vs_method) s_args_base)
+        (subst_type_params_expr type_args (fn_body fcall)) s_body_base v /\
+      s' =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_base.
+Proof.
+  intros env s raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body s' v Htarget Heval.
+  destruct (generic_direct_call_receiver_method_target_expr_shape
+    raw_body method_name type_args receiver_name receiver_type_args
+    receiver_args method_args synthetic_body Htarget) as [Hraw _].
+  rewrite Hraw in Heval.
+  dependent destruction Heval.
+  dependent destruction H1.
+  exists s1, v, s2, vs, fdef, fcall, used', s_body.
+  repeat split; try assumption; reflexivity.
+Qed.
+
 Lemma direct_call_receiver_method_eval_args_inv :
   forall env s raw_body method_name type_args receiver_name receiver_args
       method_args synthetic_body s' v,

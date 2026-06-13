@@ -56,6 +56,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance/env readiness into the body environment as top-level package
   fields; the generic runtime replay package exposes the same hidden-name
   freshness, initial store freshness, and body-env transport prerequisites.
+  Raw direct/generic receiver-method call evaluation is also packaged into
+  inversion lemmas that expose receiver evaluation, method-argument evaluation,
+  method callee lookup, alpha-renamed body evaluation, and raw final cleanup.
   Runtime theorem wiring remains before those summaries can be enabled in the
   public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
@@ -111,8 +114,9 @@ validity checks must be represented in Rocq and the extracted checker.
      into the runtime branch with the existing argument-strip, checked-body,
      return-roots, and hidden-let bridge packages. The direct branch still needs
      the runtime branch to source receiver provenance/env readiness evidence,
-     raw-to-hidden method replay, and final-store transport from the hidden
-     cleanup store to the raw final store. Only after the direct and generic
+     connect raw receiver-method evaluation to hidden method replay, and
+     transport the final store from hidden cleanup to the raw final store. Only
+     after the direct and generic
      receiver-method runtime safety branch is proved should the receiver-method
      summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

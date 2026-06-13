@@ -1548,6 +1548,7 @@ Proof.
   - simpl. right. exact IH.
 Qed.
 
+
 Lemma store_consumed_hidden_frame_rel_lookup :
   forall x T hidden s_with s_without y,
     store_consumed_hidden_frame_rel x T hidden s_with s_without ->
@@ -3808,6 +3809,320 @@ Proof.
     - exact Halpha.
     - exact Hrel_args.
     - exact Hready_body. }
+  exact (Hbody_strip Hready_body Hbody_not_free Hvalue_receiver).
+Qed.
+
+Lemma callee_body_root_shadow_store_safe_narrow_summary_alpha_renamed_ready_body_free_vars_seed_in_excludes :
+  forall env fuel fdef type_args fcall used' x s_hidden,
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    fn_captures fdef = [] ->
+    alpha_rename_fn_def (store_names s_hidden) fdef = (fcall, used') ->
+    In x (store_names s_hidden) ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall)) ->
+    ~ In x (free_vars_expr
+      (subst_type_params_expr type_args (fn_body fcall))).
+Proof.
+  intros env fuel fdef type_args fcall used' x s_hidden Hsummary Hcaps
+    Hrename Hused Hready Hin_free.
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    (store_names s_hidden) fdef fcall used' type_args x Hrename Hused)
+    as [Hnot_params _].
+  destruct (callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_cases
+    env fuel fdef type_args Hsummary) as [Hexpr | Hgeneric].
+  - destruct Hexpr as (T_body & Gamma_out & R_body & roots_body & ret_roots &
+      Hnodup & Hnarrow & Hcompat & Hexcl_roots & Hexcl_env).
+    rewrite params_ctx_apply_type_params in Hnodup.
+    rewrite ctx_names_subst_type_params_ctx in Hnodup.
+    destruct (alpha_rename_fn_def_initial_support_facts
+      (store_names s_hidden) fdef fcall used' Hrename Hnodup)
+      as (rho & used_params & Hparams_rename & Hbody_rename &
+          Halpha_params & Hrn_initial & Hrn_initial_r & Hinitial_equiv &
+          Hkeys_initial & Hroots_initial & Hnocoll_initial & Hctx_used &
+          Hrange_used & Hdisj).
+    assert (Hsummary_params :
+      expr_root_shadow_store_safe_narrow_summary
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))
+        (subst_type_params_expr type_args (fn_body fdef))
+        T_body (sctx_of_ctx Gamma_out) R_body roots_body ret_roots).
+    { rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures fdef Hcaps).
+      exact Hnarrow. }
+    assert (Htyped_body :
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))
+        (subst_type_params_expr type_args (fn_body fdef))
+        T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+    { eapply expr_root_shadow_store_safe_narrow_summary_typed.
+      exact Hsummary_params. }
+    assert (Hkeys_initial_subst :
+      root_env_sctx_keys_named (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))).
+    { unfold root_env_sctx_keys_named, root_env_keys_named in *.
+      intros y Hin. unfold sctx_of_ctx.
+      rewrite ctx_names_subst_type_params_ctx.
+      apply Hkeys_initial. exact Hin. }
+    assert (Hroots_initial_subst :
+      root_env_sctx_roots_named (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))).
+    { unfold root_env_sctx_roots_named in *.
+      intros y roots0 z Hlookup Hin.
+      change (In z (ctx_names (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))).
+      rewrite ctx_names_subst_type_params_ctx.
+      eapply Hroots_initial; eassumption. }
+    assert (Hctx_alpha_subst :
+      ctx_alpha rho
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fcall))))).
+    { apply ctx_alpha_subst_type_params_ctx. exact Halpha_params. }
+    assert (Hctx_used_subst :
+      forall y,
+        In y (ctx_names (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fcall))))) ->
+        In y used_params).
+    { intros y Hy. unfold sctx_of_ctx in Hy.
+      rewrite ctx_names_subst_type_params_ctx in Hy.
+      apply Hctx_used. exact Hy. }
+    assert (Hdisj_subst :
+      disjoint_names (free_vars_expr
+        (subst_type_params_expr type_args (fn_body fdef)))
+        (rename_range rho)).
+    { rewrite expr_names_subst_type_params_expr. exact Hdisj. }
+    assert (Hbody_rename_subst :
+      alpha_rename_expr rho used_params
+        (subst_type_params_expr type_args (fn_body fdef)) =
+      (subst_type_params_expr type_args (fn_body fcall), used')).
+    { apply alpha_rename_expr_subst_type_params_expr. exact Hbody_rename. }
+    assert (Hkeys_body :
+      root_env_sctx_keys_named R_body (sctx_of_ctx Gamma_out)).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual
+                  (global_env_with_local_bounds env
+                    (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+                  (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
+      eapply Hkeys_expr; eassumption. }
+    assert (Hrn_body : root_env_no_shadow R_body).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped_body.
+      - exact Hrn_initial. }
+    assert (Hsame_body :
+      sctx_same_bindings
+        (sctx_of_ctx (subst_type_params_ctx type_args
+          (params_ctx (fn_params fdef))))
+        (sctx_of_ctx Gamma_out)).
+    { eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural.
+      eapply typed_env_roots_shadow_safe_roots. exact Htyped_body. }
+    assert (Hnodup_apply :
+      NoDup (ctx_names (params_ctx
+        (apply_type_params type_args (fn_params fdef))))).
+    { rewrite params_ctx_apply_type_params.
+      rewrite ctx_names_subst_type_params_ctx. exact Hnodup. }
+    assert (Hctx_alpha_apply :
+      ctx_alpha rho
+        (sctx_of_ctx (params_ctx
+          (apply_type_params type_args (fn_params fdef))))
+        (sctx_of_ctx (params_ctx
+          (apply_type_params type_args (fn_params fcall))))).
+    { rewrite params_ctx_apply_type_params.
+      rewrite params_ctx_apply_type_params. exact Hctx_alpha_subst. }
+    assert (Hsame_body_apply :
+      sctx_same_bindings
+        (sctx_of_ctx (params_ctx
+          (apply_type_params type_args (fn_params fdef))))
+        (sctx_of_ctx Gamma_out)).
+    { rewrite params_ctx_apply_type_params. exact Hsame_body. }
+    assert (Hnocoll_body :
+      rename_no_collision_on rho (root_env_names R_body)).
+    { eapply rename_no_collision_on_root_env_names_from_typed_support.
+      - exact Hctx_alpha_apply.
+      - exact Hsame_body_apply.
+      - exact Hnodup_apply.
+      - exact Hkeys_body. }
+    destruct (expr_root_shadow_store_safe_narrow_summary_alpha_rename_forward
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))
+      (subst_type_params_expr type_args (fn_body fdef))
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body ret_roots
+      Hsummary_params rho
+      (initial_root_env_for_params_origin (fn_params fdef) (fn_params fcall))
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fcall))))
+      (subst_type_params_expr type_args (fn_body fcall))
+      used_params used' Hctx_alpha_subst Hrn_initial Hrn_initial_r
+      Hinitial_equiv Hkeys_initial_subst Hroots_initial_subst Hnocoll_initial
+      Hnocoll_body Hctx_used_subst Hrange_used Hdisj_subst Hbody_rename_subst)
+      as (Gamma_out_r & R_body_r & roots_body_r & ret_roots_r &
+          Hsummary_renamed & _).
+    apply Hnot_params.
+    assert (Hfree_ctx :
+      In x (ctx_names (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fcall)))))).
+    { eapply expr_root_shadow_store_safe_narrow_summary_ready_free_vars_ctx_names.
+      - exact Hsummary_renamed.
+      - exact Hready.
+      - exact Hin_free. }
+    unfold sctx_of_ctx in Hfree_ctx.
+    rewrite <- params_ctx_apply_type_params in Hfree_ctx.
+    exact Hfree_ctx.
+  - destruct Hgeneric as (fuel' & fname & nested_type_args & args & raw_body &
+      synthetic_body & fcallee & T_body & Gamma_out & R_body & roots_body &
+      Hfuel & Hbody & Htarget & Hsynthetic & Hsafe & Hin & Hname & Harity &
+      Hbounds & Hnested & Hnodup & Htyped & Hcompat & Hexcl_roots & Hexcl_env).
+    destruct (generic_direct_call_target_alpha_rename_subst_type_params_runtime
+      env type_args (store_names s_hidden) fdef fcall used' fname
+      nested_type_args args raw_body synthetic_body Hbody Htarget Hsynthetic
+      Hsafe Hrename)
+      as (argsr & Hbody_runtime & Hsafe_runtime).
+    rewrite Hbody_runtime in Hready.
+    dependent destruction Hready.
+Qed.
+
+Lemma direct_receiver_method_hidden_call_eval_body_strip_summary_cases_inv :
+  forall env s_receiver T_receiver v_receiver method_name type_args
+      method_args s_method_hidden v method_callee,
+    fn_env_unique_by_name env ->
+    In method_callee (env_fns env) ->
+    fn_name method_callee = method_name ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body method_callee)) ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 method_callee type_args ->
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    preservation_ready_args method_args ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_local_store_names method_args) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver ->
+    exists s_var_hidden s_args_hidden s_body_hidden fcall used'
+        v_receiver_arg vs_method s_args_base,
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name)
+        s_var_hidden v_receiver_arg /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver_arg :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden v /\
+      s_method_hidden =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden /\
+      v_receiver_arg = v_receiver /\
+      eval_args env s_receiver method_args s_args_base vs_method /\
+      store_refs_exclude_root receiver_method_hidden_receiver_name
+        s_args_base /\
+      Forall (value_refs_exclude_root receiver_method_hidden_receiver_name)
+        vs_method /\
+      ((s_args_hidden =
+          store_add receiver_method_hidden_receiver_name T_receiver
+            v_receiver s_args_base) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_args_hidden s_args_base) /\
+      In receiver_method_hidden_receiver_name (store_names s_args_hidden) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (params_ctx
+            (apply_type_params type_args (fn_params fcall)))) /\
+      ~ In receiver_method_hidden_receiver_name
+          (expr_local_store_names
+            (subst_type_params_expr type_args (fn_body fcall))) /\
+      store_remove receiver_method_hidden_receiver_name s_method_hidden =
+        store_remove_params (apply_type_params type_args (fn_params fcall))
+          (store_remove receiver_method_hidden_receiver_name s_body_hidden) /\
+      (value_refs_exclude_root receiver_method_hidden_receiver_name
+          v_receiver ->
+       exists s_body_base,
+         eval env
+           (bind_params (apply_type_params type_args (fn_params fcall))
+             (v_receiver :: vs_method) s_args_base)
+           (subst_type_params_expr type_args (fn_body fcall)) s_body_base v /\
+         store_refs_exclude_root receiver_method_hidden_receiver_name
+           s_body_base /\
+         value_refs_exclude_root receiver_method_hidden_receiver_name v /\
+         ((store_hidden_frame_rel receiver_method_hidden_receiver_name
+             T_receiver v_receiver s_body_hidden s_body_base) \/
+          store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+            T_receiver v_receiver s_body_hidden s_body_base) /\
+         store_remove receiver_method_hidden_receiver_name s_method_hidden =
+           store_remove_params (apply_type_params type_args (fn_params fcall))
+             (store_remove receiver_method_hidden_receiver_name s_body_hidden)).
+Proof.
+  intros env s_receiver T_receiver v_receiver method_name type_args
+    method_args s_method_hidden v method_callee Hunique Hin_method
+    Hname_method Hready_method Hsummary_method Heval_call Hready_args
+    Hfree_args Hlocal_args Hrefs_receiver.
+  destruct (hidden_receiver_method_call_eval_body_strip_inv env s_receiver
+    T_receiver v_receiver method_name type_args method_args s_method_hidden v
+    Heval_call Hready_args Hfree_args Hlocal_args Hrefs_receiver)
+    as (s_var_hidden & s_args_hidden & s_body_hidden & method_callee_runtime &
+      fcall & used' & v_receiver_arg & vs_method & s_args_base &
+      Hlookup & Hcaptures & Heval_receiver & Heval_args & Halpha &
+      Heval_body & Hremove_params & Hreceiver_eq & Heval_args_base &
+      Hrefs_args & Hvalues_args & Hhidden_args & Hhidden_in_args &
+      Hnotin_params & Hnotin_body_locals & Hcleanup_remove & Hbody_strip).
+  assert (method_callee_runtime = method_callee) as ->.
+  { eapply lookup_fn_unique_by_name; eassumption. }
+  assert (Hready_body :
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall))).
+  { destruct (alpha_rename_fn_def_params_body
+      (store_names s_args_hidden) method_callee fcall used' Halpha)
+      as (_rho & _used_params & _Hparams & Hbody_alpha).
+    eapply alpha_rename_preservation_ready_expr.
+    - eapply alpha_rename_expr_subst_type_params_expr.
+      exact Hbody_alpha.
+    - exact Hready_method. }
+  assert (Hbody_not_free :
+    ~ In receiver_method_hidden_receiver_name
+        (free_vars_expr (subst_type_params_expr type_args (fn_body fcall)))).
+  { destruct Hhidden_args as [Hhidden_eq | Hhidden_rel].
+    - subst s_args_hidden.
+      eapply callee_body_root_shadow_store_safe_narrow_summary_alpha_renamed_ready_body_free_vars_hidden_seed_excludes.
+      + exact Hsummary_method.
+      + exact Hcaptures.
+      + exact Halpha.
+      + apply store_hidden_frame_rel_here.
+      + exact Hready_body.
+    - eapply callee_body_root_shadow_store_safe_narrow_summary_alpha_renamed_ready_body_free_vars_seed_in_excludes.
+      + exact Hsummary_method.
+      + exact Hcaptures.
+      + exact Halpha.
+      + exact Hhidden_in_args.
+      + exact Hready_body. }
+  exists s_var_hidden, s_args_hidden, s_body_hidden, fcall, used',
+    v_receiver_arg, vs_method, s_args_base.
+  repeat split; try eassumption.
+  intros Hvalue_receiver.
   exact (Hbody_strip Hready_body Hbody_not_free Hvalue_receiver).
 Qed.
 

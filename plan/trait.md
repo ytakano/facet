@@ -83,8 +83,11 @@ validity checks must be represented in Rocq and the extracted checker.
   checked-initial branch-value consumers now supply those provider facts to the
   direct/generic replay-final wrappers. Both direct and generic runtime package
   branches now have checked-initial consumers that compose final-store cleanup
-  with their branch-value wrappers. The receiver-method summaries are still
-  inactive until the public runtime safety branch is wired to these consumers.
+  with their branch-value wrappers, and the direct receiver-method sidecar
+  summary now has a conditional summary-to-value bridge using those consumers.
+  The generic summary bridge and public runtime branch wiring remain pending;
+  receiver-method summaries are still inactive until that public runtime safety
+  branch is proved and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -153,11 +156,13 @@ validity checks must be represented in Rocq and the extracted checker.
      have checked-initial body-env providers, and checked-initial branch-value
      consumers feed those facts to the replay-final wrappers. Both runtime
      package branches now have checked-initial consumers that compose final-store
-     cleanup with their branch-value wrappers. The remaining proof step is to
-     wire the public receiver-method runtime safety branch to those consumers.
-     Only after the direct and generic receiver-method runtime safety branch is proved should
-     the receiver-method summaries be enabled as outer alternatives on the public
-     base checker gate.
+     cleanup with their branch-value wrappers, and the direct receiver-method
+     sidecar summary has a conditional summary-to-value bridge over the direct
+     package consumer. The next proof step is the generic summary bridge, then
+     wiring the public receiver-method runtime safety branch to the direct and
+     generic summary consumers. Only after the direct and generic receiver-method
+     runtime safety branch is proved should the receiver-method summaries be
+     enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

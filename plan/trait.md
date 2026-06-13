@@ -78,9 +78,11 @@ validity checks must be represented in Rocq and the extracted checker.
   call typing, and hidden cleanup while exposing the typed receiver-call evidence
   needed by provider wiring, and direct/generic hidden-start-store invariant
   providers derive the store typing, root, naming, no-shadow, and closure-summary
-  facts needed to invoke those wrappers after the replayed receiver call. The actual receiver-method branch still needs those providers
-  and wrappers wired into the runtime package branches before the receiver-method
-  summaries can be enabled in the public gate.
+  facts needed to invoke those wrappers after the replayed receiver call. The
+  direct path also has a checked-initial body-env provider that derives those
+  facts from initial-store readiness. The actual receiver-method branch still
+  needs the checked-initial providers and wrappers wired into the runtime package
+  branches before the receiver-method summaries can be enabled in the public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -145,9 +147,11 @@ validity checks must be represented in Rocq and the extracted checker.
      the replay-final witness while accepting typed receiver-call evidence for
      provider wiring, and direct/generic hidden-start-store invariant providers
      now derive the store/root/naming/no-shadow/closure-summary facts needed at
-     the replayed method-call start store. The runtime branch still
-     needs those providers and wrappers wired to the package branches. Only after
-     the direct and generic receiver-method runtime safety branch is proved should
+     the replayed method-call start store; the direct path additionally has a
+     checked-initial body-env provider for those facts. The runtime branch still
+     needs the generic checked-initial provider and then both providers/wrappers
+     wired to the package branches. Only after the direct and generic
+     receiver-method runtime safety branch is proved should
      the receiver-method summaries be enabled as outer alternatives on the public
      base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

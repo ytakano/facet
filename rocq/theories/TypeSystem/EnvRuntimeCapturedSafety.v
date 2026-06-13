@@ -7389,6 +7389,96 @@ Proof.
 Qed.
 
 
+Lemma callee_body_root_shadow_captured_call_receiver_method_hidden_call_value_from_typed :
+  forall env Omega n R Sigma method_name type_args method_args
+      T_method Sigma_method R_method method_roots s_method_base
+      s_method_hidden v method_callee fuel,
+    store_safe_function_value_call_args env
+      (EVar receiver_method_hidden_receiver_name :: method_args) ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel method_callee type_args ->
+    store_typed_prefix env s_method_base Sigma ->
+    store_roots_within R s_method_base ->
+    store_no_shadow s_method_base ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s_method_base ->
+    root_env_store_keys_named R s_method_base ->
+    store_function_closure_targets_summary env s_method_base ->
+    eval env s_method_base
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    fn_env_unique_by_name env ->
+    In method_callee (env_fns env) ->
+    fn_name method_callee = method_name ->
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      T_method Sigma_method R_method method_roots ->
+    value_has_type env s_method_hidden v T_method.
+Proof.
+  intros env Omega n R Sigma method_name type_args method_args
+    T_method Sigma_method R_method method_roots s_method_base
+    s_method_hidden v method_callee fuel Hsafe_args Hsummary Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store Heval Hunique
+    Hin_method Hname_method Htyped_shadow.
+  pose proof (typed_env_roots_shadow_safe_roots env Omega n R Sigma
+    (ECallGeneric method_name type_args
+      (EVar receiver_method_hidden_receiver_name :: method_args))
+    T_method Sigma_method R_method method_roots Htyped_shadow)
+    as Htyped.
+  dependent destruction Htyped.
+  assert (fdef = method_callee) as ->.
+  { eapply Hunique.
+    - exact H.
+    - exact Hin_method.
+    - exact (eq_sym Hname_method). }
+  eapply eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel;
+    eassumption.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_receiver_method_hidden_call_value_as_fn_ret :
+  forall env fdef Omega n R Sigma method_name type_args method_args
+      T_method Sigma_method R_method method_roots s_method_base
+      s_method_hidden v method_callee fuel,
+    store_safe_function_value_call_args env
+      (EVar receiver_method_hidden_receiver_name :: method_args) ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel method_callee type_args ->
+    store_typed_prefix env s_method_base Sigma ->
+    store_roots_within R s_method_base ->
+    store_no_shadow s_method_base ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s_method_base ->
+    root_env_store_keys_named R s_method_base ->
+    store_function_closure_targets_summary env s_method_base ->
+    eval env s_method_base
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    fn_env_unique_by_name env ->
+    In method_callee (env_fns env) ->
+    fn_name method_callee = method_name ->
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      T_method Sigma_method R_method method_roots ->
+    ty_compatible_b Omega T_method (fn_ret fdef) = true ->
+    value_has_type env s_method_hidden v (fn_ret fdef).
+Proof.
+  intros env fdef Omega n R Sigma method_name type_args method_args
+    T_method Sigma_method R_method method_roots s_method_base
+    s_method_hidden v method_callee fuel Hsafe_args Hsummary Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store Heval Hunique
+    Hin_method Hname_method Htyped_shadow Hcompat.
+  eapply VHT_Compatible.
+  - eapply
+      callee_body_root_shadow_captured_call_receiver_method_hidden_call_value_from_typed;
+      eassumption.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_final_store_value_consumer :
   forall env fdef s s' v method_name type_args receiver_name receiver_args
       method_args hidden_synthetic_body receiver_callee method_callee

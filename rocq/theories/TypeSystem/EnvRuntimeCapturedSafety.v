@@ -4039,6 +4039,77 @@ Proof.
   eapply direct_call_value_roots_within_store_subset; eassumption.
 Qed.
 
+Lemma eval_direct_receiver_call_value_hidden_root_exclude_prefix_named :
+  forall env Omega n R Sigma fname args T Sigma_out R_out roots
+      s s' v fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECall fname args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (ECall fname args)
+      T Sigma_out R_out roots ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    value_refs_exclude_root receiver_method_hidden_receiver_name v.
+Proof.
+  intros env Omega n R Sigma fname args T Sigma_out R_out roots
+    s s' ret fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Hsummary_store Heval_call Hunique Hin_fdef Hname_fdef
+    Htyped_shadow Hfresh_hidden.
+  pose proof
+    (eval_direct_receiver_call_store_safe_narrow_summary_value_roots_prefix_named
+       env Omega n R Sigma fname args T Sigma_out R_out roots
+       s s' ret fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn
+       Hnamed Hkeys Hsummary_store Heval_call Hunique Hin_fdef
+       Hname_fdef Htyped_shadow) as Hret_roots.
+  pose proof (typed_env_roots_shadow_safe_roots env Omega n R Sigma
+    (ECall fname args) T Sigma_out R_out roots Htyped_shadow) as Htyped.
+  dependent destruction Htyped.
+  assert (fdef0 = fdef) as ->.
+  { eapply Hunique.
+    - exact H.
+    - exact Hin_fdef.
+    - exact (eq_sym Hname_fdef). }
+  dependent destruction Heval_call.
+  match goal with
+  | Hlookup_fn : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
+      assert (f_runtime = fdef) as -> by
+        (eapply lookup_fn_unique_by_name;
+         [exact Hlookup_fn | exact Hin_fdef | exact Hname_fdef | exact Hunique])
+  | Hlookup_fn : lookup_fn ?fname_call ?fns = Some ?f_runtime |- _ =>
+      assert (f_runtime = fdef) as -> by
+        (eapply lookup_fn_unique_by_name;
+         [exact Hlookup_fn | exact Hin_fdef | exact Hname_fdef | exact Hunique])
+  end.
+  match goal with
+  | H : eval_args _ _ _ ?s_args0 ?vs0 |- _ =>
+      rename H into Heval_args;
+      rename s_args0 into s_args;
+      rename vs0 into vs
+  end.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args
+                (store_safe_function_value_call_args_preservation_ready
+                   env args Hsafe_args)) as Hnames_args.
+  destruct (store_safe_function_value_call_args_typed_roots_store_named
+              env Omega n R _ args
+              (apply_lt_params σ (fn_params fdef)) _ _
+              arg_roots s s_args vs Hsafe_args H3 Heval_args Hnamed Hkeys)
+    as [_ [Harg_roots_named _]].
+  eapply value_roots_within_store_named_exclude_root with (s := s_args).
+  - exact Hret_roots.
+  - apply root_sets_store_roots_named_union. exact Harg_roots_named.
+  - rewrite Hnames_args. exact Hfresh_hidden.
+Qed.
+
 Lemma eval_generic_direct_receiver_call_store_safe_narrow_summary_value_prefix_named_fuel :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' v fdef fuel,

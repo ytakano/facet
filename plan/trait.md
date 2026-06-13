@@ -93,13 +93,12 @@ validity checks must be represented in Rocq and the extracted checker.
      argument facts assume arg evaluation preserves static root/store shape,
      and a hidden-let receiver lowering still lacks the runtime proof needed by
      the extracted end-to-end safety gate. The next proof step is
-     wiring the direct and generic replay packages that now derive
-     receiver-store refs/value refs internally under exact ready premises into
-     the runtime branch with the existing argument-strip,
-     checked-body, return-roots, and hidden-let bridge packages.
-     Only after the direct and generic receiver-method runtime
-     safety branch is proved should the receiver-method summaries be enabled as
-     outer alternatives on the public base checker gate.
+     wiring the generic replay package and connecting the new direct
+     receiver-method runtime replay package into the runtime branch with the
+     existing argument-strip, checked-body, return-roots, and hidden-let bridge
+     packages. Only after the direct and generic receiver-method runtime safety
+     branch is proved should the receiver-method summaries be enabled as outer
+     alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

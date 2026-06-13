@@ -1641,6 +1641,28 @@ Proof.
     split; [reflexivity | right; split; [assumption | reflexivity]].
 Qed.
 
+Lemma hidden_receiver_var_eval_remove_inv :
+  forall env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (EVar receiver_method_hidden_receiver_name) s_var_hidden
+      v_receiver_arg ->
+    v_receiver_arg = v_receiver /\
+    store_remove receiver_method_hidden_receiver_name s_var_hidden =
+      s_receiver.
+Proof.
+  intros env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg
+    Heval.
+  destruct (hidden_receiver_var_eval_inv env T_receiver v_receiver
+    s_receiver s_var_hidden v_receiver_arg Heval)
+    as (Hvalue & Hcases).
+  split; [exact Hvalue |].
+  destruct Hcases as [[_ Hstore] | [_ Hstore]]; subst.
+  - apply store_remove_store_add_same.
+  - apply store_remove_mark_used_store_add_same.
+Qed.
+
 Lemma eval_args_bound_receiver_var_cons :
   forall env x T v s s_var method_args s_method_args vs_method,
     eval env (store_add x T v s) (EVar x) s_var v ->

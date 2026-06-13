@@ -33,6 +33,55 @@ Proof.
 Qed.
 
 
+Lemma store_names_remove_absent :
+  forall x s,
+    ~ In x (store_names s) ->
+    store_names (store_remove x s) = store_names s.
+Proof.
+  intros x s Hfresh.
+  induction s as [| se rest IH]; simpl in *.
+  - reflexivity.
+  - destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst.
+      exfalso. apply Hfresh. left. reflexivity.
+    + simpl. f_equal.
+      apply IH. intros Hin. apply Hfresh. right. exact Hin.
+Qed.
+
+Lemma bind_params_nil_values :
+  forall ps s,
+    bind_params ps [] s = s.
+Proof.
+  intros ps s. destruct ps; reflexivity.
+Qed.
+
+Lemma store_names_remove_params_bind_params_fresh :
+  forall ps vs s s_body,
+    params_fresh_in_store ps s ->
+    store_names s_body = store_names (bind_params ps vs s) ->
+    store_names (store_remove_params ps s_body) = store_names s.
+Proof.
+  induction ps as [| p ps IH]; intros vs s s_body Hfresh Hnames.
+  - simpl in *. exact Hnames.
+  - destruct vs as [| v vs].
+    + simpl in Hnames. simpl.
+      eapply (IH [] s (store_remove (param_name p) s_body)).
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+      * rewrite bind_params_nil_values.
+        rewrite store_names_remove_absent.
+        -- exact Hnames.
+        -- rewrite Hnames.
+           eapply params_fresh_in_store_head. exact Hfresh.
+    + simpl in Hnames. simpl.
+      destruct s_body as [| se rest]; simpl in Hnames; try discriminate.
+      inversion Hnames as [[Hhead Htail]].
+      simpl. rewrite Hhead, ident_eqb_refl.
+      eapply IH.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+      * exact Htail.
+Qed.
+
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary.
@@ -4423,6 +4472,32 @@ Proof.
   - exact Hret_roots.
   - apply root_sets_store_roots_named_union. exact Harg_roots_named.
   - rewrite Hnames_args. exact Hfresh_hidden.
+Qed.
+
+Lemma eval_direct_receiver_call_hidden_name_fresh_store_names :
+  forall env s fname args s' v,
+    env_fns_preservation_ready env ->
+    eval env s (ECall fname args) s' v ->
+    preservation_ready_args args ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    ~ In receiver_method_hidden_receiver_name (store_names s').
+Proof.
+  intros env s fname args s' v Henv_ready Heval Hready_args Hfresh.
+  dependent destruction Heval.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs H1 Hready_args) as Hnames_args.
+  assert (Hbody_ready : preservation_ready_expr (fn_body fcall)).
+  { eapply lookup_alpha_rename_fn_def_preservation_ready_body;
+      eassumption. }
+  pose proof (proj1 preservation_ready_eval_store_names_mutual
+                env (bind_params (fn_params fcall) vs s_args)
+                (fn_body fcall) s_body ret Heval Hbody_ready)
+    as Hnames_body.
+  rewrite (store_names_remove_params_bind_params_fresh
+             (fn_params fcall) vs s_args s_body).
+  - rewrite Hnames_args. exact Hfresh.
+  - eapply alpha_rename_fn_def_params_fresh_in_store. exact H2.
+  - exact Hnames_body.
 Qed.
 
 Lemma eval_direct_receiver_call_store_hidden_root_refs_exclude_prefix_named :

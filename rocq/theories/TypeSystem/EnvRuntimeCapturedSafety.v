@@ -4934,6 +4934,133 @@ Proof.
   - rewrite Hnames_args. exact Hfresh_hidden.
 Qed.
 
+Lemma preservation_ready_expr_subst_type_params_expr :
+  forall type_args e,
+    preservation_ready_expr e ->
+    preservation_ready_expr (subst_type_params_expr type_args e).
+Proof.
+  intros type_args e Hready.
+  assert (Hmut :
+    (forall e,
+      preservation_ready_expr e ->
+      forall type_args,
+        preservation_ready_expr (subst_type_params_expr type_args e)) /\
+    (forall args,
+      preservation_ready_args args ->
+      forall type_args,
+        preservation_ready_args (map (subst_type_params_expr type_args) args)) /\
+    (forall fields,
+      preservation_ready_fields fields ->
+      forall type_args,
+        preservation_ready_fields
+          (map (fun '(name, e) =>
+            (name, subst_type_params_expr type_args e)) fields)) /\
+    (forall branches,
+      preservation_ready_match_branches branches ->
+      forall type_args,
+        preservation_ready_match_branches
+          (map (fun '(name, binders, e) =>
+            (name, binders, subst_type_params_expr type_args e)) branches))).
+  { apply preservation_ready_mutind; simpl; intros;
+      repeat rewrite subst_type_params_expr_list_go_map;
+      repeat rewrite subst_type_params_fields_go_map;
+      repeat rewrite subst_type_params_match_branches_go_map;
+      try constructor; eauto using preservation_ready_expr,
+        preservation_ready_args, preservation_ready_fields,
+        preservation_ready_match_branches. }
+  exact (proj1 Hmut e Hready type_args).
+Qed.
+
+Lemma eval_generic_direct_receiver_call_hidden_name_fresh_store_names :
+  forall env s fname type_args args s' v,
+    env_fns_preservation_ready env ->
+    eval env s (ECallGeneric fname type_args args) s' v ->
+    preservation_ready_args args ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    ~ In receiver_method_hidden_receiver_name (store_names s').
+Proof.
+  intros env s fname type_args args s' v Henv_ready Heval Hready_args
+    Hfresh.
+  dependent destruction Heval.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs H1 Hready_args) as Hnames_args.
+  assert (Hbody_ready : preservation_ready_expr
+    (subst_type_params_expr type_args (fn_body fcall))).
+  { apply preservation_ready_expr_subst_type_params_expr.
+    eapply lookup_alpha_rename_fn_def_preservation_ready_body;
+      eassumption. }
+  pose proof (proj1 preservation_ready_eval_store_names_mutual
+                env
+                (bind_params (apply_type_params type_args (fn_params fcall))
+                  vs s_args)
+                (subst_type_params_expr type_args (fn_body fcall))
+                s_body ret Heval Hbody_ready)
+    as Hnames_body.
+  rewrite (store_names_remove_params_bind_params_fresh
+             (apply_type_params type_args (fn_params fcall)) vs s_args
+             s_body).
+  - rewrite Hnames_args. exact Hfresh.
+  - unfold params_fresh_in_store.
+    rewrite params_ctx_apply_type_params.
+    rewrite ctx_names_subst_type_params_ctx.
+    eapply alpha_rename_fn_def_params_fresh_in_store. exact H2.
+  - exact Hnames_body.
+Qed.
+
+Lemma eval_generic_direct_receiver_call_store_hidden_root_refs_exclude_prefix_named_fuel :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' v fdef fuel,
+    env_fns_preservation_ready env ->
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' v ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s'.
+Proof.
+  intros env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef fuel Henv_ready Hsafe_args Hsummary Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef
+    Hname_fdef Hcaps Htyped_args Houtlives Hfresh_hidden.
+  destruct (eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel
+    env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef fuel Hsafe_args Hsummary Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Hsummary_store Heval Hunique Hin_fdef Hname_fdef
+    Hcaps Htyped_args Houtlives) as [Hpkg _].
+  assert (Hfresh_out :
+    ~ In receiver_method_hidden_receiver_name (store_names s')).
+  { eapply eval_generic_direct_receiver_call_hidden_name_fresh_store_names.
+    - exact Henv_ready.
+    - exact Heval.
+    - eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe_args.
+    - exact Hfresh_hidden. }
+  eapply store_roots_exclude_root.
+  - exact (generic_direct_call_package_roots _ _ _ _ _ _ _ _ Hpkg).
+  - eapply root_env_store_roots_named_excludes_name.
+    + exact (generic_direct_call_package_roots_named _ _ _ _ _ _ _ _ Hpkg).
+    + exact Hfresh_out.
+  - intros se Hin Heq. apply Hfresh_out.
+    rewrite <- Heq. apply store_names_in_store_entry. exact Hin.
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary_instantiated_nil :
   forall env fdef,
     callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary

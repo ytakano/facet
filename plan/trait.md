@@ -38,7 +38,8 @@ validity checks must be represented in Rocq and the extracted checker.
   root naming derived, ready direct-call receiver-store freshness preservation,
   composed hidden body replay packaging that derives receiver-store refs under
   exact ready premises, root-set naming transport, generic
-  return-root and hidden-root exclusion packaging,
+  return-root, hidden-root exclusion, receiver-store freshness, and store-ref
+  exclusion packaging,
   consumed-frame support, and a
   behavior-preserving split between the active captured-call core gate and its
   public base wrapper. Those summaries remain inactive until their dedicated
@@ -93,9 +94,10 @@ validity checks must be represented in Rocq and the extracted checker.
      and a hidden-let receiver lowering still lacks the runtime proof needed by
      the extracted end-to-end safety gate. The next proof step is
      using the direct replay package that now derives receiver-store refs
-     internally under exact ready premises, then wiring it into the runtime
-     branch with the existing argument-strip, checked-body, return-roots, and
-     hidden-let bridge packages.
+     internally under exact ready premises, adding the analogous generic replay
+     composition over the generic receiver-store freshness/ref package, then
+     wiring both into the runtime branch with the existing argument-strip,
+     checked-body, return-roots, and hidden-let bridge packages.
      Only after the direct and generic receiver-method runtime
      safety branch is proved should the receiver-method summaries be enabled as
      outer alternatives on the public base checker gate.

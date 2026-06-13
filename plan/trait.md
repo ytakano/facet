@@ -31,8 +31,8 @@ validity checks must be represented in Rocq and the extracted checker.
   still fails the extracted end-to-end safety gate. Rocq now has the direct and
   generic receiver-method path factored into executable sidecar/checker
   summaries, proof-side shape/view lemmas, hidden-let/body packages,
-  replay bridge, inversion and strip helpers, consumed-frame support, and a
-  behavior-preserving split between the active captured-call core gate and its
+  replay bridge, inversion/strip/replay-prep packages, consumed-frame
+  support, and a behavior-preserving split between the active captured-call core gate and its
   public base wrapper. Those summaries remain
   inactive until their dedicated runtime safety branch is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is

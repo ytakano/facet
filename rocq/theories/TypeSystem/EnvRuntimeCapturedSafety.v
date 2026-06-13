@@ -1720,6 +1720,606 @@ Proof.
       * eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma bind_params_consumed_hidden_frame_rel :
+  forall ps vs x T hidden s_with s_without,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    store_consumed_hidden_frame_rel x T hidden
+      (bind_params ps vs s_with) (bind_params ps vs s_without).
+Proof.
+  induction ps as [| p ps IH]; intros vs x T hidden s_with s_without
+    Hnotin Hrel; destruct vs as [| v vs']; simpl.
+  - exact Hrel.
+  - exact Hrel.
+  - exact Hrel.
+  - apply SCHFR_Keep.
+    + simpl. intros Heq. apply Hnotin. left. exact Heq.
+    + apply IH.
+      * intros Hin. apply Hnotin. right. exact Hin.
+      * exact Hrel.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_bind_params :
+  forall ps vs x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden
+      (bind_params ps vs s_with) (bind_params ps vs s_without).
+Proof.
+  intros ps vs x T hidden s_with s_without Hrel Hnotin.
+  eapply bind_params_consumed_hidden_frame_rel; eassumption.
+Qed.
+
+Lemma store_remove_consumed_hidden_frame_rel :
+  forall x T hidden s_with s_without y,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_remove y s_with) (store_remove y s_without).
+Proof.
+  intros x T hidden s_with s_without y Hrel Hyx.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH].
+  - unfold store_add. simpl. rewrite ident_eqb_refl. simpl.
+    destruct (ident_eqb y x) eqn:Hy.
+    + apply ident_eqb_eq in Hy. contradiction.
+    + replace (MkStoreEntry x T hidden {| st_consumed := true; st_moved_paths := [] |}
+        :: store_remove y s) with
+        (store_mark_used x (store_add x T hidden (store_remove y s))).
+      * constructor.
+      * unfold store_add. simpl. rewrite ident_eqb_refl. reflexivity.
+  - simpl.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + exact Hrel.
+    + apply SCHFR_Keep; assumption.
+Qed.
+
+Lemma store_remove_params_consumed_hidden_frame_rel :
+  forall ps x T hidden s_with s_without,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_remove_params ps s_with) (store_remove_params ps s_without).
+Proof.
+  induction ps as [| p ps IH]; intros x T hidden s_with s_without Hnotin Hrel.
+  - exact Hrel.
+  - simpl.
+    apply IH.
+    + intros Hin. apply Hnotin. right. exact Hin.
+    + apply store_remove_consumed_hidden_frame_rel.
+      * exact Hrel.
+      * intros Heq. apply Hnotin. left. exact Heq.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_remove_params :
+  forall ps x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_remove_params ps s_with) (store_remove_params ps s_without).
+Proof.
+  intros ps x T hidden s_with s_without Hrel Hnotin.
+  eapply store_remove_params_consumed_hidden_frame_rel; eassumption.
+Qed.
+
+Theorem consumed_hidden_frame_eval_strip_rel_mutual :
+  (forall env s e s_hidden' v,
+    eval env s e s_hidden' v ->
+    forall x T hidden s_base,
+      store_consumed_hidden_frame_rel x T hidden s s_base ->
+      preservation_ready_expr e ->
+      ~ In x (free_vars_expr e) ->
+      ~ In x (expr_local_store_names e) ->
+      store_refs_exclude_root x s_base ->
+      exists s',
+        store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+        eval env s_base e s' v /\
+        store_refs_exclude_root x s' /\
+        value_refs_exclude_root x v) /\
+  (forall env s args s_hidden' vs,
+    eval_args env s args s_hidden' vs ->
+    forall x T hidden s_base,
+      store_consumed_hidden_frame_rel x T hidden s s_base ->
+      preservation_ready_args args ->
+      ~ In x (args_free_vars_ts args) ->
+      ~ In x (args_local_store_names args) ->
+      store_refs_exclude_root x s_base ->
+      exists s',
+        store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+        eval_args env s_base args s' vs /\
+        store_refs_exclude_root x s' /\
+        Forall (value_refs_exclude_root x) vs) /\
+  (forall env s fields defs s_hidden' values,
+    eval_struct_fields env s fields defs s_hidden' values ->
+    forall x T hidden s_base,
+      store_consumed_hidden_frame_rel x T hidden s s_base ->
+      preservation_ready_fields fields ->
+      ~ In x (fields_free_vars_ts fields) ->
+      ~ In x (fields_local_store_names fields) ->
+      store_refs_exclude_root x s_base ->
+      exists s',
+        store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+        eval_struct_fields env s_base fields defs s' values /\
+        store_refs_exclude_root x s' /\
+        value_fields_refs_exclude_root x values).
+Proof.
+  assert (Hmut : forall env,
+    (forall s e s_hidden' v,
+      eval env s e s_hidden' v ->
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_expr e ->
+        ~ In x (free_vars_expr e) ->
+        ~ In x (expr_local_store_names e) ->
+        store_refs_exclude_root x s_base ->
+        exists s',
+          store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+          eval env s_base e s' v /\
+          store_refs_exclude_root x s' /\
+          value_refs_exclude_root x v) /\
+    (forall s args s_hidden' vs,
+      eval_args env s args s_hidden' vs ->
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_args args ->
+        ~ In x (args_free_vars_ts args) ->
+        ~ In x (args_local_store_names args) ->
+        store_refs_exclude_root x s_base ->
+        exists s',
+          store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+          eval_args env s_base args s' vs /\
+          store_refs_exclude_root x s' /\
+          Forall (value_refs_exclude_root x) vs) /\
+    (forall s fields defs s_hidden' values,
+      eval_struct_fields env s fields defs s_hidden' values ->
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_fields fields ->
+        ~ In x (fields_free_vars_ts fields) ->
+        ~ In x (fields_local_store_names fields) ->
+        store_refs_exclude_root x s_base ->
+        exists s',
+          store_consumed_hidden_frame_rel x T hidden s_hidden' s' /\
+          eval_struct_fields env s_base fields defs s' values /\
+          store_refs_exclude_root x s' /\
+          value_fields_refs_exclude_root x values)).
+  { intro env.
+  apply (hidden_frame_eval_eval_args_eval_struct_fields_ind env
+    (fun s e s' v _ =>
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_expr e ->
+        ~ In x (free_vars_expr e) ->
+        ~ In x (expr_local_store_names e) ->
+        store_refs_exclude_root x s_base ->
+        exists s_base',
+          store_consumed_hidden_frame_rel x T hidden s' s_base' /\
+          eval env s_base e s_base' v /\
+          store_refs_exclude_root x s_base' /\
+          value_refs_exclude_root x v)
+    (fun s args s' vs _ =>
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_args args ->
+        ~ In x (args_free_vars_ts args) ->
+        ~ In x (args_local_store_names args) ->
+        store_refs_exclude_root x s_base ->
+        exists s_base',
+          store_consumed_hidden_frame_rel x T hidden s' s_base' /\
+          eval_args env s_base args s_base' vs /\
+          store_refs_exclude_root x s_base' /\
+          Forall (value_refs_exclude_root x) vs)
+    (fun s fields defs s' values _ =>
+      forall x T hidden s_base,
+        store_consumed_hidden_frame_rel x T hidden s s_base ->
+        preservation_ready_fields fields ->
+        ~ In x (fields_free_vars_ts fields) ->
+        ~ In x (fields_local_store_names fields) ->
+        store_refs_exclude_root x s_base ->
+        exists s_base',
+          store_consumed_hidden_frame_rel x T hidden s' s_base' /\
+          eval_struct_fields env s_base fields defs s_base' values /\
+          store_refs_exclude_root x s_base' /\
+          value_fields_refs_exclude_root x values)).
+  - intros s x T hidden s_base Hs Hready _ _ Hrefs.
+    exists s_base. repeat split; try constructor; assumption.
+  - intros s lit x T hidden s_base Hs Hready _ _ Hrefs.
+    exists s_base. destruct lit; repeat split; try constructor; assumption.
+  - intros s lit x T hidden s_base Hs Hready _ _ Hrefs.
+    exists s_base. repeat split; try constructor; assumption.
+  - intros s lit x T hidden s_base Hs Hready _ _ Hrefs.
+    exists s_base. repeat split; try constructor; assumption.
+  - intros s y se Hlookup Hconsume x T hidden s_base Hs Hready
+      Hfree _ Hrefs.
+    assert (Hyx : y <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    exists s_base. repeat split; try assumption.
+    + eapply Eval_Var_Copy; eassumption.
+    + exact (store_refs_exclude_lookup_value x s_base y se Hrefs Hlookup).
+  - intros s y se Hlookup Hconsume Hused x T hidden s_base Hs Hready
+      Hfree _ Hrefs.
+    assert (Hyx : y <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    exists (store_mark_used y s_base). repeat split.
+    + apply store_consumed_hidden_frame_rel_mark_used; assumption.
+    + eapply Eval_Var_Consume; eassumption.
+    + apply store_mark_used_refs_exclude_root. exact Hrefs.
+    + exact (store_refs_exclude_lookup_value x s_base y se Hrefs Hlookup).
+  - intros s p y path se Ty v Heval_place Hlookup Havail Hty Hneeds
+      Hvalue x T hidden s_base Hs Hready Hfree _ Hrefs.
+    inversion Hready; subst; clear Hready.
+    assert (Hplace_fresh : place_name p <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    destruct (eval_place_consumed_hidden_frame_rel_strip s s_base p y path x T hidden
+                Hs Hplace_fresh Hrefs Heval_place)
+      as [Hyx Hplace_base].
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    exists s_base. repeat split; try assumption.
+    + eapply Eval_Place_Copy; eassumption.
+    + eapply value_refs_exclude_lookup_path.
+      * exact (store_refs_exclude_lookup_value x s_base y se Hrefs Hlookup).
+      * exact Hvalue.
+  - intros s s' p y path se Ty v Heval_place Hlookup Havail Hty
+      Hneeds Hvalue Hconsume x T hidden s_base Hs Hready Hfree _ Hrefs.
+    inversion Hready; subst.
+    assert (Hplace_fresh : place_name p <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    destruct (eval_place_consumed_hidden_frame_rel_strip s s_base p y path x T hidden
+                Hs Hplace_fresh Hrefs Heval_place)
+      as [Hyx Hplace_base].
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    destruct (store_consumed_hidden_frame_rel_consume_path x T hidden s s_base y path s'
+                Hs Hyx Hconsume) as [s_base' [Hconsume_base Hs']].
+    exists s_base'. repeat split; try assumption.
+    + eapply Eval_Place_Consume; eassumption.
+    + eapply store_consume_path_refs_exclude_root; eassumption.
+    + eapply value_refs_exclude_lookup_path.
+      * exact (store_refs_exclude_lookup_value x s_base y se Hrefs Hlookup).
+      * exact Hvalue.
+  - intros s s' name lts args fields values sdef Hlookup Heval_fields
+      IH x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_fields fields |- _ => exact H
+                end) Hfree Hlocal Hrefs)
+      as [s_base' [Hs' [Heval_base [Hrefs' Hvalues]]]].
+    exists s_base'. split; try assumption.
+    split.
+    + eapply Eval_Struct; eassumption.
+    + split; try assumption.
+      constructor. exact Hvalues.
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IH x T hidden s_base Hs Hready Hfree
+      Hlocal Hrefs.
+    inversion Hready; subst.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_args payloads |- _ => exact H
+                end) Hfree Hlocal Hrefs)
+      as [s_base' [Hs' [Heval_base [Hrefs' Hvalues]]]].
+    exists s_base'. split; try assumption.
+    split.
+    + eapply Eval_Enum; eassumption.
+    + split; try assumption.
+      constructor. exact Hvalues.
+  - intros s s1 s2 m y Ty e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s s' e v Heval IH x T hidden s_base Hs Hready Hfree
+      Hlocal Hrefs.
+    inversion Hready; subst.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr e |- _ => exact H
+                end) Hfree Hlocal Hrefs)
+      as [s_base' [Hs' [Heval_base [Hrefs' _]]]].
+    exists s_base'. repeat split; try assumption.
+    + eapply Eval_Drop. exact Heval_base.
+    + constructor.
+  - intros s s1 s2 s3 y old_e e_new v_new Hlookup Heval_new IH
+      Hupdate Hrestore x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hyx : y <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr _ |- _ => exact H
+                end)
+                ltac:(simpl in Hfree; intros Hin; apply Hfree;
+                      right; exact Hin)
+                ltac:(match goal with
+                | H : ~ In x (expr_local_store_names _) |- _ => exact H
+                end) Hrefs)
+      as [s1_base [Hs1 [Heval_base [Hrefs1 Hvnew]]]].
+    destruct (store_consumed_hidden_frame_rel_update_val x T hidden s1 s1_base y v_new s2
+                Hs1 Hyx Hupdate) as [s2_base [Hupdate_base Hs2]].
+    destruct (store_consumed_hidden_frame_rel_restore_path x T hidden s2 s2_base y [] s3
+                Hs2 Hyx Hrestore) as [s3_base [Hrestore_base Hs3]].
+    exists s3_base. repeat split; try assumption.
+    + eapply Eval_Replace; eassumption.
+    + eapply store_restore_path_refs_exclude_root.
+      * eapply store_update_val_refs_exclude_root; eassumption.
+      * exact Hrestore_base.
+    + exact (store_refs_exclude_lookup_value x s_base y old_e Hrefs Hlookup).
+  - intros s s1 s2 y old_e e_new v_new Hlookup Heval_new IH
+      Hupdate x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hyx : y <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr _ |- _ => exact H
+                end)
+                ltac:(simpl in Hfree; intros Hin; apply Hfree;
+                      right; exact Hin)
+                ltac:(match goal with
+                | H : ~ In x (expr_local_store_names _) |- _ => exact H
+                end) Hrefs)
+      as [s1_base [Hs1 [Heval_base [Hrefs1 Hvnew]]]].
+    destruct (store_consumed_hidden_frame_rel_update_val x T hidden s1 s1_base y v_new s2
+                Hs1 Hyx Hupdate) as [s2_base [Hupdate_base Hs2]].
+    exists s2_base. repeat split; try assumption.
+    + eapply Eval_Assign; eassumption.
+    + eapply store_update_val_refs_exclude_root; eassumption.
+    + constructor.
+  - intros s s1 s2 s3 p y path old_v e_new v_new Heval_place
+      Hlookup_path Heval_new IH Hupdate Hrestore x T hidden s_base Hs Hready
+      Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hplace_fresh : place_name p <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    destruct (eval_place_consumed_hidden_frame_rel_strip s s_base p y path x T hidden
+                Hs Hplace_fresh Hrefs Heval_place)
+      as [Hyx Hplace_base].
+    unfold store_lookup_path in Hlookup_path.
+    rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s s_base y Hs Hyx)
+      in Hlookup_path.
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr _ |- _ => exact H
+                end)
+                ltac:(simpl in Hfree; intros Hin; apply Hfree;
+                      right; exact Hin)
+                ltac:(match goal with
+                | H : ~ In x (expr_local_store_names _) |- _ => exact H
+                end) Hrefs)
+      as [s1_base [Hs1 [Heval_base [Hrefs1 Hvnew]]]].
+    destruct (store_consumed_hidden_frame_rel_update_path x T hidden s1 s1_base y path v_new s2
+                Hs1 Hyx Hupdate)
+      as [s2_base [Hupdate_base Hs2]].
+    destruct (store_consumed_hidden_frame_rel_restore_path x T hidden s2 s2_base y path s3
+                Hs2 Hyx Hrestore) as [s3_base [Hrestore_base Hs3]].
+    exists s3_base. repeat split; try assumption.
+    + eapply Eval_Replace_Place; eassumption.
+    + eapply store_restore_path_refs_exclude_root.
+      * eapply store_update_path_refs_exclude_root; eassumption.
+      * exact Hrestore_base.
+    + destruct (store_lookup y s_base) as [se |] eqn:Hlookup_base;
+        simpl in Hlookup_path; try discriminate.
+      pose proof (store_refs_exclude_lookup_value x s_base y se Hrefs Hlookup_base)
+        as Hse_refs.
+      pose proof (value_refs_exclude_lookup_path x (se_val se) path old_v
+                    Hse_refs Hlookup_path) as Hold_refs.
+      exact Hold_refs.
+  - intros s s1 s2 p y path e_new v_new Heval_place Heval_new IH
+      Hupdate x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hplace_fresh : place_name p <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    destruct (eval_place_consumed_hidden_frame_rel_strip s s_base p y path x T hidden
+                Hs Hplace_fresh Hrefs Heval_place)
+      as [Hyx Hplace_base].
+    destruct (IH x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr _ |- _ => exact H
+                end)
+                ltac:(simpl in Hfree; intros Hin; apply Hfree;
+                      right; exact Hin)
+                ltac:(match goal with
+                | H : ~ In x (expr_local_store_names _) |- _ => exact H
+                end) Hrefs)
+      as [s1_base [Hs1 [Heval_base [Hrefs1 Hvnew]]]].
+    destruct (store_consumed_hidden_frame_rel_update_path x T hidden s1 s1_base y path v_new s2
+                Hs1 Hyx Hupdate)
+      as [s2_base [Hupdate_base Hs2]].
+    exists s2_base. repeat split; try assumption.
+    + eapply Eval_Assign_Place; eassumption.
+    + eapply store_update_path_refs_exclude_root; eassumption.
+    + constructor.
+  - intros s p y path rk Heval_place x T hidden s_base Hs Hready
+      Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hplace_fresh : place_name p <> x).
+    { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+    destruct (eval_place_consumed_hidden_frame_rel_strip s s_base p y path x T hidden
+                Hs Hplace_fresh Hrefs Heval_place)
+      as [Hyx Hplace_base].
+    exists s_base. repeat split; try assumption.
+    + eapply Eval_Borrow; eassumption.
+    + constructor. apply ident_eqb_neq. intros Heq. apply Hyx. symmetry. exact Heq.
+  - intros s r p y path se v Ty Has_place Heval_place Hlookup Hvalue
+      Hty Husage x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s s_r r y path se v Ty Hnot_place Heval_r IHr Hlookup
+      Hvalue Hty Husage x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s fname fdef Hlookup Hcaps x T hidden s_base Hs Hready
+      Hfree Hlocal Hrefs.
+    exists s_base. repeat split; try assumption.
+    + eapply Eval_Fn; eassumption.
+    + constructor. constructor.
+  - intros s fname captures captured fdef Hlookup Hcopy x T hidden
+      s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hfree_cond : ~ In x (free_vars_expr e1)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. left. exact Hin. }
+    assert (Hlocal_cond : ~ In x (expr_local_store_names e1)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. left. exact Hin. }
+    destruct (IHcond x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr e1 |- _ => exact H
+                end) Hfree_cond Hlocal_cond Hrefs)
+      as [s1_base [Hs1 [Heval_cond_base [Hrefs1 _]]]].
+    assert (Hfree_then : ~ In x (free_vars_expr e2)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. right.
+      apply in_or_app. left. exact Hin. }
+    assert (Hlocal_then : ~ In x (expr_local_store_names e2)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right.
+      apply in_or_app. left. exact Hin. }
+    destruct (IHthen x T hidden s1_base Hs1
+                ltac:(match goal with
+                | H : preservation_ready_expr e2 |- _ => exact H
+                end) Hfree_then Hlocal_then Hrefs1)
+      as [s2_base [Hs2 [Heval_then_base [Hrefs2 Hv]]]].
+    exists s2_base. repeat split; try assumption.
+    eapply Eval_If_True; eassumption.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hfree_cond : ~ In x (free_vars_expr e1)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. left. exact Hin. }
+    assert (Hlocal_cond : ~ In x (expr_local_store_names e1)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. left. exact Hin. }
+    destruct (IHcond x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr e1 |- _ => exact H
+                end) Hfree_cond Hlocal_cond Hrefs)
+      as [s1_base [Hs1 [Heval_cond_base [Hrefs1 _]]]].
+    assert (Hfree_else : ~ In x (free_vars_expr e3)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. right.
+      apply in_or_app. right. exact Hin. }
+    assert (Hlocal_else : ~ In x (expr_local_store_names e3)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right.
+      apply in_or_app. right. exact Hin. }
+	    destruct (IHelse x T hidden s1_base Hs1
+	                ltac:(match goal with
+	                | H : preservation_ready_expr e3 |- _ => exact H
+	                end) Hfree_else Hlocal_else Hrefs1)
+	      as [s2_base [Hs2 [Heval_else_base [Hrefs2 Hv]]]].
+	    exists s2_base. repeat split; try assumption.
+	    eapply Eval_If_False; eassumption.
+  - intros s s_scrut s_branch s' scrut branches enum_name variant_name
+      lts args values edef vdef binders ps e_branch v
+      Heval_scrut IHscrut Hlookup_enum Hlookup_variant Hlookup_binders
+      Hparams Hlen Hlookup Heval_branch IHbranch Hstore
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    assert (Hfree_scrut : ~ In x (free_vars_expr scrut)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. left. exact Hin. }
+    assert (Hlocal_scrut : ~ In x (expr_local_store_names scrut)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. left. exact Hin. }
+    destruct (IHscrut x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr scrut |- _ => exact H
+                end) Hfree_scrut Hlocal_scrut Hrefs)
+      as [s_scrut_base [Hs_scrut [Heval_scrut_base [Hrefs_scrut Hvenum]]]].
+    assert (Hready_branch : preservation_ready_expr e_branch).
+    { eapply lookup_match_branch_preservation_ready; eassumption. }
+    assert (Hfree_branches : ~ In x (match_branches_free_vars_ts branches)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. right. exact Hin. }
+    assert (Hfree_branch : ~ In x (free_vars_expr e_branch)).
+    { eapply match_branches_free_vars_ts_lookup_notin; eassumption. }
+    assert (Hlocal_branches : ~ In x (match_branches_local_store_names branches)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right. exact Hin. }
+    assert (Hlocal_branch : ~ In x (expr_local_store_names e_branch)).
+    { eapply match_branches_local_store_names_lookup_notin; eassumption. }
+    assert (Hnotin_ps : ~ In x (ctx_names (params_ctx ps))).
+    { rewrite (match_payload_params_opt_names_hfs binders lts args vdef ps Hparams).
+      intros Hin. apply Hlocal_branches.
+      eapply lookup_expr_branch_binders_local_store_names_in; eassumption. }
+    destruct (IHbranch x T hidden (bind_params ps values s_scrut_base)
+                (store_consumed_hidden_frame_rel_bind_params ps values x T hidden
+                   s_scrut s_scrut_base Hs_scrut Hnotin_ps)
+                Hready_branch Hfree_branch Hlocal_branch
+                (bind_params_refs_exclude_root x ps values s_scrut_base
+                   ltac:(inversion Hvenum; subst; assumption) Hrefs_scrut))
+      as [s_branch_base [Hs_branch [Heval_branch_base [Hrefs_branch Hv]]]].
+    exists (store_remove_params ps s_branch_base). repeat split.
+    + apply store_consumed_hidden_frame_rel_remove_params; assumption.
+    + eapply Eval_MatchEnum.
+      * exact Heval_scrut_base.
+      * exact Hlookup_enum.
+      * exact Hlookup_variant.
+      * exact Hlookup_binders.
+      * exact Hparams.
+      * exact Hlen.
+      * exact Hlookup.
+      * exact Heval_branch_base.
+      * reflexivity.
+    + eapply store_remove_params_refs_exclude_root; eassumption.
+    + assumption.
+		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden s_base Hs
+		      Hready Hfree Hlocal Hrefs.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden
+	      s_base Hs Hready Hfree Hlocal Hrefs.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args fname captured fdef fcall
+	      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s s_fn s_args s_body callee type_args args fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody x T hidden s_base0 Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
+  - intros s x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    exists s_base. repeat split; try constructor; assumption.
+  - intros s s1 s2 e es v vs Heval_e IHe Heval_args IHargs
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready; subst.
+    destruct (args_free_vars_ts_cons_notin x e es Hfree)
+      as [Hfree_e Hfree_es].
+    destruct (args_local_store_names_cons_notin x e es Hlocal)
+      as [Hlocal_e Hlocal_es].
+    destruct (IHe x T hidden s_base Hs
+                ltac:(match goal with
+                | H : preservation_ready_expr e |- _ => exact H
+                end) Hfree_e Hlocal_e Hrefs)
+      as [s1_base [Hs1 [Heval_e_base [Hrefs1 Hv]]]].
+    destruct (IHargs x T hidden s1_base Hs1
+                ltac:(match goal with
+                | H : preservation_ready_args es |- _ => exact H
+                end) Hfree_es Hlocal_es Hrefs1)
+      as [s2_base [Hs2 [Heval_args_base [Hrefs2 Hvs]]]].
+    exists s2_base. repeat split; try assumption.
+    + eapply EvalArgs_Cons; eassumption.
+    + constructor; assumption.
+  - intros s x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    exists s_base. repeat split; try constructor; assumption.
+  - intros s s1 s2 fields f rest e v values Hlookup Heval_e IHe
+      Heval_fields IHfields x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    assert (Hready_e : preservation_ready_expr e).
+    { eapply preservation_ready_fields_lookup; eassumption. }
+    assert (Hfree_e : ~ In x (free_vars_expr e)).
+    { eapply fields_free_vars_ts_lookup_notin; eassumption. }
+    assert (Hlocal_e : ~ In x (expr_local_store_names e)).
+    { eapply fields_local_store_names_lookup_notin; eassumption. }
+    destruct (IHe x T hidden s_base Hs Hready_e Hfree_e Hlocal_e Hrefs)
+      as [s1_base [Hs1 [Heval_e_base [Hrefs1 Hv]]]].
+    destruct (IHfields x T hidden s1_base Hs1 Hready Hfree Hlocal Hrefs1)
+      as [s2_base [Hs2 [Heval_fields_base [Hrefs2 Hvalues]]]].
+    exists s2_base. repeat split; try assumption.
+    + eapply EvalStructFields_Cons; eassumption.
+    + constructor; assumption.
+  }
+  repeat split; intros env; destruct (Hmut env) as [Heval [Hargs Hfields]]; eauto.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

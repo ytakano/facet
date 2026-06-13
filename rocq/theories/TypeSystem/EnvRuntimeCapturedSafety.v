@@ -1642,6 +1642,56 @@ Proof.
       s_body_hidden s_body_base Hrel). reflexivity.
 Qed.
 
+Lemma direct_receiver_method_hidden_cleanup_final_store_consumer :
+  forall type_args fcall receiver_callee v_receiver
+      s_method_hidden s_body_hidden s_body_base s_hidden s',
+    s_hidden =
+      store_remove receiver_method_hidden_receiver_name s_method_hidden ->
+    s' =
+      store_remove_params (apply_type_params type_args (fn_params fcall))
+        s_body_base ->
+    (store_hidden_frame_rel receiver_method_hidden_receiver_name
+       (fn_ret receiver_callee) v_receiver s_body_hidden s_body_base \/
+     store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+       (fn_ret receiver_callee) v_receiver s_body_hidden s_body_base) ->
+    store_remove receiver_method_hidden_receiver_name s_method_hidden =
+      store_remove_params (apply_type_params type_args (fn_params fcall))
+        (store_remove receiver_method_hidden_receiver_name s_body_hidden) ->
+    s' = s_hidden.
+Proof.
+  intros type_args fcall receiver_callee v_receiver s_method_hidden
+    s_body_hidden s_body_base s_hidden s' Hhidden_final Hraw_final
+    Hbody_rel Hhidden_cleanup.
+  subst s_hidden.
+  eapply receiver_method_hidden_cleanup_matches_base_final_store; eassumption.
+Qed.
+
+Lemma generic_receiver_method_hidden_cleanup_final_store_consumer :
+  forall type_args receiver_type_args fcall receiver_callee v_receiver
+      s_method_hidden s_body_hidden s_body_base s_hidden s',
+    s_hidden =
+      store_remove receiver_method_hidden_receiver_name s_method_hidden ->
+    s' =
+      store_remove_params (apply_type_params type_args (fn_params fcall))
+        s_body_base ->
+    (store_hidden_frame_rel receiver_method_hidden_receiver_name
+       (subst_type_params_ty receiver_type_args (fn_ret receiver_callee))
+       v_receiver s_body_hidden s_body_base \/
+     store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+       (subst_type_params_ty receiver_type_args (fn_ret receiver_callee))
+       v_receiver s_body_hidden s_body_base) ->
+    store_remove receiver_method_hidden_receiver_name s_method_hidden =
+      store_remove_params (apply_type_params type_args (fn_params fcall))
+        (store_remove receiver_method_hidden_receiver_name s_body_hidden) ->
+    s' = s_hidden.
+Proof.
+  intros type_args receiver_type_args fcall receiver_callee v_receiver
+    s_method_hidden s_body_hidden s_body_base s_hidden s' Hhidden_final
+    Hraw_final Hbody_rel Hhidden_cleanup.
+  subst s_hidden.
+  eapply receiver_method_hidden_cleanup_matches_base_final_store; eassumption.
+Qed.
+
 
 Lemma store_consumed_hidden_frame_rel_lookup :
   forall x T hidden s_with s_without y,

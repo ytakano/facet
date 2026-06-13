@@ -1844,6 +1844,44 @@ Proof.
   eapply preservation_ready_eval_args_hidden_frame_strip; eassumption.
 Qed.
 
+Lemma hidden_receiver_method_call_eval_inv :
+  forall env s_receiver T_receiver v_receiver method_name type_args
+      method_args s_method_hidden v,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    exists s_var_hidden s_args_hidden s_body_hidden method_callee fcall used'
+        v_receiver_arg vs_method,
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name)
+        s_var_hidden v_receiver_arg /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver_arg :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden v /\
+      s_method_hidden =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden.
+Proof.
+  intros env s_receiver T_receiver v_receiver method_name type_args
+    method_args s_method_hidden v Heval_call.
+  dependent destruction Heval_call.
+  dependent destruction H1.
+  exists s1, s2, s_body, fdef, fcall, used', v, vs.
+  repeat split; try assumption; reflexivity.
+Qed.
+
 Lemma generic_direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_type_args
       receiver_args method_args synthetic_body s' v,

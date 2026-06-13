@@ -2531,6 +2531,10 @@ Lemma check_fn_root_shadow_direct_receiver_method_store_safe_summary_view_prop :
           receiver_args method_args /\
       store_safe_function_value_call_args env receiver_args /\
       store_safe_function_value_call_args env method_args /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -2598,6 +2602,8 @@ Proof.
            method_args] target_synthetic_body] |] eqn:Htarget;
     try discriminate.
   apply andb_true_iff in Hcheck as [Hsafe_args Hcheck].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_local_method_args].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_free_method_args].
   apply andb_true_iff in Hsafe_args as
     [Hsafe_receiver_args Hsafe_method_args].
   destruct (lookup_fn_b receiver_name (env_fns env))
@@ -2670,6 +2676,9 @@ Proof.
     T_body, Gamma_body, R_out, roots.
   repeat split; try eassumption;
     try (apply store_safe_function_value_call_args_b_sound; eassumption);
+    try (rewrite <- args_free_vars_checker_eq;
+      apply ident_in_b_false_not_in; apply negb_true_iff; eassumption);
+    try (apply ident_in_b_false_not_in; apply negb_true_iff; eassumption);
     try (apply preservation_ready_expr_b_sound; eassumption);
     try (apply fn_params_roots_exclude_b_sound; eassumption);
     try (apply fn_params_root_env_excludes_b_sound; eassumption).
@@ -2694,6 +2703,10 @@ Lemma check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary_vie
           method_args /\
       store_safe_function_value_call_args env receiver_args /\
       store_safe_function_value_call_args env method_args /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_free_vars_ts method_args) /\
+      ~ In receiver_method_hidden_receiver_name
+          (args_local_store_names method_args) /\
       In receiver_callee (env_fns env) /\
       fn_name receiver_callee = receiver_name /\
       In method_callee (env_fns env) /\
@@ -2737,6 +2750,8 @@ Proof.
             receiver_args] method_args] target_synthetic_body] |]
     eqn:Htarget; try discriminate.
   apply andb_true_iff in Hcheck as [Hsafe_args Hcheck].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_local_method_args].
+  apply andb_true_iff in Hsafe_args as [Hsafe_args Hnot_free_method_args].
   apply andb_true_iff in Hsafe_args as
     [Hsafe_receiver_args Hsafe_method_args].
   destruct (lookup_fn_b receiver_name (env_fns env))
@@ -2795,6 +2810,9 @@ Proof.
     R_method_env, roots_method_env, T_body, Gamma_body, R_out, roots.
   repeat split; try eassumption;
     try (apply store_safe_function_value_call_args_b_sound; eassumption);
+    try (rewrite <- args_free_vars_checker_eq;
+      apply ident_in_b_false_not_in; apply negb_true_iff; eassumption);
+    try (apply ident_in_b_false_not_in; apply negb_true_iff; eassumption);
     try (apply preservation_ready_expr_b_sound; eassumption);
     try (apply fn_params_roots_exclude_b_sound; eassumption);
     try (apply fn_params_root_env_excludes_b_sound; eassumption).

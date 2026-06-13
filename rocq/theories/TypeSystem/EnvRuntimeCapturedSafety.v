@@ -5388,6 +5388,7 @@ Proof.
       R_method & roots_method & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body_env & Gamma_body_env & R_out &
       roots & Htarget & Hhidden & Hsafe_receiver_args & Hsafe_method_args &
+      _Hnot_free_method_args & _Hnot_local_method_args &
       Hin_receiver & Hname_receiver & Hin_method & Hname_method &
       _Harity & _Hbounds & _Hreceiver_core & _Hreceiver_env &
       _Hreceiver_summary & _Hreceiver_compat & _Hreceiver_roots &
@@ -5488,7 +5489,8 @@ Proof.
       roots_receiver_env & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body_env & Gamma_body_env &
       R_out & roots & Htarget & Hhidden & Hsafe_receiver_args &
-      Hsafe_method_args & Hin_receiver & Hname_receiver & Hin_method &
+      Hsafe_method_args & _Hnot_free_method_args & _Hnot_local_method_args &
+      Hin_receiver & Hname_receiver & Hin_method &
       Hname_method & Hreceiver_arity & Hmethod_arity & Hreceiver_bounds &
       Hmethod_bounds & _Hreceiver_env & _Hmethod_env & Hreceiver_ready &
       Hreceiver_summary & Hmethod_ready & Hmethod_summary & Hbody_env &
@@ -5647,6 +5649,7 @@ Proof.
       R_method & roots_method & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body & Gamma_body & R_out & roots &
       Htarget & Hhidden & Hsafe_receiver_args & Hsafe_method_args &
+      _Hnot_free_method_args & _Hnot_local_method_args &
       Hin_receiver & Hname_receiver & Hin_method & Hname_method &
       _Harity & _Hbounds & _Hreceiver_core & _Hreceiver_env &
       _Hreceiver_summary & _Hreceiver_compat & _Hreceiver_roots &
@@ -5963,7 +5966,8 @@ Proof.
       R_method & roots_method & T_method_env & Gamma_method_env &
       R_method_env & roots_method_env & T_body_checked & Gamma_body_checked &
       R_out_checked & roots_checked & Htarget & Hhidden &
-      Hsafe_receiver_args & Hsafe_method_args & Hin_receiver &
+      Hsafe_receiver_args & Hsafe_method_args & _Hnot_free_method_args &
+      _Hnot_local_method_args & Hin_receiver &
       Hname_receiver & Hin_method & Hname_method & _Harity & _Hbounds &
       _Hreceiver_core & _Hreceiver_env & Hreceiver_summary &
       _Hreceiver_compat & _Hreceiver_roots & _Hreceiver_env_excl &

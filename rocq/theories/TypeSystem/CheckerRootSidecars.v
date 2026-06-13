@@ -1406,6 +1406,10 @@ Definition check_fn_root_shadow_direct_receiver_method_store_safe_summary
       synthetic_body) =>
       store_safe_function_value_call_args_b env receiver_args &&
       store_safe_function_value_call_args_b env method_args &&
+      negb (ident_in_b receiver_method_hidden_receiver_name
+        (args_free_vars_checker method_args)) &&
+      negb (ident_in_b receiver_method_hidden_receiver_name
+        (args_local_store_names method_args)) &&
       match lookup_fn_b receiver_name (env_fns env),
             lookup_fn_b method_name (env_fns env) with
       | Some receiver_callee, Some method_callee =>
@@ -1491,6 +1495,10 @@ Definition check_fn_root_shadow_generic_direct_receiver_method_store_safe_summar
       receiver_args, method_args, synthetic_body) =>
       store_safe_function_value_call_args_b env receiver_args &&
       store_safe_function_value_call_args_b env method_args &&
+      negb (ident_in_b receiver_method_hidden_receiver_name
+        (args_free_vars_checker method_args)) &&
+      negb (ident_in_b receiver_method_hidden_receiver_name
+        (args_local_store_names method_args)) &&
       match lookup_fn_b receiver_name (env_fns env),
             lookup_fn_b method_name (env_fns env) with
       | Some receiver_callee, Some method_callee =>

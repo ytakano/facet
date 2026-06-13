@@ -1286,6 +1286,19 @@ Proof.
   rewrite ident_eqb_refl. reflexivity.
 Qed.
 
+Lemma store_remove_hidden_after_params_mark_used :
+  forall ps x T v s,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_remove x
+      (store_remove_params ps (store_mark_used x (store_add x T v s))) =
+      store_remove_params ps s.
+Proof.
+  intros ps x T v s Hnotin.
+  rewrite store_remove_params_store_remove_commute by exact Hnotin.
+  rewrite store_remove_mark_used_store_add_same.
+  reflexivity.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

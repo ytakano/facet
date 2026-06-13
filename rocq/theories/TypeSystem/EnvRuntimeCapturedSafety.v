@@ -2960,6 +2960,65 @@ Proof.
   eapply preservation_ready_eval_args_hidden_frame_strip; eassumption.
 Qed.
 
+Lemma receiver_method_eval_args_after_hidden_receiver_strip :
+  forall env s_receiver T_receiver v_receiver s_var_hidden v_receiver_arg
+      method_args s_args_hidden vs,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (EVar receiver_method_hidden_receiver_name) s_var_hidden
+      v_receiver_arg ->
+    eval_args env s_var_hidden method_args s_args_hidden vs ->
+    preservation_ready_args method_args ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_local_store_names method_args) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver ->
+    v_receiver_arg = v_receiver /\
+    exists s_args,
+      eval_args env s_receiver method_args s_args vs /\
+      store_refs_exclude_root receiver_method_hidden_receiver_name s_args /\
+      Forall (value_refs_exclude_root receiver_method_hidden_receiver_name) vs /\
+      ((s_args_hidden =
+          store_add receiver_method_hidden_receiver_name T_receiver
+            v_receiver s_args) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_args_hidden s_args).
+Proof.
+  intros env s_receiver T_receiver v_receiver s_var_hidden v_receiver_arg
+    method_args s_args_hidden vs Heval_var Heval_args Hready Hfree Hlocal
+    Hrefs.
+  destruct (hidden_receiver_var_eval_inv env T_receiver v_receiver
+    s_receiver s_var_hidden v_receiver_arg Heval_var)
+    as (Hvalue & Hcases).
+  split; [exact Hvalue |].
+  destruct Hcases as [[_ Hstore] | [_ Hstore]]; subst s_var_hidden.
+  - destruct (direct_receiver_method_eval_args_hidden_receiver_strip
+      env s_receiver T_receiver v_receiver method_args s_args_hidden vs
+      Heval_args Hready Hfree Hlocal Hrefs)
+      as (s_args & Hhidden & Hbase & Hrefs_args & Hvals).
+    exists s_args.
+    repeat split; try assumption.
+    left. exact Hhidden.
+  - destruct (proj1 (proj2 consumed_hidden_frame_eval_strip_rel_mutual)
+      env
+      (store_mark_used receiver_method_hidden_receiver_name
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver))
+      method_args s_args_hidden vs Heval_args
+      receiver_method_hidden_receiver_name T_receiver v_receiver s_receiver)
+      as (s_args & Hrel_args & Hbase & Hrefs_args & Hvals).
+    + apply store_consumed_hidden_frame_rel_here.
+    + exact Hready.
+    + exact Hfree.
+    + exact Hlocal.
+    + exact Hrefs.
+    + exists s_args.
+      repeat split; try assumption.
+      right. exact Hrel_args.
+Qed.
+
 Lemma hidden_receiver_method_call_eval_inv :
   forall env s_receiver T_receiver v_receiver method_name type_args
       method_args s_method_hidden v,

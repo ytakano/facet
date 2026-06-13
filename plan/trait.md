@@ -32,9 +32,10 @@ validity checks must be represented in Rocq and the extracted checker.
   generic receiver-method path factored into executable sidecar/checker
   summaries, proof-side shape and view lemmas, hidden-let and hidden-body
   packages, replay-parameterized bridge lemmas, receiver/method-call inversion,
-  cleanup helpers, consumed hidden-frame relation operation, parameter,
-  place-strip, and eval/args/fields strip helpers, store-operation
-  forward/inverse helpers, and a behavior-preserving split
+  cleanup helpers, post-hidden-receiver argument strip helpers, consumed
+  hidden-frame relation operation, parameter, place-strip, and eval/args/fields
+  strip helpers, store-operation forward/inverse helpers, and a
+  behavior-preserving split
   between the active
   captured-call core gate and its public base wrapper. Those summaries remain
   inactive until their dedicated runtime safety branch is proved.

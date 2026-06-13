@@ -104,9 +104,11 @@ validity checks must be represented in Rocq and the extracted checker.
   replayed body runs once both sides use the same base-store alpha rename,
   and the hidden receiver's index-0 name is proved not to change
   `fresh_ident` when inserted into an alpha-renaming seed. That invariant now
-  reaches the function-definition seed and first parameter rename step. Public
-  runtime branch wiring still needs the invariant lifted through the remaining
-  hidden/base alpha transport and direct/generic replay/final-store matching providers; receiver-method
+  reaches the function-definition seed and preserves the full parameter-renaming
+  output parameters and rename environment. Public runtime branch wiring still
+  needs the invariant lifted through body alpha-renaming and the remaining
+  hidden/base alpha transport before the direct/generic replay/final-store
+  matching providers can close; receiver-method
   summaries remain inactive until that public runtime safety branch is proved
   and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
@@ -179,11 +181,12 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is lifting the receiver seed invariant through the
-     remaining parameter and body alpha-renaming passes, then using that
-     hidden/base alpha transport with the shared body-final helper to complete the direct and generic
-     final-store matching providers before wiring the public receiver-method
-     runtime safety branch through those providers. Only after the direct and generic receiver-method runtime safety
+     over their package consumers. The next proof step is carrying the receiver
+     seed invariant through body alpha-renaming and final `used` transport, then
+     using that hidden/base alpha transport with the shared body-final helper to
+     complete the direct and generic final-store matching providers before
+     wiring the public receiver-method runtime safety branch through those
+     providers. Only after the direct and generic receiver-method runtime safety
      branch is proved should the receiver-method summaries be enabled as outer
      alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

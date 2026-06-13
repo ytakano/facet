@@ -10307,6 +10307,40 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_params_receiver_method_hidden_receiver_name_insert :
+  forall rho prefix suffix ps,
+    fst (fst (alpha_rename_params rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) ps)) =
+    fst (fst (alpha_rename_params rho (prefix ++ suffix) ps)) /\
+    snd (fst (alpha_rename_params rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) ps)) =
+    snd (fst (alpha_rename_params rho (prefix ++ suffix) ps)).
+Proof.
+  intros rho prefix suffix ps.
+  revert rho prefix suffix.
+  induction ps as [| p ps IH]; intros rho prefix suffix.
+  - simpl. split; reflexivity.
+  - destruct p as [m x T]. simpl.
+    rewrite (fresh_ident_receiver_method_hidden_receiver_name_insert
+      x prefix suffix).
+    destruct (IH rho (fresh_ident x (prefix ++ suffix) :: prefix) suffix)
+      as [Hparams Hrho].
+    destruct (alpha_rename_params rho
+      (fresh_ident x (prefix ++ suffix) ::
+       prefix ++ receiver_method_hidden_receiver_name :: suffix) ps)
+      as [[ps_hidden rho_hidden] used_hidden'] eqn:Hhidden.
+    destruct (alpha_rename_params rho
+      (fresh_ident x (prefix ++ suffix) :: prefix ++ suffix) ps)
+      as [[ps_base rho_base] used_base'] eqn:Hbase.
+    simpl in Hparams, Hrho.
+    rewrite Hhidden in Hparams, Hrho.
+    rewrite Hbase in Hparams, Hrho.
+    simpl in Hparams, Hrho.
+    subst ps_hidden rho_hidden.
+    split; reflexivity.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

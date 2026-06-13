@@ -38,7 +38,10 @@ validity checks must be represented in Rocq and the extracted checker.
   root naming derived, ready direct-call receiver-store freshness preservation,
   composed hidden body replay packaging that derives direct and generic
   receiver-store refs/value refs internally under exact ready premises,
-  root-set naming transport, generic return-root, hidden-root exclusion,
+  a direct receiver-method replay wrapper/package that separates the receiver
+  call's actual type from the hidden-frame annotation while leaving
+  compatibility available to callers, root-set naming transport, generic
+  return-root, hidden-root exclusion,
   receiver-store freshness, and store-ref exclusion packaging,
   consumed-frame support, generic receiver-method runtime replay packaging,
   proof-side direct/generic hidden-let typing inversion helpers for receiver

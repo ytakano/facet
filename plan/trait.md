@@ -93,12 +93,17 @@ validity checks must be represented in Rocq and the extracted checker.
   The direct and generic checked-initial branch wrappers can now consume
   those strengthened matching continuations at the checked-initial boundary,
   and both summary-to-value bridges have replay-facts variants that carry the
-  same provider shape up to the summary boundary. Both summary boundaries also have raw-package replay-facts variants, so
-  future matching providers can compare the raw call evaluation/final cleanup
-  package against the replayed hidden/base facts in one continuation. Public
-  runtime branch wiring still needs direct/generic replay/final-store matching
-  providers; receiver-method summaries remain inactive until that public runtime
-  safety branch is proved and wired.
+  same provider shape up to the summary boundary. Both summary boundaries also
+  have raw-package replay-facts variants, so matching providers can compare the
+  raw call evaluation/final cleanup package against the replayed hidden/base
+  facts in one continuation. The direct path now has a prefix matching provider
+  that uses evaluator determinism to align the raw receiver and method-argument
+  prefix with the replayed receiver, base argument store, and method values,
+  narrowing the remaining direct obligation to alpha/body final-store matching.
+  Public runtime branch wiring still needs the generic prefix provider plus
+  direct/generic replay/final-store matching providers; receiver-method
+  summaries remain inactive until that public runtime safety branch is proved
+  and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -169,12 +174,13 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is adding provider lemmas
-     that supply replay/final-store matching continuations for the direct and
-     generic summary consumers, then wiring the public receiver-method runtime
-     safety branch through those providers. Only after the direct and generic
-     receiver-method runtime safety branch is proved should the receiver-method
-     summaries be enabled as outer alternatives on the public base checker gate.
+     over their package consumers. The next proof step is adding the generic
+     prefix matching provider, then completing the direct and generic
+     alpha/body final-store matching providers for the summary consumers before
+     wiring the public receiver-method runtime safety branch through those
+     providers. Only after the direct and generic receiver-method runtime safety
+     branch is proved should the receiver-method summaries be enabled as outer
+     alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

@@ -61,8 +61,10 @@ validity checks must be represented in Rocq and the extracted checker.
   method callee lookup, alpha-renamed body evaluation, and raw final cleanup.
   The direct and generic receiver-method runtime replay packages now expose
   those raw evaluation/final-cleanup components as top-level fields alongside
-  the hidden-let replay evidence. Runtime theorem wiring remains before those
-  summaries can be enabled in the public gate.
+  the hidden-let replay evidence, and package-consumer lemmas turn checked
+  hidden-let replay into value typing at the hidden-cleaned store. Runtime
+  theorem wiring remains before those summaries can be enabled in the public
+  gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -115,12 +117,14 @@ validity checks must be represented in Rocq and the extracted checker.
      connecting the direct and generic receiver-method runtime replay packages
      into the runtime branch with the existing argument-strip, checked-body,
      return-roots, and hidden-let bridge packages. The raw and hidden cleanup
-     evidence is now packaged together; the runtime branch still needs to source
-     receiver provenance/env readiness evidence, connect raw receiver-method
-     evaluation to hidden method replay, and transport the final store from
-     hidden cleanup to the raw final store. Only after the direct and generic
-     receiver-method runtime safety branch is proved should the receiver-method
-     summaries be enabled as outer alternatives on the public base checker gate.
+     evidence is now packaged together, and hidden replay can produce value
+     typing at the hidden-cleaned store. The runtime branch still needs to
+     source receiver provenance/env readiness evidence, connect raw
+     receiver-method evaluation to hidden method replay, and transport the final
+     store from hidden cleanup to the raw final store. Only after the direct and
+     generic receiver-method runtime safety branch is proved should the
+     receiver-method summaries be enabled as outer alternatives on the public
+     base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

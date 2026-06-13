@@ -6808,6 +6808,104 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_package_consumer :
+  forall env fdef s v method_name type_args receiver_name receiver_args
+      method_args target_synthetic_body hidden_synthetic_body
+      receiver_callee (method_callee : fn_def) T_body Gamma_body R_out roots
+      s_hidden,
+    fn_env_unique_by_name env ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    direct_call_receiver_method_target_expr (fn_body fdef) =
+      Some (method_name, type_args, receiver_name, receiver_args,
+        method_args, target_synthetic_body) ->
+    hidden_synthetic_body =
+      direct_call_receiver_method_hidden_let_synthetic_body
+        (fn_ret receiver_callee) method_name type_args receiver_name
+        receiver_args method_args ->
+    preservation_ready_expr hidden_synthetic_body ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots ->
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s hidden_synthetic_body s_hidden v ->
+    exists s_hidden,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s hidden_synthetic_body s_hidden v /\
+      value_has_type env s_hidden v (fn_ret fdef).
+Proof.
+  intros env fdef s v method_name type_args receiver_name receiver_args
+    method_args target_synthetic_body hidden_synthetic_body
+    receiver_callee method_callee T_body Gamma_body R_out roots s_hidden
+    Hunique Hsummary Hinitial Hstore Htarget Hhidden Hready_hidden
+    Htyped_hidden Hcompat Heval_hidden.
+  exists s_hidden.
+  split.
+  - exact Heval_hidden.
+  - eapply callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
+      try eassumption.
+    exists method_name, type_args, receiver_name, receiver_args, method_args,
+      target_synthetic_body, hidden_synthetic_body, receiver_callee,
+      method_callee, T_body, Gamma_body, R_out, roots.
+    repeat split; eassumption.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runtime_replay_package_consumer :
+  forall env fdef s v method_name type_args receiver_name receiver_type_args
+      receiver_args method_args target_synthetic_body hidden_synthetic_body
+      receiver_callee (method_callee : fn_def) T_body Gamma_body R_out roots
+      s_hidden,
+    fn_env_unique_by_name env ->
+    callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) =
+      Some (method_name, type_args, receiver_name, receiver_type_args,
+        receiver_args, method_args, target_synthetic_body) ->
+    hidden_synthetic_body =
+      generic_direct_call_receiver_method_hidden_let_synthetic_body
+        (subst_type_params_ty receiver_type_args (fn_ret receiver_callee))
+        method_name type_args receiver_name receiver_type_args
+        receiver_args method_args ->
+    preservation_ready_expr hidden_synthetic_body ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots ->
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s hidden_synthetic_body s_hidden v ->
+    exists s_hidden,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s hidden_synthetic_body s_hidden v /\
+      value_has_type env s_hidden v (fn_ret fdef).
+Proof.
+  intros env fdef s v method_name type_args receiver_name receiver_type_args
+    receiver_args method_args target_synthetic_body hidden_synthetic_body
+    receiver_callee method_callee T_body Gamma_body R_out roots s_hidden
+    Hunique Hsummary Hinitial Hstore Htarget Hhidden Hready_hidden
+    Htyped_hidden Hcompat Heval_hidden.
+  exists s_hidden.
+  split.
+  - exact Heval_hidden.
+  - eapply callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_eval_value;
+      try eassumption.
+    exists method_name, type_args, receiver_name, receiver_type_args,
+      receiver_args, method_args, target_synthetic_body,
+      hidden_synthetic_body, receiver_callee, method_callee, T_body,
+      Gamma_body, R_out, roots.
+    repeat split; eassumption.
+Qed.
+
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->

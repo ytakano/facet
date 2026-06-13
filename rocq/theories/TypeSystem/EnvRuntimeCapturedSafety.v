@@ -10206,6 +10206,46 @@ Qed.
 
 
 
+Lemma receiver_method_alpha_body_final_store_matching_provider :
+  forall env fdef type_args method_callee fcall used' fcall_raw used_raw
+      s_args_base v_receiver vs_method s_body_base s_body_raw s' v,
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall, used') ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_raw, used_raw) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (bind_params (apply_type_params type_args (fn_params fcall))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall)) s_body_base v ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (bind_params (apply_type_params type_args (fn_params fcall_raw))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall_raw)) s_body_raw v ->
+    s' = store_remove_params
+      (apply_type_params type_args (fn_params fcall_raw)) s_body_raw ->
+    s' = store_remove_params
+      (apply_type_params type_args (fn_params fcall)) s_body_base.
+Proof.
+  intros env fdef type_args method_callee fcall used' fcall_raw used_raw
+    s_args_base v_receiver vs_method s_body_base s_body_raw s' v Halpha
+    Halpha_raw Heval_body_base Heval_body_raw Hfinal_raw.
+  rewrite Halpha in Halpha_raw. inversion Halpha_raw. subst fcall_raw used_raw.
+  destruct (direct_call_eval_height_exists
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (bind_params (apply_type_params type_args (fn_params fcall))
+      (v_receiver :: vs_method) s_args_base)
+    (subst_type_params_expr type_args (fn_body fcall)) s_body_base v
+    Heval_body_base) as (n_body & Hheight_body).
+  destruct (direct_call_eval_height_eval_result
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (bind_params (apply_type_params type_args (fn_params fcall))
+      (v_receiver :: vs_method) s_args_base)
+    (subst_type_params_expr type_args (fn_body fcall)) s_body_base v n_body
+    s_body_raw v Hheight_body Heval_body_raw) as [Hbody_store _Hbody_value].
+  subst s_body_raw. exact Hfinal_raw.
+Qed.
+
+
 Lemma direct_receiver_method_raw_replay_prefix_matching_provider :
   forall env fdef s s' v method_name type_args receiver_name receiver_args
       method_args hidden_synthetic_body receiver_callee method_callee s_hidden

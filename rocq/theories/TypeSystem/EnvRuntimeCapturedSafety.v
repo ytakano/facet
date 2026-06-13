@@ -2008,6 +2008,69 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_eval_value :
+  forall env fdef s s_hidden v,
+    fn_env_unique_by_name env ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    (exists method_name type_args receiver_name receiver_args method_args
+      target_synthetic_body hidden_synthetic_body receiver_callee
+      (method_callee : fn_def) T_body Gamma_body R_out roots,
+      direct_call_receiver_method_target_expr (fn_body fdef) =
+        Some (method_name, type_args, receiver_name, receiver_args,
+          method_args, target_synthetic_body) /\
+      hidden_synthetic_body =
+        direct_call_receiver_method_hidden_let_synthetic_body
+          (fn_ret receiver_callee) method_name type_args receiver_name
+          receiver_args method_args /\
+      preservation_ready_expr hidden_synthetic_body /\
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (fn_body_ctx fdef))
+        hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots /\
+      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+      eval (global_env_with_local_bounds env (fn_bounds fdef)) s
+        hidden_synthetic_body s_hidden v) ->
+    value_has_type env s_hidden v (fn_ret fdef).
+Proof.
+  intros env fdef s s_hidden v _Hunique _Hsummary _Hinitial Hstore
+    Hhidden_eval.
+  destruct Hhidden_eval as
+    (method_name & type_args & receiver_name & receiver_args & method_args &
+      target_synthetic_body & hidden_synthetic_body & receiver_callee &
+      method_callee & T_body & Gamma_body & R_out & roots & _Htarget &
+      _Hhidden & Hready_hidden & Htyped_shadow & Hcompat & Heval_hidden).
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fdef)).
+  assert (Hstore_body_env :
+      store_typed body_env s (sctx_of_ctx (fn_body_ctx fdef))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore. }
+  destruct (proj1 eval_preserves_typing_ready_mutual
+      body_env s hidden_synthetic_body s_hidden v Heval_hidden
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (sctx_of_ctx (fn_body_ctx fdef)) T_body (sctx_of_ctx Gamma_body)
+      Hready_hidden Hstore_body_env
+      (typed_env_roots_structural
+        body_env (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef) (sctx_of_ctx (fn_body_ctx fdef))
+        hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots
+        (typed_env_roots_shadow_safe_roots
+          body_env (fn_outlives fdef) (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef) (sctx_of_ctx (fn_body_ctx fdef))
+          hidden_synthetic_body T_body (sctx_of_ctx Gamma_body) R_out roots
+          Htyped_shadow)))
+    as [_ [Hv _]].
+  eapply VHT_Compatible.
+  - subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->

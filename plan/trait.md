@@ -71,12 +71,14 @@ validity checks must be represented in Rocq and the extracted checker.
   conditional `s' = s_hidden` result alongside the hidden evaluation and replay
   witnesses, and value consumers transport a typed replayed hidden method-call
   result across hidden cleanup to the raw final store without assuming the whole
-  hidden `ELet` is preservation-ready, and hidden-call value bridges derive the
+  hidden `ELet` is preservation-ready, hidden-call value bridges derive the
   replayed method-call result type from the typed `ECallGeneric` subexpression
-  plus the method callee summary. The actual receiver-method branch still needs
-  these replay, cleanup, and value-typing consumers composed into direct and
-  generic branch-level safety wrappers before those summaries can be enabled in
-  the public gate.
+  plus the method callee summary, and direct/generic branch-level value wrappers
+  now compose the final replay witness with hidden-let typing inversion, method
+  call typing, and hidden cleanup. The actual receiver-method branch still needs
+  those wrappers integrated with the runtime package branches and their start-store
+  invariant providers before the receiver-method summaries can be enabled in the
+  public gate.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -135,13 +137,14 @@ validity checks must be represented in Rocq and the extracted checker.
      final-store cleanup has direct and replay-package consumers once raw/base
      and hidden replay evidence are matched, value consumers can move a typed
      replayed hidden method-call result across hidden cleanup to the raw final
-     store, and hidden-call value bridges derive that replayed method-call type
-     from the typed `ECallGeneric` subexpression plus the method callee summary.
-     The runtime branch still needs direct and generic branch-level safety
-     wrappers that compose those facts with raw receiver-method evaluation and
-     hidden replay. Only after the direct and generic
-     receiver-method runtime safety branch is proved should the receiver-method
-     summaries be enabled as outer alternatives on the public base checker gate.
+     store, hidden-call value bridges derive that replayed method-call type
+     from the typed `ECallGeneric` subexpression plus the method callee summary,
+     and direct/generic branch-level value wrappers now compose those facts for
+     the replay-final witness. The runtime branch still needs those wrappers
+     wired to the package branches with concrete start-store invariant providers.
+     Only after the direct and generic receiver-method runtime safety branch is
+     proved should the receiver-method summaries be enabled as outer alternatives
+     on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

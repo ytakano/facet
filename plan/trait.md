@@ -30,14 +30,10 @@ validity checks must be represented in Rocq and the extracted checker.
   unlocked by OCaml desugaring alone: lowering the receiver through a hidden let
   still fails the extracted end-to-end safety gate. Rocq now has the direct and
   generic receiver-method path factored into executable sidecar/checker
-  summaries, proof-side shape and view lemmas, hidden-let and hidden-body
-  packages, replay-parameterized bridge lemmas, receiver/method-call
-  inversion, hidden method-call argument-strip packaging, cleanup helpers,
-  post-hidden-receiver argument strip helpers, consumed hidden-frame relation operation, parameter, place-strip, and eval/args/fields
-  strip helpers, store-operation forward/inverse helpers, and a
-  behavior-preserving split
-  between the active
-  captured-call core gate and its public base wrapper. Those summaries remain
+  summaries, proof-side shape/view lemmas, hidden-let/body packages,
+  replay bridge, inversion and strip helpers, consumed-frame support, and a
+  behavior-preserving split between the active captured-call core gate and its
+  public base wrapper. Those summaries remain
   inactive until their dedicated runtime safety branch is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under

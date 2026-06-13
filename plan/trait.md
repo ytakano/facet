@@ -35,7 +35,7 @@ validity checks must be represented in Rocq and the extracted checker.
   hidden-let synthetic receiver body constructors, hidden receiver `EVar`
   evaluation, consumed-frame and parameter-cleanup helpers, and inversion helpers, structured receiver-method checker view lemmas, direct and generic typed
   hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let
-  evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion and receiver-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and a behavior-preserving split
+  evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion, receiver-cleanup, and final-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and a behavior-preserving split
   between the active captured-call core gate and its
   public base wrapper. The direct and generic receiver-method checker summaries
   remain factored but inactive until their dedicated runtime safety branch is
@@ -93,7 +93,7 @@ validity checks must be represented in Rocq and the extracted checker.
      receiver wrappers, synthetic-body evaluation lemmas, hidden-let body
      constructors, hidden receiver `EVar` evaluation, consumed-frame and parameter-cleanup helpers, and inversion helpers, hidden-let
      receiver-method checker summaries, structured checker view lemmas, direct and generic typed
-     hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion and receiver-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and the active-core/public-base gate split
+     hidden-body packages for receiver-method summaries, direct and generic replay-parameterized hidden-let evaluation bridges, a method-argument hidden-receiver strip helper, a hidden receiver method-call inversion, receiver-cleanup, and final-cleanup helper, direct and generic checked hidden-body packages, direct and generic conditional hidden-body eval safety helpers, direct and generic hidden-let eval inversion helpers, and the active-core/public-base gate split
      now isolate direct and generic direct-call receiver method shapes without
      changing accepted programs. Next, remove the remaining conditional premises by using the hidden-let
      inversions to prove callee-body replay under the added hidden receiver binding and by routing the hidden

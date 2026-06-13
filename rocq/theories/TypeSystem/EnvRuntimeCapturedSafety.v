@@ -1381,6 +1381,104 @@ Proof.
   eapply store_update_state_store_mark_used_add_diff; eassumption.
 Qed.
 
+Lemma store_update_state_store_mark_used_add_inv :
+  forall x y f T v s s_hidden',
+    x <> y ->
+    store_update_state x f (store_mark_used y (store_add y T v s)) =
+      Some s_hidden' ->
+    exists s',
+      s_hidden' = store_mark_used y (store_add y T v s') /\
+      store_update_state x f s = Some s'.
+Proof.
+  intros x y f T v s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  rewrite ident_eqb_refl in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_state x f s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split.
+    + unfold store_add; simpl; rewrite ident_eqb_refl; reflexivity.
+    + reflexivity.
+Qed.
+
+Lemma store_update_val_store_mark_used_add_inv :
+  forall x y T v v_new s s_hidden',
+    x <> y ->
+    store_update_val x v_new (store_mark_used y (store_add y T v s)) =
+      Some s_hidden' ->
+    exists s',
+      s_hidden' = store_mark_used y (store_add y T v s') /\
+      store_update_val x v_new s = Some s'.
+Proof.
+  intros x y T v v_new s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  rewrite ident_eqb_refl in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_val x v_new s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split.
+    + unfold store_add; simpl; rewrite ident_eqb_refl; reflexivity.
+    + reflexivity.
+Qed.
+
+Lemma store_update_path_store_mark_used_add_inv :
+  forall x y path T v v_new s s_hidden',
+    x <> y ->
+    store_update_path x path v_new
+      (store_mark_used y (store_add y T v s)) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_mark_used y (store_add y T v s') /\
+      store_update_path x path v_new s = Some s'.
+Proof.
+  intros x y path T v v_new s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  rewrite ident_eqb_refl in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_path x path v_new s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split.
+    + unfold store_add; simpl; rewrite ident_eqb_refl; reflexivity.
+    + reflexivity.
+Qed.
+
+Lemma store_restore_path_store_mark_used_add_inv :
+  forall x y path T v s s_hidden',
+    x <> y ->
+    store_restore_path x path
+      (store_mark_used y (store_add y T v s)) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_mark_used y (store_add y T v s') /\
+      store_restore_path x path s = Some s'.
+Proof.
+  intros x y path T v s s_hidden' Hneq Hrestore.
+  unfold store_restore_path in *.
+  eapply store_update_state_store_mark_used_add_inv; eassumption.
+Qed.
+
+Lemma store_consume_path_store_mark_used_add_inv :
+  forall x y path T v s s_hidden',
+    x <> y ->
+    store_consume_path x path
+      (store_mark_used y (store_add y T v s)) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_mark_used y (store_add y T v s') /\
+      store_consume_path x path s = Some s'.
+Proof.
+  intros x y path T v s s_hidden' Hneq Hconsume.
+  unfold store_consume_path in *.
+  rewrite store_lookup_store_mark_used_add_diff in Hconsume by exact Hneq.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_update_state_store_mark_used_add_inv; eassumption.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_let_bound_generic_direct_call_roots :
   forall env Omega n R Sigma m x T_hidden fname type_args args T_body
       Sigma_out R_out roots,

@@ -2145,6 +2145,68 @@ Proof.
   exact Hhidden_in_var.
 Qed.
 
+Lemma hidden_receiver_method_call_eval_method_params_fresh_inv :
+  forall env s_receiver T_receiver v_receiver method_name type_args
+      method_args s_method_hidden v,
+    eval env
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)
+      (ECallGeneric method_name type_args
+        (EVar receiver_method_hidden_receiver_name :: method_args))
+      s_method_hidden v ->
+    preservation_ready_args method_args ->
+    exists s_var_hidden s_args_hidden s_body_hidden method_callee fcall used'
+        v_receiver_arg vs_method,
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name)
+        s_var_hidden v_receiver_arg /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver_arg :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden v /\
+      s_method_hidden =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden /\
+      v_receiver_arg = v_receiver /\
+      store_remove receiver_method_hidden_receiver_name s_var_hidden =
+        s_receiver /\
+      In receiver_method_hidden_receiver_name (store_names s_args_hidden) /\
+      ~ In receiver_method_hidden_receiver_name
+          (ctx_names (params_ctx
+            (apply_type_params type_args (fn_params fcall)))) /\
+      store_remove receiver_method_hidden_receiver_name s_method_hidden =
+        store_remove_params (apply_type_params type_args (fn_params fcall))
+          (store_remove receiver_method_hidden_receiver_name s_body_hidden).
+Proof.
+  intros env s_receiver T_receiver v_receiver method_name type_args
+    method_args s_method_hidden v Heval_call Hready_args.
+  destruct (hidden_receiver_method_call_eval_hidden_name_in_args_store env
+    s_receiver T_receiver v_receiver method_name type_args method_args
+    s_method_hidden v Heval_call Hready_args)
+    as (s_var_hidden & s_args_hidden & s_body_hidden & method_callee &
+      fcall & used' & v_receiver_arg & vs_method & Hlookup & Hcaptures &
+      Heval_receiver & Heval_args & Halpha & Heval_body &
+      Hremove_params & Hvalue & Hremove_receiver & Hhidden_in_args).
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    (store_names s_args_hidden) method_callee fcall used' type_args
+    receiver_method_hidden_receiver_name Halpha Hhidden_in_args)
+    as [Hnotin_params _Hnotin_body_locals].
+  exists s_var_hidden, s_args_hidden, s_body_hidden, method_callee, fcall,
+    used', v_receiver_arg, vs_method.
+  repeat split; try eassumption.
+  rewrite Hremove_params.
+  apply store_remove_params_store_remove_commute.
+  exact Hnotin_params.
+Qed.
+
 Lemma generic_direct_call_receiver_method_eval_synthetic :
   forall env s raw_body method_name type_args receiver_name receiver_type_args
       receiver_args method_args synthetic_body s' v,

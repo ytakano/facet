@@ -105,12 +105,12 @@ validity checks must be represented in Rocq and the extracted checker.
   and the hidden receiver's index-0 name is proved not to change
   `fresh_ident` when inserted into an alpha-renaming seed. That invariant now
   reaches the function-definition seed, preserves the full parameter-renaming
-  output parameters and rename environment, and carries the final parameter
-  `used` lists as the same hidden-receiver insertion relation. Public runtime
-  branch wiring still needs that relation lifted through body alpha-renaming
-  and remaining hidden/base alpha transport before the direct/generic
-  replay/final-store
-  matching providers can close; receiver-method
+  output parameters and rename environment, carries the final parameter `used`
+  lists as the same hidden-receiver insertion relation, and has matching
+  transport for identifier-list binder renaming. Public runtime branch wiring
+  still needs that relation lifted through expression body alpha-renaming and
+  remaining hidden/base alpha transport before the direct/generic
+  replay/final-store matching providers can close; receiver-method
   summaries remain inactive until that public runtime safety branch is proved
   and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
@@ -184,7 +184,8 @@ validity checks must be represented in Rocq and the extracted checker.
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
      over their package consumers. The next proof step is carrying the preserved
-     post-parameter hidden/base `used` relation through body alpha-renaming, then
+     post-parameter hidden/base `used` relation through expression body
+     alpha-renaming, using the identifier-list transport for match binders, then
      using that hidden/base alpha transport with the shared body-final helper to
      complete the direct and generic final-store matching providers before
      wiring the public receiver-method runtime safety branch through those

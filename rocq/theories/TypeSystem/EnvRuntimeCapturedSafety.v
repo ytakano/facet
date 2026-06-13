@@ -10375,6 +10375,47 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_idents_receiver_method_hidden_receiver_insert :
+  forall rho prefix suffix xs,
+    fst (fst (alpha_rename_idents rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) xs)) =
+    fst (fst (alpha_rename_idents rho (prefix ++ suffix) xs)) /\
+    snd (fst (alpha_rename_idents rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) xs)) =
+    snd (fst (alpha_rename_idents rho (prefix ++ suffix) xs)) /\
+    exists prefix',
+      snd (alpha_rename_idents rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix) xs) =
+        prefix' ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_idents rho (prefix ++ suffix) xs) =
+        prefix' ++ suffix.
+Proof.
+  intros rho prefix suffix xs.
+  revert rho prefix suffix.
+  induction xs as [| x xs IH]; intros rho prefix suffix.
+  - simpl. repeat split. exists prefix. split; reflexivity.
+  - simpl.
+    rewrite (fresh_ident_receiver_method_hidden_receiver_name_insert
+      x prefix suffix).
+    destruct (IH rho (fresh_ident x (prefix ++ suffix) :: prefix) suffix)
+      as (Hxs & Hrho & prefix' & Hhidden_used & Hbase_used).
+    destruct (alpha_rename_idents rho
+      (fresh_ident x (prefix ++ suffix) ::
+       prefix ++ receiver_method_hidden_receiver_name :: suffix) xs)
+      as [[xs_hidden rho_hidden] used_hidden'] eqn:Hhidden.
+    destruct (alpha_rename_idents rho
+      (fresh_ident x (prefix ++ suffix) :: prefix ++ suffix) xs)
+      as [[xs_base rho_base] used_base'] eqn:Hbase.
+    simpl in Hxs, Hrho, Hhidden_used, Hbase_used.
+    rewrite Hhidden in Hxs, Hrho, Hhidden_used.
+    rewrite Hbase in Hxs, Hrho, Hbase_used.
+    simpl in Hxs, Hrho, Hhidden_used, Hbase_used.
+    subst xs_hidden rho_hidden.
+    repeat split; try reflexivity.
+    exists prefix'. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

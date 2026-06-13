@@ -6101,6 +6101,27 @@ Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_repla
       root_env_excludes_params (fn_params fdef) R_out /\
       eval (global_env_with_local_bounds env (fn_bounds fdef))
         s (fn_body fdef) s' v /\
+      (exists s_receiver_raw v_receiver_raw s_args_raw vs_method_raw
+          fcall_raw used_raw s_body_raw,
+        eval (global_env_with_local_bounds env (fn_bounds fdef))
+          s (ECall receiver_name receiver_args) s_receiver_raw
+          v_receiver_raw /\
+        eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+          s_receiver_raw method_args s_args_raw vs_method_raw /\
+        lookup_fn method_name
+          (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+          Some method_callee /\
+        fn_captures method_callee = [] /\
+        alpha_rename_fn_def (store_names s_args_raw) method_callee =
+          (fcall_raw, used_raw) /\
+        eval (global_env_with_local_bounds env (fn_bounds fdef))
+          (bind_params (apply_type_params type_args (fn_params fcall_raw))
+            (v_receiver_raw :: vs_method_raw) s_args_raw)
+          (subst_type_params_expr type_args (fn_body fcall_raw))
+          s_body_raw v /\
+        s' = store_remove_params
+          (apply_type_params type_args (fn_params fcall_raw))
+          s_body_raw) /\
       (forall T_receiver_call Sigma_receiver_out R_receiver_out
           receiver_roots,
         typed_env_roots_shadow_safe
@@ -6296,11 +6317,47 @@ Proof.
       (global_env_with_local_bounds env (fn_bounds fdef))).
   { eapply fn_env_unique_by_name_global_env_with_local_bounds.
     exact Hunique. }
+  assert (Hraw_eval_package :
+    exists s_receiver_raw v_receiver_raw s_args_raw vs_method_raw
+        fcall_raw used_raw s_body_raw,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s (ECall receiver_name receiver_args) s_receiver_raw
+        v_receiver_raw /\
+      eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+        s_receiver_raw method_args s_args_raw vs_method_raw /\
+      lookup_fn method_name
+        (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+        Some method_callee /\
+      fn_captures method_callee = [] /\
+      alpha_rename_fn_def (store_names s_args_raw) method_callee =
+        (fcall_raw, used_raw) /\
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_raw))
+          (v_receiver_raw :: vs_method_raw) s_args_raw)
+        (subst_type_params_expr type_args (fn_body fcall_raw))
+        s_body_raw v /\
+      s' = store_remove_params
+        (apply_type_params type_args (fn_params fcall_raw))
+        s_body_raw).
+  { destruct (direct_call_receiver_method_raw_call_eval_inv
+      (global_env_with_local_bounds env (fn_bounds fdef)) s
+      (fn_body fdef) method_name type_args receiver_name receiver_args
+      method_args target_synthetic_body s' v Htarget Heval_body)
+      as (s_receiver_raw & v_receiver_raw & s_args_raw & vs_method_raw &
+        method_callee_raw & fcall_raw & used_raw & s_body_raw &
+        Heval_receiver_raw & Heval_args_raw & Hlookup_raw & Hcaptures_raw &
+        Halpha_raw & Heval_body_raw & Hfinal_raw).
+    assert (method_callee_raw = method_callee) as ->.
+    { eapply lookup_fn_unique_by_name; eassumption. }
+    exists s_receiver_raw, v_receiver_raw, s_args_raw, vs_method_raw,
+      fcall_raw, used_raw, s_body_raw.
+    repeat split; try eassumption. }
   exists method_name, type_args, receiver_name, receiver_args, method_args,
     target_synthetic_body, hidden_synthetic_body, receiver_callee,
     method_callee, T_body, Gamma_body, R_out_checked, roots_checked.
   repeat match goal with
   | |- _ /\ _ => split
+  | |- exists s_receiver_raw, _ => exact Hraw_eval_package
   | |- callee_body_root_shadow_provenance_summary env receiver_callee -> _ =>
       exact Hreceiver_provenance_to_body
   | |- env_fns_preservation_ready env -> _ =>
@@ -6435,6 +6492,27 @@ Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_runti
       root_env_excludes_params (fn_params fdef) R_out /\
       eval (global_env_with_local_bounds env (fn_bounds fdef))
         s (fn_body fdef) s' v /\
+      (exists s_receiver_raw v_receiver_raw s_args_raw vs_method_raw
+          fcall_raw used_raw s_body_raw,
+        eval (global_env_with_local_bounds env (fn_bounds fdef))
+          s (ECallGeneric receiver_name receiver_type_args receiver_args)
+          s_receiver_raw v_receiver_raw /\
+        eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+          s_receiver_raw method_args s_args_raw vs_method_raw /\
+        lookup_fn method_name
+          (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+          Some method_callee /\
+        fn_captures method_callee = [] /\
+        alpha_rename_fn_def (store_names s_args_raw) method_callee =
+          (fcall_raw, used_raw) /\
+        eval (global_env_with_local_bounds env (fn_bounds fdef))
+          (bind_params (apply_type_params type_args (fn_params fcall_raw))
+            (v_receiver_raw :: vs_method_raw) s_args_raw)
+          (subst_type_params_expr type_args (fn_body fcall_raw))
+          s_body_raw v /\
+        s' = store_remove_params
+          (apply_type_params type_args (fn_params fcall_raw))
+          s_body_raw) /\
       (forall sigma Sigma_receiver_args R_receiver_args receiver_arg_roots,
         env_fns_preservation_ready
           (global_env_with_local_bounds env (fn_bounds fdef)) ->
@@ -6626,11 +6704,48 @@ Proof.
       (global_env_with_local_bounds env (fn_bounds fdef))).
   { eapply fn_env_unique_by_name_global_env_with_local_bounds.
     exact Hunique. }
+  assert (Hraw_eval_package :
+    exists s_receiver_raw v_receiver_raw s_args_raw vs_method_raw
+        fcall_raw used_raw s_body_raw,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s (ECallGeneric receiver_name receiver_type_args receiver_args)
+        s_receiver_raw v_receiver_raw /\
+      eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+        s_receiver_raw method_args s_args_raw vs_method_raw /\
+      lookup_fn method_name
+        (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+        Some method_callee /\
+      fn_captures method_callee = [] /\
+      alpha_rename_fn_def (store_names s_args_raw) method_callee =
+        (fcall_raw, used_raw) /\
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_raw))
+          (v_receiver_raw :: vs_method_raw) s_args_raw)
+        (subst_type_params_expr type_args (fn_body fcall_raw))
+        s_body_raw v /\
+      s' = store_remove_params
+        (apply_type_params type_args (fn_params fcall_raw))
+        s_body_raw).
+  { destruct (generic_direct_call_receiver_method_raw_call_eval_inv
+      (global_env_with_local_bounds env (fn_bounds fdef)) s
+      (fn_body fdef) method_name type_args receiver_name receiver_type_args
+      receiver_args method_args target_synthetic_body s' v
+      Htarget Heval_body)
+      as (s_receiver_raw & v_receiver_raw & s_args_raw & vs_method_raw &
+        method_callee_raw & fcall_raw & used_raw & s_body_raw &
+        Heval_receiver_raw & Heval_args_raw & Hlookup_raw & Hcaptures_raw &
+        Halpha_raw & Heval_body_raw & Hfinal_raw).
+    assert (method_callee_raw = method_callee) as ->.
+    { eapply lookup_fn_unique_by_name; eassumption. }
+    exists s_receiver_raw, v_receiver_raw, s_args_raw, vs_method_raw,
+      fcall_raw, used_raw, s_body_raw.
+    repeat split; try eassumption. }
   exists method_name, type_args, receiver_name, receiver_type_args,
     receiver_args, method_args, target_synthetic_body, hidden_synthetic_body,
     receiver_callee, method_callee, T_body, Gamma_body, R_out, roots.
   repeat match goal with
   | |- _ /\ _ => split
+  | |- exists s_receiver_raw, _ => exact Hraw_eval_package
   | |- callee_body_root_shadow_provenance_summary env receiver_callee -> _ =>
       exact Hreceiver_provenance_to_body
   | |- env_fns_preservation_ready env -> _ =>

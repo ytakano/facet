@@ -43,9 +43,10 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoints. The direct-receiver wrappers now have selected scoped raw-body
   replay variants and ready-aware method-body scoped body-lift variants that
   derive replay providers using lookup, capture, and preservation-readiness
-  evidence from the checked route. The ready-aware body-lift providers are now
-  derivable from scoped expression-lift providers; the remaining proof boundary
-  is closing those scoped expression-lift providers as theorem-level facts.
+  evidence from the checked route. The ready-aware body-lift providers now also
+  have a narrow bridge from theorem-level hidden-frame eval lift interfaces;
+  the remaining proof boundary is proving those live/consumed ready lift
+  interfaces from the per-constructor hidden-frame lift lemmas.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -63,14 +64,14 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Close the selected scoped live/consumed expression-lift providers, or
-     factor the existing hidden-frame base-to-hidden evaluation lift lemmas into
-     reusable theorem-level providers. Ready-aware method-body lift and raw
-     replay now derive from that expression-lift boundary.
-   - Once those providers are theorem-level facts rather than extra assumptions,
-     route the active assoc-aware end-to-end safety theorem through the
-     direct-receiver endpoint and switch the OCaml accept/reject path only after
-     the extracted checker route is covered.
+   - Prove the live/consumed ready hidden-frame eval lift interfaces from the
+     existing per-constructor base-to-hidden lift lemmas, then use the new
+     bridge to make ready-aware method-body lift and raw replay theorem-level
+     facts rather than extra assumptions.
+   - Once those providers are theorem-level facts, route the active assoc-aware
+     end-to-end safety theorem through the direct-receiver endpoint and switch
+     the OCaml accept/reject path only after the extracted checker route is
+     covered.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

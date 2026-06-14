@@ -15988,6 +15988,33 @@ Definition direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval
       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
         T_receiver v_receiver s_with' s_base'.
 
+
+Definition hidden_frame_eval_lift_ready_rel
+    (env : global_env) : Prop :=
+  forall x T hidden s_with s_base e s_base' result,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_expr e ->
+    ~ In x (free_vars_expr e) ->
+    ~ In x (expr_local_store_names e) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_base e s_base' result ->
+    exists s_with',
+      eval env s_with e s_with' result /\
+      store_hidden_frame_rel x T hidden s_with' s_base'.
+
+Definition consumed_hidden_frame_eval_lift_ready_rel
+    (env : global_env) : Prop :=
+  forall x T hidden s_with s_base e s_base' result,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_expr e ->
+    ~ In x (free_vars_expr e) ->
+    ~ In x (expr_local_store_names e) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_base e s_base' result ->
+    exists s_with',
+      eval env s_with e s_with' result /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base'.
+
 Definition direct_receiver_method_live_scoped_body_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=
   forall T_receiver v_receiver type_args method_callee fcall_base used_base
@@ -16137,6 +16164,59 @@ Definition direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_e
           (v_receiver :: vs_method) s_args_hidden)
         (subst_type_params_expr type_args (fn_body fcall_base))
         s_body_hidden result.
+
+
+Lemma direct_receiver_method_live_scoped_body_lift_ready_provider_of_hidden_frame_eval_lift_ready_rel :
+  forall env fdef,
+    hidden_frame_eval_lift_ready_rel
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval
+      env fdef.
+Proof.
+  intros env fdef Hlift.
+  unfold hidden_frame_eval_lift_ready_rel in Hlift.
+  unfold direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval.
+  intros method_name v_receiver type_args receiver_callee method_callee
+    fcall_base used_base vs_method s_args_hidden s_args_base s_body_base
+    result _Henv_ready _Hlookup _Hcaptures _Halpha Hready Hfree Hlocal
+    Hrefs Hrel Heval.
+  destruct (Hlift receiver_method_hidden_receiver_name
+    (fn_ret receiver_callee) v_receiver
+    (bind_params (apply_type_params type_args (fn_params fcall_base))
+      (v_receiver :: vs_method) s_args_hidden)
+    (bind_params (apply_type_params type_args (fn_params fcall_base))
+      (v_receiver :: vs_method) s_args_base)
+    (subst_type_params_expr type_args (fn_body fcall_base))
+    s_body_base result Hrel Hready Hfree Hlocal Hrefs Heval)
+    as (s_body_hidden & Heval_hidden & _Hrel_body).
+  exists s_body_hidden. exact Heval_hidden.
+Qed.
+
+Lemma direct_receiver_method_consumed_scoped_body_lift_ready_provider_of_hidden_frame_eval_lift_ready_rel :
+  forall env fdef,
+    consumed_hidden_frame_eval_lift_ready_rel
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval
+      env fdef.
+Proof.
+  intros env fdef Hlift.
+  unfold consumed_hidden_frame_eval_lift_ready_rel in Hlift.
+  unfold direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval.
+  intros method_name v_receiver type_args receiver_callee method_callee
+    fcall_base used_base vs_method s_args_hidden s_args_base s_body_base
+    result _Henv_ready _Hlookup _Hcaptures _Halpha Hready Hfree Hlocal
+    Hrefs Hrel Heval.
+  destruct (Hlift receiver_method_hidden_receiver_name
+    (fn_ret receiver_callee) v_receiver
+    (bind_params (apply_type_params type_args (fn_params fcall_base))
+      (v_receiver :: vs_method) s_args_hidden)
+    (bind_params (apply_type_params type_args (fn_params fcall_base))
+      (v_receiver :: vs_method) s_args_base)
+    (subst_type_params_expr type_args (fn_body fcall_base))
+    s_body_base result Hrel Hready Hfree Hlocal Hrefs Heval)
+    as (s_body_hidden & Heval_hidden & _Hrel_body).
+  exists s_body_hidden. exact Heval_hidden.
+Qed.
 
 Definition direct_receiver_method_live_expr_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=

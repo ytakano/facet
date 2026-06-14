@@ -1934,6 +1934,68 @@ Proof.
       * eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma eval_place_hidden_frame_rel_lift :
+  forall s_with s_without p y path x T hidden,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_without ->
+    eval_place s_without p y path ->
+    y <> x /\ eval_place s_with p y path.
+Proof.
+  intros s_with s_without p y path x T hidden Hrel Hfresh Hrefs Heval.
+  induction Heval.
+  - split.
+    + exact Hfresh.
+    + eapply EvalPlace_Var.
+      rewrite (store_hidden_frame_rel_lookup x T hidden s_with s x0
+        Hrel Hfresh).
+      exact H.
+  - simpl in Hfresh.
+    destruct IHHeval as [Hyx Hwith]; try assumption.
+    split; [exact Hyx | constructor; exact Hwith].
+  - simpl in Hfresh.
+    destruct IHHeval as [Hrx Hwith]; try assumption.
+    assert (Hlookup_with : store_lookup r s_with = Some se_r).
+    { rewrite (store_hidden_frame_rel_lookup x T hidden s_with s r
+        Hrel Hrx). exact H. }
+    split.
+    + eapply value_refs_exclude_lookup_ref_neq.
+      * exact (store_refs_exclude_lookup_value x s r se_r Hrefs H).
+      * exact H0.
+    + eapply EvalPlace_Deref; eassumption.
+Qed.
+
+Lemma eval_place_consumed_hidden_frame_rel_lift :
+  forall s_with s_without p y path x T hidden,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_without ->
+    eval_place s_without p y path ->
+    y <> x /\ eval_place s_with p y path.
+Proof.
+  intros s_with s_without p y path x T hidden Hrel Hfresh Hrefs Heval.
+  induction Heval.
+  - split.
+    + exact Hfresh.
+    + eapply EvalPlace_Var.
+      rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with s x0
+        Hrel Hfresh).
+      exact H.
+  - simpl in Hfresh.
+    destruct IHHeval as [Hyx Hwith]; try assumption.
+    split; [exact Hyx | constructor; exact Hwith].
+  - simpl in Hfresh.
+    destruct IHHeval as [Hrx Hwith]; try assumption.
+    assert (Hlookup_with : store_lookup r s_with = Some se_r).
+    { rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with s r
+        Hrel Hrx). exact H. }
+    split.
+    + eapply value_refs_exclude_lookup_ref_neq.
+      * exact (store_refs_exclude_lookup_value x s r se_r Hrefs H).
+      * exact H0.
+    + eapply EvalPlace_Deref; eassumption.
+Qed.
+
 Lemma bind_params_consumed_hidden_frame_rel :
   forall ps vs x T hidden s_with s_without,
     ~ In x (ctx_names (params_ctx ps)) ->

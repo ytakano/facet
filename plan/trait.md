@@ -120,7 +120,9 @@ validity checks must be represented in Rocq and the extracted checker.
   alpha-renaming transport for method bodies, derives method-parameter
   freshness from live/consumed frames, packages bound-parameter start frames,
   lets both branches consume focused method-body evaluation lift premises,
-  and bridges those premises to the split replay-boundary continuation shape. Hidden
+  bridges those premises to the split replay-boundary continuation shape,
+  and has live/consumed place-level reverse hidden-frame lifts for the
+  expression replay proof. Hidden
   receiver replay now packages the initial variable step with store-safe
   method-argument hidden-frame replay, method-argument inversion, direct
   body-strip wrapper, hidden method-call constructor bridge, the existential
@@ -211,9 +213,9 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is proving the focused live/consumed method-body
-     evaluation lift premises, then switching the active public gate to the
-     direct-extended boundary. Generic
+     The next proof step is lifting the place-level reverse hidden-frame facts
+     through focused live/consumed method-body evaluation, then switching the
+     active public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

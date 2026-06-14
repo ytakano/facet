@@ -10916,6 +10916,56 @@ Proof.
 Qed.
 
 
+Lemma direct_receiver_method_receiver_store_hidden_root_exclude_checked_initial_body_env :
+  forall env fdef s receiver_name receiver_args T_receiver_call
+      Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
+      receiver_callee,
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_args ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    root_env_no_shadow (initial_root_env_for_fn fdef) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s (ECall receiver_name receiver_args) s_receiver v_receiver ->
+    fn_env_unique_by_name
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    In receiver_callee
+      (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) ->
+    fn_name receiver_callee = receiver_name ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (ECall receiver_name receiver_args) T_receiver_call Sigma_receiver
+      R_receiver receiver_roots ->
+    ~ In receiver_method_hidden_receiver_name (store_names s_receiver) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver.
+Proof.
+  intros env fdef s receiver_name receiver_args T_receiver_call
+    Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
+    receiver_callee Hsafe_receiver Hreceiver_provenance_body Hinitial
+    Hstore_initial Hrn Heval_receiver Hunique_body Hin_receiver
+    Hname_receiver Htyped_receiver Hfresh_receiver.
+  destruct (check_initial_root_runtime_ready_sound fdef s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  assert (Hstore_body :
+    store_typed (global_env_with_local_bounds env (fn_bounds fdef))
+      s (sctx_of_ctx (fn_body_ctx fdef))).
+  { eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore_initial. }
+  eapply (eval_direct_receiver_call_store_hidden_root_refs_exclude_ready_prefix_named
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef) (sctx_of_ctx (fn_body_ctx fdef))
+    receiver_name receiver_args T_receiver_call Sigma_receiver R_receiver
+    receiver_roots s s_receiver v_receiver receiver_callee);
+    try eassumption.
+Qed.
+
+
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_branch_value :
   forall env fdef s s' v method_name type_args receiver_name receiver_args
       method_args hidden_synthetic_body receiver_callee method_callee T_body

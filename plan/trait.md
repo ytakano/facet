@@ -119,8 +119,8 @@ validity checks must be represented in Rocq and the extracted checker.
   for targeted provider work. The live argument-frame path now has base-to-hidden
   alpha-renaming transport for method bodies, derives method-parameter
   freshness from live/consumed frames, packages bound-parameter start frames,
-  and lets both branches consume focused method-body evaluation lift
-  premises. Hidden
+  lets both branches consume focused method-body evaluation lift premises,
+  and bridges those premises to the split replay-boundary continuation shape. Hidden
   receiver replay now packages the initial variable step with store-safe
   method-argument hidden-frame replay, method-argument inversion, direct
   body-strip wrapper, hidden method-call constructor bridge, the existential
@@ -212,8 +212,8 @@ validity checks must be represented in Rocq and the extracted checker.
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
      The next proof step is proving the focused live/consumed method-body
-     evaluation lift premises, then wiring them into the split replay boundary
-     before switching the active public gate to the direct-extended boundary. Generic
+     evaluation lift premises, then switching the active public gate to the
+     direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

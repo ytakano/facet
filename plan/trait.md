@@ -58,9 +58,10 @@ validity checks must be represented in Rocq and the extracted checker.
   checker boundaries such as headers, expected types, annotations, explicit type
   arguments, closure/letrec signatures, and `RawCore` embedding.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
-  exported, and covered by assoc-boundary soundness. The OCaml CLI uses the
-  extracted assoc-aware end-to-end checker as its accept/reject authority, and
-  the required public theorem names point at that active path.
+  exported, and covered by assoc-boundary soundness. The public runtime safety
+  theorem now targets the assoc strict exact-closure direct-receiver endpoint;
+  the boundary soundness aliases and OCaml CLI still use the older assoc-aware
+  endpoint until extraction and CLI switching are completed.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -68,9 +69,9 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Switch the exported active assoc-aware end-to-end safety theorem and OCaml
-     accept/reject path to the assoc direct-receiver endpoint, preserving the
-     extracted checker as the only authority.
+   - Add direct-receiver boundary soundness aliases, regenerate extraction, and
+     switch the OCaml accept/reject path to the assoc direct-receiver endpoint
+     while preserving the extracted checker as the only authority.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

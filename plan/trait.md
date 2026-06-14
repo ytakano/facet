@@ -40,8 +40,10 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance summary, preservation readiness, the direct-extended
   captured/direct-receiver-or-component gate, and the no-capture component gate.
   End-to-end safety wrappers discharge those executable premises from the new
-  endpoints. The direct-receiver wrappers now have selected scoped raw-body
-  replay variants and ready-aware method-body scoped body-lift variants that
+  endpoints, including provider-free strict and assoc direct-receiver safety
+  wrappers backed by theorem-level scoped body-lift providers. The
+  direct-receiver wrappers also have selected scoped raw-body replay variants
+  and ready-aware method-body scoped body-lift variants that
   derive replay providers using lookup, capture, and preservation-readiness
   evidence from the checked route. The ready-aware body-lift providers now also
   have a narrow bridge from theorem-level hidden-frame eval lift interfaces.
@@ -66,10 +68,9 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Route the active assoc-aware end-to-end safety theorem through the
-     direct-receiver endpoint using the theorem-level scoped body-lift
-     providers, then switch the OCaml accept/reject path only after the
-     extracted checker route is covered.
+   - Switch the exported active assoc-aware end-to-end safety theorem and OCaml
+     accept/reject path to the assoc direct-receiver endpoint, preserving the
+     extracted checker as the only authority.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

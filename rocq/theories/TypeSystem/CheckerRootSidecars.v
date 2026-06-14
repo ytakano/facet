@@ -1962,6 +1962,18 @@ Definition check_env_root_shadow_captured_call_store_safe_summary
   forallb (check_fn_root_shadow_captured_call_store_safe_summary env)
     (env_fns env).
 
+Definition check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_captured_call_store_safe_summary env fdef ||
+  check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef.
+
+Definition check_env_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
     (env : global_env) (fdef : fn_def) : bool :=
   check_fn_root_shadow_captured_call_store_safe_summary env fdef ||

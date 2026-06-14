@@ -109,9 +109,10 @@ validity checks must be represented in Rocq and the extracted checker.
   hidden/base argument-store frame alpha transport. The direct and generic
   replay-final providers now consume that transport with the shared body-final
   helper. The direct and generic public checked-initial raw-package summary
-  boundaries now route through their closed replay-final providers. The
-  receiver-method summaries remain inactive until they are enabled on the public
-  base checker gate.
+  boundaries now route through their closed replay-final providers. A staged
+  direct-extended captured-call checker/Prop summary boundary now has boolean
+  soundness, but the active public checker gate still uses the base summary
+  until the direct hidden-call replay premise is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -183,12 +184,13 @@ validity checks must be represented in Rocq and the extracted checker.
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
      over their package consumers, both direct and generic replay-final providers
-     close final-store matching with the argument-store alpha bridge, and both
-     public checked-initial raw-package boundaries now route through those closed
-     providers. The next proof step is enabling the direct and generic
-     receiver-method summaries as outer alternatives on the public base checker
-     gate, then adding regression coverage for the newly accepted direct-call
-     receiver shapes.
+     close final-store matching with the argument-store alpha bridge, both public
+     checked-initial raw-package boundaries route through those closed providers,
+     and a staged direct-extended summary checker/Prop boundary is sound. The
+     next proof step is deriving the direct hidden-method replay premise from raw
+     receiver-method evaluation, then switching the active public gate to the
+     direct-extended boundary. Generic activation and regression coverage follow
+     after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

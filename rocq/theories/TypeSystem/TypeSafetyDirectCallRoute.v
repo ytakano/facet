@@ -2038,6 +2038,17 @@ Proof.
   apply root_set_store_roots_named_single. exact Hin.
 Qed.
 
+Lemma root_of_place_store_roots_named_direct_route :
+  forall s p x path,
+    In x (store_names s) ->
+    place_path p = Some (x, path) ->
+    root_set_store_roots_named (root_of_place p) s.
+Proof.
+  intros s p x path Hin Hpath.
+  unfold root_of_place. rewrite Hpath.
+  apply root_set_store_roots_named_single. exact Hin.
+Qed.
+
 Lemma root_env_store_keys_named_update_env_direct_route :
   forall R s x roots,
     root_env_store_keys_named R s ->

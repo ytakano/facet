@@ -2892,6 +2892,109 @@ Proof.
   - exact Hrel3.
 Qed.
 
+
+Lemma eval_if_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base e_cond e_then e_else s_base' v,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    eval env s_base (EIf e_cond e_then e_else) s_base' v ->
+    (forall s_base0 s_start_with s_cond value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_cond s_cond value ->
+      exists s_cond_with,
+        eval env s_start_with e_cond s_cond_with value /\
+        store_hidden_frame_rel x T hidden s_cond_with s_cond) ->
+    (forall s_base0 s_start_with s_then value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_then s_then value ->
+      exists s_then_with,
+        eval env s_start_with e_then s_then_with value /\
+        store_hidden_frame_rel x T hidden s_then_with s_then) ->
+    (forall s_base0 s_start_with s_else value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_else s_else value ->
+      exists s_else_with,
+        eval env s_start_with e_else s_else_with value /\
+        store_hidden_frame_rel x T hidden s_else_with s_else) ->
+    exists s_with',
+      eval env s_with (EIf e_cond e_then e_else) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base e_cond e_then e_else s_base' v Hrel
+    Heval Hcond_lift Hthen_lift Helse_lift.
+  inversion Heval; subst; clear Heval.
+  - match goal with
+    | Hcond : eval env s_base e_cond ?s1 (VBool true),
+      Hthen : eval env ?s1 e_then ?s2 v |- _ =>
+        destruct (Hcond_lift s_base s_with s1 (VBool true) Hrel Hcond) as
+          (s1_with & Heval_cond_with & Hrel1);
+        destruct (Hthen_lift s1 s1_with s2 v Hrel1 Hthen) as
+          (s2_with & Heval_then_with & Hrel2);
+        exists s2_with; split;
+        [ eapply Eval_If_True; eassumption | exact Hrel2 ]
+    end.
+  - match goal with
+    | Hcond : eval env s_base e_cond ?s1 (VBool false),
+      Helse : eval env ?s1 e_else ?s2 v |- _ =>
+        destruct (Hcond_lift s_base s_with s1 (VBool false) Hrel Hcond) as
+          (s1_with & Heval_cond_with & Hrel1);
+        destruct (Helse_lift s1 s1_with s2 v Hrel1 Helse) as
+          (s2_with & Heval_else_with & Hrel2);
+        exists s2_with; split;
+        [ eapply Eval_If_False; eassumption | exact Hrel2 ]
+    end.
+Qed.
+
+Lemma eval_if_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base e_cond e_then e_else s_base' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    eval env s_base (EIf e_cond e_then e_else) s_base' v ->
+    (forall s_base0 s_start_with s_cond value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_cond s_cond value ->
+      exists s_cond_with,
+        eval env s_start_with e_cond s_cond_with value /\
+        store_consumed_hidden_frame_rel x T hidden s_cond_with s_cond) ->
+    (forall s_base0 s_start_with s_then value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_then s_then value ->
+      exists s_then_with,
+        eval env s_start_with e_then s_then_with value /\
+        store_consumed_hidden_frame_rel x T hidden s_then_with s_then) ->
+    (forall s_base0 s_start_with s_else value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_else s_else value ->
+      exists s_else_with,
+        eval env s_start_with e_else s_else_with value /\
+        store_consumed_hidden_frame_rel x T hidden s_else_with s_else) ->
+    exists s_with',
+      eval env s_with (EIf e_cond e_then e_else) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base e_cond e_then e_else s_base' v Hrel
+    Heval Hcond_lift Hthen_lift Helse_lift.
+  inversion Heval; subst; clear Heval.
+  - match goal with
+    | Hcond : eval env s_base e_cond ?s1 (VBool true),
+      Hthen : eval env ?s1 e_then ?s2 v |- _ =>
+        destruct (Hcond_lift s_base s_with s1 (VBool true) Hrel Hcond) as
+          (s1_with & Heval_cond_with & Hrel1);
+        destruct (Hthen_lift s1 s1_with s2 v Hrel1 Hthen) as
+          (s2_with & Heval_then_with & Hrel2);
+        exists s2_with; split;
+        [ eapply Eval_If_True; eassumption | exact Hrel2 ]
+    end.
+  - match goal with
+    | Hcond : eval env s_base e_cond ?s1 (VBool false),
+      Helse : eval env ?s1 e_else ?s2 v |- _ =>
+        destruct (Hcond_lift s_base s_with s1 (VBool false) Hrel Hcond) as
+          (s1_with & Heval_cond_with & Hrel1);
+        destruct (Helse_lift s1 s1_with s2 v Hrel1 Helse) as
+          (s2_with & Heval_else_with & Hrel2);
+        exists s2_with; split;
+        [ eapply Eval_If_False; eassumption | exact Hrel2 ]
+    end.
+Qed.
+
 Lemma eval_fn_hidden_frame_rel_lift :
   forall env x T hidden s_with s_without fname s_without' v,
     store_hidden_frame_rel x T hidden s_with s_without ->

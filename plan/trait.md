@@ -112,10 +112,12 @@ validity checks must be represented in Rocq and the extracted checker.
   boundaries now route through their closed replay-final providers. Hidden
   receiver replay now packages the initial variable step with store-safe
   method-argument hidden-frame replay, method-argument inversion, direct
-  body-strip wrapper, hidden method-call constructor bridge, and the existential
-  parts-to-call replay bridge as live or consumed hidden-frame relations while
-  preserving the distinction between the receiver call's inferred type and the
-  hidden-frame annotation. Staged direct-only and combined
+  body-strip wrapper, hidden method-call constructor bridge, the existential
+  parts-to-call replay bridge, and a body-replay continuation bridge that turns
+  those replayed argument facts into a hidden method call. These keep live or
+  consumed hidden-frame relations while preserving the distinction between the
+  receiver call's inferred type and the hidden-frame annotation. Staged
+  direct-only and combined
   direct/generic receiver-method captured-call checker/Prop summary boundaries
   now have boolean soundness, but the active public checker gate still uses the
   base summary until the direct hidden-call replay premise is proved.
@@ -196,10 +198,10 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is combining the packaged hidden receiver/method-argument
-     replay with raw receiver-method body replay to feed the parts-to-call bridge
-     and discharge the direct hidden-method replay premise, then switching the
-     active public gate to the direct-extended boundary. Generic
+     The next proof step is supplying the raw receiver-method body replay to the
+     new hidden-call continuation bridge to discharge the direct hidden-method
+     replay premise, then switching the active public gate to the direct-extended
+     boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

@@ -140,8 +140,10 @@ validity checks must be represented in Rocq and the extracted checker.
   hidden-frame annotation. Staged
   direct-only and combined
   direct/generic receiver-method captured-call checker/Prop summary boundaries
-  now have boolean soundness, but the active public checker gate still uses the
-  base summary until the direct hidden-call replay premise is proved.
+  now have boolean soundness. The checker side also has a direct-receiver
+  captured-call-or-no-capture-component env gate with matching Prop/readiness
+  evidence, but the active public checker gate still uses the base summary until
+  the direct hidden-call replay premise is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -216,7 +218,9 @@ validity checks must be represented in Rocq and the extracted checker.
      close final-store matching with the argument-store alpha bridge, both public
      checked-initial raw-package boundaries route through those closed providers,
      staged direct-only plus combined direct/generic summary checker/Prop
-     boundaries are sound, and the direct hidden-call body-strip wrapper now
+     boundaries are sound, the direct-receiver captured-call-or-component env
+     gate has matching Prop/readiness evidence for the future public route, and
+     the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
      The next proof step is switching the active public gate to the

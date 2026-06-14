@@ -10920,6 +10920,22 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_direct_ready_endpoint :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+      env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver
+      env = infer_ok env'.
+Proof.
+  intros env env' Hprog Hdirect_ready.
+  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver.
+  rewrite (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
+    env env' Hprog).
+  rewrite Hdirect_ready.
+  reflexivity.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -10942,9 +10958,6 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hdirect_ready Hinitial Hin Hstore Heval.
-  pose proof
-    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
-      env env' Hprog) as Hbase.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_big_step_safe_checked_initial_ready.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -10954,8 +10967,8 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver.
-    rewrite Hbase. rewrite Hdirect_ready. reflexivity.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_direct_ready_endpoint;
+      eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

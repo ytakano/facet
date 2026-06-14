@@ -2033,6 +2033,78 @@ Proof.
       * constructor; assumption.
 Qed.
 
+Lemma store_hidden_frame_rel_restore_path_lift :
+  forall x T hidden s_with s_without y path s_without',
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_restore_path y path s_without = Some s_without' ->
+    exists s_with',
+      store_restore_path y path s_with = Some s_with' /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_without' Hrel Hyx Hrestore.
+  unfold store_restore_path in *.
+  eapply store_hidden_frame_rel_update_state_lift; eassumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_restore_path_lift :
+  forall x T hidden s_with s_without y path s_without',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_restore_path y path s_without = Some s_without' ->
+    exists s_with',
+      store_restore_path y path s_with = Some s_with' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_without' Hrel Hyx Hrestore.
+  unfold store_restore_path in *.
+  eapply store_consumed_hidden_frame_rel_update_state_lift; eassumption.
+Qed.
+
+Lemma store_hidden_frame_rel_consume_path_lift :
+  forall x T hidden s_with s_without y path s_without',
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consume_path y path s_without = Some s_without' ->
+    exists s_with',
+      store_consume_path y path s_with = Some s_with' /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_without' Hrel Hyx Hconsume.
+  unfold store_consume_path in *.
+  destruct (store_lookup y s_without) as [se |] eqn:Hlookup_base;
+    try discriminate.
+  assert (Hlookup_with : store_lookup y s_with = Some se).
+  { rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_without y
+      Hrel Hyx). exact Hlookup_base. }
+  rewrite Hlookup_with.
+  destruct (binding_available_b (se_state se) path) eqn:Havail;
+    try discriminate.
+  eapply store_hidden_frame_rel_update_state_lift; eassumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_consume_path_lift :
+  forall x T hidden s_with s_without y path s_without',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consume_path y path s_without = Some s_without' ->
+    exists s_with',
+      store_consume_path y path s_with = Some s_with' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y path s_without' Hrel Hyx Hconsume.
+  unfold store_consume_path in *.
+  destruct (store_lookup y s_without) as [se |] eqn:Hlookup_base;
+    try discriminate.
+  assert (Hlookup_with : store_lookup y s_with = Some se).
+  { rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+      s_without y Hrel Hyx). exact Hlookup_base. }
+  rewrite Hlookup_with.
+  destruct (binding_available_b (se_state se) path) eqn:Havail;
+    try discriminate.
+  eapply store_consumed_hidden_frame_rel_update_state_lift; eassumption.
+Qed.
+
 Lemma store_consumed_hidden_frame_rel_update_val :
   forall x T hidden s_with s_without y v_new s_with',
     store_consumed_hidden_frame_rel x T hidden s_with s_without ->

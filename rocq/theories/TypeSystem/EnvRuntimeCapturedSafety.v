@@ -10769,6 +10769,30 @@ Proof.
 Qed.
 
 
+Lemma fresh_ident_receiver_method_let_seed_insert :
+  forall x body prefix suffix,
+    fresh_ident x
+      (x :: free_vars_expr body ++
+       prefix ++ receiver_method_hidden_receiver_name :: suffix) =
+    fresh_ident x
+      (x :: free_vars_expr body ++ prefix ++ suffix).
+Proof.
+  intros x body prefix suffix.
+  assert (Hleft :
+    x :: free_vars_expr body ++
+      prefix ++ receiver_method_hidden_receiver_name :: suffix =
+    (x :: free_vars_expr body ++ prefix) ++
+      receiver_method_hidden_receiver_name :: suffix).
+  { simpl. rewrite app_assoc. reflexivity. }
+  assert (Hright :
+    x :: free_vars_expr body ++ prefix ++ suffix =
+    (x :: free_vars_expr body ++ prefix) ++ suffix).
+  { simpl. rewrite app_assoc. reflexivity. }
+  rewrite Hleft. rewrite Hright.
+  apply fresh_ident_receiver_method_hidden_receiver_name_insert.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

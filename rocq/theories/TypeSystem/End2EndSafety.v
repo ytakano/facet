@@ -10942,13 +10942,9 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hdirect_ready Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
-  injection Hprog as <-.
+  pose proof
+    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
+      env env' Hprog) as Hbase.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_big_step_safe_checked_initial_ready.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -10994,13 +10990,9 @@ Proof.
   intros _Hsynthetic_route Hscope_synthetic _Htyping_ready Hroots_ready
     Hroot_names Hroot_keys _Hframe_ready _Hparam_ready env env' f s s' v
     Hprog Hcomponent_route Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
-  injection Hprog as <-.
+  pose proof
+    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
+      env env' Hprog) as Hbase.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family.
   - exact Hscope_synthetic.
   - exact eval_preserves_typing_ready_mutual.
@@ -11038,13 +11030,9 @@ Proof.
   intros _Hsynthetic_route Hscope_synthetic _Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s'
     v Hprog Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
-  injection Hprog as <-.
+  pose proof
+    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
+      env env' Hprog) as Hbase.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_store_safe_at_target_callbacks.
   - exact Hscope_synthetic.
   - exact eval_preserves_typing_ready_prefix_mutual.

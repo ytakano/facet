@@ -111,8 +111,8 @@ validity checks must be represented in Rocq and the extracted checker.
   expression-list traversal, struct-field traversal, match-branch traversal,
   let-binder fresh seeds, conditional expression chains, annotated and
   inferred let expression bodies, deref/drop unary wrappers, replace/assign
-  wrappers, and function-value call expressions. Public runtime branch wiring
-  still needs that relation lifted
+  wrappers, function-value call expressions, and ordinary/generic direct-call
+  expressions. Public runtime branch wiring still needs that relation lifted
   through expression body alpha-renaming and
   remaining hidden/base alpha transport before the direct/generic
   replay/final-store matching providers can close; receiver-method
@@ -192,8 +192,8 @@ validity checks must be represented in Rocq and the extracted checker.
      post-parameter hidden/base `used` relation through the remaining
      expression-body alpha-renaming constructors with the completed list,
      let-binder seed, conditional-chain, let-body, unary-wrapper,
-     assignment-wrapper, and call-expression helpers before using the
-     hidden/base alpha transport
+     assignment-wrapper, call-expression, and direct-call helpers before using
+     the hidden/base alpha transport
      with the shared body-final helper to
      complete the direct and generic final-store matching providers before
      wiring the public receiver-method runtime safety branch through those

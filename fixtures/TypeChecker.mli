@@ -1361,6 +1361,10 @@ val receiver_method_hidden_receiver_name : ident
 val direct_call_receiver_method_hidden_let_synthetic_body :
   ty -> ident -> ty list -> ident -> expr list -> expr list -> expr
 
+val generic_direct_call_receiver_method_target_expr :
+  expr -> ((((((ident * ty list) * ident) * ty list) * expr list) * expr
+  list) * expr) option
+
 val if_literal_generic_direct_call_target_expr :
   expr -> (((((((bool * ident) * ty list) * expr list) * ident) * ty
   list) * expr list) * expr) option
@@ -1579,6 +1583,13 @@ val check_program_env_end2end_assoc_strict_exact_closure : global_env -> bool
 
 val check_env_end2end_direct_receiver_ready : global_env -> bool
 
+val check_fn_root_shadow_direct_receiver_method_present :
+  global_env -> fn_def -> bool
+
+val check_env_root_shadow_direct_receiver_method_present : global_env -> bool
+
+val check_env_end2end_direct_receiver_mixed_ready : global_env -> bool
+
 val infer_program_env_end2end_strict_exact_closure_direct_receiver :
   global_env -> global_env infer_result
 
@@ -1589,6 +1600,12 @@ val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
   global_env -> global_env infer_result
 
 val check_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
+  global_env -> bool
+
+val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed :
   global_env -> bool
 
 type raw_expr =

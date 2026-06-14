@@ -14463,6 +14463,24 @@ let direct_call_receiver_method_hidden_let_synthetic_body t_receiver method_name
     (receiver_name, receiver_args)), (ECallGeneric (method_name, type_args,
     ((EVar receiver_method_hidden_receiver_name) :: method_args))))
 
+(** val generic_direct_call_receiver_method_target_expr :
+    expr -> ((((((ident * ty list) * ident) * ty list) * expr list) * expr
+    list) * expr) option **)
+
+let generic_direct_call_receiver_method_target_expr = function
+| ECallGeneric (method_name, type_args, l) ->
+  (match l with
+   | [] -> None
+   | e0 :: method_args ->
+     (match e0 with
+      | ECallGeneric (receiver_name, receiver_type_args, receiver_args) ->
+        Some ((((((method_name, type_args), receiver_name),
+          receiver_type_args), receiver_args), method_args), (ECallGeneric
+          (method_name, type_args, ((ECallGeneric (receiver_name,
+          receiver_type_args, receiver_args)) :: method_args))))
+      | _ -> None))
+| _ -> None
+
 (** val if_literal_generic_direct_call_target_expr :
     expr -> (((((((bool * ident) * ty list) * expr list) * ident) * ty
     list) * expr list) * expr) option **)
@@ -16678,6 +16696,30 @@ let check_env_end2end_direct_receiver_ready env =
     (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
       env)
 
+(** val check_fn_root_shadow_direct_receiver_method_present :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_direct_receiver_method_present _ fdef =
+  match direct_call_receiver_method_target_expr fdef.fn_body with
+  | Some _ -> true
+  | None ->
+    (match generic_direct_call_receiver_method_target_expr fdef.fn_body with
+     | Some _ -> true
+     | None -> false)
+
+(** val check_env_root_shadow_direct_receiver_method_present :
+    global_env -> bool **)
+
+let check_env_root_shadow_direct_receiver_method_present env =
+  existsb (check_fn_root_shadow_direct_receiver_method_present env)
+    env.env_fns
+
+(** val check_env_end2end_direct_receiver_mixed_ready : global_env -> bool **)
+
+let check_env_end2end_direct_receiver_mixed_ready env =
+  (||) (negb (check_env_root_shadow_direct_receiver_method_present env))
+    (check_env_end2end_direct_receiver_ready env)
+
 (** val infer_program_env_end2end_strict_exact_closure_direct_receiver :
     global_env -> global_env infer_result **)
 
@@ -16713,6 +16755,26 @@ let infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
 
 let check_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
   match infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver
+          env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed env =
+  match infer_program_env_end2end_assoc_strict_exact_closure env with
+  | Infer_ok env' ->
+    if check_env_end2end_direct_receiver_mixed_ready env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed env =
+  match infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
           env with
   | Infer_ok _ -> true
   | Infer_err _ -> false

@@ -41,16 +41,14 @@ validity checks must be represented in Rocq and the extracted checker.
   captured/direct-receiver-or-component gate, and the no-capture component gate.
   End-to-end safety wrappers discharge those executable premises from the new
   endpoints, including provider-free strict and assoc direct-receiver safety
-  wrappers backed by theorem-level scoped body-lift providers. The
-  direct-receiver wrappers also have selected scoped raw-body replay variants
-  and ready-aware method-body scoped body-lift variants that
-  derive replay providers using lookup, capture, and preservation-readiness
-  evidence from the checked route. The ready-aware body-lift providers now also
-  have a narrow bridge from theorem-level hidden-frame eval lift interfaces.
-  Those interfaces now have explicit mutual expression/args/field forms, both
-  the live and consumed mutual ready lift interfaces are proven from the
-  per-constructor hidden-frame lift lemmas, and theorem-level scoped body-lift
-  providers are derived from them.
+  wrappers backed by theorem-level scoped body-lift providers.
+- A mixed assoc direct-receiver endpoint,
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`,
+  is exported. It runs the assoc strict exact-closure checker, then requires the
+  direct-receiver safety gate only when an elaborated function body has a direct
+  or generic direct receiver-method shape. It has checker-boundary soundness
+  aliases, but its runtime safety theorem and public theorem aliases are still
+  pending.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -59,10 +57,10 @@ validity checks must be represented in Rocq and the extracted checker.
   arguments, closure/letrec signatures, and `RawCore` embedding.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
   exported, and covered by assoc-boundary soundness. The required public
-  soundness and runtime safety theorem names now target the assoc strict
+  soundness and runtime safety theorem names currently target the assoc strict
   exact-closure direct-receiver endpoint. Extraction is current, but the OCaml
-  CLI still uses the older assoc-aware endpoint because the direct-receiver
-  safety gate currently rejects broad existing valid coverage.
+  CLI still uses the older assoc-aware endpoint until the mixed endpoint has the
+  required public runtime-safety theorem and can become the sole CLI authority.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -70,10 +68,11 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Broaden or narrow the direct-receiver safety gate so the assoc
-     direct-receiver endpoint accepts the existing valid suite without fallback
-     checker logic, then switch the OCaml accept/reject path to that extracted
-     endpoint.
+   - Route the public soundness and runtime-safety theorem names through the
+     mixed assoc direct-receiver endpoint, preserving the direct gate for actual
+     direct receiver-method bodies.
+   - Switch the OCaml accept/reject path to the extracted mixed endpoint once
+     the required public theorem names target it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -101,7 +100,9 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. On `tests/valid/assign/basic_assign.facet`,
   the direct gate reports provenance=true, preservation=false,
   direct-or-component=true, component=false. The endpoint is verified but not
-  yet broad enough to be the active CLI authority.
+  broad enough to be the active CLI authority. The mixed endpoint avoids this
+  gate for programs without direct receiver-method bodies, but still needs the
+  public runtime-safety theorem route before the CLI can switch to it.
 
 ## Key Decisions
 

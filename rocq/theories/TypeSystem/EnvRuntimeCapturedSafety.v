@@ -12721,6 +12721,113 @@ Proof.
   split; assumption.
 Qed.
 
+Lemma alpha_rename_fn_def_receiver_method_hidden_receiver_consumed_args_frame_base_insert :
+  forall T_receiver v_receiver s_args_hidden s_args_base method_callee
+      fcall used_base,
+    store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver s_args_hidden s_args_base ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall, used_base) ->
+    exists used_hidden,
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used_hidden).
+Proof.
+  intros T_receiver v_receiver s_args_hidden s_args_base method_callee
+    fcall used_base Hframe Halpha.
+  destruct (store_consumed_hidden_frame_rel_store_names_insert
+    receiver_method_hidden_receiver_name T_receiver v_receiver
+    s_args_hidden s_args_base Hframe) as
+    (prefix & suffix & Hhidden_names & Hbase_names).
+  rewrite Hbase_names in Halpha.
+  destruct (alpha_rename_fn_def_receiver_method_hidden_receiver_base_insert
+    method_callee prefix suffix fcall used_base Halpha)
+    as (used_hidden & Halpha_hidden).
+  exists used_hidden. rewrite Hhidden_names. exact Halpha_hidden.
+Qed.
+
+Lemma receiver_method_consumed_body_replay_start_frame_provider :
+  forall type_args T_receiver v_receiver s_args_hidden s_args_base
+      method_callee fcall_base used_base vs_method,
+    store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver s_args_hidden s_args_base ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    exists used_hidden,
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall_base, used_hidden) /\
+      store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+        T_receiver v_receiver
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_hidden)
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_base).
+Proof.
+  intros type_args T_receiver v_receiver s_args_hidden s_args_base
+    method_callee fcall_base used_base vs_method Hframe Halpha_base.
+  destruct (alpha_rename_fn_def_receiver_method_hidden_receiver_consumed_args_frame_base_insert
+    T_receiver v_receiver s_args_hidden s_args_base method_callee fcall_base
+    used_base Hframe Halpha_base) as (used_hidden & Halpha_hidden).
+  pose proof (store_consumed_hidden_frame_rel_name_in
+    receiver_method_hidden_receiver_name T_receiver v_receiver
+    s_args_hidden s_args_base Hframe) as Hhidden_in.
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    (store_names s_args_hidden) method_callee fcall_base used_hidden type_args
+    receiver_method_hidden_receiver_name Halpha_hidden Hhidden_in) as
+    (Hnotin_params & _Hnotin_body_locals).
+  exists used_hidden.
+  split; [exact Halpha_hidden |].
+  eapply store_consumed_hidden_frame_rel_bind_params; eassumption.
+Qed.
+
+Lemma receiver_method_consumed_raw_body_replay_provider :
+  forall env type_args T_receiver v_receiver s_args_hidden s_args_base
+      method_callee fcall_base used_base vs_method s_body_base v,
+    store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver s_args_hidden s_args_base ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    eval env
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall_base))
+      s_body_base v ->
+    (forall used_hidden,
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall_base, used_hidden) ->
+      store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+        T_receiver v_receiver
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_hidden)
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_base) ->
+      exists s_body_hidden,
+        eval env
+          (bind_params (apply_type_params type_args (fn_params fcall_base))
+            (v_receiver :: vs_method) s_args_hidden)
+          (subst_type_params_expr type_args (fn_body fcall_base))
+          s_body_hidden v) ->
+    exists fcall_hidden used_hidden s_body_hidden,
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall_hidden, used_hidden) /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall_hidden))
+          (v_receiver :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall_hidden))
+        s_body_hidden v.
+Proof.
+  intros env type_args T_receiver v_receiver s_args_hidden s_args_base
+    method_callee fcall_base used_base vs_method s_body_base v Hframe
+    Halpha_base _Heval_body_base Hlift_body.
+  destruct (receiver_method_consumed_body_replay_start_frame_provider
+    type_args T_receiver v_receiver s_args_hidden s_args_base method_callee
+    fcall_base used_base vs_method Hframe Halpha_base)
+    as (used_hidden & Halpha_hidden & Hrel_start).
+  destruct (Hlift_body used_hidden Halpha_hidden Hrel_start) as
+    (s_body_hidden & Heval_body_hidden).
+  exists fcall_base, used_hidden, s_body_hidden.
+  split; assumption.
+Qed.
+
 Lemma alpha_rename_fn_def_receiver_method_hidden_receiver_args_frame_insert :
   forall T_receiver v_receiver s_args_hidden s_args_base method_callee
       fcall used_hidden,

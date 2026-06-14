@@ -2401,6 +2401,80 @@ Proof.
     + eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma eval_fn_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without fname s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    eval env s_without (EFn fname) s_without' v ->
+    exists s_with',
+      eval env s_with (EFn fname) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without fname s_without' v Hrel Heval.
+  inversion Heval; subst; clear Heval.
+  exists s_with. split; [eapply Eval_Fn; eassumption | exact Hrel].
+Qed.
+
+Lemma eval_fn_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without fname s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    eval env s_without (EFn fname) s_without' v ->
+    exists s_with',
+      eval env s_with (EFn fname) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without fname s_without' v Hrel Heval.
+  inversion Heval; subst; clear Heval.
+  exists s_with. split; [eapply Eval_Fn; eassumption | exact Hrel].
+Qed.
+
+Lemma eval_borrow_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without p rk s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_without ->
+    eval env s_without (EBorrow rk p) s_without' v ->
+    exists s_with',
+      eval env s_with (EBorrow rk p) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without p rk s_without' v Hrel
+    Hfresh Hrefs Heval.
+  inversion Heval; subst; clear Heval.
+  match type of Hrel with
+  | store_hidden_frame_rel _ _ _ _ ?s_base =>
+      match goal with
+      | Hplace_base : eval_place s_base p x0 path |- _ =>
+          destruct (eval_place_hidden_frame_rel_lift s_with s_base p x0 path x T hidden
+            Hrel Hfresh Hrefs Hplace_base) as [_ Hplace_with]
+      end
+  end.
+  exists s_with. split; [eapply Eval_Borrow; exact Hplace_with | exact Hrel].
+Qed.
+
+Lemma eval_borrow_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without p rk s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_without ->
+    eval env s_without (EBorrow rk p) s_without' v ->
+    exists s_with',
+      eval env s_with (EBorrow rk p) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without p rk s_without' v Hrel
+    Hfresh Hrefs Heval.
+  inversion Heval; subst; clear Heval.
+  match type of Hrel with
+  | store_consumed_hidden_frame_rel _ _ _ _ ?s_base =>
+      match goal with
+      | Hplace_base : eval_place s_base p x0 path |- _ =>
+          destruct (eval_place_consumed_hidden_frame_rel_lift s_with s_base p x0 path x T hidden
+            Hrel Hfresh Hrefs Hplace_base) as [_ Hplace_with]
+      end
+  end.
+  exists s_with. split; [eapply Eval_Borrow; exact Hplace_with | exact Hrel].
+Qed.
+
 Lemma bind_params_consumed_hidden_frame_rel :
   forall ps vs x T hidden s_with s_without,
     ~ In x (ctx_names (params_ctx ps)) ->

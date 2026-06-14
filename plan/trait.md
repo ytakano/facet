@@ -53,9 +53,11 @@ validity checks must be represented in Rocq and the extracted checker.
   route evidence for checked functions instead of global provider premises,
   and a static-runtime callback variant removes that route-evidence premise entirely.
   Direct `root_of_place` store-root naming helpers are proven for explicit
-  store-name membership and for prefix-typed stores, but the public
-  runtime-safety theorem still needs a stronger static-runtime bridge before it
-  can target the mixed endpoint.
+  store-name membership and for prefix-typed stores. Mixed endpoint success now
+  exposes the underlying assoc strict exact-closure success, checked-env name
+  uniqueness, and strict exact-closure readiness, but the public runtime-safety
+  theorem still needs a stronger static-runtime bridge before it can target the
+  mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -115,7 +117,8 @@ validity checks must be represented in Rocq and the extracted checker.
   recovers assoc strict exact-closure safety for that branch from
   env-local component route evidence. A mixed-ready case-split lemma and a
   static-runtime callback theorem are available, but the remaining public theorem
-  bridge still needs to remove the extra static-runtime premise before the
+  bridge can reuse mixed success to recover assoc strict exact-closure base
+  facts, but still needs to remove the extra static-runtime premise before the
   required public runtime-safety theorem can target the mixed endpoint without
   widening its interface. The attempted global static-runtime proof now has a
   concrete subgoal: direct place/borrow roots need either `In x (store_names s)`

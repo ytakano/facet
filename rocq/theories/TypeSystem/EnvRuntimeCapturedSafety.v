@@ -16333,6 +16333,86 @@ Proof.
 Qed.
 
 
+Lemma direct_receiver_method_scoped_raw_body_replay_side_conditions_from_base_args :
+  forall env (fdef : fn_def) type_args
+      (receiver_callee method_callee fcall_base : fn_def) used_base
+      (v_receiver : value) vs_method s_receiver method_args s_args_base,
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      (global_env_with_local_bounds env (fn_bounds fdef)) 10000
+      method_callee type_args ->
+    fn_captures method_callee = [] ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall_base)) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fdef)) method_args ->
+    ~ In receiver_method_hidden_receiver_name
+      (args_free_vars_ts method_args) ->
+    eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+      s_receiver method_args s_args_base vs_method ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_args_base ->
+    Forall (value_refs_exclude_root receiver_method_hidden_receiver_name)
+      vs_method ->
+    value_refs_exclude_root receiver_method_hidden_receiver_name v_receiver ->
+    ~ In receiver_method_hidden_receiver_name
+      (free_vars_expr (subst_type_params_expr type_args
+        (fn_body fcall_base))) /\
+    ~ In receiver_method_hidden_receiver_name
+      (expr_local_store_names
+        (subst_type_params_expr type_args (fn_body fcall_base))) /\
+    store_refs_exclude_root receiver_method_hidden_receiver_name
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base).
+Proof.
+  intros env fdef type_args receiver_callee method_callee fcall_base
+    used_base v_receiver vs_method s_receiver method_args s_args_base
+    Hsummary_method Hcaptures Hready_body Hsafe_method Hfree_method_args
+    Heval_args_base Halpha_base Hrefs_args Hvalues_args Hvalue_receiver.
+  destruct (receiver_method_store_safe_args_hidden_replay
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_ret receiver_callee) v_receiver s_receiver method_args
+    s_args_base vs_method Hsafe_method Hfree_method_args Heval_args_base)
+    as (s_var_hidden & s_args_hidden & Heval_var & Heval_args_hidden &
+      Hhidden_args).
+  destruct Hhidden_args as [Hhidden_live | Hhidden_consumed].
+  - destruct (receiver_method_live_body_replay_start_frame_provider
+      type_args (fn_ret receiver_callee) v_receiver s_args_hidden
+      s_args_base method_callee fcall_base used_base vs_method
+      Hhidden_live Halpha_base) as
+      (used_hidden & Halpha_hidden & _Hrel_start).
+    pose proof (store_hidden_frame_rel_name_in
+      receiver_method_hidden_receiver_name (fn_ret receiver_callee)
+      v_receiver s_args_hidden s_args_base Hhidden_live) as Hhidden_in.
+    destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+      (store_names s_args_hidden) method_callee fcall_base used_hidden
+      type_args receiver_method_hidden_receiver_name Halpha_hidden
+      Hhidden_in) as (_Hnotin_params & Hnotin_body_locals).
+    eapply (direct_receiver_method_scoped_raw_body_replay_side_conditions_from_replay_package_facts
+      env fdef type_args receiver_callee method_callee fcall_base
+      used_hidden v_receiver vs_method s_args_base s_args_hidden);
+      try eassumption.
+    left. exact Hhidden_live.
+  - destruct (receiver_method_consumed_body_replay_start_frame_provider
+      type_args (fn_ret receiver_callee) v_receiver s_args_hidden
+      s_args_base method_callee fcall_base used_base vs_method
+      Hhidden_consumed Halpha_base) as
+      (used_hidden & Halpha_hidden & _Hrel_start).
+    pose proof (store_consumed_hidden_frame_rel_name_in
+      receiver_method_hidden_receiver_name (fn_ret receiver_callee)
+      v_receiver s_args_hidden s_args_base Hhidden_consumed) as Hhidden_in.
+    destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+      (store_names s_args_hidden) method_callee fcall_base used_hidden
+      type_args receiver_method_hidden_receiver_name Halpha_hidden
+      Hhidden_in) as (_Hnotin_params & Hnotin_body_locals).
+    eapply (direct_receiver_method_scoped_raw_body_replay_side_conditions_from_replay_package_facts
+      env fdef type_args receiver_callee method_callee fcall_base
+      used_hidden v_receiver vs_method s_args_base s_args_hidden);
+      try eassumption.
+    right. exact Hhidden_consumed.
+Qed.
+
+
 Lemma direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider :
   forall env fdef s s' v,
     direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval

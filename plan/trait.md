@@ -121,7 +121,7 @@ validity checks must be represented in Rocq and the extracted checker.
   freshness from live/consumed frames, packages bound-parameter start frames,
   lets both branches consume focused method-body evaluation lift premises,
   bridges those premises to the split replay-boundary continuation shape,
-  and has live/consumed place-level plus state/value/path-update,
+  and has live/consumed variable-evaluation, place-level, state/value/path-update,
   restore-path, and consume-path reverse hidden-frame lifts for the
   expression replay proof. Hidden
   receiver replay now packages the initial variable step with store-safe

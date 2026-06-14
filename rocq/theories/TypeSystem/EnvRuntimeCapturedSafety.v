@@ -2237,6 +2237,70 @@ Proof.
       * eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma eval_var_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without y s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    eval env s_without (EVar y) s_without' v ->
+    exists s_with',
+      eval env s_with (EVar y) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without y s_without' v Hrel Hyx Heval.
+  inversion Heval; subst; clear Heval.
+  - assert (Hlookup_with : store_lookup y s_with = Some e).
+    { match goal with
+      | Hlookup_base : store_lookup y ?s_base = Some e |- _ =>
+          rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_base y
+            Hrel Hyx);
+          exact Hlookup_base
+      end. }
+    exists s_with. split; [eapply Eval_Var_Copy; eassumption | exact Hrel].
+  - assert (Hlookup_with : store_lookup y s_with = Some e).
+    { match goal with
+      | Hlookup_base : store_lookup y ?s_base = Some e |- _ =>
+          rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_base y
+            Hrel Hyx);
+          exact Hlookup_base
+      end. }
+    exists (store_mark_used y s_with).
+    split.
+    + eapply Eval_Var_Consume; eassumption.
+    + eapply store_hidden_frame_rel_mark_used; eassumption.
+Qed.
+
+Lemma eval_var_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without y s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    eval env s_without (EVar y) s_without' v ->
+    exists s_with',
+      eval env s_with (EVar y) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without y s_without' v Hrel Hyx Heval.
+  inversion Heval; subst; clear Heval.
+  - assert (Hlookup_with : store_lookup y s_with = Some e).
+    { match goal with
+      | Hlookup_base : store_lookup y ?s_base = Some e |- _ =>
+          rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+            s_base y Hrel Hyx);
+          exact Hlookup_base
+      end. }
+    exists s_with. split; [eapply Eval_Var_Copy; eassumption | exact Hrel].
+  - assert (Hlookup_with : store_lookup y s_with = Some e).
+    { match goal with
+      | Hlookup_base : store_lookup y ?s_base = Some e |- _ =>
+          rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+            s_base y Hrel Hyx);
+          exact Hlookup_base
+      end. }
+    exists (store_mark_used y s_with).
+    split.
+    + eapply Eval_Var_Consume; eassumption.
+    + eapply store_consumed_hidden_frame_rel_mark_used; eassumption.
+Qed.
+
 Lemma eval_place_hidden_frame_rel_lift :
   forall s_with s_without p y path x T hidden,
     store_hidden_frame_rel x T hidden s_with s_without ->

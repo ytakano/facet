@@ -10619,6 +10619,156 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_match_branches_receiver_method_hidden_receiver_insert :
+  forall rho prefix suffix branches,
+    (forall rho0 prefix0 suffix0 name binders e,
+      In (name, binders, e) branches ->
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst ((fix go (used0 : list ident)
+      (branches0 : list (string * list ident * expr))
+      : list (string * list ident * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name, binders, e) :: rest =>
+          let binder_seed := binders ++ free_vars_expr e ++ used0 in
+          let '(binders', rho_branch, used1) :=
+            alpha_rename_idents rho binder_seed binders in
+          let (e', used2) := alpha_rename_expr rho_branch used1 e in
+          let (rest', used3) := go used2 rest in
+          ((name, binders', e') :: rest', used3)
+      end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) branches) =
+    fst ((fix go (used0 : list ident)
+      (branches0 : list (string * list ident * expr))
+      : list (string * list ident * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name, binders, e) :: rest =>
+          let binder_seed := binders ++ free_vars_expr e ++ used0 in
+          let '(binders', rho_branch, used1) :=
+            alpha_rename_idents rho binder_seed binders in
+          let (e', used2) := alpha_rename_expr rho_branch used1 e in
+          let (rest', used3) := go used2 rest in
+          ((name, binders', e') :: rest', used3)
+      end) (prefix ++ suffix) branches) /\
+    exists prefix',
+      snd ((fix go (used0 : list ident)
+        (branches0 : list (string * list ident * expr))
+        : list (string * list ident * expr) * list ident :=
+        match branches0 with
+        | [] => ([], used0)
+        | (name, binders, e) :: rest =>
+            let binder_seed := binders ++ free_vars_expr e ++ used0 in
+            let '(binders', rho_branch, used1) :=
+              alpha_rename_idents rho binder_seed binders in
+            let (e', used2) := alpha_rename_expr rho_branch used1 e in
+            let (rest', used3) := go used2 rest in
+            ((name, binders', e') :: rest', used3)
+        end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) branches) =
+        prefix' ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd ((fix go (used0 : list ident)
+        (branches0 : list (string * list ident * expr))
+        : list (string * list ident * expr) * list ident :=
+        match branches0 with
+        | [] => ([], used0)
+        | (name, binders, e) :: rest =>
+            let binder_seed := binders ++ free_vars_expr e ++ used0 in
+            let '(binders', rho_branch, used1) :=
+              alpha_rename_idents rho binder_seed binders in
+            let (e', used2) := alpha_rename_expr rho_branch used1 e in
+            let (rest', used3) := go used2 rest in
+            ((name, binders', e') :: rest', used3)
+        end) (prefix ++ suffix) branches) =
+        prefix' ++ suffix.
+Proof.
+  intros rho prefix suffix branches Hexpr.
+  revert prefix suffix.
+  induction branches as [| [[name binders] branch] rest IH];
+    intros prefix suffix.
+  - simpl. split; [reflexivity |]. exists prefix. split; reflexivity.
+  - simpl.
+    set (prefix_seed := binders ++ free_vars_expr branch ++ prefix).
+    assert (Hseed_hidden :
+      binders ++ free_vars_expr branch ++
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix) =
+      prefix_seed ++ receiver_method_hidden_receiver_name :: suffix).
+    { subst prefix_seed. repeat rewrite <- app_assoc. reflexivity. }
+    assert (Hseed_base :
+      binders ++ free_vars_expr branch ++ (prefix ++ suffix) =
+      prefix_seed ++ suffix).
+    { subst prefix_seed. repeat rewrite <- app_assoc. reflexivity. }
+    rewrite Hseed_hidden. rewrite Hseed_base.
+    destruct (alpha_rename_idents_receiver_method_hidden_receiver_insert
+      rho prefix_seed suffix binders)
+      as (Hbinders_expr & Hrho & prefix1 & Hbinders_hidden_used & Hbinders_base_used).
+    destruct (alpha_rename_idents rho
+      (prefix_seed ++ receiver_method_hidden_receiver_name :: suffix) binders)
+      as [[binders_hidden rho_hidden] used_binders_hidden] eqn:Hbinders_hidden.
+    destruct (alpha_rename_idents rho (prefix_seed ++ suffix) binders)
+      as [[binders_base rho_base] used_binders_base] eqn:Hbinders_base.
+    simpl in Hbinders_expr, Hrho, Hbinders_hidden_used, Hbinders_base_used.
+    subst binders_hidden rho_hidden.
+    rewrite Hbinders_hidden_used. rewrite Hbinders_base_used.
+    destruct (Hexpr rho_base prefix1 suffix name binders branch)
+      as [Hbranch_expr Hbranch_used].
+    { left. reflexivity. }
+    destruct Hbranch_used as (prefix2 & Hbranch_hidden_used & Hbranch_base_used).
+    destruct (alpha_rename_expr rho_base
+      (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) branch)
+      as [branch_hidden used_branch_hidden] eqn:Hbranch_hidden.
+    destruct (alpha_rename_expr rho_base (prefix1 ++ suffix) branch)
+      as [branch_base used_branch_base] eqn:Hbranch_base.
+    simpl in Hbranch_expr, Hbranch_hidden_used, Hbranch_base_used.
+    subst branch_hidden.
+    rewrite Hbranch_hidden_used. rewrite Hbranch_base_used.
+    destruct (IH
+      (fun rho0 prefix0 suffix0 name0 binders0 e Hin =>
+        Hexpr rho0 prefix0 suffix0 name0 binders0 e (or_intror Hin))
+      prefix2 suffix) as [Hrest_expr Hrest_used].
+    destruct Hrest_used as (prefix3 & Hrest_hidden_used & Hrest_base_used).
+    destruct ((fix go (used0 : list ident)
+      (branches0 : list (string * list ident * expr))
+      : list (string * list ident * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name0, binders0, e0) :: rest0 =>
+          let binder_seed := binders0 ++ free_vars_expr e0 ++ used0 in
+          let '(binders', rho_branch, used1) :=
+            alpha_rename_idents rho binder_seed binders0 in
+          let (e', used2) := alpha_rename_expr rho_branch used1 e0 in
+          let (rest', used3) := go used2 rest0 in
+          ((name0, binders', e') :: rest', used3)
+      end) (prefix2 ++ receiver_method_hidden_receiver_name :: suffix) rest)
+      as [rest_hidden used_rest_hidden] eqn:Hrest_hidden.
+    destruct ((fix go (used0 : list ident)
+      (branches0 : list (string * list ident * expr))
+      : list (string * list ident * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name0, binders0, e0) :: rest0 =>
+          let binder_seed := binders0 ++ free_vars_expr e0 ++ used0 in
+          let '(binders', rho_branch, used1) :=
+            alpha_rename_idents rho binder_seed binders0 in
+          let (e', used2) := alpha_rename_expr rho_branch used1 e0 in
+          let (rest', used3) := go used2 rest0 in
+          ((name0, binders', e') :: rest', used3)
+      end) (prefix2 ++ suffix) rest)
+      as [rest_base used_rest_base] eqn:Hrest_base.
+    simpl in Hrest_expr, Hrest_hidden_used, Hrest_base_used.
+    subst rest_hidden.
+    split.
+    + reflexivity.
+    + exists prefix3. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

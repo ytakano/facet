@@ -11775,6 +11775,76 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_fn_def_receiver_method_hidden_receiver_insert :
+  forall fdef prefix suffix fcall used_hidden,
+    alpha_rename_fn_def
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) fdef =
+      (fcall, used_hidden) ->
+    exists used_base,
+      alpha_rename_fn_def (prefix ++ suffix) fdef = (fcall, used_base).
+Proof.
+  intros fdef prefix suffix fcall used_hidden Halpha.
+  unfold alpha_rename_fn_def in Halpha.
+  set (seed_prefix :=
+    param_names (fn_params fdef) ++
+    param_names (fn_captures fdef) ++
+    free_vars_expr (fn_body fdef) ++ prefix).
+  assert (Hseed_hidden :
+    param_names (fn_params fdef) ++
+    param_names (fn_captures fdef) ++
+    free_vars_expr (fn_body fdef) ++
+    prefix ++ receiver_method_hidden_receiver_name :: suffix =
+    seed_prefix ++ receiver_method_hidden_receiver_name :: suffix).
+  { subst seed_prefix. repeat rewrite <- app_assoc. reflexivity. }
+  assert (Hseed_base :
+    param_names (fn_params fdef) ++
+    param_names (fn_captures fdef) ++
+    free_vars_expr (fn_body fdef) ++ prefix ++ suffix =
+    seed_prefix ++ suffix).
+  { subst seed_prefix. repeat rewrite <- app_assoc. reflexivity. }
+  rewrite Hseed_hidden in Halpha.
+  destruct (alpha_rename_params []
+    (seed_prefix ++ receiver_method_hidden_receiver_name :: suffix)
+    (fn_params fdef)) as [[params_hidden rho_hidden] used1_hidden]
+    eqn:Hparams_hidden.
+  destruct (alpha_rename_params [] (seed_prefix ++ suffix) (fn_params fdef))
+    as [[params_base rho_base] used1_base] eqn:Hparams_base.
+  destruct (alpha_rename_params_receiver_method_hidden_receiver_name_insert
+    [] seed_prefix suffix (fn_params fdef)) as [Hparams Hrho].
+  rewrite Hparams_hidden in Hparams, Hrho.
+  rewrite Hparams_base in Hparams, Hrho.
+  simpl in Hparams, Hrho.
+  subst params_hidden rho_hidden.
+  destruct (alpha_rename_params_receiver_method_hidden_receiver_used_insert
+    [] seed_prefix suffix (fn_params fdef))
+    as (prefix1 & Hused1_hidden & Hused1_base).
+  rewrite Hparams_hidden in Hused1_hidden.
+  rewrite Hparams_base in Hused1_base.
+  simpl in Hused1_hidden, Hused1_base.
+  rewrite Hused1_hidden in Halpha.
+  destruct (alpha_rename_expr rho_base
+    (prefix1 ++ receiver_method_hidden_receiver_name :: suffix)
+    (fn_body fdef)) as [body_hidden used2_hidden] eqn:Hbody_hidden.
+  destruct (alpha_rename_expr rho_base (prefix1 ++ suffix) (fn_body fdef))
+    as [body_base used2_base] eqn:Hbody_base.
+  simpl in Halpha. inversion Halpha; subst fcall used_hidden; clear Halpha.
+  destruct (alpha_rename_expr_receiver_method_hidden_receiver_insert
+    (fn_body fdef) rho_base prefix1 suffix) as [Hbody Hused2].
+  destruct Hused2 as (prefix2 & Hused2_hidden & Hused2_base).
+  rewrite Hbody_hidden in Hbody, Hused2_hidden.
+  rewrite Hbody_base in Hbody, Hused2_base.
+  simpl in Hbody, Hused2_hidden, Hused2_base.
+  subst body_hidden.
+  exists used2_base.
+  unfold alpha_rename_fn_def.
+  rewrite Hseed_base.
+  rewrite Hparams_base.
+  rewrite Hused1_base.
+  rewrite Hbody_base.
+  reflexivity.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

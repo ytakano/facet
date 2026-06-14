@@ -2049,6 +2049,18 @@ Proof.
   apply root_set_store_roots_named_single. exact Hin.
 Qed.
 
+Lemma root_of_place_store_roots_named_direct_route_of_store_typed_prefix :
+  forall env s Σ p T,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    root_set_store_roots_named (root_of_place p) s.
+Proof.
+  intros env s Σ p T Hstore Htyped.
+  eapply root_set_ctx_roots_named_store_typed_prefix.
+  - exact Hstore.
+  - eapply root_of_place_ctx_roots_named. exact Htyped.
+Qed.
+
 Lemma root_env_store_keys_named_update_env_direct_route :
   forall R s x roots,
     root_env_store_keys_named R s ->

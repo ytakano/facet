@@ -52,9 +52,10 @@ validity checks must be represented in Rocq and the extracted checker.
   receiver gate. The mixed base-route theorem now uses env-local component
   route evidence for checked functions instead of global provider premises,
   and a static-runtime callback variant removes that route-evidence premise entirely.
-  A direct `root_of_place` store-root naming helper is proven for explicit
-  store-name membership, but the public runtime-safety theorem still needs a
-  stronger static-runtime bridge before it can target the mixed endpoint.
+  Direct `root_of_place` store-root naming helpers are proven for explicit
+  store-name membership and for prefix-typed stores, but the public
+  runtime-safety theorem still needs a stronger static-runtime bridge before it
+  can target the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -117,9 +118,10 @@ validity checks must be represented in Rocq and the extracted checker.
   bridge still needs to remove the extra static-runtime premise before the
   required public runtime-safety theorem can target the mixed endpoint without
   widening its interface. The attempted global static-runtime proof now has a
-  concrete subgoal: direct place/borrow roots need `In x (store_names s)`, which
-  is not implied by the current static inputs unless the root flows through the
-  root environment.
+  concrete subgoal: direct place/borrow roots need either `In x (store_names s)`
+  or a store-typing premise that connects typed-place context membership to the
+  runtime store. The current static inputs do not provide that unless the root
+  flows through the root environment.
 
 ## Key Decisions
 

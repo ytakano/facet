@@ -11584,6 +11584,94 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_match_insert :
+  forall rho prefix suffix scrut branches,
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) scrut) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) scrut) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) scrut) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) scrut) =
+          prefix1 ++ suffix0) ->
+    (forall rho0 prefix0 suffix0 name binders e,
+      In (name, binders, e) branches ->
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (EMatch scrut branches)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix) (EMatch scrut branches)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (EMatch scrut branches)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix) (EMatch scrut branches)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix scrut branches Hscrut Hbranches.
+  simpl.
+  destruct (Hscrut rho prefix suffix) as [Hscrut_expr Hscrut_used].
+  destruct Hscrut_used as
+    (prefix1 & Hscrut_hidden_used & Hscrut_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix ++ receiver_method_hidden_receiver_name :: suffix) scrut)
+    as [scrut_hidden used_scrut_hidden] eqn:Hscrut_hidden.
+  destruct (alpha_rename_expr rho (prefix ++ suffix) scrut)
+    as [scrut_base used_scrut_base] eqn:Hscrut_base.
+  simpl in Hscrut_expr, Hscrut_hidden_used, Hscrut_base_used.
+  subst scrut_hidden.
+  rewrite Hscrut_hidden_used. rewrite Hscrut_base_used.
+  destruct (alpha_rename_match_branches_receiver_method_hidden_receiver_insert
+    rho prefix1 suffix branches Hbranches) as [Hbranches_expr Hbranches_used].
+  destruct Hbranches_used as
+    (prefix2 & Hbranches_hidden_used & Hbranches_base_used).
+  destruct ((fix go (used0 : list ident)
+    (branches0 : list (string * list ident * expr))
+    : list (string * list ident * expr) * list ident :=
+    match branches0 with
+    | [] => ([], used0)
+    | (name, binders, e) :: rest =>
+        let binder_seed := binders ++ free_vars_expr e ++ used0 in
+        let (p, used1) := alpha_rename_idents rho binder_seed binders in
+        let (binders_r, rho_branch) := p in
+        let (e_r, used2) := alpha_rename_expr rho_branch used1 e in
+        let (rest_r, used3) := go used2 rest in
+        ((name, binders_r, e_r) :: rest_r, used3)
+    end) (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) branches)
+    as [branches_hidden used_branches_hidden] eqn:Hbranches_hidden.
+  destruct ((fix go (used0 : list ident)
+    (branches0 : list (string * list ident * expr))
+    : list (string * list ident * expr) * list ident :=
+    match branches0 with
+    | [] => ([], used0)
+    | (name, binders, e) :: rest =>
+        let binder_seed := binders ++ free_vars_expr e ++ used0 in
+        let (p, used1) := alpha_rename_idents rho binder_seed binders in
+        let (binders_r, rho_branch) := p in
+        let (e_r, used2) := alpha_rename_expr rho_branch used1 e in
+        let (rest_r, used3) := go used2 rest in
+        ((name, binders_r, e_r) :: rest_r, used3)
+    end) (prefix1 ++ suffix) branches)
+    as [branches_base used_branches_base] eqn:Hbranches_base.
+  simpl in Hbranches_expr, Hbranches_hidden_used, Hbranches_base_used.
+  subst branches_hidden.
+  split.
+  - reflexivity.
+  - exists prefix2. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

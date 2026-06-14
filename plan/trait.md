@@ -170,9 +170,13 @@ validity checks must be represented in Rocq and the extracted checker.
   side-condition provider; and the expression-lift route now passes through that
   selected scoped wrapper. Prop-level and checker-level public wrappers now cover
   the direct-extended captured/direct-receiver summary combined with the
-  no-capture direct-call component summary. The active top-level safety gate
-  still needs to thread those wrappers and their scoped lift premises into the
-  end-to-end checker route.
+  no-capture direct-call component summary, and the strict plus assoc strict
+  end-to-end safety routes now have direct-receiver scoped-expression-lift
+  variants that consume the direct-extended checker gate, component gate,
+  provenance/preservation readiness, and scoped lift premises. The remaining
+  top-level gate work is deriving those new premises from executable checks so
+  the active end-to-end checker route can use the direct-extended branch
+  without extra theorem assumptions.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no

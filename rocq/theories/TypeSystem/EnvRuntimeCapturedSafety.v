@@ -5000,6 +5000,49 @@ Proof.
 Qed.
 
 
+Lemma direct_receiver_method_base_args_hidden_root_exclude_from_store_safe :
+  forall env (T_receiver : Ty) (v_receiver : value) s_receiver method_args
+      s_args_base vs_method,
+    store_safe_function_value_call_args env method_args ->
+    ~ In receiver_method_hidden_receiver_name
+      (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+      (args_local_store_names method_args) ->
+    eval_args env s_receiver method_args s_args_base vs_method ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_args_base /\
+    Forall (value_refs_exclude_root receiver_method_hidden_receiver_name)
+      vs_method.
+Proof.
+  intros env T_receiver v_receiver s_receiver method_args s_args_base
+    vs_method Hsafe_method Hfree_method Hlocal_method Heval_args_base
+    Hrefs_receiver.
+  pose proof (store_safe_function_value_call_args_preservation_ready
+    env method_args Hsafe_method) as Hready_method.
+  destruct (receiver_method_hidden_receiver_var_frame_case
+    env T_receiver v_receiver s_receiver) as
+    (s_var_hidden & Heval_var & Hrel_var).
+  destruct (store_safe_function_value_call_args_hidden_frame_lift
+    env receiver_method_hidden_receiver_name T_receiver v_receiver
+    method_args s_var_hidden s_receiver s_args_base vs_method Hrel_var
+    Hsafe_method Hfree_method Heval_args_base) as
+    (s_args_hidden & Heval_args_hidden & _Hrel_args).
+  destruct (receiver_method_eval_args_after_hidden_receiver_strip
+    env s_receiver T_receiver v_receiver s_var_hidden v_receiver method_args
+    s_args_hidden vs_method Heval_var Heval_args_hidden Hready_method
+    Hfree_method Hlocal_method Hrefs_receiver) as
+    (_Hreceiver_eq & s_args_base' & Heval_args_base' & Hrefs_args &
+      Hvalues_args & _Hhidden_args).
+  destruct (direct_call_eval_args_height_exists env s_receiver method_args
+    s_args_base vs_method Heval_args_base) as (n_args & Hheight_args).
+  destruct (direct_call_eval_args_height_eval_args_result env s_receiver
+    method_args s_args_base vs_method n_args s_args_base' vs_method
+    Hheight_args Heval_args_base') as [Hargs_store _Hargs_values].
+  subst s_args_base'.
+  split; assumption.
+Qed.
+
+
 Lemma hidden_receiver_method_call_eval_intro :
   forall env s_receiver T_receiver v_receiver method_name type_args
       method_args s_var_hidden v_receiver_arg s_args_hidden vs_method

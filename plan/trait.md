@@ -157,13 +157,14 @@ validity checks must be represented in Rocq and the extracted checker.
   side-condition provider supplies the body freshness and bound-start
   ref-exclusion facts. A replay-package helper now derives that side-condition
   triple from method summary/readiness, hidden-frame replay facts, base argument
-  refs, method argument refs, and receiver-value ref exclusion; a base-argument
-  bridge now synthesizes the hidden-frame replay facts from store-safe method
-  argument evaluation; and checked-initial body-env helpers source
-  receiver-value and receiver-store ref exclusion from the typed receiver direct
-  call at the initial store. The active public checker gate still uses the base
-  summary until these helpers are assembled into a side-condition provider and
-  the scoped route is wired into the public wrapper.
+  refs, method argument refs, and receiver-value ref exclusion; base-argument
+  bridges synthesize hidden-frame replay facts plus base method-argument
+  ref/value exclusion from store-safe method argument evaluation; and
+  checked-initial body-env helpers source receiver-value and receiver-store ref
+  exclusion from the typed receiver direct call at the initial store. The active
+  public checker gate still uses the base summary until these helpers are
+  assembled into a side-condition provider and the scoped route is wired into
+  the public wrapper.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -249,14 +250,14 @@ validity checks must be represented in Rocq and the extracted checker.
      facts explicit at the provider boundary. A checked-initial adapter now
      consumes those scoped providers through a shared side-condition provider;
      replay-package and base-argument bridges derive the side-condition triple
-     from method summary/readiness, store-safe method argument replay, base
-     argument refs, method argument refs, and receiver-value ref exclusion; and
-     checked-initial body-env helpers derive receiver-value and receiver-store
-     ref exclusion from the typed receiver direct call at the
-     initial store. The next proof step is assembling these helpers into the
-     side-condition provider, then wiring the scoped route into the public
-     wrapper so the active public gate can switch to the direct-extended
-     boundary. Generic activation and
+     from method summary/readiness, store-safe method argument replay, hidden
+     frame replay facts, base method-argument ref/value exclusion, and
+     receiver-value ref exclusion; and checked-initial body-env helpers derive
+     receiver-value and receiver-store ref exclusion from the typed receiver
+     direct call at the initial store. The next proof step is assembling these
+     helpers into the side-condition provider, then wiring the scoped route into
+     the public wrapper so the active public gate can switch to the
+     direct-extended boundary. Generic activation and
      regression coverage follow after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.

@@ -2128,6 +2128,31 @@ Proof.
   eapply resolve_root_set_fuel_store_roots_named_direct_route; eassumption.
 Qed.
 
+Lemma typed_place_env_structural_store_typed_prefix_static_runtime_named_leaf :
+  forall env s Σ R p T,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    root_env_store_roots_named R s ->
+    root_set_store_roots_named (root_of_place p) s /\
+    (forall roots,
+      place_borrow_roots R p = Some roots ->
+      root_set_store_roots_named roots s) /\
+    (forall roots,
+      place_resolved_roots R p = Some roots ->
+      root_set_store_roots_named roots s).
+Proof.
+  intros env s Σ R p T Hstore Htyped Hnamed.
+  assert (Hplace : root_set_store_roots_named (root_of_place p) s).
+  { eapply root_of_place_store_roots_named_direct_route_of_store_typed_prefix;
+      eassumption. }
+  repeat split.
+  - exact Hplace.
+  - intros roots Hborrow.
+    eapply place_borrow_roots_store_roots_named_direct_route; eassumption.
+  - intros roots Hresolved.
+    eapply place_resolved_roots_store_roots_named_direct_route; eassumption.
+Qed.
+
 Inductive preservation_ready_expr_static_runtime_named_leaf : expr -> Prop :=
   | PRSRN_Unit :
       preservation_ready_expr_static_runtime_named_leaf EUnit

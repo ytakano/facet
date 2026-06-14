@@ -122,9 +122,10 @@ validity checks must be represented in Rocq and the extracted checker.
   lets both branches consume focused method-body evaluation lift premises,
   bridges those premises to the split replay-boundary continuation shape,
   and has live/consumed focused base-body replay wrappers whose bridge
-  continuations consume the concrete base body evaluation, plus
-  variable-evaluation, place-level, state/value/path-update, restore-path, and
-  consume-path reverse hidden-frame lifts for the expression replay proof. Hidden
+  continuations consume the concrete base body evaluation, expression-to-focused
+  lift constructors, plus variable-evaluation, place-level,
+  state/value/path-update, restore-path, and consume-path reverse hidden-frame
+  lifts for the expression replay proof. Hidden
   receiver replay now packages the initial variable step with store-safe
   method-argument hidden-frame replay, method-argument inversion, direct
   body-strip wrapper, hidden method-call constructor bridge, the existential
@@ -215,10 +216,9 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is deriving the focused live/consumed method-body
-     evaluation lift from the reverse hidden-frame facts at the base-body
-     bridge boundary, then switching the active public gate to the
-     direct-extended boundary. Generic
+     The next proof step is proving the expression-level live/consumed
+     reverse hidden-frame lift needed by the focused body bridge, then switching
+     the active public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

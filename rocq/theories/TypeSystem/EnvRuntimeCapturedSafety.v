@@ -10517,6 +10517,108 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_struct_fields_receiver_method_hidden_receiver_insert :
+  forall rho prefix suffix fields,
+    (forall prefix0 suffix0 fname e,
+      In (fname, e) fields ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname, e) :: rest =>
+          let (e', used1) := alpha_rename_expr rho used0 e in
+          let (rest', used2) := go used1 rest in
+          ((fname, e') :: rest', used2)
+      end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) fields) =
+    fst ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname, e) :: rest =>
+          let (e', used1) := alpha_rename_expr rho used0 e in
+          let (rest', used2) := go used1 rest in
+          ((fname, e') :: rest', used2)
+      end) (prefix ++ suffix) fields) /\
+    exists prefix',
+      snd ((fix go (used0 : list ident) (fields0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match fields0 with
+        | [] => ([], used0)
+        | (fname, e) :: rest =>
+            let (e', used1) := alpha_rename_expr rho used0 e in
+            let (rest', used2) := go used1 rest in
+            ((fname, e') :: rest', used2)
+        end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) fields) =
+        prefix' ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd ((fix go (used0 : list ident) (fields0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match fields0 with
+        | [] => ([], used0)
+        | (fname, e) :: rest =>
+            let (e', used1) := alpha_rename_expr rho used0 e in
+            let (rest', used2) := go used1 rest in
+            ((fname, e') :: rest', used2)
+        end) (prefix ++ suffix) fields) =
+        prefix' ++ suffix.
+Proof.
+  intros rho prefix suffix fields Hexpr.
+  revert prefix suffix.
+  induction fields as [| [fname field] rest IH]; intros prefix suffix.
+  - simpl. split; [reflexivity |]. exists prefix. split; reflexivity.
+  - simpl.
+    destruct (Hexpr prefix suffix fname field) as [Hfield_expr Hfield_used].
+    { left. reflexivity. }
+    destruct Hfield_used as (prefix1 & Hfield_hidden_used & Hfield_base_used).
+    destruct (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) field)
+      as [field_hidden used_hidden] eqn:Hfield_hidden.
+    destruct (alpha_rename_expr rho (prefix ++ suffix) field)
+      as [field_base used_base] eqn:Hfield_base.
+    simpl in Hfield_expr, Hfield_hidden_used, Hfield_base_used.
+    subst field_hidden.
+    rewrite Hfield_hidden_used. rewrite Hfield_base_used.
+    destruct (IH
+      (fun prefix0 suffix0 fname0 e Hin =>
+        Hexpr prefix0 suffix0 fname0 e (or_intror Hin))
+      prefix1 suffix) as [Hrest_expr Hrest_used].
+    destruct Hrest_used as (prefix2 & Hrest_hidden_used & Hrest_base_used).
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname0, e0) :: rest0 =>
+          let (e', used1) := alpha_rename_expr rho used0 e0 in
+          let (rest', used2) := go used1 rest0 in
+          ((fname0, e') :: rest', used2)
+      end) (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) rest)
+      as [rest_hidden used_rest_hidden] eqn:Hrest_hidden.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname0, e0) :: rest0 =>
+          let (e', used1) := alpha_rename_expr rho used0 e0 in
+          let (rest', used2) := go used1 rest0 in
+          ((fname0, e') :: rest', used2)
+      end) (prefix1 ++ suffix) rest)
+      as [rest_base used_rest_base] eqn:Hrest_base.
+    simpl in Hrest_expr, Hrest_hidden_used, Hrest_base_used.
+    subst rest_hidden.
+    split.
+    + reflexivity.
+    + exists prefix2. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

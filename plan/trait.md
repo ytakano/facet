@@ -107,8 +107,8 @@ validity checks must be represented in Rocq and the extracted checker.
   reaches the function-definition seed, preserves the full parameter-renaming
   output parameters and rename environment, carries the final parameter `used`
   lists as the same hidden-receiver insertion relation, and has matching
-  transport for identifier-list binder renaming plus call-argument/payload
-  expression-list traversal. Public runtime branch wiring
+  transport for identifier-list binder renaming, call-argument/payload
+  expression-list traversal, and struct-field traversal. Public runtime branch wiring
   still needs that relation lifted through expression body alpha-renaming and
   remaining hidden/base alpha transport before the direct/generic
   replay/final-store matching providers can close; receiver-method
@@ -184,9 +184,9 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is adding the remaining
-     field and branch traversal transports, then carrying the preserved
-     post-parameter hidden/base `used` relation through expression body
+     over their package consumers. The next proof step is adding branch traversal
+     transport, then carrying the preserved post-parameter hidden/base `used`
+     relation through expression body
      alpha-renaming with those list helpers before using the hidden/base alpha
      transport with the shared body-final helper to
      complete the direct and generic final-store matching providers before

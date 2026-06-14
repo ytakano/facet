@@ -110,12 +110,12 @@ validity checks must be represented in Rocq and the extracted checker.
   replay-final providers now consume that transport with the shared body-final
   helper. The direct and generic public checked-initial raw-package summary
   boundaries now route through their closed replay-final providers. Hidden
-  receiver replay now packages the initial variable step, method-argument
-  inversion, direct body-strip wrapper, hidden method-call constructor bridge,
-  and the existential parts-to-call replay bridge as live or consumed
-  hidden-frame relations while preserving the distinction between the receiver
-  call's inferred type and the hidden-frame annotation. Staged direct-only and
-  combined
+  receiver replay now packages the initial variable step, store-safe
+  method-argument hidden-frame lifting, method-argument inversion, direct
+  body-strip wrapper, hidden method-call constructor bridge, and the existential
+  parts-to-call replay bridge as live or consumed hidden-frame relations while
+  preserving the distinction between the receiver call's inferred type and the
+  hidden-frame annotation. Staged direct-only and combined
   direct/generic receiver-method captured-call checker/Prop summary boundaries
   now have boolean soundness, but the active public checker gate still uses the
   base summary until the direct hidden-call replay premise is proved.
@@ -196,8 +196,8 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is forward-replaying store-safe method arguments and
-     body from raw receiver-method evaluation into that parts-to-call bridge to
+     The next proof step is using the store-safe method-argument lift with the
+     raw receiver-method body replay to feed the parts-to-call bridge and
      discharge the direct hidden-method replay premise, then switching the active
      public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is

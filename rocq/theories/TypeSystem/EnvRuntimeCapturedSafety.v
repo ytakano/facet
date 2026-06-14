@@ -3068,6 +3068,129 @@ Proof.
     + left. apply store_hidden_frame_rel_here.
 Qed.
 
+Lemma store_safe_function_value_call_arg_hidden_frame_lift :
+  forall env x T hidden arg s_hidden s_base s_base' v,
+    (store_hidden_frame_rel x T hidden s_hidden s_base \/
+     store_consumed_hidden_frame_rel x T hidden s_hidden s_base) ->
+    store_safe_function_value_call_arg env arg ->
+    ~ In x (free_vars_expr arg) ->
+    eval env s_base arg s_base' v ->
+    exists s_hidden',
+      eval env s_hidden arg s_hidden' v /\
+      (store_hidden_frame_rel x T hidden s_hidden' s_base' \/
+       store_consumed_hidden_frame_rel x T hidden s_hidden' s_base').
+Proof.
+  intros env x T hidden arg s_hidden s_base s_base' v Hrel Hsafe Hfree Heval.
+  destruct Hsafe as [| lit | y | fname fdef Hin Hname Hsummary
+    | name lts tys sdef Hlookup_struct Hbounds
+    | name variant lts variant_lts tys edef vdef Hlookup_enum
+        Henum_bounds Hlookup_variant Hfields].
+  - inversion Heval; subst.
+    exists s_hidden. split; [constructor | exact Hrel].
+  - destruct lit; inversion Heval; subst.
+    + exists s_hidden. split; [apply Eval_LitInt | exact Hrel].
+    + exists s_hidden. split; [apply Eval_LitFloat | exact Hrel].
+    + exists s_hidden. split; [apply Eval_LitBool | exact Hrel].
+  - inversion Heval; subst.
+    + assert (Hneq : y <> x).
+      { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+      match goal with
+      | Hlookup : store_lookup y ?s0 = Some ?entry |- _ =>
+          destruct Hrel as [Hrel | Hrel];
+          [ rewrite <- (store_hidden_frame_rel_lookup x T hidden _ _ y Hrel
+              Hneq) in Hlookup;
+            exists s_hidden; split;
+            [eapply Eval_Var_Copy; eassumption | left; exact Hrel]
+          | rewrite <- (store_consumed_hidden_frame_rel_lookup x T hidden
+              _ _ y Hrel Hneq) in Hlookup;
+            exists s_hidden; split;
+            [eapply Eval_Var_Copy; eassumption | right; exact Hrel] ]
+      end.
+    + assert (Hneq : y <> x).
+      { intros Heq. apply Hfree. subst. simpl. left. reflexivity. }
+      match goal with
+      | Hlookup : store_lookup y ?s0 = Some ?entry |- _ =>
+          destruct Hrel as [Hrel | Hrel];
+          [ rewrite <- (store_hidden_frame_rel_lookup x T hidden _ _ y Hrel
+              Hneq) in Hlookup;
+            exists (store_mark_used y s_hidden); split;
+            [eapply Eval_Var_Consume; eassumption |
+             left; eapply store_hidden_frame_rel_mark_used; eassumption]
+          | rewrite <- (store_consumed_hidden_frame_rel_lookup x T hidden
+              _ _ y Hrel Hneq) in Hlookup;
+            exists (store_mark_used y s_hidden); split;
+            [eapply Eval_Var_Consume; eassumption |
+             right; eapply store_consumed_hidden_frame_rel_mark_used;
+             eassumption] ]
+      end.
+  - inversion Heval; subst.
+    exists s_hidden. split.
+    + eapply Eval_Fn; eassumption.
+    + exact Hrel.
+  - inversion Heval; subst.
+    match goal with
+    | Hfields_eval : eval_struct_fields _ _ [] _ _ _ |- _ =>
+        dependent destruction Hfields_eval
+    end.
+    exists s_hidden. split.
+    + eapply Eval_Struct.
+      * eassumption.
+      * match goal with
+        | Hfields : [] = struct_fields _ |- _ =>
+            rewrite <- Hfields; constructor
+        end.
+    + exact Hrel.
+  - inversion Heval; subst.
+    match goal with
+    | Hpayloads : eval_args _ _ [] _ _ |- _ =>
+        dependent destruction Hpayloads
+    end.
+    exists s_hidden. split.
+    + eapply Eval_Enum.
+      * exact Hlookup_enum.
+      * exact Hlookup_variant.
+      * constructor.
+    + exact Hrel.
+Qed.
+
+Lemma store_safe_function_value_call_args_hidden_frame_lift :
+  forall env x T hidden args s_hidden s_base s_base' vs,
+    (store_hidden_frame_rel x T hidden s_hidden s_base \/
+     store_consumed_hidden_frame_rel x T hidden s_hidden s_base) ->
+    store_safe_function_value_call_args env args ->
+    ~ In x (args_free_vars_ts args) ->
+    eval_args env s_base args s_base' vs ->
+    exists s_hidden',
+      eval_args env s_hidden args s_hidden' vs /\
+      (store_hidden_frame_rel x T hidden s_hidden' s_base' \/
+       store_consumed_hidden_frame_rel x T hidden s_hidden' s_base').
+Proof.
+  intros env x T hidden args s_hidden s_base s_base' vs Hrel Hsafe Hfree
+    Heval_args.
+  revert s_hidden s_base s_base' vs Hrel Hfree Heval_args.
+  induction Hsafe as [| arg rest Harg Hrest IH]; intros s_hidden s_base
+    s_base' vs Hrel Hfree Heval_args.
+  - dependent destruction Heval_args.
+    exists s_hidden. split; [constructor | exact Hrel].
+  - inversion Heval_args; subst.
+    assert (Hfree_arg : ~ In x (free_vars_expr arg)).
+    { intros Hin. apply Hfree. simpl. apply in_or_app. left. exact Hin. }
+    assert (Hfree_rest : ~ In x (args_free_vars_ts rest)).
+    { intros Hin. apply Hfree. simpl. apply in_or_app. right. exact Hin. }
+    match goal with
+    | Heval_head : eval env s_base arg ?s1 ?v_head,
+      Heval_tail : eval_args env ?s1 rest s_base' ?vs_tail |- _ =>
+        destruct (store_safe_function_value_call_arg_hidden_frame_lift
+          env x T hidden arg s_hidden s_base s1 v_head Hrel Harg
+          Hfree_arg Heval_head)
+          as (s1_hidden & Heval_hidden & Hrel1);
+        destruct (IH s1_hidden s1 s_base' vs_tail Hrel1 Hfree_rest
+          Heval_tail) as (s2_hidden & Heval_args_hidden & Hrel2);
+        exists s2_hidden; split;
+        [eapply EvalArgs_Cons; eassumption | exact Hrel2]
+    end.
+Qed.
+
 Lemma hidden_receiver_var_eval_inv :
   forall env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
     eval env

@@ -10416,6 +10416,107 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_call_args_receiver_method_hidden_receiver_insert :
+  forall rho prefix suffix args,
+    (forall prefix0 suffix0 e,
+      In e args ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) args) =
+    fst ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) (prefix ++ suffix) args) /\
+    exists prefix',
+      snd ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) args) =
+        prefix' ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) (prefix ++ suffix) args) =
+        prefix' ++ suffix.
+Proof.
+  intros rho prefix suffix args Hexpr.
+  revert prefix suffix.
+  induction args as [| arg rest IH]; intros prefix suffix.
+  - simpl. split; [reflexivity |]. exists prefix. split; reflexivity.
+  - simpl.
+    destruct (Hexpr prefix suffix arg) as [Harg_expr Harg_used].
+    { left. reflexivity. }
+    destruct Harg_used as (prefix1 & Harg_hidden_used & Harg_base_used).
+    destruct (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) arg)
+      as [arg_hidden used_hidden] eqn:Harg_hidden.
+    destruct (alpha_rename_expr rho (prefix ++ suffix) arg)
+      as [arg_base used_base] eqn:Harg_base.
+    simpl in Harg_expr, Harg_hidden_used, Harg_base_used.
+    subst arg_hidden.
+    rewrite Harg_hidden_used. rewrite Harg_base_used.
+    destruct (IH
+      (fun prefix0 suffix0 e Hin => Hexpr prefix0 suffix0 e (or_intror Hin))
+      prefix1 suffix) as [Hrest_expr Hrest_used].
+    destruct Hrest_used as (prefix2 & Hrest_hidden_used & Hrest_base_used).
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg0 :: rest0 =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg0 in
+          let (rest', used2) := go used1 rest0 in
+          (arg' :: rest', used2)
+      end) (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) rest)
+      as [rest_hidden used_rest_hidden] eqn:Hrest_hidden.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg0 :: rest0 =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg0 in
+          let (rest', used2) := go used1 rest0 in
+          (arg' :: rest', used2)
+      end) (prefix1 ++ suffix) rest)
+      as [rest_base used_rest_base] eqn:Hrest_base.
+    simpl in Hrest_expr, Hrest_hidden_used, Hrest_base_used.
+    subst rest_hidden.
+    split.
+    + reflexivity.
+    + exists prefix2. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

@@ -11186,6 +11186,164 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_call_expr_insert :
+  forall rho prefix suffix callee args,
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) callee) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) callee) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) callee) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) callee) =
+          prefix1 ++ suffix0) ->
+    (forall prefix0 suffix0 e,
+      In e args ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (ECallExpr callee args)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix) (ECallExpr callee args)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (ECallExpr callee args)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix) (ECallExpr callee args)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix callee args Hcallee Hargs.
+  simpl.
+  destruct (Hcallee rho prefix suffix) as [Hcallee_expr Hcallee_used].
+  destruct Hcallee_used as (prefix1 & Hcallee_hidden_used & Hcallee_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix ++ receiver_method_hidden_receiver_name :: suffix) callee)
+    as [callee_hidden used_callee_hidden] eqn:Hcallee_hidden.
+  destruct (alpha_rename_expr rho (prefix ++ suffix) callee)
+    as [callee_base used_callee_base] eqn:Hcallee_base.
+  simpl in Hcallee_expr, Hcallee_hidden_used, Hcallee_base_used.
+  subst callee_hidden.
+  rewrite Hcallee_hidden_used. rewrite Hcallee_base_used.
+  destruct (alpha_rename_call_args_receiver_method_hidden_receiver_insert
+    rho prefix1 suffix args Hargs) as [Hargs_expr Hargs_used].
+  destruct Hargs_used as (prefix2 & Hargs_hidden_used & Hargs_base_used).
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg', used1) := alpha_rename_expr rho used0 arg in
+        let (rest', used2) := go used1 rest in
+        (arg' :: rest', used2)
+    end) (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) args)
+    as [args_hidden used_args_hidden] eqn:Hargs_hidden.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg', used1) := alpha_rename_expr rho used0 arg in
+        let (rest', used2) := go used1 rest in
+        (arg' :: rest', used2)
+    end) (prefix1 ++ suffix) args)
+    as [args_base used_args_base] eqn:Hargs_base.
+  simpl in Hargs_expr, Hargs_hidden_used, Hargs_base_used.
+  subst args_hidden.
+  split.
+  - reflexivity.
+  - exists prefix2. split; assumption.
+Qed.
+
+
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_call_expr_generic_insert :
+  forall rho prefix suffix callee type_args args,
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) callee) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) callee) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) callee) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) callee) =
+          prefix1 ++ suffix0) ->
+    (forall prefix0 suffix0 e,
+      In e args ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (ECallExprGeneric callee type_args args)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix)
+      (ECallExprGeneric callee type_args args)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (ECallExprGeneric callee type_args args)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix)
+        (ECallExprGeneric callee type_args args)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix callee type_args args Hcallee Hargs.
+  simpl.
+  destruct (Hcallee rho prefix suffix) as [Hcallee_expr Hcallee_used].
+  destruct Hcallee_used as (prefix1 & Hcallee_hidden_used & Hcallee_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix ++ receiver_method_hidden_receiver_name :: suffix) callee)
+    as [callee_hidden used_callee_hidden] eqn:Hcallee_hidden.
+  destruct (alpha_rename_expr rho (prefix ++ suffix) callee)
+    as [callee_base used_callee_base] eqn:Hcallee_base.
+  simpl in Hcallee_expr, Hcallee_hidden_used, Hcallee_base_used.
+  subst callee_hidden.
+  rewrite Hcallee_hidden_used. rewrite Hcallee_base_used.
+  destruct (alpha_rename_call_args_receiver_method_hidden_receiver_insert
+    rho prefix1 suffix args Hargs) as [Hargs_expr Hargs_used].
+  destruct Hargs_used as (prefix2 & Hargs_hidden_used & Hargs_base_used).
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg', used1) := alpha_rename_expr rho used0 arg in
+        let (rest', used2) := go used1 rest in
+        (arg' :: rest', used2)
+    end) (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) args)
+    as [args_hidden used_args_hidden] eqn:Hargs_hidden.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg', used1) := alpha_rename_expr rho used0 arg in
+        let (rest', used2) := go used1 rest in
+        (arg' :: rest', used2)
+    end) (prefix1 ++ suffix) args)
+    as [args_base used_args_base] eqn:Hargs_base.
+  simpl in Hargs_expr, Hargs_hidden_used, Hargs_base_used.
+  subst args_hidden.
+  split.
+  - reflexivity.
+  - exists prefix2. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

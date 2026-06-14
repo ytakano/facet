@@ -3020,6 +3020,54 @@ Proof.
     + apply SCHFR_Keep; assumption.
 Qed.
 
+
+Lemma bind_params_consumed_hidden_frame_rel_lift :
+  forall ps vs x T hidden s_with s_without,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    store_consumed_hidden_frame_rel x T hidden
+      (bind_params ps vs s_with) (bind_params ps vs s_without).
+Proof.
+  induction ps as [| p ps IH]; intros vs x T hidden s_with s_without
+    Hnotin Hrel; destruct vs as [| v vs']; simpl.
+  - exact Hrel.
+  - exact Hrel.
+  - exact Hrel.
+  - apply SCHFR_Keep.
+    + simpl. intros Heq. apply Hnotin. left. exact Heq.
+    + apply IH.
+      * intros Hin. apply Hnotin. right. exact Hin.
+      * exact Hrel.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_bind_params_lift :
+  forall ps vs x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden
+      (bind_params ps vs s_with) (bind_params ps vs s_without).
+Proof.
+  intros ps vs x T hidden s_with s_without Hrel Hnotin.
+  eapply bind_params_consumed_hidden_frame_rel_lift; eassumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_remove_params_lift :
+  forall ps x T hidden s_with s_without,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_remove_params ps s_with) (store_remove_params ps s_without).
+Proof.
+  induction ps as [| p ps IH]; intros x T hidden s_with s_without Hnotin Hrel.
+  - exact Hrel.
+  - simpl.
+    apply IH.
+    + intros Hin. apply Hnotin. right. exact Hin.
+    + apply store_consumed_hidden_frame_rel_remove_lift.
+      * exact Hrel.
+      * intros Heq. apply Hnotin. left. exact Heq.
+Qed.
+
 Lemma eval_let_hidden_frame_rel_lift :
   forall env x T hidden s_with s_base m y T_bind e1 e2 s_base' v,
     store_hidden_frame_rel x T hidden s_with s_base ->
@@ -3100,6 +3148,112 @@ Proof.
   exists (store_remove y s2_with). split.
   - eapply Eval_Let; eassumption.
   - apply store_consumed_hidden_frame_rel_remove_lift; assumption.
+Qed.
+
+
+
+Lemma eval_match_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base scrut branches s_base' v,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    ~ In x (match_branches_local_store_names branches) ->
+    eval env s_base (EMatch scrut branches) s_base' v ->
+    (forall s_base0 s_start_with s_scrut value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 scrut s_scrut value ->
+      exists s_scrut_with,
+        eval env s_start_with scrut s_scrut_with value /\
+        store_hidden_frame_rel x T hidden s_scrut_with s_scrut) ->
+    (forall e_branch (ps : list param) (values : list value)
+        s_branch_start_base s_branch_start_with s_branch value,
+      store_hidden_frame_rel x T hidden s_branch_start_with s_branch_start_base ->
+      eval env s_branch_start_base e_branch s_branch value ->
+      exists s_branch_with,
+        eval env s_branch_start_with e_branch s_branch_with value /\
+        store_hidden_frame_rel x T hidden s_branch_with s_branch) ->
+    exists s_with',
+      eval env s_with (EMatch scrut branches) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base scrut branches s_base' v Hrel
+    Hbranches_notin Heval Hscrut_lift Hbranch_lift.
+  inversion Heval; subst; clear Heval.
+  destruct (Hscrut_lift s_base s_with s_scrut
+    (VEnum enum_name variant_name lts args values) Hrel H1) as
+    (s_scrut_with & Heval_scrut_with & Hrel_scrut).
+  assert (Hnotin_params : ~ In x (ctx_names (params_ctx ps))).
+  { rewrite (match_payload_params_opt_names_hfs binders lts args vdef ps H5).
+    intros Hin. apply Hbranches_notin.
+    eapply lookup_expr_branch_binders_local_store_names_in; eassumption. }
+  assert (Hrel_bind : store_hidden_frame_rel x T hidden
+    (bind_params ps values s_scrut_with) (bind_params ps values s_scrut)).
+  { eapply store_hidden_frame_rel_bind_params; eassumption. }
+  destruct (Hbranch_lift e_branch ps values (bind_params ps values s_scrut)
+    (bind_params ps values s_scrut_with) s_branch v Hrel_bind H9) as
+    (s_branch_with & Heval_branch_with & Hrel_branch).
+  exists (store_remove_params ps s_branch_with). split.
+  - eapply Eval_MatchEnum;
+      [ exact Heval_scrut_with
+      | exact H2
+      | exact H3
+      | exact H4
+      | exact H5
+      | exact H6
+      | exact H7
+      | exact Heval_branch_with
+      | reflexivity ].
+  - eapply store_remove_params_hidden_frame_rel; eassumption.
+Qed.
+
+Lemma eval_match_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base scrut branches s_base' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    ~ In x (match_branches_local_store_names branches) ->
+    eval env s_base (EMatch scrut branches) s_base' v ->
+    (forall s_base0 s_start_with s_scrut value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 scrut s_scrut value ->
+      exists s_scrut_with,
+        eval env s_start_with scrut s_scrut_with value /\
+        store_consumed_hidden_frame_rel x T hidden s_scrut_with s_scrut) ->
+    (forall e_branch (ps : list param) (values : list value)
+        s_branch_start_base s_branch_start_with s_branch value,
+      store_consumed_hidden_frame_rel x T hidden s_branch_start_with s_branch_start_base ->
+      eval env s_branch_start_base e_branch s_branch value ->
+      exists s_branch_with,
+        eval env s_branch_start_with e_branch s_branch_with value /\
+        store_consumed_hidden_frame_rel x T hidden s_branch_with s_branch) ->
+    exists s_with',
+      eval env s_with (EMatch scrut branches) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base scrut branches s_base' v Hrel
+    Hbranches_notin Heval Hscrut_lift Hbranch_lift.
+  inversion Heval; subst; clear Heval.
+  destruct (Hscrut_lift s_base s_with s_scrut
+    (VEnum enum_name variant_name lts args values) Hrel H1) as
+    (s_scrut_with & Heval_scrut_with & Hrel_scrut).
+  assert (Hnotin_params : ~ In x (ctx_names (params_ctx ps))).
+  { rewrite (match_payload_params_opt_names_hfs binders lts args vdef ps H5).
+    intros Hin. apply Hbranches_notin.
+    eapply lookup_expr_branch_binders_local_store_names_in; eassumption. }
+  assert (Hrel_bind : store_consumed_hidden_frame_rel x T hidden
+    (bind_params ps values s_scrut_with) (bind_params ps values s_scrut)).
+  { eapply store_consumed_hidden_frame_rel_bind_params_lift; eassumption. }
+  destruct (Hbranch_lift e_branch ps values (bind_params ps values s_scrut)
+    (bind_params ps values s_scrut_with) s_branch v Hrel_bind H9) as
+    (s_branch_with & Heval_branch_with & Hrel_branch).
+  exists (store_remove_params ps s_branch_with). split.
+  - eapply Eval_MatchEnum;
+      [ exact Heval_scrut_with
+      | exact H2
+      | exact H3
+      | exact H4
+      | exact H5
+      | exact H6
+      | exact H7
+      | exact Heval_branch_with
+      | reflexivity ].
+  - eapply store_consumed_hidden_frame_rel_remove_params_lift; eassumption.
 Qed.
 
 Lemma eval_fn_hidden_frame_rel_lift :
@@ -5826,7 +5980,7 @@ Proof.
         (bind_params ps (v_receiver :: vs_method) s_args_hidden)
         (bind_params ps (v_receiver :: vs_method) s_args_base)).
     { subst ps.
-      eapply store_consumed_hidden_frame_rel_bind_params; eassumption. }
+      eapply store_consumed_hidden_frame_rel_bind_params_lift; eassumption. }
     destruct (proj1 consumed_hidden_frame_eval_strip_rel_mutual env
       (bind_params ps (v_receiver :: vs_method) s_args_hidden)
       (subst_type_params_expr type_args (fn_body fcall)) s_body_hidden v
@@ -14018,7 +14172,7 @@ Proof.
     (Hnotin_params & _Hnotin_body_locals).
   exists used_hidden.
   split; [exact Halpha_hidden |].
-  eapply store_consumed_hidden_frame_rel_bind_params; eassumption.
+  eapply store_consumed_hidden_frame_rel_bind_params_lift; eassumption.
 Qed.
 
 Lemma receiver_method_live_body_replay_from_base_lift :

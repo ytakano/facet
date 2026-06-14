@@ -14055,6 +14055,47 @@ Proof.
     eapply Hreplay_all; eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_closed_raw_replay_facts :
+  forall env fdef s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    eval env s (fn_body fdef) s' v ->
+    root_env_no_shadow (initial_root_env_for_fn fdef) ->
+    (forall method_name type_args receiver_name receiver_type_args
+        receiver_args method_args receiver_callee s_receiver v_receiver,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s (ECallGeneric receiver_name receiver_type_args receiver_args)
+        s_receiver v_receiver ->
+      exists s_method_hidden,
+        eval (global_env_with_local_bounds env (fn_bounds fdef))
+          (store_add receiver_method_hidden_receiver_name
+            (subst_type_params_ty receiver_type_args
+              (fn_ret receiver_callee))
+            v_receiver s_receiver)
+          (ECallGeneric method_name type_args
+            (EVar receiver_method_hidden_receiver_name :: method_args))
+          s_method_hidden v) ->
+    value_has_type env s' v (fn_ret fdef).
+Proof.
+  intros env fdef s s' v Hunique Hevidence_body Henv_ready_body Hsummary
+    Hinitial Hstore_initial Heval Hrn Hreplay_all.
+  eapply callee_body_root_shadow_captured_call_generic_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_raw_replay_facts;
+    try eassumption.
+  intros method_name type_args receiver_name receiver_type_args receiver_args
+    method_args hidden_synthetic_body receiver_callee method_callee Hraw
+    s_hidden s_receiver v_receiver s_method_hidden s_var_hidden
+    s_args_hidden s_body_hidden fcall used' v_receiver_arg vs_method
+    s_args_base s_body_base.
+  eapply generic_direct_receiver_method_raw_replay_final_store_matching_provider;
+    eassumption.
+Qed.
 
 
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_env_consumer :

@@ -60,8 +60,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
   exported, and covered by assoc-boundary soundness. The required public
   soundness and runtime safety theorem names now target the assoc strict
-  exact-closure direct-receiver endpoint. The OCaml CLI still uses the older
-  assoc-aware endpoint until extraction and CLI switching are completed.
+  exact-closure direct-receiver endpoint. Extraction is current, but the OCaml
+  CLI still uses the older assoc-aware endpoint because the direct-receiver
+  safety gate currently rejects broad existing valid coverage.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -69,9 +70,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Regenerate extraction and switch the OCaml accept/reject path to the assoc
-     direct-receiver endpoint while preserving the extracted checker as the only
-     authority.
+   - Broaden or narrow the direct-receiver safety gate so the assoc
+     direct-receiver endpoint accepts the existing valid suite without fallback
+     checker logic, then switch the OCaml accept/reject path to that extracted
+     endpoint.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -90,6 +92,14 @@ validity checks must be represented in Rocq and the extracted checker.
      rewriting whole raw ASTs.
    - Keep parser/desugar name resolution separate from trait solving and final
      checker authority.
+
+## Unresolved Blockers
+
+- A trial CLI switch to
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver`
+  rejected many existing `tests/valid` programs with
+  `ErrEndToEndSafetyGateFailed`. The endpoint is verified but not yet broad
+  enough to be the active CLI authority.
 
 ## Key Decisions
 

@@ -168,11 +168,11 @@ validity checks must be represented in Rocq and the extracted checker.
   replay package; the direct summary wrapper can now consume selected scoped
   live/consumed raw-body replay providers without the old universal
   side-condition provider; and the expression-lift route now passes through that
-  selected scoped wrapper. A Prop-level public wrapper also covers the
-  direct-extended captured/direct-receiver summary combined with the no-capture
-  direct-call component summary. The active checker-level public gate still uses
-  the base summary until its checker boundary is wired to the direct-extended
-  summary.
+  selected scoped wrapper. Prop-level and checker-level public wrappers now cover
+  the direct-extended captured/direct-receiver summary combined with the
+  no-capture direct-call component summary. The active top-level safety gate
+  still needs to thread those wrappers and their scoped lift premises into the
+  end-to-end checker route.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -269,11 +269,12 @@ validity checks must be represented in Rocq and the extracted checker.
      the direct summary wrapper now consumes selected scoped live/consumed
      raw-body replay providers without the old universal side-condition
      provider; the expression-lift route now passes through that selected scoped
-     wrapper; and a Prop-level public wrapper covers the direct-extended
-     captured/direct-receiver summary combined with the no-capture direct-call
-     component summary. The next proof step is wiring the checker-level public
-     gate to the direct-extended summary boundary. Generic activation and
-     regression coverage follow after the direct branch is active.
+     wrapper; and Prop-level plus checker-level public wrappers cover the
+     direct-extended captured/direct-receiver summary combined with the
+     no-capture direct-call component summary. The next proof step is threading
+     those wrappers and their scoped lift premises into the active top-level
+     end-to-end checker route. Generic activation and regression coverage follow
+     after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

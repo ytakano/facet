@@ -11462,6 +11462,128 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_struct_insert :
+  forall rho prefix suffix sname lts args fields,
+    (forall prefix0 suffix0 fname e,
+      In (fname, e) fields ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (EStruct sname lts args fields)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix)
+      (EStruct sname lts args fields)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (EStruct sname lts args fields)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix)
+        (EStruct sname lts args fields)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix sname lts args fields Hfields.
+  simpl.
+  destruct (alpha_rename_struct_fields_receiver_method_hidden_receiver_insert
+    rho prefix suffix fields Hfields) as [Hfields_expr Hfields_used].
+  destruct Hfields_used as (prefix1 & Hfields_hidden_used & Hfields_base_used).
+  destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+    : list (string * expr) * list ident :=
+    match fields0 with
+    | [] => ([], used0)
+    | (fname, e) :: rest =>
+        let (e_r, used1) := alpha_rename_expr rho used0 e in
+        let (rest_r, used2) := go used1 rest in
+        ((fname, e_r) :: rest_r, used2)
+    end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) fields)
+    as [fields_hidden used_fields_hidden] eqn:Hfields_hidden.
+  destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+    : list (string * expr) * list ident :=
+    match fields0 with
+    | [] => ([], used0)
+    | (fname, e) :: rest =>
+        let (e_r, used1) := alpha_rename_expr rho used0 e in
+        let (rest_r, used2) := go used1 rest in
+        ((fname, e_r) :: rest_r, used2)
+    end) (prefix ++ suffix) fields)
+    as [fields_base used_fields_base] eqn:Hfields_base.
+  simpl in Hfields_expr, Hfields_hidden_used, Hfields_base_used.
+  subst fields_hidden.
+  split.
+  - reflexivity.
+  - exists prefix1. split; assumption.
+Qed.
+
+
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_enum_insert :
+  forall rho prefix suffix enum_name variant_name lts variant_lts args payloads,
+    (forall prefix0 suffix0 e,
+      In e payloads ->
+      fst (alpha_rename_expr rho
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+      fst (alpha_rename_expr rho (prefix0 ++ suffix0) e) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho (prefix0 ++ suffix0) e) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (EEnum enum_name variant_name lts variant_lts args payloads)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix)
+      (EEnum enum_name variant_name lts variant_lts args payloads)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (EEnum enum_name variant_name lts variant_lts args payloads)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix)
+        (EEnum enum_name variant_name lts variant_lts args payloads)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix enum_name variant_name lts variant_lts args payloads
+    Hpayloads.
+  simpl.
+  destruct (alpha_rename_call_args_receiver_method_hidden_receiver_insert
+    rho prefix suffix payloads Hpayloads) as [Hpayloads_expr Hpayloads_used].
+  destruct Hpayloads_used as
+    (prefix1 & Hpayloads_hidden_used & Hpayloads_base_used).
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg_r, used1) := alpha_rename_expr rho used0 arg in
+        let (rest_r, used2) := go used1 rest in
+        (arg_r :: rest_r, used2)
+    end) (prefix ++ receiver_method_hidden_receiver_name :: suffix) payloads)
+    as [payloads_hidden used_payloads_hidden] eqn:Hpayloads_hidden.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+    : list expr * list ident :=
+    match args0 with
+    | [] => ([], used0)
+    | arg :: rest =>
+        let (arg_r, used1) := alpha_rename_expr rho used0 arg in
+        let (rest_r, used2) := go used1 rest in
+        (arg_r :: rest_r, used2)
+    end) (prefix ++ suffix) payloads)
+    as [payloads_base used_payloads_base] eqn:Hpayloads_base.
+  simpl in Hpayloads_expr, Hpayloads_hidden_used, Hpayloads_base_used.
+  subst payloads_hidden.
+  split.
+  - reflexivity.
+  - exists prefix1. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

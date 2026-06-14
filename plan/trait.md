@@ -144,9 +144,13 @@ validity checks must be represented in Rocq and the extracted checker.
   captured-call-or-no-capture-component env gate with matching Prop/readiness
   evidence, and the direct-extended callee safety wrapper can route direct
   receiver summaries through split live/consumed raw-body replay providers. Those
-  raw providers can now be derived from expression-lift providers; the active
-  public checker gate still uses the base summary until the expression-lift
-  provider is derived automatically and wired into the public route.
+  raw providers can now be derived from expression-lift providers; scoped
+  live/consumed expression-lift provider shapes record the hidden-name
+  free/local freshness and base-store ref-exclusion side conditions needed by
+  the constructor lifts, while the unscoped provider remains a compatibility
+  wrapper. The active public checker gate still uses the base summary until the
+  scoped expression-lift provider is derived automatically and wired into the
+  public route.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -226,9 +230,11 @@ validity checks must be represented in Rocq and the extracted checker.
      safety wrapper can consume split live/consumed raw-body replay providers,
      and those raw providers can be produced from live/consumed expression-lift
      providers while preserving the receiver-call type versus hidden-frame
-     annotation distinction. The next proof step is deriving the expression-lift
-     provider itself and wiring it into the public route so the active public
-     gate can switch to the direct-extended boundary. Generic
+     annotation distinction. The next proof step is deriving the scoped
+     expression-lift provider by threading the packaged method-body
+     freshness/ref-exclusion facts into raw replay, then wiring it into the
+     public route so the active public gate can switch to the direct-extended
+     boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

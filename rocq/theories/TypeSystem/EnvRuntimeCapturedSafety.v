@@ -15624,6 +15624,39 @@ Qed.
 
 
 
+
+Definition direct_receiver_method_live_scoped_expr_lift_provider_for_eval
+    (env : global_env) (fdef : fn_def) : Prop :=
+  forall T_receiver v_receiver s_with s_base e s_base' result,
+    ~ In receiver_method_hidden_receiver_name (free_vars_expr e) ->
+    ~ In receiver_method_hidden_receiver_name (expr_local_store_names e) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_base ->
+    store_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver s_with s_base ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s_base e s_base' result ->
+    exists s_with',
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s_with e s_with' result /\
+      store_hidden_frame_rel receiver_method_hidden_receiver_name
+        T_receiver v_receiver s_with' s_base'.
+
+Definition direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval
+    (env : global_env) (fdef : fn_def) : Prop :=
+  forall T_receiver v_receiver s_with s_base e s_base' result,
+    ~ In receiver_method_hidden_receiver_name (free_vars_expr e) ->
+    ~ In receiver_method_hidden_receiver_name (expr_local_store_names e) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_base ->
+    store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver s_with s_base ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s_base e s_base' result ->
+    exists s_with',
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s_with e s_with' result /\
+      store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+        T_receiver v_receiver s_with' s_base'.
+
 Definition direct_receiver_method_live_expr_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=
   forall T_receiver v_receiver s_with s_base e s_base' result,
@@ -15649,6 +15682,33 @@ Definition direct_receiver_method_consumed_expr_lift_provider_for_eval
         s_with e s_with' result /\
       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
         T_receiver v_receiver s_with' s_base'.
+
+
+Lemma direct_receiver_method_live_scoped_expr_lift_provider_of_unscoped :
+  forall env fdef,
+    direct_receiver_method_live_expr_lift_provider_for_eval env fdef ->
+    direct_receiver_method_live_scoped_expr_lift_provider_for_eval env fdef.
+Proof.
+  intros env fdef Hlift.
+  unfold direct_receiver_method_live_expr_lift_provider_for_eval in Hlift.
+  unfold direct_receiver_method_live_scoped_expr_lift_provider_for_eval.
+  intros T_receiver v_receiver s_with s_base e s_base' result _Hfree
+    _Hlocal _Hrefs Hrel Heval.
+  eapply Hlift; eassumption.
+Qed.
+
+Lemma direct_receiver_method_consumed_scoped_expr_lift_provider_of_unscoped :
+  forall env fdef,
+    direct_receiver_method_consumed_expr_lift_provider_for_eval env fdef ->
+    direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval env fdef.
+Proof.
+  intros env fdef Hlift.
+  unfold direct_receiver_method_consumed_expr_lift_provider_for_eval in Hlift.
+  unfold direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval.
+  intros T_receiver v_receiver s_with s_base e s_base' result _Hfree
+    _Hlocal _Hrefs Hrel Heval.
+  eapply Hlift; eassumption.
+Qed.
 
 Definition direct_receiver_method_live_raw_body_replay_provider_for_eval
     (env : global_env) (fdef : fn_def) (s s' : store) (v : value)

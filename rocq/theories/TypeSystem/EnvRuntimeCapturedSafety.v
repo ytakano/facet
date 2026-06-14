@@ -2571,6 +2571,72 @@ Proof.
     end.
 Qed.
 
+Lemma eval_assign_place_parts_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base p y path e_new s1_base s2_base v_new,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_base ->
+    eval_place s_base p y path ->
+    eval env s_base e_new s1_base v_new ->
+    store_update_path y path v_new s1_base = Some s2_base ->
+    (forall s_base0 s_start_with s1 value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_new s1 value ->
+      exists s1_with,
+        eval env s_start_with e_new s1_with value /\
+        store_hidden_frame_rel x T hidden s1_with s1) ->
+    exists s2_with,
+      eval env s_with (EAssign p e_new) s2_with VUnit /\
+      store_hidden_frame_rel x T hidden s2_with s2_base.
+Proof.
+  intros env x T hidden s_with s_base p y path e_new s1_base s2_base v_new
+    Hrel Hfresh Hrefs Heval_place Heval_new Hupdate Hlift.
+  destruct (eval_place_hidden_frame_rel_lift s_with s_base p y path x T hidden
+    Hrel Hfresh Hrefs Heval_place) as (Hyx & Heval_place_with).
+  destruct (Hlift s_base s_with s1_base v_new Hrel Heval_new) as
+    (s1_with & Heval_new_with & Hrel1).
+  destruct (store_hidden_frame_rel_update_path_lift x T hidden s1_with
+    s1_base y path v_new s2_base Hrel1 Hyx Hupdate) as
+    (s2_with & Hupdate_with & Hrel2).
+  exists s2_with.
+  split.
+  - eapply Eval_Assign_Place; eassumption.
+  - exact Hrel2.
+Qed.
+
+Lemma eval_assign_place_parts_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base p y path e_new s1_base s2_base v_new,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    place_name p <> x ->
+    store_refs_exclude_root x s_base ->
+    eval_place s_base p y path ->
+    eval env s_base e_new s1_base v_new ->
+    store_update_path y path v_new s1_base = Some s2_base ->
+    (forall s_base0 s_start_with s1 value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e_new s1 value ->
+      exists s1_with,
+        eval env s_start_with e_new s1_with value /\
+        store_consumed_hidden_frame_rel x T hidden s1_with s1) ->
+    exists s2_with,
+      eval env s_with (EAssign p e_new) s2_with VUnit /\
+      store_consumed_hidden_frame_rel x T hidden s2_with s2_base.
+Proof.
+  intros env x T hidden s_with s_base p y path e_new s1_base s2_base v_new
+    Hrel Hfresh Hrefs Heval_place Heval_new Hupdate Hlift.
+  destruct (eval_place_consumed_hidden_frame_rel_lift s_with s_base p y path x T hidden
+    Hrel Hfresh Hrefs Heval_place) as (Hyx & Heval_place_with).
+  destruct (Hlift s_base s_with s1_base v_new Hrel Heval_new) as
+    (s1_with & Heval_new_with & Hrel1).
+  destruct (store_consumed_hidden_frame_rel_update_path_lift x T hidden
+    s1_with s1_base y path v_new s2_base Hrel1 Hyx Hupdate) as
+    (s2_with & Hupdate_with & Hrel2).
+  exists s2_with.
+  split.
+  - eapply Eval_Assign_Place; eassumption.
+  - exact Hrel2.
+Qed.
+
 Lemma eval_fn_hidden_frame_rel_lift :
   forall env x T hidden s_with s_without fname s_without' v,
     store_hidden_frame_rel x T hidden s_with s_without ->

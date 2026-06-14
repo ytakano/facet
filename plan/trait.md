@@ -163,11 +163,12 @@ validity checks must be represented in Rocq and the extracted checker.
   checked-initial body-env helpers source receiver-value and receiver-store ref
   exclusion from the typed receiver direct call at the initial store. A
   checked-initial fact helper now composes those facts into the side-condition
-  triple for a concrete raw replay witness, and a selected runtime-call bridge
+  triple for a concrete raw replay witness; a selected runtime-call bridge
   packages that fact behind the hidden-let typing inversion needed by the direct
-  replay package. The active public checker gate still uses the base summary
-  until the selected bridge is consumed by the provider route and the scoped
-  route is wired into the public wrapper.
+  replay package; and the direct summary wrapper can now consume selected scoped
+  live/consumed raw-body replay providers without the old universal
+  side-condition provider. The active public checker gate still uses the base
+  summary until it is switched to the selected scoped direct-extended wrapper.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -259,12 +260,13 @@ validity checks must be represented in Rocq and the extracted checker.
      receiver-value and receiver-store ref exclusion from the typed receiver
      direct call at the initial store; and a checked-initial fact helper now
      composes those inputs into the side-condition triple for a concrete raw
-     replay witness, and a selected runtime-call bridge packages that helper
-     with the hidden-let typing inversion required by the direct replay package.
-     The next proof step is consuming that selected bridge in the provider route,
-     then wiring the scoped route into the public wrapper so the active public
-     gate can switch to the direct-extended boundary. Generic activation and
-     regression coverage follow after the direct branch is active.
+     replay witness; a selected runtime-call bridge packages that helper with
+     the hidden-let typing inversion required by the direct replay package; and
+     the direct summary wrapper now consumes selected scoped live/consumed
+     raw-body replay providers without the old universal side-condition
+     provider. The next proof step is switching the active public gate to this
+     selected scoped direct-extended boundary. Generic activation and regression
+     coverage follow after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

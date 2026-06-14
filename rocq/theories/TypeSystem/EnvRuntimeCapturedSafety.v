@@ -16697,6 +16697,139 @@ Proof.
 Qed.
 
 
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_selected_scoped_raw_body_replay :
+  forall env fdef s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    eval env s (fn_body fdef) s' v ->
+    root_env_no_shadow (initial_root_env_for_fn fdef) ->
+    direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v ->
+    direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v ->
+    value_has_type env s' v (fn_ret fdef).
+Proof.
+  intros env fdef s s' v Hunique Hevidence_body Henv_ready_body Hsummary
+    Hinitial Hstore_initial Heval Hrn Hbody_replay_live
+    Hbody_replay_consumed.
+  destruct (callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_package
+    env fdef s s' v Hunique Hsummary Hinitial Hstore_initial Heval) as
+    (method_name & type_args & receiver_name & receiver_args & method_args &
+      target_synthetic_body & hidden_synthetic_body & receiver_callee &
+      method_callee & T_body & Gamma_body & R_out & roots & Htarget &
+      Hhidden & Hsafe_receiver & Hsafe_method & Hin_receiver &
+      Hname_receiver & Hreceiver_summary & _Hreceiver_provenance_to_body &
+      _Henv_ready_to_body & Hin_method & Hname_method & Hfree_args &
+      Hlocal_args & Hfresh_hidden & _Hmethod_ready & Hmethod_summary &
+      Htyped_hidden & Hcompat_body & _Hroots_excl & _Henv_excl &
+      _Heval_body & Hraw_eval_package & Hreplay_consumer).
+  subst hidden_synthetic_body.
+  destruct (typed_env_roots_shadow_safe_direct_receiver_method_hidden_let_inv
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef) (sctx_of_ctx (fn_body_ctx fdef))
+    (fn_ret receiver_callee) method_name type_args receiver_name
+    receiver_args method_args T_body (sctx_of_ctx Gamma_body) R_out roots
+    Htyped_hidden) as
+    (T_receiver_call & Sigma_receiver & R_receiver & receiver_roots &
+      _Sigma_method & _R_method & _method_roots & Htyped_receiver &
+      _Htyped_receiver_roots & Hcompat_receiver & _).
+  assert (Hunique_body : fn_env_unique_by_name
+    (global_env_with_local_bounds env (fn_bounds fdef))).
+  { eapply fn_env_unique_by_name_global_env_with_local_bounds.
+    exact Hunique. }
+  assert (Hlookup_receiver :
+    lookup_fn receiver_name
+      (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+      Some receiver_callee).
+  { eapply lookup_fn_in_unique_by_name; eassumption. }
+  assert (Hreceiver_provenance :
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee).
+  { exact (Hevidence_body receiver_name receiver_callee Hlookup_receiver). }
+  pose proof Hraw_eval_package as Hraw_eval_package_for_side.
+  destruct Hraw_eval_package_for_side as
+    (_s_receiver_raw & _v_receiver_raw & _s_args_raw & _vs_method_raw &
+      _fcall_raw & _used_raw & _s_body_raw & _Heval_receiver_raw &
+      _Heval_args_raw & Hlookup_method & Hcaptures & _Halpha_raw &
+      _Heval_body_raw & _Hfinal_raw).
+  eapply (callee_body_root_shadow_captured_call_direct_receiver_method_runtime_replay_package_checked_initial_branch_value_with_replay_facts
+    env fdef s s' v method_name type_args receiver_name receiver_args
+    method_args
+    (direct_call_receiver_method_hidden_let_synthetic_body
+      (fn_ret receiver_callee) method_name type_args receiver_name
+      receiver_args method_args) receiver_callee method_callee
+    T_receiver_call Sigma_receiver R_receiver receiver_roots T_body
+    Gamma_body R_out roots Hreplay_consumer).
+  - intros s_hidden s_receiver v_receiver s_method_hidden s_var_hidden
+      s_args_hidden s_body_hidden fcall used' v_receiver_arg vs_method
+      s_args_base s_body_base.
+    eapply direct_receiver_method_raw_replay_final_store_matching_provider;
+      eassumption.
+  - reflexivity.
+  - exact Hevidence_body.
+  - exact Henv_ready_body.
+  - exact Hsafe_receiver.
+  - exact Hsafe_method.
+  - exact Hreceiver_summary.
+  - exact Hreceiver_provenance.
+  - exact Hmethod_summary.
+  - exact Hin_receiver.
+  - exact Hname_receiver.
+  - exact Hin_method.
+  - exact Hname_method.
+  - exact Hunique_body.
+  - exact Hinitial.
+  - exact Hstore_initial.
+  - exact Hrn.
+  - exact Hfresh_hidden.
+  - exact Hfree_args.
+  - exact Hlocal_args.
+  - exact Htyped_receiver.
+  - exact Hcompat_receiver.
+  - exact Htyped_hidden.
+  - exact Hcompat_body.
+  - intros s_receiver v_receiver Heval_receiver.
+    eapply receiver_method_hidden_replay_from_raw_final_package_continuation
+      with (s' := s') (method_callee := method_callee); try eassumption.
+    intros s_args_base vs_method fcall_base used_base s_body_base
+      Heval_args_base Halpha_base Heval_body_base s_var_hidden
+      s_args_hidden Heval_var Heval_args_hidden Hrel_args.
+    destruct (direct_receiver_method_selected_scoped_raw_body_replay_side_conditions_from_checked_initial_package
+      env fdef s method_name type_args receiver_name receiver_args
+      method_args receiver_callee method_callee T_body Gamma_body R_out roots
+      Henv_ready_body Hsafe_receiver Hsafe_method Hreceiver_summary
+      Hreceiver_provenance Hmethod_summary Hlookup_method Hcaptures Hinitial
+      Hstore_initial Hrn Hunique_body Hin_receiver Hname_receiver
+      Htyped_hidden Hfresh_hidden Hfree_args Hlocal_args s_receiver
+      v_receiver s_args_base vs_method fcall_base used_base Heval_receiver
+      Heval_args_base Halpha_base) as
+      (Hbody_free & Hbody_local & Hrefs_body_start).
+    destruct Hrel_args as [Hrel_live | Hrel_consumed].
+    + exact (Hbody_replay_live method_name type_args receiver_name
+        receiver_args method_args receiver_callee method_callee
+        Hraw_eval_package s_receiver v_receiver Heval_receiver s_args_base
+        vs_method fcall_base used_base s_body_base Heval_args_base
+        Halpha_base Heval_body_base Hbody_free Hbody_local
+        Hrefs_body_start s_var_hidden s_args_hidden Heval_var
+        Heval_args_hidden Hrel_live).
+    + exact (Hbody_replay_consumed method_name type_args receiver_name
+        receiver_args method_args receiver_callee method_callee
+        Hraw_eval_package s_receiver v_receiver Heval_receiver s_args_base
+        vs_method fcall_base used_base s_body_base Heval_args_base
+        Halpha_base Heval_body_base Hbody_free Hbody_local
+        Hrefs_body_start s_var_hidden s_args_hidden Heval_var
+        Heval_args_hidden Hrel_consumed).
+Qed.
+
+
 Lemma direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider :
   forall env fdef s s' v,
     direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
@@ -22805,6 +22938,55 @@ Proof.
   - eapply direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider;
       eassumption.
   - eapply direct_receiver_method_consumed_raw_body_replay_provider_of_scoped_raw_body_replay_provider;
+      eassumption.
+Qed.
+
+
+Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+      env f s s' v ->
+    direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+      env f s s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hevidence Hready Hsummary Hinitial
+    Hstore Heval Hbody_replay_live Hbody_replay_consumed.
+  destruct Hsummary as [Hcaptured | Hdirect].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready;
+      eassumption.
+  - destruct (check_fn_root_shadow_direct_receiver_method_store_safe_summary_view_prop
+      env f Hdirect) as
+      (method_name & type_args & receiver_name & receiver_args & method_args &
+        target_synthetic_body & hidden_synthetic_body & receiver_callee &
+        method_callee & T_receiver & Gamma_receiver & R_receiver &
+        roots_receiver & T_receiver_env & Gamma_receiver_env & R_receiver_env &
+        roots_receiver_env & ret_roots_receiver & T_method & Gamma_method &
+        R_method & roots_method & T_method_env & Gamma_method_env &
+        R_method_env & roots_method_env & T_body & Gamma_body & R_out &
+        roots & _Htarget & _Hhidden & _Hsafe_receiver_args &
+        _Hsafe_method_args & _Hnot_free_method_args &
+        _Hnot_local_method_args & _Hnot_body_ctx & _Hin_receiver &
+        _Hname_receiver & _Hin_method & _Hname_method & _Harity & _Hbounds &
+        _Hreceiver_core & _Hreceiver_env & _Hreceiver_summary &
+        _Hreceiver_compat & _Hreceiver_roots & _Hreceiver_env_excl &
+        _Hmethod_core & _Hmethod_env & _Hmethod_ready & _Hmethod_summary &
+        _Hmethod_compat & _Hmethod_roots & _Hmethod_env_excl & Hbody_env &
+        _Hcompat & _Hroots_excl & _Henv_excl).
+    pose proof (infer_env_roots_shadow_safe_params_nodup_sidecar env
+      (fn_with_body f hidden_synthetic_body) (initial_root_env_for_fn f)
+      T_body Gamma_body R_out roots Hbody_env) as Hnodup.
+    unfold fn_with_body in Hnodup. simpl in Hnodup.
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+    eapply callee_body_root_shadow_captured_call_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_selected_scoped_raw_body_replay;
       eassumption.
 Qed.
 

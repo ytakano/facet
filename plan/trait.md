@@ -142,8 +142,10 @@ validity checks must be represented in Rocq and the extracted checker.
   direct/generic receiver-method captured-call checker/Prop summary boundaries
   now have boolean soundness. The checker side also has a direct-receiver
   captured-call-or-no-capture-component env gate with matching Prop/readiness
-  evidence, but the active public checker gate still uses the base summary until
-  the direct hidden-call replay premise is proved.
+  evidence, and the direct-extended callee safety wrapper can route direct
+  receiver summaries through split live/consumed raw-body replay providers. The
+  active public checker gate still uses the base summary until those providers
+  are derived automatically.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -219,13 +221,12 @@ validity checks must be represented in Rocq and the extracted checker.
      checked-initial raw-package boundaries route through those closed providers,
      staged direct-only plus combined direct/generic summary checker/Prop
      boundaries are sound, the direct-receiver captured-call-or-component env
-     gate has matching Prop/readiness evidence for the future public route, and
-     the direct hidden-call body-strip wrapper now
-     exposes live/consumed hidden-frame relations at both argument and body
-     stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is switching the active public gate to the
-     direct-extended boundary using the expression-lift-backed raw-body replay
-     wrappers. Generic
+     gate has matching Prop/readiness evidence, and the direct-extended callee
+     safety wrapper can consume split live/consumed raw-body replay providers
+     while preserving the receiver-call type versus hidden-frame annotation
+     distinction. The next proof step is deriving those replay providers from
+     the expression-lift-backed raw-body replay wrappers so the active public
+     gate can switch to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

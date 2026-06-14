@@ -1802,6 +1802,83 @@ Proof.
       * constructor; assumption.
 Qed.
 
+Lemma store_hidden_frame_rel_update_state_lift :
+  forall x T hidden s_with s_without y f s_without',
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_update_state y f s_without = Some s_without' ->
+    exists s_with',
+      store_update_state y f s_with = Some s_with' /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y f s_without' Hrel.
+  revert y f s_without'.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH];
+    intros y f s_without' Hyx Hupdate.
+  - unfold store_add. simpl.
+    destruct (ident_eqb y x) eqn:Hy.
+    + apply ident_eqb_eq in Hy. contradiction.
+    + rewrite Hupdate.
+      exists (store_add x T hidden s_without'). split; [reflexivity | constructor].
+  - simpl in Hupdate.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + inversion Hupdate; subst s_without'.
+      exists (MkStoreEntry (se_name se) (se_ty se) (se_val se)
+        (f (se_state se)) :: s_with).
+      split.
+      * simpl. rewrite Hy. reflexivity.
+      * constructor; assumption.
+    + destruct (store_update_state y f s_without) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s_without'.
+      destruct (IH y f tail' Hyx Htail) as [tail_with [Htail_with Hrel_tail]].
+      exists (se :: tail_with). split.
+      * simpl. rewrite Hy, Htail_with. reflexivity.
+      * constructor; assumption.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_update_state_lift :
+  forall x T hidden s_with s_without y f s_without',
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_update_state y f s_without = Some s_without' ->
+    exists s_with',
+      store_update_state y f s_with = Some s_with' /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros x T hidden s_with s_without y f s_without' Hrel.
+  revert y f s_without'.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH];
+    intros y f s_without' Hyx Hupdate.
+  - unfold store_add, store_mark_used. simpl.
+    destruct (ident_eqb x x) eqn:Hxx; [| apply ident_eqb_neq in Hxx; contradiction].
+    destruct (ident_eqb y x) eqn:Hy.
+    + apply ident_eqb_eq in Hy. contradiction.
+    + destruct (store_update_state y f s) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst tail'.
+      exists (store_mark_used x (store_add x T hidden s_without')).
+      split.
+      * unfold store_add, store_mark_used. simpl.
+        rewrite Hxx, Hy, Htail. reflexivity.
+      * constructor.
+  - simpl in Hupdate.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + inversion Hupdate; subst s_without'.
+      exists (MkStoreEntry (se_name se) (se_ty se) (se_val se)
+        (f (se_state se)) :: s_with).
+      split.
+      * simpl. rewrite Hy. reflexivity.
+      * constructor; assumption.
+    + destruct (store_update_state y f s_without) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s_without'.
+      destruct (IH y f tail' Hyx Htail) as [tail_with [Htail_with Hrel_tail]].
+      exists (se :: tail_with). split.
+      * simpl. rewrite Hy, Htail_with. reflexivity.
+      * constructor; assumption.
+Qed.
+
 Lemma store_consumed_hidden_frame_rel_update_val :
   forall x T hidden s_with s_without y v_new s_with',
     store_consumed_hidden_frame_rel x T hidden s_with s_without ->

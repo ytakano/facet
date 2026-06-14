@@ -141,33 +141,6 @@ Proof.
   eapply infer_program_env_end2end_assoc_sound; eauto.
 Qed.
 
-Theorem infer_program_env_end2end_sound :
-  forall env env' f,
-    infer_program_env_end2end_assoc env = infer_ok env' ->
-    In f (env_fns env') ->
-    exists T Γ_out R_out roots,
-      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots_checked_assoc_boundary env' f
-        (initial_root_env_for_params (fn_params f ++ fn_captures f))
-        R_out roots.
-Proof.
-  eapply infer_program_env_end2end_assoc_sound.
-Qed.
-
-Theorem check_program_env_end2end_sound :
-  forall env env' f,
-    check_program_env_end2end_assoc env = true ->
-    infer_program_env_end2end_assoc env = infer_ok env' ->
-    In f (env_fns env') ->
-    exists T Γ_out R_out roots,
-      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots_checked_assoc_boundary env' f
-        (initial_root_env_for_params (fn_params f ++ fn_captures f))
-        R_out roots.
-Proof.
-  eapply check_program_env_end2end_assoc_sound.
-Qed.
-
 Lemma check_program_env_end2end_assoc_infer_ok :
   forall env,
     check_program_env_end2end_assoc env = true ->
@@ -511,6 +484,38 @@ Proof.
   intros env env' f _ Hprog Hin.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_sound;
     eauto.
+Qed.
+
+Theorem infer_program_env_end2end_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_strict_exact_closure env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_sound.
+Qed.
+
+Theorem check_program_env_end2end_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
+      true ->
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_strict_exact_closure env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  eapply check_program_env_end2end_assoc_strict_exact_closure_direct_receiver_sound.
 Qed.
 
 Theorem check_program_env_end2end_assoc_strict_exact_closure_direct_receiver_sound_exists :

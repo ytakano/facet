@@ -58,11 +58,10 @@ validity checks must be represented in Rocq and the extracted checker.
   checker boundaries such as headers, expected types, annotations, explicit type
   arguments, closure/letrec signatures, and `RawCore` embedding.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
-  exported, and covered by assoc-boundary soundness. The public runtime safety
-  theorem now targets the assoc strict exact-closure direct-receiver endpoint,
-  and direct-receiver boundary soundness aliases exist for the same endpoint.
-  The OCaml CLI still uses the older assoc-aware endpoint until extraction and
-  CLI switching are completed.
+  exported, and covered by assoc-boundary soundness. The required public
+  soundness and runtime safety theorem names now target the assoc strict
+  exact-closure direct-receiver endpoint. The OCaml CLI still uses the older
+  assoc-aware endpoint until extraction and CLI switching are completed.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

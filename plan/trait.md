@@ -98,8 +98,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - A trial CLI switch to
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver`
   rejected many existing `tests/valid` programs with
-  `ErrEndToEndSafetyGateFailed`. The endpoint is verified but not yet broad
-  enough to be the active CLI authority.
+  `ErrEndToEndSafetyGateFailed`. On `tests/valid/assign/basic_assign.facet`,
+  the direct gate reports provenance=true, preservation=false,
+  direct-or-component=true, component=false. The endpoint is verified but not
+  yet broad enough to be the active CLI authority.
 
 ## Key Decisions
 

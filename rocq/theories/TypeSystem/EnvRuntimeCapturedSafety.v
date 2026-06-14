@@ -2995,6 +2995,113 @@ Proof.
     end.
 Qed.
 
+
+
+Lemma store_consumed_hidden_frame_rel_remove_lift :
+  forall x T hidden s_with s_without y,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    store_consumed_hidden_frame_rel x T hidden
+      (store_remove y s_with) (store_remove y s_without).
+Proof.
+  intros x T hidden s_with s_without y Hrel Hyx.
+  induction Hrel as [s | se s_with s_without Hsex Hrel IH].
+  - unfold store_add. simpl. rewrite ident_eqb_refl. simpl.
+    destruct (ident_eqb y x) eqn:Hy.
+    + apply ident_eqb_eq in Hy. contradiction.
+    + replace (MkStoreEntry x T hidden {| st_consumed := true; st_moved_paths := [] |}
+        :: store_remove y s) with
+        (store_mark_used x (store_add x T hidden (store_remove y s))).
+      * constructor.
+      * unfold store_add. simpl. rewrite ident_eqb_refl. reflexivity.
+  - simpl.
+    destruct (ident_eqb y (se_name se)) eqn:Hy.
+    + exact Hrel.
+    + apply SCHFR_Keep; assumption.
+Qed.
+
+Lemma eval_let_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base m y T_bind e1 e2 s_base' v,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    y <> x ->
+    eval env s_base (ELet m y T_bind e1 e2) s_base' v ->
+    (forall s_base0 s_start_with s1 value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e1 s1 value ->
+      exists s1_with,
+        eval env s_start_with e1 s1_with value /\
+        store_hidden_frame_rel x T hidden s1_with s1) ->
+    (forall s_base0 s_start_with s2 value,
+      store_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e2 s2 value ->
+      exists s2_with,
+        eval env s_start_with e2 s2_with value /\
+        store_hidden_frame_rel x T hidden s2_with s2) ->
+    exists s_with',
+      eval env s_with (ELet m y T_bind e1 e2) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base m y T_bind e1 e2 s_base' v Hrel Hyx
+    Heval He1_lift He2_lift.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Heval1 : eval env s_base ?e1' ?s1 ?v1,
+    Heval2 : eval env (store_add y T_bind ?v1 ?s1) ?e2' ?s2 ?v2 |- _ =>
+      change e1' with e1 in Heval1;
+      change e2' with e2 in Heval2;
+      change v2 with v in Heval2;
+      destruct (He1_lift s_base s_with s1 v1 Hrel Heval1) as
+        (s1_with & Heval1_with & Hrel1);
+      assert (Hrel_add : store_hidden_frame_rel x T hidden
+        (store_add y T_bind v1 s1_with) (store_add y T_bind v1 s1));
+      [ unfold store_add; apply SHFR_Keep; assumption
+      | destruct (He2_lift (store_add y T_bind v1 s1)
+          (store_add y T_bind v1 s1_with) s2 v Hrel_add Heval2) as
+          (s2_with & Heval2_with & Hrel2);
+        exists (store_remove y s2_with); split;
+        [ eapply Eval_Let; eassumption
+        | apply store_remove_hidden_frame_rel; assumption ] ]
+  end.
+Qed.
+
+Lemma eval_let_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_base m y T_bind e1 e2 s_base' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    y <> x ->
+    eval env s_base (ELet m y T_bind e1 e2) s_base' v ->
+    (forall s_base0 s_start_with s1 value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e1 s1 value ->
+      exists s1_with,
+        eval env s_start_with e1 s1_with value /\
+        store_consumed_hidden_frame_rel x T hidden s1_with s1) ->
+    (forall s_base0 s_start_with s2 value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base0 ->
+      eval env s_base0 e2 s2 value ->
+      exists s2_with,
+        eval env s_start_with e2 s2_with value /\
+        store_consumed_hidden_frame_rel x T hidden s2_with s2) ->
+    exists s_with',
+      eval env s_with (ELet m y T_bind e1 e2) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base'.
+Proof.
+  intros env x T hidden s_with s_base m y T_bind e1 e2 s_base' v Hrel Hyx
+    Heval He1_lift He2_lift.
+  remember (ELet m y T_bind e1 e2) as e eqn:Heq.
+  induction Heval; inversion Heq; subst; clear Heq.
+  destruct (He1_lift s s_with s1 v1 Hrel Heval1) as
+    (s1_with & Heval1_with & Hrel1).
+  assert (Hrel_add : store_consumed_hidden_frame_rel x T hidden
+    (store_add y T_bind v1 s1_with) (store_add y T_bind v1 s1)).
+  { unfold store_add. apply SCHFR_Keep; assumption. }
+  destruct (He2_lift (store_add y T_bind v1 s1)
+    (store_add y T_bind v1 s1_with) s2 v2 Hrel_add Heval2) as
+    (s2_with & Heval2_with & Hrel2).
+  exists (store_remove y s2_with). split.
+  - eapply Eval_Let; eassumption.
+  - apply store_consumed_hidden_frame_rel_remove_lift; assumption.
+Qed.
+
 Lemma eval_fn_hidden_frame_rel_lift :
   forall env x T hidden s_with s_without fname s_without' v,
     store_hidden_frame_rel x T hidden s_with s_without ->

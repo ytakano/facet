@@ -106,10 +106,10 @@ validity checks must be represented in Rocq and the extracted checker.
   when inserted into alpha-renaming seeds, and that invariant now reaches the
   function-definition seed, parameter-renaming outputs, traversal helpers,
   whole expression-body alpha-renaming, function-definition alpha-renaming, and
-  hidden/base argument-store frame alpha transport. The direct replay-final
-  provider now consumes that transport with the shared body-final helper. Public
-  runtime branch wiring still needs the generic replay-final provider to do the
-  same before receiver-method summaries can be activated.
+  hidden/base argument-store frame alpha transport. The direct and generic
+  replay-final providers now consume that transport with the shared body-final
+  helper. Public runtime branch wiring still needs to route receiver-method
+  safety through those providers before summaries can be activated.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -180,12 +180,12 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is adding the generic
-     replay-final provider that consumes the argument-store alpha bridge with
-     the shared body-final helper, then wiring the public receiver-method
-     runtime safety branch through the direct and generic providers. Only after
-     that branch is proved should the receiver-method summaries be enabled as
-     outer alternatives on the public base checker gate.
+     over their package consumers, and both direct and generic replay-final
+     providers now close final-store matching with the argument-store alpha
+     bridge. The next proof step is wiring the public receiver-method runtime
+     safety branch through those providers. Only after that branch is proved
+     should the receiver-method summaries be enabled as outer alternatives on
+     the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

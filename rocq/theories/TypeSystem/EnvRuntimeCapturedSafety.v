@@ -12646,9 +12646,6 @@ Lemma receiver_method_live_body_replay_start_frame_provider :
       T_receiver v_receiver s_args_hidden s_args_base ->
     alpha_rename_fn_def (store_names s_args_base) method_callee =
       (fcall_base, used_base) ->
-    ~ In receiver_method_hidden_receiver_name
-        (ctx_names (params_ctx
-          (apply_type_params type_args (fn_params fcall_base)))) ->
     exists used_hidden,
       alpha_rename_fn_def (store_names s_args_hidden) method_callee =
         (fcall_base, used_hidden) /\
@@ -12660,11 +12657,16 @@ Lemma receiver_method_live_body_replay_start_frame_provider :
           (v_receiver :: vs_method) s_args_base).
 Proof.
   intros type_args T_receiver v_receiver s_args_hidden s_args_base
-    method_callee fcall_base used_base vs_method Hframe Halpha_base
-    Hnotin_params.
+    method_callee fcall_base used_base vs_method Hframe Halpha_base.
   destruct (alpha_rename_fn_def_receiver_method_hidden_receiver_args_frame_base_insert
     T_receiver v_receiver s_args_hidden s_args_base method_callee fcall_base
     used_base Hframe Halpha_base) as (used_hidden & Halpha_hidden).
+  pose proof (store_hidden_frame_rel_name_in receiver_method_hidden_receiver_name
+    T_receiver v_receiver s_args_hidden s_args_base Hframe) as Hhidden_in.
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    (store_names s_args_hidden) method_callee fcall_base used_hidden type_args
+    receiver_method_hidden_receiver_name Halpha_hidden Hhidden_in) as
+    (Hnotin_params & _Hnotin_body_locals).
   exists used_hidden.
   split; [exact Halpha_hidden |].
   eapply store_hidden_frame_rel_bind_params; eassumption.
@@ -12682,9 +12684,6 @@ Lemma receiver_method_live_raw_body_replay_provider :
         (v_receiver :: vs_method) s_args_base)
       (subst_type_params_expr type_args (fn_body fcall_base))
       s_body_base v ->
-    ~ In receiver_method_hidden_receiver_name
-        (ctx_names (params_ctx
-          (apply_type_params type_args (fn_params fcall_base)))) ->
     (forall used_hidden,
       alpha_rename_fn_def (store_names s_args_hidden) method_callee =
         (fcall_base, used_hidden) ->
@@ -12711,10 +12710,10 @@ Lemma receiver_method_live_raw_body_replay_provider :
 Proof.
   intros env type_args T_receiver v_receiver s_args_hidden s_args_base
     method_callee fcall_base used_base vs_method s_body_base v Hframe
-    Halpha_base _Heval_body_base Hnotin_params Hlift_body.
+    Halpha_base _Heval_body_base Hlift_body.
   destruct (receiver_method_live_body_replay_start_frame_provider
     type_args T_receiver v_receiver s_args_hidden s_args_base method_callee
-    fcall_base used_base vs_method Hframe Halpha_base Hnotin_params)
+    fcall_base used_base vs_method Hframe Halpha_base)
     as (used_hidden & Halpha_hidden & Hrel_start).
   destruct (Hlift_body used_hidden Halpha_hidden Hrel_start) as
     (s_body_hidden & Heval_body_hidden).

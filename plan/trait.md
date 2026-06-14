@@ -117,9 +117,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the packaged raw final evaluation to discharge the hidden-method replay
   premise internally, with live and consumed argument-frame continuations split
   for targeted provider work. The live argument-frame path now has base-to-hidden
-  alpha-renaming transport for method bodies plus bound-parameter start-frame
-  packaging for the replayed method body, and the live branch can now consume a
-  focused method-body evaluation lift premise. Hidden
+  alpha-renaming transport for method bodies, derives method-parameter
+  freshness from the live frame, packages the bound-parameter start frame,
+  and lets the live branch consume a focused method-body evaluation lift
+  premise. Hidden
   receiver replay now packages the initial variable step with store-safe
   method-argument hidden-frame replay, method-argument inversion, direct
   body-strip wrapper, hidden method-call constructor bridge, the existential

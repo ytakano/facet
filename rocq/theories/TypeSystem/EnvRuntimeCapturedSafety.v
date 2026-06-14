@@ -15988,6 +15988,72 @@ Definition direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval
       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
         T_receiver v_receiver s_with' s_base'.
 
+Definition direct_receiver_method_live_scoped_body_lift_provider_for_eval
+    (env : global_env) (fdef : fn_def) : Prop :=
+  forall T_receiver v_receiver type_args method_callee fcall_base used_base
+      vs_method s_args_hidden s_args_base s_body_base result,
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    ~ In receiver_method_hidden_receiver_name
+      (free_vars_expr (subst_type_params_expr type_args
+        (fn_body fcall_base))) ->
+    ~ In receiver_method_hidden_receiver_name
+      (expr_local_store_names (subst_type_params_expr type_args
+        (fn_body fcall_base))) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base) ->
+    store_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_hidden)
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall_base))
+      s_body_base result ->
+    exists s_body_hidden,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall_base))
+        s_body_hidden result.
+
+Definition direct_receiver_method_consumed_scoped_body_lift_provider_for_eval
+    (env : global_env) (fdef : fn_def) : Prop :=
+  forall T_receiver v_receiver type_args method_callee fcall_base used_base
+      vs_method s_args_hidden s_args_base s_body_base result,
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    ~ In receiver_method_hidden_receiver_name
+      (free_vars_expr (subst_type_params_expr type_args
+        (fn_body fcall_base))) ->
+    ~ In receiver_method_hidden_receiver_name
+      (expr_local_store_names (subst_type_params_expr type_args
+        (fn_body fcall_base))) ->
+    store_refs_exclude_root receiver_method_hidden_receiver_name
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base) ->
+    store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+      T_receiver v_receiver
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_hidden)
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall_base))
+      s_body_base result ->
+    exists s_body_hidden,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall_base))
+        s_body_hidden result.
+
 Definition direct_receiver_method_live_expr_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=
   forall T_receiver v_receiver s_with s_base e s_base' result,
@@ -16283,6 +16349,54 @@ Definition direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_e
           (v_receiver :: vs_method) s_args_hidden)
         (subst_type_params_expr type_args (fn_body fcall_hidden))
         s_body_hidden v.
+
+Lemma direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_body_lift :
+  forall env fdef s s' v,
+    direct_receiver_method_live_scoped_body_lift_provider_for_eval env fdef ->
+    direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v.
+Proof.
+  intros env fdef s s' v Hbody_lift.
+  unfold direct_receiver_method_live_scoped_body_lift_provider_for_eval in Hbody_lift.
+  unfold direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval.
+  intros method_name type_args receiver_name receiver_args method_args
+    receiver_callee method_callee Hraw s_receiver v_receiver Heval_receiver
+    s_args_base vs_method fcall_base used_base s_body_base Heval_args_base
+    Halpha_base Heval_body_base Hbody_free Hbody_local Hrefs_body_start
+    s_var_hidden s_args_hidden Heval_var Heval_args_hidden Hrel_args.
+  eapply receiver_method_live_raw_body_replay_from_focused_lift;
+    try eassumption.
+  intros used_hidden _Halpha_hidden Hrel_start Heval_body_base0.
+  destruct (Hbody_lift (fn_ret receiver_callee) v_receiver type_args
+    method_callee fcall_base used_base vs_method s_args_hidden s_args_base
+    s_body_base v Halpha_base Hbody_free Hbody_local Hrefs_body_start
+    Hrel_start Heval_body_base0) as (s_body_hidden & Heval_body_hidden).
+  exists s_body_hidden. exact Heval_body_hidden.
+Qed.
+
+Lemma direct_receiver_method_consumed_scoped_raw_body_replay_provider_of_scoped_body_lift :
+  forall env fdef s s' v,
+    direct_receiver_method_consumed_scoped_body_lift_provider_for_eval env fdef ->
+    direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v.
+Proof.
+  intros env fdef s s' v Hbody_lift.
+  unfold direct_receiver_method_consumed_scoped_body_lift_provider_for_eval in Hbody_lift.
+  unfold direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval.
+  intros method_name type_args receiver_name receiver_args method_args
+    receiver_callee method_callee Hraw s_receiver v_receiver Heval_receiver
+    s_args_base vs_method fcall_base used_base s_body_base Heval_args_base
+    Halpha_base Heval_body_base Hbody_free Hbody_local Hrefs_body_start
+    s_var_hidden s_args_hidden Heval_var Heval_args_hidden Hrel_args.
+  eapply receiver_method_consumed_raw_body_replay_from_focused_lift;
+    try eassumption.
+  intros used_hidden _Halpha_hidden Hrel_start Heval_body_base0.
+  destruct (Hbody_lift (fn_ret receiver_callee) v_receiver type_args
+    method_callee fcall_base used_base vs_method s_args_hidden s_args_base
+    s_body_base v Halpha_base Hbody_free Hbody_local Hrefs_body_start
+    Hrel_start Heval_body_base0) as (s_body_hidden & Heval_body_hidden).
+  exists s_body_hidden. exact Heval_body_hidden.
+Qed.
 
 Lemma direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_expr_lift :
   forall env fdef s s' v,
@@ -22991,6 +23105,31 @@ Proof.
 Qed.
 
 
+
+Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hevidence Hready Hsummary Hinitial Hstore
+    Heval Hlive_body Hconsumed_body.
+  eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay;
+    try eassumption.
+  - eapply direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_body_lift.
+    exact Hlive_body.
+  - eapply direct_receiver_method_consumed_scoped_raw_body_replay_provider_of_scoped_body_lift.
+    exact Hconsumed_body.
+Qed.
+
 Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_expr_lift :
   forall env f s s' v,
     fn_env_unique_by_name env ->
@@ -23154,6 +23293,87 @@ Proof.
     Hevidence Hready Hcombined_check Hcomponent_check Hinitial Hin Hstore
     Heval Hlive_raw Hconsumed_raw.
   eapply env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay;
+    try eassumption.
+  - intros fname fdef Hlookup.
+    exact (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
+      env Hcombined_check fname fdef Hlookup).
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary_evidence.
+    exact Hcomponent_check.
+Qed.
+
+
+Theorem env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    (forall fname fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+        env fdef \/
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env fdef) ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env f s s' v Hunique
+    Hevidence Hready Hcombined Hsynthetic_summary Hinitial Hin Hstore Heval
+    Hlive_body Hconsumed_body.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hcombined (fn_name f) f Hlookup) as [Hcaptured | Hcomponent].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift;
+      eassumption.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_mutual;
+      eassumption.
+Qed.
+
+Theorem check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env = true ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env f s s' v Hunique
+    Hevidence Hready Hcombined_check Hcomponent_check Hinitial Hin Hstore
+    Heval Hlive_body Hconsumed_body.
+  eapply env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift;
     try eassumption.
   - intros fname fdef Hlookup.
     exact (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready

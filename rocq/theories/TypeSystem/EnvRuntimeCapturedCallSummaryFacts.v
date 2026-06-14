@@ -3341,6 +3341,57 @@ Proof.
   exact Hcheck.
 Qed.
 
+Definition callee_body_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    env fdef \/
+  callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+    env fdef.
+
+Lemma check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods_sound :
+  forall env fdef,
+    check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+      env fdef = true ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+      env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+    in Hcheck.
+  unfold callee_body_root_shadow_captured_call_store_safe_summary_with_receiver_methods.
+  apply orb_true_iff in Hcheck as [Hdirect | Hgeneric].
+  - left.
+    apply check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_sound.
+    exact Hdirect.
+  - right.
+    apply check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary_sound.
+    exact Hgeneric.
+Qed.
+
+Definition env_fns_root_shadow_captured_call_store_safe_summary_with_receiver_methods_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+      env fdef.
+
+Lemma check_env_root_shadow_captured_call_store_safe_summary_with_receiver_methods_ready :
+  forall env,
+    check_env_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+      env = true ->
+    env_fns_root_shadow_captured_call_store_safe_summary_with_receiver_methods_check_ready
+      env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+    in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods_sound.
+  exact Hcheck.
+Qed.
+
 Lemma check_env_root_shadow_captured_call_store_safe_summary_ready :
   forall env,
     check_env_root_shadow_captured_call_store_safe_summary env = true ->

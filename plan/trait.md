@@ -46,8 +46,9 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence from the checked route. The ready-aware body-lift providers now also
   have a narrow bridge from theorem-level hidden-frame eval lift interfaces.
   Those interfaces now have explicit mutual expression/args/field forms; the
-  remaining proof boundary is proving the live/consumed mutual ready lift
-  interfaces from the per-constructor hidden-frame lift lemmas.
+  live mutual ready lift interface is proven from the per-constructor
+  hidden-frame lift lemmas, and the consumed mutual interface remains the
+  proof boundary.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -65,10 +66,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Prove the live/consumed mutual ready hidden-frame eval lift interfaces
-     from the existing per-constructor base-to-hidden lift lemmas, then project
-     them to the expression interface used by ready-aware method-body lift and
-     raw replay.
+   - Prove the consumed mutual ready hidden-frame eval lift interface from the
+     existing per-constructor base-to-hidden lift lemmas, then project it to
+     the expression interface used by ready-aware method-body lift and raw
+     replay. The live mutual interface is already theorem-level.
    - Once those providers are theorem-level facts, route the active assoc-aware
      end-to-end safety theorem through the direct-receiver endpoint and switch
      the OCaml accept/reject path only after the extracted checker route is

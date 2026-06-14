@@ -165,10 +165,14 @@ validity checks must be represented in Rocq and the extracted checker.
   checked-initial fact helper now composes those facts into the side-condition
   triple for a concrete raw replay witness; a selected runtime-call bridge
   packages that fact behind the hidden-let typing inversion needed by the direct
-  replay package; and the direct summary wrapper can now consume selected scoped
+  replay package; the direct summary wrapper can now consume selected scoped
   live/consumed raw-body replay providers without the old universal
-  side-condition provider. The active public checker gate still uses the base
-  summary until it is switched to the selected scoped direct-extended wrapper.
+  side-condition provider; and the expression-lift route now passes through that
+  selected scoped wrapper. A Prop-level public wrapper also covers the
+  direct-extended captured/direct-receiver summary combined with the no-capture
+  direct-call component summary. The active checker-level public gate still uses
+  the base summary until its checker boundary is wired to the direct-extended
+  summary.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -264,9 +268,12 @@ validity checks must be represented in Rocq and the extracted checker.
      the hidden-let typing inversion required by the direct replay package; and
      the direct summary wrapper now consumes selected scoped live/consumed
      raw-body replay providers without the old universal side-condition
-     provider. The next proof step is switching the active public gate to this
-     selected scoped direct-extended boundary. Generic activation and regression
-     coverage follow after the direct branch is active.
+     provider; the expression-lift route now passes through that selected scoped
+     wrapper; and a Prop-level public wrapper covers the direct-extended
+     captured/direct-receiver summary combined with the no-capture direct-call
+     component summary. The next proof step is wiring the checker-level public
+     gate to the direct-extended summary boundary. Generic activation and
+     regression coverage follow after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

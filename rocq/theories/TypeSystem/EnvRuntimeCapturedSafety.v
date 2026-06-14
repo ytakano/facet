@@ -5387,8 +5387,9 @@ Proof.
 Qed.
 
 Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_frame_inv :
-  forall env Omega n R Sigma receiver_name receiver_args T_receiver
-      Sigma_receiver_out R_receiver_out receiver_roots s s_receiver
+  forall env Omega n R Sigma receiver_name receiver_args T_receiver_call
+      Sigma_receiver_out R_receiver_out receiver_roots T_receiver_hidden
+      s s_receiver
       v_receiver receiver_callee method_name type_args method_args
       s_method_hidden v method_callee,
     env_fns_preservation_ready env ->
@@ -5407,7 +5408,7 @@ Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_fra
     In receiver_callee (env_fns env) ->
     fn_name receiver_callee = receiver_name ->
     typed_env_roots_shadow_safe env Omega n R Sigma
-      (ECall receiver_name receiver_args) T_receiver Sigma_receiver_out
+      (ECall receiver_name receiver_args) T_receiver_call Sigma_receiver_out
       R_receiver_out receiver_roots ->
     ~ In receiver_method_hidden_receiver_name (store_names s) ->
     In method_callee (env_fns env) ->
@@ -5417,7 +5418,7 @@ Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_fra
     callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
       env 10000 method_callee type_args ->
     eval env
-      (store_add receiver_method_hidden_receiver_name T_receiver
+      (store_add receiver_method_hidden_receiver_name T_receiver_hidden
         v_receiver s_receiver)
       (ECallGeneric method_name type_args
         (EVar receiver_method_hidden_receiver_name :: method_args))
@@ -5432,7 +5433,7 @@ Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_fra
       lookup_fn method_name (env_fns env) = Some method_callee /\
       fn_captures method_callee = [] /\
       eval env
-        (store_add receiver_method_hidden_receiver_name T_receiver
+        (store_add receiver_method_hidden_receiver_name T_receiver_hidden
           v_receiver s_receiver)
         (EVar receiver_method_hidden_receiver_name)
         s_var_hidden v_receiver_arg /\
@@ -5454,9 +5455,9 @@ Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_fra
       Forall (value_refs_exclude_root receiver_method_hidden_receiver_name)
         vs_method /\
       ((store_hidden_frame_rel receiver_method_hidden_receiver_name
-          T_receiver v_receiver s_args_hidden s_args_base) \/
+          T_receiver_hidden v_receiver s_args_hidden s_args_base) \/
        store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
-         T_receiver v_receiver s_args_hidden s_args_base) /\
+         T_receiver_hidden v_receiver s_args_hidden s_args_base) /\
       In receiver_method_hidden_receiver_name (store_names s_args_hidden) /\
       ~ In receiver_method_hidden_receiver_name
           (ctx_names (params_ctx
@@ -5475,15 +5476,16 @@ Lemma direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_fra
         s_body_base /\
       value_refs_exclude_root receiver_method_hidden_receiver_name v /\
       ((store_hidden_frame_rel receiver_method_hidden_receiver_name
-          T_receiver v_receiver s_body_hidden s_body_base) \/
+          T_receiver_hidden v_receiver s_body_hidden s_body_base) \/
        store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
-         T_receiver v_receiver s_body_hidden s_body_base) /\
+         T_receiver_hidden v_receiver s_body_hidden s_body_base) /\
       store_remove receiver_method_hidden_receiver_name s_method_hidden =
         store_remove_params (apply_type_params type_args (fn_params fcall))
           (store_remove receiver_method_hidden_receiver_name s_body_hidden).
 Proof.
-  intros env Omega n R Sigma receiver_name receiver_args T_receiver
-    Sigma_receiver_out R_receiver_out receiver_roots s s_receiver
+  intros env Omega n R Sigma receiver_name receiver_args T_receiver_call
+    Sigma_receiver_out R_receiver_out receiver_roots T_receiver_hidden
+    s s_receiver
     v_receiver receiver_callee method_name type_args method_args
     s_method_hidden v method_callee Henv_ready Hsafe_receiver
     Hsummary_receiver Hprovenance_receiver Hstore Hroots Hshadow Hrn
@@ -5491,9 +5493,10 @@ Proof.
     Hname_receiver Htyped_receiver Hfresh_hidden Hin_method Hname_method
     Hready_method Hsummary_method Heval_method Hready_args Hfree_args
     Hlocal_args.
-  destruct (direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_inv
-    env Omega n R Sigma receiver_name receiver_args T_receiver
-    Sigma_receiver_out R_receiver_out receiver_roots s s_receiver
+  destruct (direct_receiver_method_hidden_call_eval_body_strip_with_receiver_ready_typed_inv
+    env Omega n R Sigma receiver_name receiver_args T_receiver_call
+    Sigma_receiver_out R_receiver_out receiver_roots T_receiver_hidden
+    s s_receiver
     v_receiver receiver_callee method_name type_args method_args
     s_method_hidden v method_callee Henv_ready Hsafe_receiver
     Hsummary_receiver Hprovenance_receiver Hstore Hroots Hshadow Hrn

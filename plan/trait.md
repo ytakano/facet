@@ -112,10 +112,11 @@ validity checks must be represented in Rocq and the extracted checker.
   boundaries now route through their closed replay-final providers. Hidden
   receiver replay now packages the initial variable step, method-argument
   inversion, and direct body-strip wrapper as live or consumed hidden-frame
-  relations. Staged direct-only and combined direct/generic receiver-method
-  captured-call checker/Prop summary boundaries now have boolean soundness, but
-  the active public checker gate still uses the base summary until the direct
-  hidden-call replay premise is proved.
+  relations while preserving the distinction between the receiver call's
+  inferred type and the hidden-frame annotation. Staged direct-only and combined
+  direct/generic receiver-method captured-call checker/Prop summary boundaries
+  now have boolean soundness, but the active public checker gate still uses the
+  base summary until the direct hidden-call replay premise is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -192,9 +193,10 @@ validity checks must be represented in Rocq and the extracted checker.
      staged direct-only plus combined direct/generic summary checker/Prop
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
-     stores. The next proof step is deriving the direct hidden-method replay
-     premise from raw receiver-method evaluation, then switching the active
-     public gate to the direct-extended boundary. Generic
+     stores without conflating receiver-call type and hidden-frame annotation.
+     The next proof step is deriving the direct hidden-method replay premise
+     from raw receiver-method evaluation, then switching the active public gate
+     to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

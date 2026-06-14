@@ -155,8 +155,11 @@ validity checks must be represented in Rocq and the extracted checker.
   expression-lift providers, plus a checked-initial adapter that converts
   scoped raw replay back to the existing split replay wrapper when a shared
   side-condition provider supplies the body freshness and bound-start
-  ref-exclusion facts. The active public checker gate still uses the base
-  summary until that side-condition provider is derived automatically and the
+  ref-exclusion facts. A replay-package helper now derives that side-condition
+  triple from method summary/readiness, hidden-frame replay facts, base argument
+  refs, method argument refs, and receiver-value ref exclusion. The active
+  public checker gate still uses the base summary until receiver-value
+  exclusion is sourced from the checked-initial hidden-start facts and the
   scoped route is wired into the public wrapper.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
@@ -241,11 +244,13 @@ validity checks must be represented in Rocq and the extracted checker.
      and matching provider-layer derivations from scoped expression-lift
      providers, with method-body freshness and bound-parameter ref-exclusion
      facts explicit at the provider boundary. A checked-initial adapter now
-     consumes those scoped providers through a shared side-condition provider.
-     The next proof step is deriving that side-condition provider from the
-     checked-initial replay package facts, then wiring the scoped route into the
-     public wrapper so the active public gate can switch to the direct-extended
-     boundary. Generic
+     consumes those scoped providers through a shared side-condition provider,
+     and a replay-package helper derives the side-condition triple once
+     receiver-value ref exclusion is available. The next proof step is sourcing
+     receiver-value ref exclusion from the checked-initial hidden-start facts and
+     using the helper to build the side-condition provider, then wiring the
+     scoped route into the public wrapper so the active public gate can switch to
+     the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

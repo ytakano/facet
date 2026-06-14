@@ -53,9 +53,10 @@ validity checks must be represented in Rocq and the extracted checker.
   route evidence for checked functions instead of global provider premises,
   and a static-runtime callback variant removes that route-evidence premise entirely.
   Direct `root_of_place` store-root naming helpers are proven for explicit
-  store-name membership and for prefix-typed stores. A prefix-typed-place helper
-  now packages store naming for direct place roots, borrowed place roots, and
-  resolved place roots. Mixed endpoint success now exposes the underlying assoc
+  store-name membership and for prefix-typed stores. Prefix-typed-place and
+  preservation-ready borrow helpers now package store naming for direct place
+  roots, direct borrow roots, borrowed place roots, and resolved place roots.
+  Mixed endpoint success now exposes the underlying assoc
   strict exact-closure success, checked-env name
   uniqueness, strict exact-closure readiness, and a direct-endpoint success
   fact when the checked env also passes the direct receiver gate. The mixed
@@ -128,9 +129,9 @@ validity checks must be represented in Rocq and the extracted checker.
   global static-runtime proof now has a concrete subgoal: direct place/borrow
   roots need either `In x (store_names s)` or a store-typing premise that
   connects typed-place context membership to the runtime store. The new
-  prefix-typed-place helper covers that store-typing route locally, but the
-  public bridge still needs to thread an appropriate store-typed-prefix premise
-  to the static-runtime callback.
+  prefix-typed-place and direct-borrow helpers cover that store-typing route
+  locally, but the public bridge still needs to thread an appropriate
+  store-typed-prefix premise to the static-runtime callback.
 
 ## Key Decisions
 

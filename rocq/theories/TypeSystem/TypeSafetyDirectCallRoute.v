@@ -2187,6 +2187,38 @@ Proof.
     try (eapply root_env_lookup_store_roots_named_direct_route; eassumption).
 Qed.
 
+Lemma preservation_ready_borrow_static_runtime_named_store_typed_prefix :
+  forall env s rk p (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr (EBorrow rk p) ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EBorrow rk p) T Σ' R' roots ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros env s rk p Ω n R Σ T Σ' R' roots Hready Hstore Htyped
+    Hwithin Hnamed Hkeys.
+  inversion Hready; subst; clear Hready.
+  inversion Htyped; subst; try congruence; repeat split; try assumption.
+  - match goal with
+    | Htyped_place : typed_place_env_structural _ _ p _ |- _ =>
+        destruct (typed_place_env_structural_store_typed_prefix_static_runtime_named_leaf
+          _ _ _ _ _ _ Hstore Htyped_place Hnamed) as [Hplace _]
+    end.
+    exact Hplace.
+  - assert (Hplace : root_set_store_roots_named (root_of_place p) s).
+    { eapply root_of_place_store_roots_named_direct_route_of_store_typed_prefix;
+        eassumption. }
+    match goal with
+    | Hpath : place_path p = Some (_, _) |- _ =>
+        unfold root_of_place in Hplace; rewrite Hpath in Hplace; exact Hplace
+    end.
+Qed.
+
 Lemma root_env_store_roots_named_direct_route_store_names_eq :
   forall R s s',
     store_names s' = store_names s ->

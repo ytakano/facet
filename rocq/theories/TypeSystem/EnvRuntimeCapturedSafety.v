@@ -16175,6 +16175,111 @@ Proof.
 Qed.
 
 
+Definition direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+    (env : global_env) (fdef : fn_def) (s s' : store) (v : value)
+    : Prop :=
+  forall method_name type_args receiver_name receiver_args method_args
+      (receiver_callee : fn_def) method_callee,
+    (exists s_receiver_raw v_receiver_raw s_args_raw vs_method_raw
+        fcall_raw used_raw s_body_raw,
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        s (ECall receiver_name receiver_args) s_receiver_raw
+        v_receiver_raw /\
+      eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+        s_receiver_raw method_args s_args_raw vs_method_raw /\
+      lookup_fn method_name
+        (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+        Some method_callee /\
+      fn_captures method_callee = [] /\
+      alpha_rename_fn_def (store_names s_args_raw) method_callee =
+        (fcall_raw, used_raw) /\
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_raw))
+          (v_receiver_raw :: vs_method_raw) s_args_raw)
+        (subst_type_params_expr type_args (fn_body fcall_raw))
+        s_body_raw v /\
+      s' = store_remove_params
+        (apply_type_params type_args (fn_params fcall_raw)) s_body_raw) ->
+    forall s_receiver v_receiver,
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s (ECall receiver_name receiver_args) s_receiver v_receiver ->
+    forall s_args_base vs_method fcall_base used_base s_body_base,
+    eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+      s_receiver method_args s_args_base vs_method ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base)
+      (subst_type_params_expr type_args (fn_body fcall_base))
+      s_body_base v ->
+    ~ In receiver_method_hidden_receiver_name
+      (free_vars_expr (subst_type_params_expr type_args
+        (fn_body fcall_base))) /\
+    ~ In receiver_method_hidden_receiver_name
+      (expr_local_store_names (subst_type_params_expr type_args
+        (fn_body fcall_base))) /\
+    store_refs_exclude_root receiver_method_hidden_receiver_name
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base).
+
+Lemma direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider :
+  forall env fdef s s' v,
+    direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+      env fdef s s' v ->
+    direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v ->
+    direct_receiver_method_live_raw_body_replay_provider_for_eval
+      env fdef s s' v.
+Proof.
+  intros env fdef s s' v Hside Hscoped.
+  unfold direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+    in Hside.
+  unfold direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+    in Hscoped.
+  unfold direct_receiver_method_live_raw_body_replay_provider_for_eval.
+  intros method_name type_args receiver_name receiver_args method_args
+    receiver_callee method_callee Hraw s_receiver v_receiver Heval_receiver
+    s_args_base vs_method fcall_base used_base s_body_base Heval_args_base
+    Halpha_base Heval_body_base s_var_hidden s_args_hidden Heval_var
+    Heval_args_hidden Hrel_args.
+  destruct (Hside method_name type_args receiver_name receiver_args
+    method_args receiver_callee method_callee Hraw s_receiver v_receiver
+    Heval_receiver s_args_base vs_method fcall_base used_base s_body_base
+    Heval_args_base Halpha_base Heval_body_base) as
+    (Hbody_free & Hbody_local & Hrefs_body_start).
+  eapply Hscoped; eassumption.
+Qed.
+
+Lemma direct_receiver_method_consumed_raw_body_replay_provider_of_scoped_raw_body_replay_provider :
+  forall env fdef s s' v,
+    direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+      env fdef s s' v ->
+    direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+      env fdef s s' v ->
+    direct_receiver_method_consumed_raw_body_replay_provider_for_eval
+      env fdef s s' v.
+Proof.
+  intros env fdef s s' v Hside Hscoped.
+  unfold direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+    in Hside.
+  unfold direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+    in Hscoped.
+  unfold direct_receiver_method_consumed_raw_body_replay_provider_for_eval.
+  intros method_name type_args receiver_name receiver_args method_args
+    receiver_callee method_callee Hraw s_receiver v_receiver Heval_receiver
+    s_args_base vs_method fcall_base used_base s_body_base Heval_args_base
+    Halpha_base Heval_body_base s_var_hidden s_args_hidden Heval_var
+    Heval_args_hidden Hrel_args.
+  destruct (Hside method_name type_args receiver_name receiver_args
+    method_args receiver_callee method_callee Hraw s_receiver v_receiver
+    Heval_receiver s_args_base vs_method fcall_base used_base s_body_base
+    Heval_args_base Halpha_base Heval_body_base) as
+    (Hbody_free & Hbody_local & Hrefs_body_start).
+  eapply Hscoped; eassumption.
+Qed.
+
+
 Lemma direct_receiver_method_live_raw_body_replay_provider_of_expr_lift :
   forall env fdef s s' v,
     direct_receiver_method_live_expr_lift_provider_for_eval env fdef ->
@@ -22198,6 +22303,35 @@ Proof.
       in Hbody_replay_consumed.
     eapply callee_body_root_shadow_captured_call_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_split_raw_body_replay;
       try eassumption.
+Qed.
+
+
+Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_raw_body_replay :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval
+      env f s s' v ->
+    direct_receiver_method_live_scoped_raw_body_replay_provider_for_eval
+      env f s s' v ->
+    direct_receiver_method_consumed_scoped_raw_body_replay_provider_for_eval
+      env f s s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hevidence Hready Hsummary Hinitial
+    Hstore Heval Hside Hbody_replay_live Hbody_replay_consumed.
+  eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_split_raw_body_replay;
+    try eassumption.
+  - eapply direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider;
+      eassumption.
+  - eapply direct_receiver_method_consumed_raw_body_replay_provider_of_scoped_raw_body_replay_provider;
+      eassumption.
 Qed.
 
 

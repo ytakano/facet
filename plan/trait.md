@@ -152,9 +152,12 @@ validity checks must be represented in Rocq and the extracted checker.
   expression-lift bridges that consume the packaged body free/local freshness
   and bound-parameter ref-exclusion premises; the direct provider layer now has
   matching scoped live/consumed raw-replay providers derived from scoped
-  expression-lift providers. The active public checker gate still uses the base
-  summary until those scoped providers are threaded through a checked-initial
-  wrapper and wired into the public route.
+  expression-lift providers, plus a checked-initial adapter that converts
+  scoped raw replay back to the existing split replay wrapper when a shared
+  side-condition provider supplies the body freshness and bound-start
+  ref-exclusion facts. The active public checker gate still uses the base
+  summary until that side-condition provider is derived automatically and the
+  scoped route is wired into the public wrapper.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -237,10 +240,12 @@ validity checks must be represented in Rocq and the extracted checker.
      annotation distinction. Raw replay now has scoped live/consumed bridges
      and matching provider-layer derivations from scoped expression-lift
      providers, with method-body freshness and bound-parameter ref-exclusion
-     facts explicit at the provider boundary. The next proof step is threading
-     the checked-initial package facts through a scoped-provider wrapper, then
-     wiring the result into the public route so the active public gate can switch
-     to the direct-extended boundary. Generic
+     facts explicit at the provider boundary. A checked-initial adapter now
+     consumes those scoped providers through a shared side-condition provider.
+     The next proof step is deriving that side-condition provider from the
+     checked-initial replay package facts, then wiring the scoped route into the
+     public wrapper so the active public gate can switch to the direct-extended
+     boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

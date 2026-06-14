@@ -14426,6 +14426,43 @@ let let_bound_generic_direct_call_target_expr = function
    | _ -> None)
 | _ -> None
 
+(** val direct_call_receiver_method_target_expr :
+    expr -> (((((ident * ty list) * ident) * expr list) * expr list) * expr)
+    option **)
+
+let direct_call_receiver_method_target_expr = function
+| ECallGeneric (method_name, type_args, l) ->
+  (match l with
+   | [] -> None
+   | e0 :: method_args ->
+     (match e0 with
+      | ECall (receiver_name, receiver_args) ->
+        Some (((((method_name, type_args), receiver_name), receiver_args),
+          method_args), (ECallGeneric (method_name, type_args, ((ECall
+          (receiver_name, receiver_args)) :: method_args))))
+      | ECallExpr (e1, receiver_args) ->
+        (match e1 with
+         | EFn receiver_name ->
+           Some (((((method_name, type_args), receiver_name), receiver_args),
+             method_args), (ECallGeneric (method_name, type_args, ((ECall
+             (receiver_name, receiver_args)) :: method_args))))
+         | _ -> None)
+      | _ -> None))
+| _ -> None
+
+(** val receiver_method_hidden_receiver_name : ident **)
+
+let receiver_method_hidden_receiver_name =
+  ("__facet_method_receiver", Big_int_Z.zero_big_int)
+
+(** val direct_call_receiver_method_hidden_let_synthetic_body :
+    ty -> ident -> ty list -> ident -> expr list -> expr list -> expr **)
+
+let direct_call_receiver_method_hidden_let_synthetic_body t_receiver method_name type_args receiver_name receiver_args method_args =
+  ELet (MImmutable, receiver_method_hidden_receiver_name, t_receiver, (ECall
+    (receiver_name, receiver_args)), (ECallGeneric (method_name, type_args,
+    ((EVar receiver_method_hidden_receiver_name) :: method_args))))
+
 (** val if_literal_generic_direct_call_target_expr :
     expr -> (((((((bool * ident) * ty list) * expr list) * ident) * ty
     list) * expr list) * expr) option **)
@@ -15627,6 +15664,151 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
       fname type_args args synthetic_body
   | None -> false
 
+(** val check_fn_root_shadow_direct_receiver_method_store_safe_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef =
+  match direct_call_receiver_method_target_expr fdef.fn_body with
+  | Some p ->
+    let (p0, _) = p in
+    let (p1, method_args) = p0 in
+    let (p2, receiver_args) = p1 in
+    let (p3, receiver_name) = p2 in
+    let (method_name, type_args) = p3 in
+    (&&)
+      ((&&)
+        ((&&)
+          ((&&)
+            ((&&) (store_safe_function_value_call_args_b env receiver_args)
+              (store_safe_function_value_call_args_b env method_args))
+            (negb
+              (ident_in_b receiver_method_hidden_receiver_name
+                (args_free_vars_checker method_args))))
+          (negb
+            (ident_in_b receiver_method_hidden_receiver_name
+              (args_local_store_names method_args))))
+        (negb
+          (ident_in_b receiver_method_hidden_receiver_name
+            (ctx_names (fn_body_ctx fdef)))))
+      (match lookup_fn_b receiver_name env.env_fns with
+       | Some receiver_callee ->
+         (match lookup_fn_b method_name env.env_fns with
+          | Some method_callee ->
+            (&&) (Nat.eqb (length type_args) method_callee.fn_type_params)
+              (match check_struct_bounds
+                       (global_env_with_local_bounds env fdef.fn_bounds)
+                       method_callee.fn_bounds type_args with
+               | Some _ -> false
+               | None ->
+                 let method_body_env =
+                   global_env_with_local_bounds env
+                     (subst_type_params_trait_bounds type_args
+                       method_callee.fn_bounds)
+                 in
+                 (match infer_core_env_roots_shadow_safe env
+                          receiver_callee.fn_outlives
+                          receiver_callee.fn_lifetimes
+                          (initial_root_env_for_fn receiver_callee)
+                          (fn_body_ctx receiver_callee)
+                          receiver_callee.fn_body with
+                  | Infer_ok p4 ->
+                    let (p5, roots_receiver) = p4 in
+                    let (p6, r_receiver) = p5 in
+                    let (t_receiver, _) = p6 in
+                    (match infer_env_roots_shadow_safe env receiver_callee
+                             (initial_root_env_for_fn receiver_callee) with
+                     | Infer_ok _ ->
+                       (match infer_core_env_roots_shadow_safe
+                                method_body_env method_callee.fn_outlives
+                                method_callee.fn_lifetimes
+                                (initial_root_env_for_fn method_callee)
+                                (subst_type_params_ctx type_args
+                                  (fn_body_ctx method_callee))
+                                (subst_type_params_expr type_args
+                                  method_callee.fn_body) with
+                        | Infer_ok p7 ->
+                          let (p8, roots_method) = p7 in
+                          let (p9, r_method) = p8 in
+                          let (t_method, _) = p9 in
+                          (match infer_env_roots_shadow_safe env
+                                   method_callee
+                                   (initial_root_env_for_fn method_callee) with
+                           | Infer_ok _ ->
+                             (match infer_env_roots_shadow_safe env
+                                      (fn_with_body fdef
+                                        (direct_call_receiver_method_hidden_let_synthetic_body
+                                          receiver_callee.fn_ret method_name
+                                          type_args receiver_name
+                                          receiver_args method_args))
+                                      (initial_root_env_for_fn fdef) with
+                              | Infer_ok p10 ->
+                                let (p11, roots) = p10 in
+                                let (p12, r_out) = p11 in
+                                let (t_body, _) = p12 in
+                                (&&)
+                                  ((&&)
+                                    ((&&)
+                                      ((&&)
+                                        ((&&)
+                                          ((&&)
+                                            ((&&)
+                                              ((&&)
+                                                ((&&)
+                                                  ((&&)
+                                                    ((&&)
+                                                      (check_expr_root_shadow_store_safe_narrow_summary
+                                                        env
+                                                        receiver_callee.fn_outlives
+                                                        receiver_callee.fn_lifetimes
+                                                        (initial_root_env_for_fn
+                                                          receiver_callee)
+                                                        (fn_body_ctx
+                                                          receiver_callee)
+                                                        receiver_callee.fn_body)
+                                                      (ty_compatible_b
+                                                        receiver_callee.fn_outlives
+                                                        t_receiver
+                                                        receiver_callee.fn_ret))
+                                                    (fn_params_roots_exclude_b
+                                                      receiver_callee.fn_params
+                                                      roots_receiver))
+                                                  (fn_params_root_env_excludes_b
+                                                    receiver_callee.fn_params
+                                                    r_receiver))
+                                                (preservation_ready_expr_b
+                                                  (subst_type_params_expr
+                                                    type_args
+                                                    method_callee.fn_body)))
+                                              (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                                                env method_callee type_args))
+                                            (ty_compatible_b
+                                              method_callee.fn_outlives
+                                              t_method
+                                              (subst_type_params_ty type_args
+                                                method_callee.fn_ret)))
+                                          (fn_params_roots_exclude_b
+                                            (apply_type_params type_args
+                                              method_callee.fn_params)
+                                            roots_method))
+                                        (fn_params_root_env_excludes_b
+                                          (apply_type_params type_args
+                                            method_callee.fn_params)
+                                          r_method))
+                                      (ty_compatible_b fdef.fn_outlives
+                                        t_body fdef.fn_ret))
+                                    (fn_params_roots_exclude_b fdef.fn_params
+                                      roots))
+                                  (fn_params_root_env_excludes_b
+                                    fdef.fn_params r_out)
+                              | Infer_err _ -> false)
+                           | Infer_err _ -> false)
+                        | Infer_err _ -> false)
+                     | Infer_err _ -> false)
+                  | Infer_err _ -> false))
+          | None -> false)
+       | None -> false)
+  | None -> false
+
 (** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary :
     global_env -> fn_def -> bool **)
 
@@ -15702,6 +15884,15 @@ let rec check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
 let check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef =
   check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
     (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D1 Nil))))))) [] env fdef
+
+(** val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary env =
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env)
+    env.env_fns
 
 (** val check_fn_root_shadow_captured_call_provenance_summary :
     global_env -> fn_def -> bool **)
@@ -16159,6 +16350,32 @@ let check_fn_root_shadow_captured_call_base_store_safe_summary =
 let check_fn_root_shadow_captured_call_store_safe_summary =
   check_fn_root_shadow_captured_call_base_store_safe_summary
 
+(** val check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method env fdef =
+  (||) (check_fn_root_shadow_captured_call_store_safe_summary env fdef)
+    (check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef)
+
+(** val check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary env fdef =
+  (||)
+    (check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env fdef)
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef)
+
+(** val check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary env =
+  forallb
+    (check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env)
+    env.env_fns
+
 (** val check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary :
     global_env -> fn_def -> bool **)
 
@@ -16446,6 +16663,57 @@ let infer_program_env_end2end_assoc_strict_exact_closure env =
 
 let check_program_env_end2end_assoc_strict_exact_closure env =
   match infer_program_env_end2end_assoc_strict_exact_closure env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val check_env_end2end_direct_receiver_ready : global_env -> bool **)
+
+let check_env_end2end_direct_receiver_ready env =
+  (&&)
+    ((&&)
+      ((&&) (check_env_root_shadow_provenance_summary env)
+        (check_env_preservation_ready env))
+      (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+        env))
+    (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env)
+
+(** val infer_program_env_end2end_strict_exact_closure_direct_receiver :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_strict_exact_closure_direct_receiver env =
+  match infer_program_env_end2end_strict_exact_closure env with
+  | Infer_ok env' ->
+    if check_env_end2end_direct_receiver_ready env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_strict_exact_closure_direct_receiver :
+    global_env -> bool **)
+
+let check_program_env_end2end_strict_exact_closure_direct_receiver env =
+  match infer_program_env_end2end_strict_exact_closure_direct_receiver env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
+  match infer_program_env_end2end_assoc_strict_exact_closure env with
+  | Infer_ok env' ->
+    if check_env_end2end_direct_receiver_ready env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
+  match infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver
+          env with
   | Infer_ok _ -> true
   | Infer_err _ -> false
 

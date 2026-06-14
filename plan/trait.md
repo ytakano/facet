@@ -110,8 +110,8 @@ validity checks must be represented in Rocq and the extracted checker.
   replay-final providers now consume that transport with the shared body-final
   helper. The direct and generic public checked-initial raw-package summary
   boundaries now route through their closed replay-final providers. Hidden
-  receiver replay now packages the initial variable step, store-safe
-  method-argument hidden-frame lifting, method-argument inversion, direct
+  receiver replay now packages the initial variable step with store-safe
+  method-argument hidden-frame replay, method-argument inversion, direct
   body-strip wrapper, hidden method-call constructor bridge, and the existential
   parts-to-call replay bridge as live or consumed hidden-frame relations while
   preserving the distinction between the receiver call's inferred type and the
@@ -196,10 +196,10 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is using the store-safe method-argument lift with the
-     raw receiver-method body replay to feed the parts-to-call bridge and
-     discharge the direct hidden-method replay premise, then switching the active
-     public gate to the direct-extended boundary. Generic
+     The next proof step is combining the packaged hidden receiver/method-argument
+     replay with raw receiver-method body replay to feed the parts-to-call bridge
+     and discharge the direct hidden-method replay premise, then switching the
+     active public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

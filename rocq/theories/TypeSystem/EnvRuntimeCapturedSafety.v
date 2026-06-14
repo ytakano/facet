@@ -3191,6 +3191,39 @@ Proof.
     end.
 Qed.
 
+Lemma receiver_method_store_safe_args_hidden_replay :
+  forall env T_receiver v_receiver s_receiver method_args s_args_base
+      vs_method,
+    store_safe_function_value_call_args env method_args ->
+    ~ In receiver_method_hidden_receiver_name
+        (args_free_vars_ts method_args) ->
+    eval_args env s_receiver method_args s_args_base vs_method ->
+    exists s_var_hidden s_args_hidden,
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name) s_var_hidden
+        v_receiver /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      ((store_hidden_frame_rel receiver_method_hidden_receiver_name
+          T_receiver v_receiver s_args_hidden s_args_base) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_args_hidden s_args_base).
+Proof.
+  intros env T_receiver v_receiver s_receiver method_args s_args_base
+    vs_method Hsafe Hfree Heval_args_base.
+  destruct (receiver_method_hidden_receiver_var_frame_case
+    env T_receiver v_receiver s_receiver) as
+    (s_var_hidden & Heval_var & Hrel_var).
+  destruct (store_safe_function_value_call_args_hidden_frame_lift
+    env receiver_method_hidden_receiver_name T_receiver v_receiver
+    method_args s_var_hidden s_receiver s_args_base vs_method Hrel_var
+    Hsafe Hfree Heval_args_base) as (s_args_hidden & Heval_args_hidden &
+      Hrel_args).
+  exists s_var_hidden, s_args_hidden.
+  repeat split; eassumption.
+Qed.
+
 Lemma hidden_receiver_var_eval_inv :
   forall env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
     eval env

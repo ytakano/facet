@@ -163,9 +163,11 @@ validity checks must be represented in Rocq and the extracted checker.
   checked-initial body-env helpers source receiver-value and receiver-store ref
   exclusion from the typed receiver direct call at the initial store. A
   checked-initial fact helper now composes those facts into the side-condition
-  triple for a concrete raw replay witness. The active public checker gate still
-  uses the base summary until that helper is lifted into a provider and the
-  scoped route is wired into the public wrapper.
+  triple for a concrete raw replay witness, and a selected runtime-call bridge
+  packages that fact behind the hidden-let typing inversion needed by the direct
+  replay package. The active public checker gate still uses the base summary
+  until the selected bridge is consumed by the provider route and the scoped
+  route is wired into the public wrapper.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -257,10 +259,11 @@ validity checks must be represented in Rocq and the extracted checker.
      receiver-value and receiver-store ref exclusion from the typed receiver
      direct call at the initial store; and a checked-initial fact helper now
      composes those inputs into the side-condition triple for a concrete raw
-     replay witness. The next proof step is lifting that helper into the
-     side-condition provider, then wiring the scoped route into the public
-     wrapper so the active public gate can switch to the direct-extended
-     boundary. Generic activation and
+     replay witness, and a selected runtime-call bridge packages that helper
+     with the hidden-let typing inversion required by the direct replay package.
+     The next proof step is consuming that selected bridge in the provider route,
+     then wiring the scoped route into the public wrapper so the active public
+     gate can switch to the direct-extended boundary. Generic activation and
      regression coverage follow after the direct branch is active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.

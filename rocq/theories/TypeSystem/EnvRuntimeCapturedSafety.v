@@ -14155,6 +14155,11 @@ Lemma receiver_method_live_raw_body_replay_from_focused_lift :
           (v_receiver :: vs_method) s_args_hidden)
         (bind_params (apply_type_params type_args (fn_params fcall_base))
           (v_receiver :: vs_method) s_args_base) ->
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_base)
+        (subst_type_params_expr type_args (fn_body fcall_base))
+        s_body_base v ->
       exists s_body_hidden,
         eval (global_env_with_local_bounds env (fn_bounds fdef))
           (bind_params (apply_type_params type_args (fn_params fcall_base))
@@ -14175,7 +14180,7 @@ Proof.
     s_args_base vs_method fcall_base used_base s_body_base s_var_hidden
     s_args_hidden _Hraw _Heval_receiver _Heval_args_base Halpha_base
     Heval_body_base _Heval_var _Heval_args_hidden Hrel_args Hlift_body.
-  eapply receiver_method_live_raw_body_replay_provider; eassumption.
+  eapply receiver_method_live_body_replay_from_base_lift; eassumption.
 Qed.
 
 Lemma receiver_method_consumed_raw_body_replay_from_focused_lift :
@@ -14231,6 +14236,11 @@ Lemma receiver_method_consumed_raw_body_replay_from_focused_lift :
           (v_receiver :: vs_method) s_args_hidden)
         (bind_params (apply_type_params type_args (fn_params fcall_base))
           (v_receiver :: vs_method) s_args_base) ->
+      eval (global_env_with_local_bounds env (fn_bounds fdef))
+        (bind_params (apply_type_params type_args (fn_params fcall_base))
+          (v_receiver :: vs_method) s_args_base)
+        (subst_type_params_expr type_args (fn_body fcall_base))
+        s_body_base v ->
       exists s_body_hidden,
         eval (global_env_with_local_bounds env (fn_bounds fdef))
           (bind_params (apply_type_params type_args (fn_params fcall_base))
@@ -14251,7 +14261,7 @@ Proof.
     s_args_base vs_method fcall_base used_base s_body_base s_var_hidden
     s_args_hidden _Hraw _Heval_receiver _Heval_args_base Halpha_base
     Heval_body_base _Heval_var _Heval_args_hidden Hrel_args Hlift_body.
-  eapply receiver_method_consumed_raw_body_replay_provider; eassumption.
+  eapply receiver_method_consumed_body_replay_from_base_lift; eassumption.
 Qed.
 
 Lemma callee_body_root_shadow_captured_call_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_split_raw_body_replay :

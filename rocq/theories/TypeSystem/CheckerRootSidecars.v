@@ -2346,6 +2346,20 @@ Definition check_env_end2end_direct_receiver_mixed_ready
   negb (check_env_root_shadow_direct_receiver_method_present env) ||
   check_env_end2end_direct_receiver_ready env.
 
+Lemma check_env_end2end_direct_receiver_mixed_ready_cases :
+  forall env,
+    check_env_end2end_direct_receiver_mixed_ready env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false \/
+    check_env_end2end_direct_receiver_ready env = true.
+Proof.
+  intros env Hready.
+  unfold check_env_end2end_direct_receiver_mixed_ready in Hready.
+  destruct (check_env_root_shadow_direct_receiver_method_present env)
+    eqn:Hpresent; simpl in Hready.
+  - right. exact Hready.
+  - left. reflexivity.
+Qed.
+
 Definition infer_program_env_end2end_strict_exact_closure_direct_receiver
     (env : global_env) : infer_result global_env :=
   match infer_program_env_end2end_strict_exact_closure env with

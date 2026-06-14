@@ -110,9 +110,9 @@ validity checks must be represented in Rocq and the extracted checker.
   gate for programs without direct receiver-method bodies; its direct-ready
   runtime branch is proven, and a base-route mixed runtime theorem now recovers
   assoc strict exact-closure safety for that branch through exact-closure
-  provider premises. A provider-free bridge is still needed before the required
-  public runtime-safety theorem can target the mixed endpoint without widening
-  its interface.
+  provider premises. A mixed-ready case-split lemma is available, but a
+  provider-free bridge is still needed before the required public
+  runtime-safety theorem can target the mixed endpoint without widening its interface.
 
 ## Key Decisions
 

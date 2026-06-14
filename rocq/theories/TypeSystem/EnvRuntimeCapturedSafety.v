@@ -2401,6 +2401,52 @@ Proof.
     + eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma eval_drop_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without e s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    eval env s_without (EDrop e) s_without' v ->
+    (forall s1 value,
+      eval env s_without e s1 value ->
+      exists s0',
+        eval env s_with e s0' value /\
+        store_hidden_frame_rel x T hidden s0' s1) ->
+    exists s_with',
+      eval env s_with (EDrop e) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without e s_without' v _Hrel Heval Hlift.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Hinner : eval env s_without e ?s_inner ?value |- _ =>
+      destruct (Hlift s_inner value Hinner) as
+        (s_with' & Heval_with & Hrel')
+  end.
+  exists s_with'. split; [eapply Eval_Drop; exact Heval_with | exact Hrel'].
+Qed.
+
+Lemma eval_drop_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without e s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    eval env s_without (EDrop e) s_without' v ->
+    (forall s1 value,
+      eval env s_without e s1 value ->
+      exists s0',
+        eval env s_with e s0' value /\
+        store_consumed_hidden_frame_rel x T hidden s0' s1) ->
+    exists s_with',
+      eval env s_with (EDrop e) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without e s_without' v _Hrel Heval Hlift.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Hinner : eval env s_without e ?s_inner ?value |- _ =>
+      destruct (Hlift s_inner value Hinner) as
+        (s_with' & Heval_with & Hrel')
+  end.
+  exists s_with'. split; [eapply Eval_Drop; exact Heval_with | exact Hrel'].
+Qed.
+
 Lemma eval_fn_hidden_frame_rel_lift :
   forall env x T hidden s_with s_without fname s_without' v,
     store_hidden_frame_rel x T hidden s_with s_without ->

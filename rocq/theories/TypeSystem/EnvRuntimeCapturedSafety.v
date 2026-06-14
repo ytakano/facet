@@ -16506,6 +16506,110 @@ Proof.
 Qed.
 
 
+Lemma direct_receiver_method_scoped_raw_body_replay_side_conditions_from_checked_initial_facts :
+  forall env fdef s receiver_name receiver_args T_receiver_call
+      Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
+      receiver_callee method_name method_args method_callee type_args
+      fcall_base used_base vs_method s_args_base,
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_args ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fdef)) method_args ->
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) receiver_callee ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      (global_env_with_local_bounds env (fn_bounds fdef)) 10000
+      method_callee type_args ->
+    lookup_fn method_name
+      (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) =
+      Some method_callee ->
+    fn_captures method_callee = [] ->
+    check_initial_root_runtime_ready fdef s = true ->
+    initial_store_for_fn env fdef s ->
+    root_env_no_shadow (initial_root_env_for_fn fdef) ->
+    eval (global_env_with_local_bounds env (fn_bounds fdef))
+      s (ECall receiver_name receiver_args) s_receiver v_receiver ->
+    fn_env_unique_by_name
+      (global_env_with_local_bounds env (fn_bounds fdef)) ->
+    In receiver_callee
+      (env_fns (global_env_with_local_bounds env (fn_bounds fdef))) ->
+    fn_name receiver_callee = receiver_name ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (ECall receiver_name receiver_args) T_receiver_call Sigma_receiver
+      R_receiver receiver_roots ->
+    ~ In receiver_method_hidden_receiver_name (store_names s) ->
+    ~ In receiver_method_hidden_receiver_name
+      (args_free_vars_ts method_args) ->
+    ~ In receiver_method_hidden_receiver_name
+      (args_local_store_names method_args) ->
+    eval_args (global_env_with_local_bounds env (fn_bounds fdef))
+      s_receiver method_args s_args_base vs_method ->
+    alpha_rename_fn_def (store_names s_args_base) method_callee =
+      (fcall_base, used_base) ->
+    ~ In receiver_method_hidden_receiver_name
+      (free_vars_expr (subst_type_params_expr type_args
+        (fn_body fcall_base))) /\
+    ~ In receiver_method_hidden_receiver_name
+      (expr_local_store_names
+        (subst_type_params_expr type_args (fn_body fcall_base))) /\
+    store_refs_exclude_root receiver_method_hidden_receiver_name
+      (bind_params (apply_type_params type_args (fn_params fcall_base))
+        (v_receiver :: vs_method) s_args_base).
+Proof.
+  intros env fdef s receiver_name receiver_args T_receiver_call
+    Sigma_receiver R_receiver receiver_roots s_receiver v_receiver
+    receiver_callee method_name method_args method_callee type_args
+    fcall_base used_base vs_method s_args_base Henv_ready_body
+    Hsafe_receiver Hsafe_method Hreceiver_summary Hreceiver_provenance
+    Hmethod_summary Hlookup_method Hcaptures Hinitial Hstore_initial Hrn
+    Heval_receiver Hunique_body Hin_receiver Hname_receiver Htyped_receiver
+    Hfresh_initial Hfree_method Hlocal_method Heval_args_base Halpha_base.
+  assert (Hfresh_receiver :
+    ~ In receiver_method_hidden_receiver_name (store_names s_receiver)).
+  { eapply eval_direct_receiver_call_hidden_name_fresh_store_names.
+    - exact Henv_ready_body.
+    - exact Heval_receiver.
+    - eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe_receiver.
+    - exact Hfresh_initial. }
+  assert (Hrefs_receiver :
+    store_refs_exclude_root receiver_method_hidden_receiver_name s_receiver).
+  { eapply (direct_receiver_method_receiver_store_hidden_root_exclude_checked_initial_body_env
+      env fdef s receiver_name receiver_args T_receiver_call Sigma_receiver
+      R_receiver receiver_roots s_receiver v_receiver receiver_callee);
+      eassumption. }
+  assert (Hvalue_receiver :
+    value_refs_exclude_root receiver_method_hidden_receiver_name v_receiver).
+  { eapply (direct_receiver_method_receiver_value_hidden_root_exclude_checked_initial_body_env
+      env fdef s receiver_name receiver_args T_receiver_call Sigma_receiver
+      R_receiver receiver_roots s_receiver v_receiver receiver_callee);
+      eassumption. }
+  destruct (direct_receiver_method_base_args_hidden_root_exclude_from_store_safe
+    (global_env_with_local_bounds env (fn_bounds fdef))
+    (fn_ret receiver_callee) v_receiver s_receiver method_args s_args_base
+    vs_method Hsafe_method Hfree_method Hlocal_method Heval_args_base
+    Hrefs_receiver) as (Hrefs_args & Hvalues_args).
+  assert (Hready_fcall : preservation_ready_expr (fn_body fcall_base)).
+  { eapply lookup_alpha_rename_fn_def_preservation_ready_body;
+      eassumption. }
+  assert (Hready_body :
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall_base))).
+  { apply preservation_ready_expr_subst_type_params_expr.
+    exact Hready_fcall. }
+  eapply direct_receiver_method_scoped_raw_body_replay_side_conditions_from_base_args;
+    eassumption.
+Qed.
+
+
 Lemma direct_receiver_method_live_raw_body_replay_provider_of_scoped_raw_body_replay_provider :
   forall env fdef s s' v,
     direct_receiver_method_scoped_raw_body_replay_side_conditions_for_eval

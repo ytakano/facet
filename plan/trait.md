@@ -109,13 +109,13 @@ validity checks must be represented in Rocq and the extracted checker.
   hidden/base argument-store frame alpha transport. The direct and generic
   replay-final providers now consume that transport with the shared body-final
   helper. The direct and generic public checked-initial raw-package summary
-  boundaries now route through their closed replay-final providers. A hidden
-  receiver variable frame-case bridge now packages the first replay step as
-  either the live or consumed hidden-frame relation. Staged direct-only and
-  combined direct/generic receiver-method captured-call checker/Prop summary
-  boundaries now have boolean soundness, but the active public checker gate
-  still uses the base summary until the direct hidden-call replay premise is
-  proved.
+  boundaries now route through their closed replay-final providers. Hidden
+  receiver replay now packages both the initial variable step and the full
+  method-argument inversion as live or consumed hidden-frame relations. Staged
+  direct-only and combined direct/generic receiver-method captured-call
+  checker/Prop summary boundaries now have boolean soundness, but the active
+  public checker gate still uses the base summary until the direct hidden-call
+  replay premise is proved.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -190,12 +190,11 @@ validity checks must be represented in Rocq and the extracted checker.
      close final-store matching with the argument-store alpha bridge, both public
      checked-initial raw-package boundaries route through those closed providers,
      staged direct-only plus combined direct/generic summary checker/Prop
-     boundaries are sound, and hidden receiver variable replay now yields either
-     the live or consumed hidden-frame relation. The next proof step is lifting
-     preservation-ready method-argument evaluation across that hidden receiver
-     frame, deriving the direct hidden-method replay premise from raw
-     receiver-method evaluation, then switching the active public gate to the
-     direct-extended boundary. Generic
+     boundaries are sound, and hidden method-call inversion now exposes base
+     method-argument evaluation with the live/consumed hidden-frame relation at
+     the argument store. The next proof step is deriving the direct hidden-method
+     replay premise from raw receiver-method evaluation, then switching the
+     active public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

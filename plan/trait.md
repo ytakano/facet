@@ -38,6 +38,9 @@ validity checks must be represented in Rocq and the extracted checker.
   root naming derived, ready direct-call receiver-store freshness preservation,
   composed hidden body replay packaging that derives direct and generic
   receiver-store refs/value refs internally under exact ready premises,
+  and hidden receiver replay has a raw-final-package continuation bridge that
+  strips the packaged raw cleanup fact before deriving the replayed hidden
+  method call from the body replay continuation. Rocq also has
   a direct receiver-method replay wrapper/package that separates the receiver
   call's actual type from the hidden-frame annotation while leaving
   compatibility available to callers, root-set naming transport, generic
@@ -200,10 +203,10 @@ validity checks must be represented in Rocq and the extracted checker.
      boundaries are sound, and the direct hidden-call body-strip wrapper now
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
-     The next proof step is wiring the raw-package bridge into the direct
-     checked-initial wrapper so the raw receiver-method body replay discharges
-     the direct hidden-method replay premise, then switching the active public
-     gate to the direct-extended boundary. Generic
+     The next proof step is threading the direct raw-final-package replay
+     bridge through the checked-initial wrapper so the raw receiver-method body
+     replay discharges the direct hidden-method replay premise, then switching
+     the active public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is
      active.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this

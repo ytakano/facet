@@ -2237,6 +2237,44 @@ Proof.
       * eapply EvalPlace_Deref; eassumption.
 Qed.
 
+Lemma eval_store_inert_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without e s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    (e = EUnit \/ exists lit, e = ELit lit) ->
+    eval env s_without e s_without' v ->
+    exists s_with',
+      eval env s_with e s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without e s_without' v Hrel Hinert Heval.
+  destruct Hinert as [Heq | [lit Heq]]; subst e.
+  - inversion Heval; subst; clear Heval.
+    exists s_with. split; [apply Eval_Unit | exact Hrel].
+  - destruct lit; inversion Heval; subst; clear Heval.
+    + exists s_with. split; [apply Eval_LitInt | exact Hrel].
+    + exists s_with. split; [apply Eval_LitFloat | exact Hrel].
+    + exists s_with. split; [apply Eval_LitBool | exact Hrel].
+Qed.
+
+Lemma eval_store_inert_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without e s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    (e = EUnit \/ exists lit, e = ELit lit) ->
+    eval env s_without e s_without' v ->
+    exists s_with',
+      eval env s_with e s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without e s_without' v Hrel Hinert Heval.
+  destruct Hinert as [Heq | [lit Heq]]; subst e.
+  - inversion Heval; subst; clear Heval.
+    exists s_with. split; [apply Eval_Unit | exact Hrel].
+  - destruct lit; inversion Heval; subst; clear Heval.
+    + exists s_with. split; [apply Eval_LitInt | exact Hrel].
+    + exists s_with. split; [apply Eval_LitFloat | exact Hrel].
+    + exists s_with. split; [apply Eval_LitBool | exact Hrel].
+Qed.
+
 Lemma eval_var_hidden_frame_rel_lift :
   forall env x T hidden s_with s_without y s_without' v,
     store_hidden_frame_rel x T hidden s_with s_without ->

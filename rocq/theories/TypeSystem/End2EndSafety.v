@@ -10933,18 +10933,15 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
-    In fdef (env_fns env) ->
-    fn_name fdef = fname ->
-    alpha_rename_fn_def used fdef = (fcall, used') ->
-    direct_call_target_expr (fn_body fcall) =
-      Some (fname_body, args_body, synthetic_body) ->
-    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-      env fdef) ->
-  (forall env, component_body_no_capture_direct_call_component_exact_closure_check_provider env) ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
       env = infer_ok env' ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
@@ -10952,9 +10949,8 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros _Hsynthetic_route Hscope_synthetic _Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys _Hframe_ready _Hparam_ready Hcomponent_provider
-    Hexact_closure_provider env env' f s s' v Hprog Hinitial Hin Hstore
-    Heval.
+    Hroot_names Hroot_keys _Hframe_ready _Hparam_ready env env' f s s' v
+    Hprog Hcomponent_route Hinitial Hin Hstore Heval.
   unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
     in Hprog.
   destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
@@ -10962,16 +10958,14 @@ Proof.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
     try discriminate.
   injection Hprog as <-.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_component_body_summary_route_package_and_exact_closure_provider.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family.
   - exact Hscope_synthetic.
-  - exact eval_preserves_typing_ready_prefix_mutual.
-  - exact eval_preserves_typing_roots_ready_prefix_mutual.
+  - exact eval_preserves_typing_ready_mutual.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hcomponent_provider.
-  - exact Hexact_closure_provider.
   - exact Hbase.
+  - exact Hcomponent_route.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

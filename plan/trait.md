@@ -108,11 +108,11 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-or-component=true, component=false. The endpoint is verified but not
   broad enough to be the active CLI authority. The mixed endpoint avoids this
   gate for programs without direct receiver-method bodies; its direct-ready
-  runtime branch is proven, and a base-route mixed runtime theorem now recovers
-  assoc strict exact-closure safety for that branch through exact-closure
-  provider premises. A mixed-ready case-split lemma is available, but a
-  provider-free bridge is still needed before the required public
-  runtime-safety theorem can target the mixed endpoint without widening its interface.
+  runtime branch is proven, and a base-route mixed runtime theorem now
+  recovers assoc strict exact-closure safety for that branch from env-local component route evidence. A mixed-ready
+  case-split lemma is available, but a provider-free bridge is still needed
+  before the required public runtime-safety theorem can target the mixed
+  endpoint without widening its interface.
 
 ## Key Decisions
 

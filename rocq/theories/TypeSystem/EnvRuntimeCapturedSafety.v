@@ -1705,6 +1705,38 @@ Proof.
 Qed.
 
 
+Lemma store_hidden_frame_rel_store_names_insert :
+  forall x T hidden s_with s_without,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    exists prefix suffix,
+      store_names s_with = prefix ++ x :: suffix /\
+      store_names s_without = prefix ++ suffix.
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without _ _ IH].
+  - exists [], (store_names s). unfold store_add. simpl. split; reflexivity.
+  - destruct IH as (prefix & suffix & Hwith & Hwithout).
+    exists (se_name se :: prefix), suffix. simpl.
+    rewrite Hwith. rewrite Hwithout. split; reflexivity.
+Qed.
+
+Lemma store_consumed_hidden_frame_rel_store_names_insert :
+  forall x T hidden s_with s_without,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    exists prefix suffix,
+      store_names s_with = prefix ++ x :: suffix /\
+      store_names s_without = prefix ++ suffix.
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without _ _ IH].
+  - exists [], (store_names s). rewrite store_names_mark_used_readiness.
+    unfold store_add. simpl. split; reflexivity.
+  - destruct IH as (prefix & suffix & Hwith & Hwithout).
+    exists (se_name se :: prefix), suffix. simpl.
+    rewrite Hwith. rewrite Hwithout. split; reflexivity.
+Qed.
+
+
 Lemma store_consumed_hidden_frame_rel_lookup :
   forall x T hidden s_with s_without y,
     store_consumed_hidden_frame_rel x T hidden s_with s_without ->
@@ -11842,6 +11874,39 @@ Proof.
   rewrite Hused1_base.
   rewrite Hbody_base.
   reflexivity.
+Qed.
+
+
+Lemma alpha_rename_fn_def_receiver_method_hidden_receiver_args_frame_insert :
+  forall T_receiver v_receiver s_args_hidden s_args_base method_callee
+      fcall used_hidden,
+    ((s_args_hidden =
+        store_add receiver_method_hidden_receiver_name T_receiver v_receiver
+          s_args_base) \/
+     store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+       T_receiver v_receiver s_args_hidden s_args_base) ->
+    alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+      (fcall, used_hidden) ->
+    exists used_base,
+      alpha_rename_fn_def (store_names s_args_base) method_callee =
+        (fcall, used_base).
+Proof.
+  intros T_receiver v_receiver s_args_hidden s_args_base method_callee
+    fcall used_hidden Hframe Halpha.
+  destruct Hframe as [Hframe | Hframe].
+  - subst s_args_hidden.
+    unfold store_add in Halpha. simpl in Halpha.
+    exact (alpha_rename_fn_def_receiver_method_hidden_receiver_insert
+      method_callee [] (store_names s_args_base) fcall used_hidden Halpha).
+  - destruct (store_consumed_hidden_frame_rel_store_names_insert
+      receiver_method_hidden_receiver_name T_receiver v_receiver
+      s_args_hidden s_args_base Hframe)
+      as (prefix & suffix & Hhidden_names & Hbase_names).
+    rewrite Hhidden_names in Halpha.
+    destruct (alpha_rename_fn_def_receiver_method_hidden_receiver_insert
+      method_callee prefix suffix fcall used_hidden Halpha)
+      as (used_base & Halpha_base).
+    exists used_base. rewrite Hbase_names. exact Halpha_base.
 Qed.
 
 

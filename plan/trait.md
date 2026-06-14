@@ -47,8 +47,8 @@ validity checks must be represented in Rocq and the extracted checker.
   is exported. It runs the assoc strict exact-closure checker, then requires the
   direct-receiver safety gate only when an elaborated function body has a direct
   or generic direct receiver-method shape. It has checker-boundary soundness
-  aliases, but its runtime safety theorem and public theorem aliases are still
-  pending.
+  aliases, and the required public soundness aliases now target it. Its public
+  runtime-safety theorem route is still pending.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -57,10 +57,12 @@ validity checks must be represented in Rocq and the extracted checker.
   arguments, closure/letrec signatures, and `RawCore` embedding.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
   exported, and covered by assoc-boundary soundness. The required public
-  soundness and runtime safety theorem names currently target the assoc strict
-  exact-closure direct-receiver endpoint. Extraction is current, but the OCaml
-  CLI still uses the older assoc-aware endpoint until the mixed endpoint has the
-  required public runtime-safety theorem and can become the sole CLI authority.
+  soundness theorem names target the assoc strict exact-closure mixed
+  direct-receiver endpoint; the required public runtime-safety theorem still
+  targets the non-mixed direct-receiver endpoint. Extraction is current, but the
+  OCaml CLI still uses the older assoc-aware endpoint until the mixed endpoint
+  has the required public runtime-safety theorem and can become the sole CLI
+  authority.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -68,9 +70,9 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Route the public soundness and runtime-safety theorem names through the
-     mixed assoc direct-receiver endpoint, preserving the direct gate for actual
-     direct receiver-method bodies.
+   - Route the public runtime-safety theorem name through the mixed assoc
+     direct-receiver endpoint, preserving the direct gate for actual direct
+     receiver-method bodies.
    - Switch the OCaml accept/reject path to the extracted mixed endpoint once
      the required public theorem names target it.
    - Add positive direct-call receiver UFCS tests only after the active extracted

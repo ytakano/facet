@@ -101,24 +101,14 @@ validity checks must be represented in Rocq and the extracted checker.
   prefixes with the replayed receiver, base argument store, and method values,
   narrowing the remaining obligations to alpha/body final-store matching.
   A shared alpha/body final-store helper now identifies matching raw and
-  replayed body runs once both sides use the same base-store alpha rename,
-  and the hidden receiver's index-0 name is proved not to change
-  `fresh_ident` when inserted into an alpha-renaming seed. That invariant now
-  reaches the function-definition seed, preserves the full parameter-renaming
-  output parameters and rename environment, carries the final parameter `used`
-  lists as the same hidden-receiver insertion relation, and has matching
-  transport for identifier-list binder renaming, call-argument/payload
-  expression-list traversal, struct-field traversal, match-branch traversal,
-  let-binder fresh seeds, conditional expression chains, annotated and
-  inferred let expression bodies, deref/drop unary wrappers, replace/assign
-  wrappers, function-value call expressions, ordinary/generic direct-call
-  expressions, struct/enum constructors, and match expressions. Public runtime
-  branch wiring still needs that relation lifted
-  through expression body alpha-renaming and
-  remaining hidden/base alpha transport before the direct/generic
-  replay/final-store matching providers can close; receiver-method
-  summaries remain inactive until that public runtime safety branch is proved
-  and wired.
+  replayed body runs once both sides use the same base-store alpha rename.
+  The hidden receiver's index-0 name is proved not to change `fresh_ident`
+  when inserted into alpha-renaming seeds, and that invariant now reaches the
+  function-definition seed, parameter-renaming outputs, traversal helpers, and
+  whole expression-body alpha-renaming. Public runtime branch wiring still
+  needs the direct/generic replay-final providers to use that hidden/base alpha
+  transport with the shared body-final helper; receiver-method summaries remain
+  inactive until that runtime safety branch is proved and wired.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration no
@@ -189,18 +179,12 @@ validity checks must be represented in Rocq and the extracted checker.
      package branches now have checked-initial consumers that compose final-store
      cleanup with their branch-value wrappers, and the direct and generic
      receiver-method sidecar summaries have conditional summary-to-value bridges
-     over their package consumers. The next proof step is carrying the preserved
-     post-parameter hidden/base `used` relation through the remaining
-     expression-body alpha-renaming constructors with the completed list,
-     let-binder seed, conditional-chain, let-body, unary-wrapper,
-     assignment-wrapper, call-expression, direct-call, aggregate-constructor,
-     and match-expression helpers before using the hidden/base alpha transport
-     with the shared body-final helper to
-     complete the direct and generic final-store matching providers before
-     wiring the public receiver-method runtime safety branch through those
-     providers. Only after the direct and generic receiver-method runtime safety
-     branch is proved should the receiver-method summaries be enabled as outer
-     alternatives on the public base checker gate.
+     over their package consumers. The next proof step is using the completed
+     hidden/base whole-expression alpha transport with the shared body-final
+     helper to close the direct and generic final-store matching providers,
+     then wiring the public receiver-method runtime safety branch through those
+     providers. Only after that branch is proved should the receiver-method
+     summaries be enabled as outer alternatives on the public base checker gate.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 

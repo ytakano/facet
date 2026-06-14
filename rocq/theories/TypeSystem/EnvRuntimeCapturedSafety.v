@@ -11672,6 +11672,109 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_insert :
+  forall e rho prefix suffix,
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix) e) =
+    fst (alpha_rename_expr rho (prefix ++ suffix) e) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix) e) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix) e) =
+        prefix_out ++ suffix.
+Proof.
+  assert (Hsize : forall n e,
+    expr_size e < n ->
+    forall rho prefix suffix,
+      fst (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix) e) =
+      fst (alpha_rename_expr rho (prefix ++ suffix) e) /\
+      exists prefix_out,
+        snd (alpha_rename_expr rho
+          (prefix ++ receiver_method_hidden_receiver_name :: suffix) e) =
+          prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+        snd (alpha_rename_expr rho (prefix ++ suffix) e) =
+          prefix_out ++ suffix).
+  { induction n as [| n IHn]; intros e Hlt rho prefix suffix.
+    - lia.
+    - destruct e as
+        [| lit | x | m x T e1 e2 | m x e1 e2 | fname
+         | fname captures | p | fname args | fname type_args args
+         | callee args | callee type_args args | sname lts ty_args fields
+         | enum_name variant_name lts variant_lts ty_args payloads
+         | scrut branches | p e | p e | rk p | e | e | e1 e2 e3];
+        try (simpl; split; [reflexivity | exists prefix; split; reflexivity]).
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_let_insert;
+          intros rho0 prefix0 suffix0; eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_let_infer_insert;
+          intros rho0 prefix0 suffix0; eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_call_insert.
+        intros prefix0 suffix0 arg Hin.
+        eapply IHn.
+        pose proof (expr_size_call_arg_lt fname args arg Hin).
+        lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_call_generic_insert.
+        intros prefix0 suffix0 arg Hin.
+        eapply IHn.
+        pose proof (expr_size_call_generic_arg_lt fname type_args args arg Hin).
+        lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_call_expr_insert.
+        * intros rho0 prefix0 suffix0.
+          eapply IHn.
+          pose proof (expr_size_callexpr_callee_lt callee args).
+          lia.
+        * intros prefix0 suffix0 arg Hin.
+          eapply IHn.
+          pose proof (expr_size_callexpr_arg_lt callee args arg Hin).
+          lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_call_expr_generic_insert.
+        * intros rho0 prefix0 suffix0.
+          eapply IHn.
+          pose proof (expr_size_callexpr_generic_callee_lt callee type_args args).
+          lia.
+        * intros prefix0 suffix0 arg Hin.
+          eapply IHn.
+          pose proof (expr_size_callexpr_generic_arg_lt callee type_args args arg Hin).
+          lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_struct_insert.
+        intros prefix0 suffix0 fname field_expr Hin.
+        eapply IHn.
+        pose proof (expr_size_struct_field_lt sname lts ty_args fields fname
+          field_expr Hin).
+        lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_enum_insert.
+        intros prefix0 suffix0 payload Hin.
+        eapply IHn.
+        pose proof (expr_size_enum_payload_lt enum_name variant_name lts
+          variant_lts ty_args payloads payload Hin).
+        lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_match_insert.
+        * intros rho0 prefix0 suffix0.
+          eapply IHn.
+          pose proof (expr_size_match_scrutinee_lt scrut branches).
+          lia.
+        * intros rho0 prefix0 suffix0 variant binders branch Hin.
+          eapply IHn.
+          pose proof (expr_size_match_branch_lt scrut branches variant binders
+            branch Hin).
+          lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_replace_insert.
+        intros rho0 prefix0 suffix0. eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_assign_insert.
+        intros rho0 prefix0 suffix0. eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_deref_insert.
+        intros rho0 prefix0 suffix0. eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_drop_insert.
+        intros rho0 prefix0 suffix0. eapply IHn; simpl in Hlt; lia.
+      + eapply alpha_rename_expr_receiver_method_hidden_receiver_if_insert;
+          intros rho0 prefix0 suffix0; eapply IHn; simpl in Hlt; lia.
+  }
+  intros e rho prefix suffix.
+  eapply Hsize with (n := S (expr_size e)); lia.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

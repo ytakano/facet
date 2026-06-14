@@ -3040,6 +3040,34 @@ Proof.
   - unfold se_used, se_state. simpl. reflexivity.
 Qed.
 
+Lemma receiver_method_hidden_receiver_var_frame_case :
+  forall env T_receiver v_receiver s_receiver,
+    exists s_var_hidden,
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name) s_var_hidden
+        v_receiver /\
+      ((store_hidden_frame_rel receiver_method_hidden_receiver_name
+          T_receiver v_receiver s_var_hidden s_receiver) \/
+       store_consumed_hidden_frame_rel receiver_method_hidden_receiver_name
+         T_receiver v_receiver s_var_hidden s_receiver).
+Proof.
+  intros env T_receiver v_receiver s_receiver.
+  destruct (needs_consume T_receiver) eqn:Hconsume.
+  - exists (store_mark_used receiver_method_hidden_receiver_name
+      (store_add receiver_method_hidden_receiver_name T_receiver
+        v_receiver s_receiver)).
+    split.
+    + apply eval_bound_receiver_var_consume. exact Hconsume.
+    + right. apply store_consumed_hidden_frame_rel_here.
+  - exists (store_add receiver_method_hidden_receiver_name T_receiver
+      v_receiver s_receiver).
+    split.
+    + apply eval_bound_receiver_var_copy. exact Hconsume.
+    + left. apply store_hidden_frame_rel_here.
+Qed.
+
 Lemma hidden_receiver_var_eval_inv :
   forall env T_receiver v_receiver s_receiver s_var_hidden v_receiver_arg,
     eval env

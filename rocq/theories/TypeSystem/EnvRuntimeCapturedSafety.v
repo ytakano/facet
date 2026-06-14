@@ -2571,6 +2571,171 @@ Proof.
     end.
 Qed.
 
+
+Lemma eval_replace_var_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without y e_new s_without' v,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    eval env s_without (EReplace (PVar y) e_new) s_without' v ->
+    (forall s_base s_start_with s1 value,
+      store_hidden_frame_rel x T hidden s_start_with s_base ->
+      eval env s_base e_new s1 value ->
+      exists s1_with,
+        eval env s_start_with e_new s1_with value /\
+        store_hidden_frame_rel x T hidden s1_with s1) ->
+    exists s_with',
+      eval env s_with (EReplace (PVar y) e_new) s_with' v /\
+      store_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without y e_new s_without' v Hrel Hyx
+    Heval Hlift.
+  inversion Heval; subst; clear Heval.
+  - match goal with
+    | Hlookup_base : store_lookup y ?s_base = Some old_e,
+      Heval_new : eval env ?s_base e_new ?s1 ?v_new,
+      Hupdate_base : store_update_val y ?v_new ?s1 = Some ?s2,
+      Hrestore_base : store_restore_path y [] ?s2 = Some ?s3,
+      Hrel0 : store_hidden_frame_rel x T hidden s_with ?s_base |- _ =>
+        assert (Hlookup_with : store_lookup y s_with = Some old_e);
+        [ rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_base y
+            Hrel0 Hyx); exact Hlookup_base
+        | destruct (Hlift s_base s_with s1 v_new Hrel0 Heval_new) as
+            (s1_with & Heval_with & Hrel1);
+          destruct (store_hidden_frame_rel_update_val_lift x T hidden s1_with
+            s1 y v_new s2 Hrel1 Hyx Hupdate_base) as
+            (s2_with & Hupdate_with & Hrel2);
+          destruct (store_hidden_frame_rel_restore_path_lift x T hidden s2_with
+            s2 y [] s3 Hrel2 Hyx Hrestore_base) as
+            (s3_with & Hrestore_with & Hrel3);
+          exists s3_with; split;
+          [ eapply Eval_Replace with (old_e := old_e);
+            [ exact Hlookup_with
+            | exact Heval_with
+            | exact Hupdate_with
+            | exact Hrestore_with ]
+          | exact Hrel3 ] ]
+    end.
+  - match goal with
+    | Hplace_base : eval_place ?s_base (PVar ?y0) ?root ?path,
+      Hlookup_path_base : store_lookup_path ?root ?path ?s_base = Some ?old_v,
+      Heval_new : eval env ?s_base e_new ?s1 ?v_new,
+      Hupdate_base : store_update_path ?root ?path ?v_new ?s1 = Some ?s2,
+      Hrestore_base : store_restore_path ?root ?path ?s2 = Some ?s3,
+      Hrel0 : store_hidden_frame_rel x T hidden s_with ?s_base |- _ =>
+        inversion Hplace_base; subst; clear Hplace_base;
+        match goal with
+        | Hlookup_base : store_lookup ?y0 s_base = Some ?entry |- _ =>
+            assert (Hlookup_with : store_lookup y0 s_with = Some entry);
+            [ rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_base y0
+                Hrel0 Hyx); exact Hlookup_base
+            | assert (Hlookup_path_with :
+                store_lookup_path y0 [] s_with = Some old_v);
+              [ unfold store_lookup_path in *;
+                rewrite (store_hidden_frame_rel_lookup x T hidden s_with s_base y0
+                  Hrel0 Hyx);
+                exact Hlookup_path_base
+              | destruct (Hlift s_base s_with s1 v_new Hrel0 Heval_new) as
+                  (s1_with & Heval_with & Hrel1);
+                destruct (store_hidden_frame_rel_update_path_lift x T hidden
+                  s1_with s1 y0 [] v_new s2 Hrel1 Hyx Hupdate_base) as
+                  (s2_with & Hupdate_with & Hrel2);
+                destruct (store_hidden_frame_rel_restore_path_lift x T hidden
+                  s2_with s2 y0 [] s3 Hrel2 Hyx Hrestore_base) as
+                  (s3_with & Hrestore_with & Hrel3);
+                exists s3_with; split;
+                [ eapply Eval_Replace_Place;
+                  [ eapply EvalPlace_Var; exact Hlookup_with
+                  | exact Hlookup_path_with
+                  | exact Heval_with
+                  | exact Hupdate_with
+                  | exact Hrestore_with ]
+                | exact Hrel3 ] ] ]
+        end
+    end.
+Qed.
+
+Lemma eval_replace_var_consumed_hidden_frame_rel_lift :
+  forall env x T hidden s_with s_without y e_new s_without' v,
+    store_consumed_hidden_frame_rel x T hidden s_with s_without ->
+    y <> x ->
+    eval env s_without (EReplace (PVar y) e_new) s_without' v ->
+    (forall s_base s_start_with s1 value,
+      store_consumed_hidden_frame_rel x T hidden s_start_with s_base ->
+      eval env s_base e_new s1 value ->
+      exists s1_with,
+        eval env s_start_with e_new s1_with value /\
+        store_consumed_hidden_frame_rel x T hidden s1_with s1) ->
+    exists s_with',
+      eval env s_with (EReplace (PVar y) e_new) s_with' v /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_without'.
+Proof.
+  intros env x T hidden s_with s_without y e_new s_without' v Hrel Hyx
+    Heval Hlift.
+  inversion Heval; subst; clear Heval.
+  - match goal with
+    | Hlookup_base : store_lookup y ?s_base = Some old_e,
+      Heval_new : eval env ?s_base e_new ?s1 ?v_new,
+      Hupdate_base : store_update_val y ?v_new ?s1 = Some ?s2,
+      Hrestore_base : store_restore_path y [] ?s2 = Some ?s3,
+      Hrel0 : store_consumed_hidden_frame_rel x T hidden s_with ?s_base |- _ =>
+        assert (Hlookup_with : store_lookup y s_with = Some old_e);
+        [ rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+            s_base y Hrel0 Hyx); exact Hlookup_base
+        | destruct (Hlift s_base s_with s1 v_new Hrel0 Heval_new) as
+            (s1_with & Heval_with & Hrel1);
+          destruct (store_consumed_hidden_frame_rel_update_val_lift x T hidden
+            s1_with s1 y v_new s2 Hrel1 Hyx Hupdate_base) as
+            (s2_with & Hupdate_with & Hrel2);
+          destruct (store_consumed_hidden_frame_rel_restore_path_lift x T hidden
+            s2_with s2 y [] s3 Hrel2 Hyx Hrestore_base) as
+            (s3_with & Hrestore_with & Hrel3);
+          exists s3_with; split;
+          [ eapply Eval_Replace with (old_e := old_e);
+            [ exact Hlookup_with
+            | exact Heval_with
+            | exact Hupdate_with
+            | exact Hrestore_with ]
+          | exact Hrel3 ] ]
+    end.
+  - match goal with
+    | Hplace_base : eval_place ?s_base (PVar ?y0) ?root ?path,
+      Hlookup_path_base : store_lookup_path ?root ?path ?s_base = Some ?old_v,
+      Heval_new : eval env ?s_base e_new ?s1 ?v_new,
+      Hupdate_base : store_update_path ?root ?path ?v_new ?s1 = Some ?s2,
+      Hrestore_base : store_restore_path ?root ?path ?s2 = Some ?s3,
+      Hrel0 : store_consumed_hidden_frame_rel x T hidden s_with ?s_base |- _ =>
+        inversion Hplace_base; subst; clear Hplace_base;
+        match goal with
+        | Hlookup_base : store_lookup ?y0 s_base = Some ?entry |- _ =>
+            assert (Hlookup_with : store_lookup y0 s_with = Some entry);
+            [ rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+                s_base y0 Hrel0 Hyx); exact Hlookup_base
+            | assert (Hlookup_path_with :
+                store_lookup_path y0 [] s_with = Some old_v);
+              [ unfold store_lookup_path in *;
+                rewrite (store_consumed_hidden_frame_rel_lookup x T hidden s_with
+                  s_base y0 Hrel0 Hyx);
+                exact Hlookup_path_base
+              | destruct (Hlift s_base s_with s1 v_new Hrel0 Heval_new) as
+                  (s1_with & Heval_with & Hrel1);
+                destruct (store_consumed_hidden_frame_rel_update_path_lift x T
+                  hidden s1_with s1 y0 [] v_new s2 Hrel1 Hyx Hupdate_base) as
+                  (s2_with & Hupdate_with & Hrel2);
+                destruct (store_consumed_hidden_frame_rel_restore_path_lift x T
+                  hidden s2_with s2 y0 [] s3 Hrel2 Hyx Hrestore_base) as
+                  (s3_with & Hrestore_with & Hrel3);
+                exists s3_with; split;
+                [ eapply Eval_Replace_Place;
+                  [ eapply EvalPlace_Var; exact Hlookup_with
+                  | exact Hlookup_path_with
+                  | exact Heval_with
+                  | exact Hupdate_with
+                  | exact Hrestore_with ]
+                | exact Hrel3 ] ] ]
+        end
+    end.
+Qed.
+
 Lemma eval_assign_place_parts_hidden_frame_rel_lift :
   forall env x T hidden s_with s_base p y path e_new s1_base s2_base v_new,
     store_hidden_frame_rel x T hidden s_with s_base ->

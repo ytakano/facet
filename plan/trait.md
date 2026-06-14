@@ -44,8 +44,9 @@ validity checks must be represented in Rocq and the extracted checker.
   replay variants and ready-aware method-body scoped body-lift variants that
   derive replay providers using lookup, capture, and preservation-readiness
   evidence from the checked route. The ready-aware body-lift providers now also
-  have a narrow bridge from theorem-level hidden-frame eval lift interfaces;
-  the remaining proof boundary is proving those live/consumed ready lift
+  have a narrow bridge from theorem-level hidden-frame eval lift interfaces.
+  Those interfaces now have explicit mutual expression/args/field forms; the
+  remaining proof boundary is proving the live/consumed mutual ready lift
   interfaces from the per-constructor hidden-frame lift lemmas.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
@@ -64,10 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Prove the live/consumed ready hidden-frame eval lift interfaces from the
-     existing per-constructor base-to-hidden lift lemmas, then use the new
-     bridge to make ready-aware method-body lift and raw replay theorem-level
-     facts rather than extra assumptions.
+   - Prove the live/consumed mutual ready hidden-frame eval lift interfaces
+     from the existing per-constructor base-to-hidden lift lemmas, then project
+     them to the expression interface used by ready-aware method-body lift and
+     raw replay.
    - Once those providers are theorem-level facts, route the active assoc-aware
      end-to-end safety theorem through the direct-receiver endpoint and switch
      the OCaml accept/reject path only after the extracted checker route is

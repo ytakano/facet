@@ -16015,6 +16015,90 @@ Definition consumed_hidden_frame_eval_lift_ready_rel
       eval env s_with e s_with' result /\
       store_consumed_hidden_frame_rel x T hidden s_with' s_base'.
 
+Definition hidden_frame_eval_lift_ready_mutual_rel
+    (env : global_env) : Prop :=
+  (forall x T hidden s_with s_base e s_base' result,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_expr e ->
+    ~ In x (free_vars_expr e) ->
+    ~ In x (expr_local_store_names e) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_base e s_base' result ->
+    exists s_with',
+      eval env s_with e s_with' result /\
+      store_hidden_frame_rel x T hidden s_with' s_base') /\
+  (forall x T hidden s_with s_base args s_base' vs,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s_base ->
+    eval_args env s_base args s_base' vs ->
+    exists s_with',
+      eval_args env s_with args s_with' vs /\
+      store_hidden_frame_rel x T hidden s_with' s_base') /\
+  (forall x T hidden s_with s_base fields defs s_base' values,
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_fields fields ->
+    ~ In x (fields_free_vars_ts fields) ->
+    ~ In x (fields_local_store_names fields) ->
+    store_refs_exclude_root x s_base ->
+    eval_struct_fields env s_base fields defs s_base' values ->
+    exists s_with',
+      eval_struct_fields env s_with fields defs s_with' values /\
+      store_hidden_frame_rel x T hidden s_with' s_base').
+
+Definition consumed_hidden_frame_eval_lift_ready_mutual_rel
+    (env : global_env) : Prop :=
+  (forall x T hidden s_with s_base e s_base' result,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_expr e ->
+    ~ In x (free_vars_expr e) ->
+    ~ In x (expr_local_store_names e) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_base e s_base' result ->
+    exists s_with',
+      eval env s_with e s_with' result /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base') /\
+  (forall x T hidden s_with s_base args s_base' vs,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s_base ->
+    eval_args env s_base args s_base' vs ->
+    exists s_with',
+      eval_args env s_with args s_with' vs /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base') /\
+  (forall x T hidden s_with s_base fields defs s_base' values,
+    store_consumed_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_fields fields ->
+    ~ In x (fields_free_vars_ts fields) ->
+    ~ In x (fields_local_store_names fields) ->
+    store_refs_exclude_root x s_base ->
+    eval_struct_fields env s_base fields defs s_base' values ->
+    exists s_with',
+      eval_struct_fields env s_with fields defs s_with' values /\
+      store_consumed_hidden_frame_rel x T hidden s_with' s_base').
+
+Lemma hidden_frame_eval_lift_ready_rel_of_mutual :
+  forall env,
+    hidden_frame_eval_lift_ready_mutual_rel env ->
+    hidden_frame_eval_lift_ready_rel env.
+Proof.
+  intros env Hmut.
+  exact (proj1 Hmut).
+Qed.
+
+Lemma consumed_hidden_frame_eval_lift_ready_rel_of_mutual :
+  forall env,
+    consumed_hidden_frame_eval_lift_ready_mutual_rel env ->
+    consumed_hidden_frame_eval_lift_ready_rel env.
+Proof.
+  intros env Hmut.
+  exact (proj1 Hmut).
+Qed.
+
 Definition direct_receiver_method_live_scoped_body_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=
   forall T_receiver v_receiver type_args method_callee fcall_base used_base

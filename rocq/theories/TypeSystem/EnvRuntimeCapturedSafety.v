@@ -17145,6 +17145,28 @@ Proof.
   exists s_body_hidden. exact Heval_hidden.
 Qed.
 
+Theorem direct_receiver_method_live_scoped_body_lift_ready_provider_proven :
+  forall env fdef,
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval
+      env fdef.
+Proof.
+  intros env fdef.
+  eapply direct_receiver_method_live_scoped_body_lift_ready_provider_of_hidden_frame_eval_lift_ready_rel.
+  eapply hidden_frame_eval_lift_ready_rel_of_mutual.
+  apply hidden_frame_eval_lift_ready_mutual_rel_proven.
+Qed.
+
+Theorem direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven :
+  forall env fdef,
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval
+      env fdef.
+Proof.
+  intros env fdef.
+  eapply direct_receiver_method_consumed_scoped_body_lift_ready_provider_of_hidden_frame_eval_lift_ready_rel.
+  eapply consumed_hidden_frame_eval_lift_ready_rel_of_mutual.
+  apply consumed_hidden_frame_eval_lift_ready_mutual_rel_proven.
+Qed.
+
 Definition direct_receiver_method_live_expr_lift_provider_for_eval
     (env : global_env) (fdef : fn_def) : Prop :=
   forall T_receiver v_receiver s_with s_base e s_base' result,

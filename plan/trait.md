@@ -47,8 +47,10 @@ validity checks must be represented in Rocq and the extracted checker.
   is exported. It runs the assoc strict exact-closure checker, then requires the
   direct-receiver safety gate only when an elaborated function body has a direct
   or generic direct receiver-method shape. It has checker-boundary soundness
-  aliases, and the required public soundness aliases now target it. Its public
-  runtime-safety theorem route is still pending.
+  aliases, and the required public soundness aliases now target it. A runtime
+  branch theorem covers mixed results whose checked env also passes the direct
+  receiver gate; the no-direct/base-route branch still needs to be connected
+  before the public runtime-safety theorem can target the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -103,8 +105,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct gate reports provenance=true, preservation=false,
   direct-or-component=true, component=false. The endpoint is verified but not
   broad enough to be the active CLI authority. The mixed endpoint avoids this
-  gate for programs without direct receiver-method bodies, but still needs the
-  public runtime-safety theorem route before the CLI can switch to it.
+  gate for programs without direct receiver-method bodies; its direct-ready
+  runtime branch is proven, and the remaining proof gap is the no-direct/base
+  assoc strict exact-closure runtime branch.
 
 ## Key Decisions
 

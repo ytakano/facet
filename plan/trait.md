@@ -49,10 +49,10 @@ validity checks must be represented in Rocq and the extracted checker.
   or generic direct receiver-method shape. It has checker-boundary soundness
   aliases, and the required public soundness aliases now target it. A runtime
   branch theorem covers mixed results whose checked env also passes the direct
-  receiver gate. The mixed base-route theorem now reuses the assoc
-  strict exact-closure exact-body route package instead of requiring a
-  standalone store-safe route premise; the public runtime-safety theorem still
-  needs a provider-free bridge before it can target the mixed endpoint.
+  receiver gate. The mixed base-route theorem now uses env-local component
+  route evidence for checked functions instead of global provider premises;
+  the public runtime-safety theorem still needs a provider-free bridge before it can target
+  the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -109,8 +109,9 @@ validity checks must be represented in Rocq and the extracted checker.
   broad enough to be the active CLI authority. The mixed endpoint avoids this
   gate for programs without direct receiver-method bodies; its direct-ready
   runtime branch is proven, and a base-route mixed runtime theorem now
-  recovers assoc strict exact-closure safety for that branch from env-local component route evidence. A mixed-ready
-  case-split lemma is available, but a provider-free bridge is still needed
+  recovers assoc strict exact-closure safety for that branch from
+  env-local component route evidence. A mixed-ready case-split lemma is
+  available, but a provider-free bridge is still needed
   before the required public runtime-safety theorem can target the mixed
   endpoint without widening its interface.
 

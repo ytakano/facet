@@ -3483,6 +3483,45 @@ Proof.
   eapply EvalArgs_Cons; eassumption.
 Qed.
 
+
+Lemma hidden_receiver_method_call_eval_exists_from_parts :
+  forall env s_receiver T_receiver v_receiver method_name type_args
+      method_args v,
+    (exists s_var_hidden v_receiver_arg s_args_hidden vs_method
+        method_callee fcall used' s_body_hidden,
+      lookup_fn method_name (env_fns env) = Some method_callee /\
+      fn_captures method_callee = [] /\
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (EVar receiver_method_hidden_receiver_name) s_var_hidden
+        v_receiver_arg /\
+      eval_args env s_var_hidden method_args s_args_hidden vs_method /\
+      alpha_rename_fn_def (store_names s_args_hidden) method_callee =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          (v_receiver_arg :: vs_method) s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden v) ->
+    exists s_method_hidden,
+      eval env
+        (store_add receiver_method_hidden_receiver_name T_receiver
+          v_receiver s_receiver)
+        (ECallGeneric method_name type_args
+          (EVar receiver_method_hidden_receiver_name :: method_args))
+        s_method_hidden v.
+Proof.
+  intros env s_receiver T_receiver v_receiver method_name type_args
+    method_args v Hparts.
+  destruct Hparts as (s_var_hidden & v_receiver_arg & s_args_hidden &
+    vs_method & method_callee & fcall & used' & s_body_hidden & Hlookup &
+    Hcaptures & Heval_var & Heval_args & Halpha & Heval_body).
+  exists (store_remove_params
+    (apply_type_params type_args (fn_params fcall)) s_body_hidden).
+  eapply hidden_receiver_method_call_eval_intro; eassumption.
+Qed.
+
 Lemma hidden_receiver_method_call_eval_inv :
   forall env s_receiver T_receiver v_receiver method_name type_args
       method_args s_method_hidden v,

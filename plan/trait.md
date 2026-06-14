@@ -111,10 +111,11 @@ validity checks must be represented in Rocq and the extracted checker.
   helper. The direct and generic public checked-initial raw-package summary
   boundaries now route through their closed replay-final providers. Hidden
   receiver replay now packages the initial variable step, method-argument
-  inversion, direct body-strip wrapper, and hidden method-call constructor
-  bridge as live or consumed hidden-frame relations while preserving the
-  distinction between the receiver call's inferred type and the hidden-frame
-  annotation. Staged direct-only and combined
+  inversion, direct body-strip wrapper, hidden method-call constructor bridge,
+  and the existential parts-to-call replay bridge as live or consumed
+  hidden-frame relations while preserving the distinction between the receiver
+  call's inferred type and the hidden-frame annotation. Staged direct-only and
+  combined
   direct/generic receiver-method captured-call checker/Prop summary boundaries
   now have boolean soundness, but the active public checker gate still uses the
   base summary until the direct hidden-call replay premise is proved.
@@ -196,7 +197,7 @@ validity checks must be represented in Rocq and the extracted checker.
      exposes live/consumed hidden-frame relations at both argument and body
      stores without conflating receiver-call type and hidden-frame annotation.
      The next proof step is forward-replaying store-safe method arguments and
-     body from raw receiver-method evaluation into that constructor bridge to
+     body from raw receiver-method evaluation into that parts-to-call bridge to
      discharge the direct hidden-method replay premise, then switching the active
      public gate to the direct-extended boundary. Generic
      activation and regression coverage follow after the direct branch is

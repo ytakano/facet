@@ -40,8 +40,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance summary, preservation readiness, the direct-extended
   captured/direct-receiver-or-component gate, and the no-capture component gate.
   End-to-end safety wrappers discharge those executable premises from the new
-  endpoints while still requiring scoped live/consumed expression-lift provider
-  assumptions.
+  endpoints. The direct-receiver wrappers now have selected scoped raw-body
+  replay variants, so the remaining theorem assumptions are the live/consumed
+  raw replay providers rather than the stronger expression-lift providers.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -59,8 +60,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Derive or close the scoped live/consumed expression-lift providers needed
-     by the direct-receiver end-to-end wrappers.
+   - Derive or close the selected scoped live/consumed raw-body replay providers
+     needed by the direct-receiver end-to-end wrappers. The expression-lift
+     route remains available as a compatibility path, but the top-level proof
+     boundary now only needs the raw replay providers.
    - Once those providers are theorem-level facts rather than extra assumptions,
      route the active assoc-aware end-to-end safety theorem through the
      direct-receiver endpoint and switch the OCaml accept/reject path only after

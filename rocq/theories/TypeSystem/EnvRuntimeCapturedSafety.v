@@ -10793,6 +10793,89 @@ Proof.
 Qed.
 
 
+
+
+Lemma alpha_rename_expr_receiver_method_hidden_receiver_if_insert :
+  forall rho prefix suffix e1 e2 e3,
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e1) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) e1) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e1) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) e1) =
+          prefix1 ++ suffix0) ->
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e2) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) e2) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e2) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) e2) =
+          prefix1 ++ suffix0) ->
+    (forall rho0 prefix0 suffix0,
+      fst (alpha_rename_expr rho0
+        (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e3) =
+      fst (alpha_rename_expr rho0 (prefix0 ++ suffix0) e3) /\
+      exists prefix1,
+        snd (alpha_rename_expr rho0
+          (prefix0 ++ receiver_method_hidden_receiver_name :: suffix0) e3) =
+          prefix1 ++ receiver_method_hidden_receiver_name :: suffix0 /\
+        snd (alpha_rename_expr rho0 (prefix0 ++ suffix0) e3) =
+          prefix1 ++ suffix0) ->
+    fst (alpha_rename_expr rho
+      (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+      (EIf e1 e2 e3)) =
+    fst (alpha_rename_expr rho (prefix ++ suffix) (EIf e1 e2 e3)) /\
+    exists prefix_out,
+      snd (alpha_rename_expr rho
+        (prefix ++ receiver_method_hidden_receiver_name :: suffix)
+        (EIf e1 e2 e3)) =
+        prefix_out ++ receiver_method_hidden_receiver_name :: suffix /\
+      snd (alpha_rename_expr rho (prefix ++ suffix) (EIf e1 e2 e3)) =
+        prefix_out ++ suffix.
+Proof.
+  intros rho prefix suffix e1 e2 e3 He1 He2 He3.
+  simpl.
+  destruct (He1 rho prefix suffix) as [He1_expr He1_used].
+  destruct He1_used as (prefix1 & He1_hidden_used & He1_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix ++ receiver_method_hidden_receiver_name :: suffix) e1)
+    as [e1_hidden used1_hidden] eqn:He1_hidden.
+  destruct (alpha_rename_expr rho (prefix ++ suffix) e1)
+    as [e1_base used1_base] eqn:He1_base.
+  simpl in He1_expr, He1_hidden_used, He1_base_used.
+  subst e1_hidden.
+  rewrite He1_hidden_used. rewrite He1_base_used.
+  destruct (He2 rho prefix1 suffix) as [He2_expr He2_used].
+  destruct He2_used as (prefix2 & He2_hidden_used & He2_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix1 ++ receiver_method_hidden_receiver_name :: suffix) e2)
+    as [e2_hidden used2_hidden] eqn:He2_hidden.
+  destruct (alpha_rename_expr rho (prefix1 ++ suffix) e2)
+    as [e2_base used2_base] eqn:He2_base.
+  simpl in He2_expr, He2_hidden_used, He2_base_used.
+  subst e2_hidden.
+  rewrite He2_hidden_used. rewrite He2_base_used.
+  destruct (He3 rho prefix2 suffix) as [He3_expr He3_used].
+  destruct He3_used as (prefix3 & He3_hidden_used & He3_base_used).
+  destruct (alpha_rename_expr rho
+    (prefix2 ++ receiver_method_hidden_receiver_name :: suffix) e3)
+    as [e3_hidden used3_hidden] eqn:He3_hidden.
+  destruct (alpha_rename_expr rho (prefix2 ++ suffix) e3)
+    as [e3_base used3_base] eqn:He3_base.
+  simpl in He3_expr, He3_hidden_used, He3_base_used.
+  subst e3_hidden.
+  split.
+  - reflexivity.
+  - exists prefix3. split; assumption.
+Qed.
+
+
 Lemma receiver_method_alpha_body_final_store_matching_provider :
   forall env fdef type_args method_callee fcall used' fcall_raw used_raw
       s_args_base v_receiver vs_method s_body_base s_body_raw s' v,

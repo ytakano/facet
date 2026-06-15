@@ -2040,6 +2040,74 @@ Proof.
   eapply store_typed_prefix_ctx_names_in_store_names; eassumption.
 Qed.
 
+Lemma root_env_ctx_roots_named_store_names_subset_direct_route :
+  forall R Σ s,
+    (forall x, In x (ctx_names Σ) -> In x (store_names s)) ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_store_roots_named R s.
+Proof.
+  unfold root_env_ctx_roots_named, root_env_store_roots_named.
+  intros R Σ s Hsubset Hctx x roots z Hlookup Hin.
+  apply Hsubset. eapply Hctx; eassumption.
+Qed.
+
+Lemma root_set_ctx_roots_named_store_names_subset_direct_route :
+  forall roots Σ s,
+    (forall x, In x (ctx_names Σ) -> In x (store_names s)) ->
+    root_set_ctx_roots_named roots Σ ->
+    root_set_store_roots_named roots s.
+Proof.
+  unfold root_set_ctx_roots_named, root_set_store_roots_named.
+  intros roots Σ s Hsubset Hctx z Hin.
+  apply Hsubset. apply Hctx. exact Hin.
+Qed.
+
+Lemma root_env_ctx_keys_named_store_names_subset_direct_route :
+  forall R Σ s,
+    (forall x, In x (ctx_names Σ) -> In x (store_names s)) ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_store_keys_named R s.
+Proof.
+  unfold root_env_ctx_keys_named, root_env_store_keys_named.
+  intros R Σ s Hsubset Hkeys.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - exact Hsubset.
+Qed.
+
+Lemma typed_env_roots_preserves_store_root_names_keys_prefix :
+  forall env s Ω n R Σ e T Σ' R' roots,
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros env s Ω n R Σ e T Σ' R' roots Hready Hstore Htyped Hrn
+    Hctx_roots Hctx_keys.
+  destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
+              R Σ e T Σ' R' roots Htyped Hrn Hctx_roots)
+    as [Hctx_roots' Hroots_ctx].
+  pose proof (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+                R Σ e T Σ' R' roots Htyped Hrn Hctx_keys)
+    as Hctx_keys'.
+  assert (Hsubset : forall x, In x (ctx_names Σ') -> In x (store_names s)).
+  { intros x Hin.
+    eapply typed_env_roots_preserves_ctx_names_in_store_prefix;
+      eassumption. }
+  repeat split.
+  - eapply root_env_ctx_roots_named_store_names_subset_direct_route;
+      eassumption.
+  - eapply root_set_ctx_roots_named_store_names_subset_direct_route;
+      eassumption.
+  - eapply root_env_ctx_keys_named_store_names_subset_direct_route;
+      eassumption.
+Qed.
+
 Definition preservation_ready_expr_static_runtime_named_statement : Prop :=
   forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
     preservation_ready_expr e ->

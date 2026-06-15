@@ -59,10 +59,11 @@ validity checks must be represented in Rocq and the extracted checker.
   A prefix-aware static-runtime callback shape is defined, with a bridge from
   the legacy callback, a direct-borrow instance, and prefix-shaped argument-root
   naming compatibility consumed by the current core route cleanup bridge branches.
-  The argument-root helper now takes the prefix-aware callback directly, while
-  the first core cleanup route exposes a prefix-callback theorem and keeps the
-  legacy public shape as a wrapper. Higher route wrappers still bridge legacy
-  static-runtime premises into the prefix chain.
+  The argument-root helper now takes the prefix-aware callback directly. The
+  first core cleanup route and its first route-package layer both expose
+  prefix-callback theorems while keeping legacy public shapes as wrappers.
+  Higher route wrappers still bridge legacy static-runtime premises into the
+  prefix chain.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure
   success, checked-env name uniqueness, strict exact-closure readiness, and a
   direct-endpoint success

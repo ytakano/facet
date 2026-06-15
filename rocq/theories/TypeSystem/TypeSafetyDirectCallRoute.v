@@ -10544,13 +10544,13 @@ Proof.
   exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
-Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_reachable_less_callbacks_and_exact_body_call_route_package_provider :
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_reachable_less_callbacks_and_exact_body_call_route_package_provider_prefix :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
@@ -10675,7 +10675,7 @@ Proof.
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Htyping_prefix Hroots_ready
-      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      Hstatic
       env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
       H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
@@ -10844,6 +10844,61 @@ Proof.
   - rewrite Hremoved_exact. exact Hroots_args.
   - eapply direct_call_value_roots_within_store_subset; eassumption.
   - rewrite Hremoved_exact. exact Hshadow_args.
+Qed.
+
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_reachable_less_callbacks_and_exact_body_call_route_package_provider :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  forall base_env base_fname env s fname args s' v n_call,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    forall (Omega : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+        env fname ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic.
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_reachable_less_callbacks_and_exact_body_call_route_package_provider_prefix;
+    try eassumption.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 

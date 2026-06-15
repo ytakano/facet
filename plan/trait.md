@@ -74,7 +74,8 @@ validity checks must be represented in Rocq and the extracted checker.
   reachable package-provider frame, reachable package-provider combined,
   reachable package-provider body-callback, reachable package-and-target summary,
   reachable package-and-target body-callback, exact-body package body-callback,
-  and package-at-all body-callback bridge variants, expose prefix-callback theorems while
+  and package-at-all body-callback bridge variants, plus strict and assoc
+  component callback-provider wrappers, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge
   legacy static-runtime premises into the prefix chain.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure

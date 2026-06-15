@@ -2440,6 +2440,102 @@ Proof.
       eassumption.
 Qed.
 
+Lemma store_entries_typed_static_update_state_direct_route :
+  forall env s entries Σ x f Σ',
+    Forall2 (store_entry_typed env s) entries Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines runtime (f static)) ->
+    sctx_update_state x f Σ = Some Σ' ->
+    Forall2 (store_entry_typed env s) entries Σ'.
+Proof.
+  intros env s entries Σ x f Σ' Htyped Href Hupdate.
+  revert Σ' Hupdate.
+  induction Htyped as [| se ce entries_tail Σ_tail Hentry Htail IH];
+    intros Σ' Hupdate.
+  - simpl in Hupdate. discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hupdate.
+    destruct (ident_eqb x cx) eqn:Hcx.
+    + injection Hupdate as Hsame. subst Σ'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        apply Href. exact Hst.
+      * exact Htail.
+    + destruct (ctx_update_state x f Σ_tail) as [Σ_tail' |]
+        eqn:Htail_update.
+      * unfold sctx_update_state in Hupdate.
+        rewrite Htail_update in Hupdate.
+        injection Hupdate as Hsame. subst Σ'.
+        constructor.
+        -- simpl. repeat split; assumption.
+        -- apply IH. unfold sctx_update_state. exact Htail_update.
+      * unfold sctx_update_state in Hupdate.
+        rewrite Htail_update in Hupdate.
+        discriminate.
+Qed.
+
+Lemma store_typed_prefix_static_update_state_direct_route :
+  forall env s Σ x f Σ',
+    store_typed_prefix env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines runtime (f static)) ->
+    sctx_update_state x f Σ = Some Σ' ->
+    store_typed_prefix env s Σ'.
+Proof.
+  intros env s Σ x f Σ' Hstore Href Hupdate.
+  unfold store_typed_prefix in Hstore.
+  destruct Hstore as [entries [frame [Hs Hentries]]].
+  unfold store_typed_prefix.
+  exists entries, frame. split; [exact Hs |].
+  eapply store_entries_typed_static_update_state_direct_route; eassumption.
+Qed.
+
+Lemma binding_state_refines_static_consume_path_direct_route :
+  forall runtime static p,
+    binding_state_refines runtime static ->
+    binding_state_refines runtime (state_consume_path p static).
+Proof.
+  intros runtime [sconsumed smoved] p Href q Havailable.
+  destruct p as [| seg rest].
+  - simpl in Havailable.
+    unfold binding_available_b in Havailable. simpl in Havailable.
+    discriminate.
+  - unfold binding_available_b in Havailable.
+    simpl in Havailable.
+    destruct sconsumed; simpl in Havailable; try discriminate.
+    destruct (path_conflict_b q (seg :: rest)) eqn:Hconflict;
+      simpl in Havailable; try discriminate.
+    destruct (path_conflicts_any_b q smoved) eqn:Hstatic;
+      simpl in Havailable; try discriminate.
+    apply Href.
+    unfold binding_available_b. simpl. rewrite Hstatic. reflexivity.
+Qed.
+
+Lemma store_typed_prefix_static_consume_path_direct_route :
+  forall env s Σ x p Σ',
+    store_typed_prefix env s Σ ->
+    sctx_consume_path Σ x p = infer_ok Σ' ->
+    store_typed_prefix env s Σ'.
+Proof.
+  intros env s Σ x p Σ' Hstore Hconsume.
+  unfold sctx_consume_path, sctx_path_available in Hconsume.
+  destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b st p) eqn:Havailable; try discriminate.
+  destruct (sctx_update_state x (state_consume_path p) Σ) as [Σ0 |]
+    eqn:Hupdate; try discriminate.
+  inversion Hconsume; subst Σ0.
+  eapply store_typed_prefix_static_update_state_direct_route.
+  - exact Hstore.
+  - intros runtime static Href.
+    apply binding_state_refines_static_consume_path_direct_route. exact Href.
+  - exact Hupdate.
+Qed.
+
 Lemma root_env_store_roots_named_direct_route_store_names_eq :
   forall R s s',
     store_names s' = store_names s ->

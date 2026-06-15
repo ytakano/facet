@@ -2332,28 +2332,6 @@ Proof.
     constructor; assumption.
 Qed.
 
-Lemma typed_args_roots_preservation_ready_static_runtime_named_prefix_of_static :
-  preservation_ready_expr_static_runtime_named_statement ->
-  forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args
-      arg_roots,
-    preservation_ready_args args ->
-    store_typed_prefix env s Σ ->
-    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
-    root_env_no_shadow R ->
-    store_roots_within R s ->
-    root_env_store_roots_named R s ->
-    root_env_store_keys_named R s ->
-    store_roots_within R_args s /\
-    root_env_store_roots_named R_args s /\
-    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
-    root_env_store_keys_named R_args s.
-Proof.
-  intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
-    _Hstore Htyped Hrn Hwithin Hnamed Hkeys.
-  eapply typed_args_roots_preservation_ready_static_runtime_named;
-    eassumption.
-Qed.
-
 Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,
@@ -2388,13 +2366,16 @@ Proof.
 Qed.
 
 Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix :
-  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
   forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,
     eval_args env s args s_args vs ->
     preservation_ready_args args ->
     store_typed_prefix env s Σ ->
     root_env_no_shadow R ->
     store_roots_within R s ->
+    store_no_shadow s ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
     typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
@@ -2402,23 +2383,55 @@ Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static
     Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots /\
     root_env_store_keys_named R_args s_args.
 Proof.
-  intros Hexpr env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
-    Heval_args Hready Hstore Hrn Hwithin Hnamed Hkeys Htyped.
-  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
-                env s args s_args vs Heval_args Hready) as Hnames.
-  destruct (typed_args_roots_preservation_ready_static_runtime_named_prefix_of_static
-              Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots
-              Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys)
-    as [_ [Hnamed_args [Hroots_named Hkeys_args]]].
-  repeat split.
-  - eapply root_env_store_roots_named_direct_route_store_names_eq;
-      eassumption.
-  - eapply Forall_impl; [| exact Hroots_named].
-    intros roots Hroot_named.
-    eapply root_set_store_roots_named_direct_route_store_names_eq;
-      eassumption.
-  - eapply root_env_store_keys_named_direct_route_store_names_eq;
-      eassumption.
+  intros Htyping_prefix Hroots_ready Hexpr env s args s_args vs Ω n R Σ ps
+    Σ_args R_args arg_roots Heval_args Hready Hstore Hrn Hwithin Hshadow
+    Hnamed Hkeys Htyped.
+  revert s s_args vs Heval_args Hready Hstore Hrn Hwithin Hshadow Hnamed Hkeys.
+  induction Htyped as
+    [R0 Σ0
+    | R0 R1 R2 Σ0 Σ1 Σ2 e es p ps0 T_e roots roots_rest
+        Htyped_e Hcompat Htyped_rest IH];
+    intros s s_args vs Heval_args Hready Hstore Hrn Hwithin Hshadow Hnamed Hkeys.
+  - dependent destruction Heval_args.
+    dependent destruction Hready.
+    repeat split; try constructor; assumption.
+  - dependent destruction Heval_args.
+    dependent destruction Hready.
+    pose proof (proj1 preservation_ready_eval_store_names_mutual
+                  env s e s1 v H H0) as Hnames_e.
+    destruct (Hexpr env s e Ω n R0 Σ0 T_e Σ1 R1 roots H0 Hstore
+                Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [_Hwithin1_s [Hnamed1_s [Hroots_named_s Hkeys1_s]]].
+    destruct (proj1 Htyping_prefix env s e s1 v H Ω n Σ0 T_e Σ1 H0
+                Hstore (typed_env_roots_structural env Ω n R0 Σ0 e T_e Σ1
+                  R1 roots Htyped_e))
+      as [Hstore1 [_ _]].
+    destruct (proj1 Hroots_ready env s e s1 v H Ω n R0 Σ0 T_e Σ1 R1
+                roots (preservation_ready_expr_implies_provenance_ready_direct_call
+                  e H0) Hwithin Hshadow Hrn Htyped_e)
+      as [Hwithin1 [_ [Hshadow1 Hrn1]]].
+    assert (Hnamed1 : root_env_store_roots_named R1 s1).
+    { eapply root_env_store_roots_named_direct_route_store_names_eq;
+        eassumption. }
+    assert (Hkeys1 : root_env_store_keys_named R1 s1).
+    { eapply root_env_store_keys_named_direct_route_store_names_eq;
+        eassumption. }
+    match goal with
+    | Heval_tail : eval_args env s1 es s2 vs |- _ =>
+        pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+          env s1 es s2 vs Heval_tail Hready) as Hnames_tail;
+        assert (Hroots_named_s1 : root_set_store_roots_named roots s1)
+        by (eapply root_set_store_roots_named_direct_route_store_names_eq;
+            eassumption);
+        assert (Hroots_named_args : root_set_store_roots_named roots s2)
+        by (eapply root_set_store_roots_named_direct_route_store_names_eq;
+            eassumption);
+        destruct (IH s1 s2 vs Heval_tail Hready Hstore1 Hrn1 Hwithin1
+                    Hshadow1 Hnamed1 Hkeys1)
+          as [Hnamed_args [Hroots_rest_named Hkeys_args]]
+    end.
+    repeat split; try assumption.
+    constructor; assumption.
 Qed.
 
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
@@ -9500,9 +9513,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -9742,9 +9757,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -10076,9 +10093,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -10364,9 +10383,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -10660,9 +10681,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -10998,9 +11021,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -12194,9 +12219,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -12551,9 +12578,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -12895,9 +12924,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -13197,9 +13228,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -13504,9 +13537,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -14519,9 +14554,11 @@ Proof.
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
     (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
-      Hstatic env s args s_args vs Omega n R Σ
+      Htyping_prefix Hroots_ready
+      (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic)
+      env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hshadow Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named

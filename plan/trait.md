@@ -52,12 +52,13 @@ validity checks must be represented in Rocq and the extracted checker.
   mixed case split, and a checked component-summary bridge for mixed component
   store-safe callbacks.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
-  store-typed-prefix root naming for direct places and borrows, prefix-facing
-  route wrappers through the mixed static-component runtime wrapper, and legacy
-  wrapper shapes that delegate through the prefix bridge. The mixed component
-  callback route can now consume the checked component-summary boolean directly.
-  The remaining runtime theorem gap is deriving the route/prefix-static evidence
-  needed by the required public theorem without adding a new premise.
+  store-typed-prefix root naming for direct places and borrows, context-name to
+  store-name transport for rooted typing outputs, prefix-facing route wrappers
+  through the mixed static-component runtime wrapper, and legacy wrapper shapes
+  that delegate through the prefix bridge. The mixed component callback route can
+  now consume the checked component-summary boolean directly. The remaining
+  runtime theorem gap is deriving the route/prefix-static `store_roots_within`
+  evidence needed by the required public theorem without adding a new premise.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -114,14 +115,13 @@ validity checks must be represented in Rocq and the extracted checker.
   before
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` can target the
   mixed endpoint without widening its interface.
-- The concrete proof gap is deriving prefix/static-runtime naming evidence from
-  the required runtime-safety theorem's existing hypotheses. Direct place and
-  borrow roots need either explicit `In x (store_names s)` evidence or a
-  `store_typed_prefix` premise connecting typed-place context membership to the
-  runtime store. Existing prefix-typed-place and direct-borrow helpers cover
-  that route locally; the remaining work is packaging it through the higher
-  route/combined package callback chain so the public theorem does not need a
-  new premise.
+- The concrete proof gap is deriving prefix/static-runtime evidence from the
+  required runtime-safety theorem's existing hypotheses. Context names in rooted
+  typing outputs can now be transported back to the runtime store from
+  `store_typed_prefix`; the remaining static callback work is transporting
+  `store_roots_within` across preservation-ready rooted typing outputs and
+  packaging that through the higher route/combined callback chain so the public
+  theorem does not need a new premise.
 
 ## Key Decisions
 

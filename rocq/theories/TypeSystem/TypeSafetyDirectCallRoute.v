@@ -2003,6 +2003,43 @@ Proof.
 Qed.
 
 
+Lemma store_typed_prefix_ctx_names_in_store_names :
+  forall env s Σ x,
+    store_typed_prefix env s Σ ->
+    In x (ctx_names Σ) ->
+    In x (store_names s).
+Proof.
+  intros env s Σ x Hstore Hin.
+  unfold store_typed_prefix in Hstore.
+  destruct Hstore as [entries [frame [Hs Htyped]]].
+  subst s.
+  induction Htyped as [| se ce entries_tail Σ_tail Hentry Htyped IH]; simpl in *.
+  - contradiction.
+  - destruct ce as [[[cx cT] cst] cm].
+    destruct se as [sx sT sv sst].
+    simpl in *.
+    destruct Hentry as [Heq _].
+    destruct Hin as [Hin | Hin].
+    + subst x. left. exact Heq.
+    + right. exact (IH Hin).
+Qed.
+
+Lemma typed_env_roots_preserves_ctx_names_in_store_prefix :
+  forall env s Ω n R Σ e T Σ' R' roots,
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    forall x, In x (ctx_names Σ') -> In x (store_names s).
+Proof.
+  intros env s Ω n R Σ e T Σ' R' roots _Hready Hstore Htyped x Hin.
+  pose proof (typed_env_roots_structural env Ω n R Σ e T Σ' R' roots
+    Htyped) as Hstruct.
+  pose proof (typed_env_structural_same_bindings env Ω n Σ e T Σ'
+    Hstruct) as Hsame.
+  rewrite (sctx_same_bindings_names_alpha Σ Σ' Hsame) in Hin.
+  eapply store_typed_prefix_ctx_names_in_store_names; eassumption.
+Qed.
+
 Definition preservation_ready_expr_static_runtime_named_statement : Prop :=
   forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
     preservation_ready_expr e ->

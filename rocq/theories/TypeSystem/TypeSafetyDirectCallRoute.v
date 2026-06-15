@@ -2569,6 +2569,65 @@ Proof.
   rewrite Hnames. eapply Hkeys; eassumption.
 Qed.
 
+Lemma preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix :
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    store_typed_prefix env s Σ'.
+Proof.
+  intros env s e Ω n R Σ T Σ' R' roots Hcase Hstore Htyped.
+  inversion Hcase; subst.
+  - inversion H; subst; inversion Htyped; subst; try exact Hstore;
+      eapply store_typed_prefix_static_consume_path_direct_route; eassumption.
+  - inversion Htyped; subst; exact Hstore.
+Qed.
+
+Lemma typed_args_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args
+      arg_roots,
+    preservation_ready_args args ->
+    Forall preservation_ready_expr_static_runtime_named_leaf_or_borrow args ->
+    store_typed_prefix env s Σ ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_args /\
+    store_roots_within R_args s /\
+    root_env_store_roots_named R_args s /\
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+    root_env_store_keys_named R_args s.
+Proof.
+  intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
+    Hall Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  revert Hready Hall Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [R0 Σ0
+    | R0 R1 R2 Σ0 Σ1 Σ2 e es p ps0 T_e roots roots_rest
+        Htyped_e Hcompat Htyped_rest IH];
+    intros Hready Hall Hstore Hrn Hwithin Hnamed Hkeys.
+  - dependent destruction Hready.
+    dependent destruction Hall.
+    repeat split; try constructor; assumption.
+  - dependent destruction Hready.
+    dependent destruction Hall.
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (Hexpr env s e Ω n R0 Σ0 T_e Σ1 R1 roots H Hstore
+                Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hwithin1 [Hnamed1 [Hroots_named Hkeys1]]].
+    assert (Hstore1 : store_typed_prefix env s Σ1).
+    { eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+        eassumption. }
+    destruct (IH Hready Hall Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    constructor; assumption.
+Qed.
+
 Lemma typed_args_roots_preservation_ready_static_runtime_named :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args

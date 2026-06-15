@@ -57,12 +57,13 @@ validity checks must be represented in Rocq and the extracted checker.
   rooted typing outputs, packaged static root-name/key transport through
   `typed_roots_ctx_roots_named_mutual`, same-store `store_roots_within` transport
   for root-env union updates, static-only `store_typed_prefix` stability for
-  consumed paths, prefix-facing route wrappers through the mixed static-component
-  runtime wrapper, and legacy wrapper shapes that delegate through the prefix
-  bridge. The mixed component callback route can now consume the checked
-  component-summary boolean directly. The remaining runtime theorem gap is
-  packaging the compound preservation-ready static traversal needed by the
-  required public theorem without adding a new premise.
+  consumed paths, a leaf/borrow prefix traversal for typed argument lists,
+  prefix-facing route wrappers through the mixed static-component runtime
+  wrapper, and legacy wrapper shapes that delegate through the prefix bridge. The
+  mixed component callback route can now consume the checked component-summary
+  boolean directly. The remaining runtime theorem gap is packaging the compound
+  preservation-ready static traversal needed by the required public theorem
+  without adding a new premise.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -124,11 +125,12 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence can now be transported from rooted typing outputs back to the runtime
   store under `store_typed_prefix`; leaf and direct-borrow expressions have a
   packaged prefix callback; assign/replace root-env union updates preserve
-  same-store `store_roots_within`; and static path consumes preserve
-  `store_typed_prefix`. The remaining static callback work is the mutual
-  preservation-ready traversal for compound args, fields, match tails, and
-  expressions, then packaging that through the higher route/combined callback
-  chain so the public theorem does not need a new premise.
+  same-store `store_roots_within`; static path consumes preserve
+  `store_typed_prefix`; and leaf/borrow argument lists have a prefix traversal.
+  The remaining static callback work is the mutual preservation-ready traversal
+  for compound args, fields, match tails, and expressions, then packaging that
+  through the higher route/combined callback chain so the public theorem does
+  not need a new premise.
 
 ## Key Decisions
 

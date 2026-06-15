@@ -2332,6 +2332,28 @@ Proof.
     constructor; assumption.
 Qed.
 
+Lemma typed_args_roots_preservation_ready_static_runtime_named_prefix_of_static :
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args
+      arg_roots,
+    preservation_ready_args args ->
+    store_typed_prefix env s Σ ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_roots_within R_args s /\
+    root_env_store_roots_named R_args s /\
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+    root_env_store_keys_named R_args s.
+Proof.
+  intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
+    _Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  eapply typed_args_roots_preservation_ready_static_runtime_named;
+    eassumption.
+Qed.
+
 Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,

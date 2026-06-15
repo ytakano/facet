@@ -2387,6 +2387,40 @@ Proof.
       eassumption.
 Qed.
 
+Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix :
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    store_typed_prefix env s Σ ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_store_roots_named R_args s_args /\
+    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots /\
+    root_env_store_keys_named R_args s_args.
+Proof.
+  intros Hexpr env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
+    Heval_args Hready Hstore Hrn Hwithin Hnamed Hkeys Htyped.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args Hready) as Hnames.
+  destruct (typed_args_roots_preservation_ready_static_runtime_named_prefix_of_static
+              Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots
+              Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys)
+    as [_ [Hnamed_args [Hroots_named Hkeys_args]]].
+  repeat split.
+  - eapply root_env_store_roots_named_direct_route_store_names_eq;
+      eassumption.
+  - eapply Forall_impl; [| exact Hroots_named].
+    intros roots Hroot_named.
+    eapply root_set_store_roots_named_direct_route_store_names_eq;
+      eassumption.
+  - eapply root_env_store_keys_named_direct_route_store_names_eq;
+      eassumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
@@ -9465,10 +9499,10 @@ Proof.
               Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
-    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr
+    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Hstatic env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-      H1 Hready_args Hrn Hroots Hnamed Hkeys H7)
+      H1 Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named

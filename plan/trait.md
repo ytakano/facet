@@ -58,9 +58,10 @@ validity checks must be represented in Rocq and the extracted checker.
   roots, direct borrow roots, borrowed place roots, and resolved place roots.
   A prefix-aware static-runtime callback shape is defined, with a bridge from
   the legacy callback, a direct-borrow instance, and prefix-shaped argument-root
-  naming compatibility. Mixed endpoint success now exposes the underlying assoc
-  strict exact-closure success, checked-env name
-  uniqueness, strict exact-closure readiness, and a direct-endpoint success
+  naming compatibility now consumed by the core route cleanup bridge. Mixed
+  endpoint success now exposes the underlying assoc strict exact-closure
+  success, checked-env name uniqueness, strict exact-closure readiness, and a
+  direct-endpoint success
   fact when the checked env also passes the direct receiver gate. The mixed
   runtime wrappers now consume those reusable facts. The public runtime-safety
   theorem still needs a stronger static-runtime bridge before it can target the
@@ -134,8 +135,9 @@ validity checks must be represented in Rocq and the extracted checker.
   prefix-typed-place and direct-borrow helpers cover that store-typing route
   locally, and a prefix-aware callback shape can carry the needed
   `store_typed_prefix` premise. Argument-root naming has a prefix-shaped
-  compatibility helper, but the public bridge still needs the route-package
-  callback chain to consume the prefix-aware callback shape directly.
+  compatibility helper, and the core route cleanup bridge consumes it. The
+  public bridge still needs the remaining route-package callback chain to
+  consume the prefix-aware callback shape directly.
 
 ## Key Decisions
 

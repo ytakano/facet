@@ -2704,6 +2704,116 @@ Proof.
     apply root_set_store_roots_named_union; assumption.
 Qed.
 
+Lemma match_payload_params_empty_direct_route :
+  forall lts args v ps,
+    match_payload_params [] lts args v = infer_ok ps ->
+    ps = [].
+Proof.
+  intros lts args v ps Hparams.
+  unfold match_payload_params in Hparams.
+  destruct (instantiate_enum_variant_field_tys lts args v) as [| T Ts];
+    simpl in Hparams; try discriminate.
+  inversion Hparams. reflexivity.
+Qed.
+
+Lemma preservation_ready_match_branches_lookup_direct_route :
+  forall branches name e,
+    preservation_ready_match_branches branches ->
+    lookup_expr_branch name branches = Some e ->
+    preservation_ready_expr e.
+Proof.
+  intros branches name e Hready Hlookup.
+  induction Hready as [| name0 binders e0 rest Hbinders He0 Hrest IH];
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name name0) eqn:Hname.
+    + inversion Hlookup; subst. exact He0.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma preservation_ready_match_branches_leaf_or_borrow_lookup_direct_route :
+  forall branches name e,
+    Forall (fun branch =>
+      match branch with
+      | (_, _, expr) =>
+          preservation_ready_expr_static_runtime_named_leaf_or_borrow expr
+      end) branches ->
+    lookup_expr_branch name branches = Some e ->
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e.
+Proof.
+  intros branches name e Hall Hlookup.
+  induction Hall as [| [[name0 binders] e0] rest Hbranch Hrest IH];
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name name0) eqn:Hname.
+    + inversion Hlookup; subst. exact Hbranch.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma typed_match_tail_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s (Ω : outlives_ctx) (n : nat) lts args R roots_scrut Σ
+      branches variants expected_core R_out Σs Ts rootss,
+    preservation_ready_match_branches branches ->
+    Forall (fun branch =>
+      match branch with
+      | (_, _, expr) =>
+          preservation_ready_expr_static_runtime_named_leaf_or_borrow expr
+      end) branches ->
+    store_typed_prefix env s Σ ->
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    Forall (store_typed_prefix env s) Σs /\
+    Forall (fun roots => root_set_store_roots_named roots s) rootss.
+Proof.
+  intros Hexpr env s Ω n lts args R roots_scrut Σ branches variants
+    expected_core R_out Σs Ts rootss Hready Hall Hstore Htyped Hrn Hwithin
+    Hnamed Hkeys.
+  revert Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [lts args R0 roots_scrut Σ0 branches0 expected_core R_out
+    | R0 R_payload Rv_payload Rv Σ0 branches0 v rest e T Σv_payload Σv
+        R_out roots Σs Ts rootss expected_core binders ps lts args
+        roots_scrut Hbinders Hparams Hnodup Hctx_none Hroot_none Hlookup
+        HR_payload Htyped_e Hno_lbound Hparams_ok Hroots_excl HRv
+        HRv_excl HΣv Hcore HRout Htyped_tail IH];
+    intros Hstore Hrn Hwithin Hnamed Hkeys.
+  - repeat constructor.
+  - assert (Hbinders_empty : binders = []).
+    { eapply lookup_expr_branch_binders_preservation_ready_empty;
+        eassumption. }
+    subst binders.
+    assert (Hps_empty : ps = []).
+    { eapply match_payload_params_empty_direct_route; eassumption. }
+    subst ps.
+    simpl in HR_payload. subst R_payload.
+    simpl in Htyped_e.
+    assert (Hready_e : preservation_ready_expr e).
+    { eapply preservation_ready_match_branches_lookup_direct_route;
+        eassumption. }
+    assert (Hleaf_e :
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow e).
+    { eapply preservation_ready_match_branches_leaf_or_borrow_lookup_direct_route;
+        eassumption. }
+    assert (Hrn_payload : root_env_no_shadow R0) by exact Hrn.
+    destruct (Hexpr env s e Ω n R0 Σ0 T Σv_payload Rv_payload roots
+                Hready_e Hstore Htyped_e Hrn_payload Hwithin Hnamed Hkeys)
+      as [Hwithin_payload [Hnamed_payload [Hroots_named Hkeys_payload]]].
+    assert (Hstore_payload : store_typed_prefix env s Σv_payload).
+    { eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+        eassumption. }
+    simpl in HΣv. subst Σv.
+    destruct (IH Hready Hall Hstore Hrn Hwithin Hnamed Hkeys)
+      as [Hstores_tail Hroots_tail].
+    split.
+    + constructor; assumption.
+    + constructor; assumption.
+Qed.
+
 Lemma typed_args_roots_preservation_ready_static_runtime_named :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args

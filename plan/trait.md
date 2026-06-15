@@ -56,8 +56,9 @@ validity checks must be represented in Rocq and the extracted checker.
   store-name membership and for prefix-typed stores. Prefix-typed-place and
   preservation-ready borrow helpers now package store naming for direct place
   roots, direct borrow roots, borrowed place roots, and resolved place roots.
-  Mixed endpoint success now exposes the underlying assoc
-  strict exact-closure success, checked-env name
+  A prefix-aware static-runtime callback shape is defined, with a bridge from
+  the legacy callback and a direct-borrow instance. Mixed endpoint success now
+  exposes the underlying assoc strict exact-closure success, checked-env name
   uniqueness, strict exact-closure readiness, and a direct-endpoint success
   fact when the checked env also passes the direct receiver gate. The mixed
   runtime wrappers now consume those reusable facts. The public runtime-safety
@@ -130,8 +131,9 @@ validity checks must be represented in Rocq and the extracted checker.
   roots need either `In x (store_names s)` or a store-typing premise that
   connects typed-place context membership to the runtime store. The new
   prefix-typed-place and direct-borrow helpers cover that store-typing route
-  locally, but the public bridge still needs to thread an appropriate
-  store-typed-prefix premise to the static-runtime callback.
+  locally, and a prefix-aware callback shape can carry the needed
+  `store_typed_prefix` premise. The public bridge still needs the route-package
+  callback chain to consume that prefix-aware shape.
 
 ## Key Decisions
 

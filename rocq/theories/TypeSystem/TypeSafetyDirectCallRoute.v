@@ -2016,6 +2016,29 @@ Definition preservation_ready_expr_static_runtime_named_statement : Prop :=
     root_set_store_roots_named roots s /\
     root_env_store_keys_named R' s.
 
+Definition preservation_ready_expr_static_runtime_named_prefix_statement : Prop :=
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+
+Lemma preservation_ready_expr_static_runtime_named_prefix_of_static :
+  preservation_ready_expr_static_runtime_named_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement.
+Proof.
+  intros Hstatic env s e Ω n R Σ T Σ' R' roots Hready _Hstore Htyped
+    Hrn Hwithin Hnamed Hkeys.
+  eapply Hstatic; eassumption.
+Qed.
+
 Lemma root_env_lookup_store_roots_named_direct_route :
   forall R s x roots,
     root_env_store_roots_named R s ->
@@ -2217,6 +2240,26 @@ Proof.
     | Hpath : place_path p = Some (_, _) |- _ =>
         unfold root_of_place in Hplace; rewrite Hpath in Hplace; exact Hplace
     end.
+Qed.
+
+Lemma preservation_ready_borrow_static_runtime_named_prefix_instance :
+  forall rk p env s (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr (EBorrow rk p) ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EBorrow rk p) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros rk p env s Ω n R Σ T Σ' R' roots Hready Hstore Htyped _Hrn
+    Hwithin Hnamed Hkeys.
+  eapply preservation_ready_borrow_static_runtime_named_store_typed_prefix;
+    eassumption.
 Qed.
 
 Lemma root_env_store_roots_named_direct_route_store_names_eq :

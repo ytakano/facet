@@ -87,7 +87,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summaries there, a collapse from the direct-extended captured/component
   readiness predicate back to the ordinary captured/component predicate in that
   branch, and a direct-endpoint success fact for the direct-ready branch. The
-  mixed runtime wrappers now consume those reusable facts. The public
+  mixed runtime wrappers now consume those reusable facts and expose both
+  static-runtime and provider-based component callback routes. The public
   runtime-safety theorem still needs a stronger static-runtime bridge before it
   can target the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is

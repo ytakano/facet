@@ -3379,6 +3379,154 @@ Proof.
     constructor; assumption.
 Qed.
 
+
+Lemma eval_let_preserves_root_names_keys_preservation_ready_runtime_prefix :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s s1 s2 m x T_ann e1 e2 v1 v2
+      (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    eval env s e1 s1 v1 ->
+    eval env (store_add x T_ann v1 s1) e2 s2 v2 ->
+    preservation_ready_expr e1 ->
+    preservation_ready_expr e2 ->
+    store_typed_prefix env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    typed_env_roots env Ω n R Σ (ELet m x T_ann e1 e2) T Σ' R' roots ->
+    store_roots_within R' (store_remove x s2) /\
+    root_env_store_roots_named R' (store_remove x s2) /\
+    root_set_store_roots_named roots (store_remove x s2) /\
+    root_env_store_keys_named R' (store_remove x s2).
+Proof.
+  intros Htyping_prefix Hroots_ready Hexpr env s s1 s2 m x T_ann e1 e2
+    v1 v2 Ω n R Σ T Σ' R' roots Heval1 Heval2 Hready1 Hready2 Hstore
+    Hwithin Hshadow Hrn Hnamed Hkeys Htyped.
+  inversion Htyped; subst.
+  match goal with
+  | Htyped1 : typed_env_roots env Ω n R Σ e1 ?T1 ?Σ1 ?R1 ?roots1,
+    Hcompat : ty_compatible_b Ω ?T1 T_ann = true,
+    Hfresh_root : root_env_lookup x ?R1 = None,
+    Htyped2 : typed_env_roots env Ω n (root_env_add x ?roots1 ?R1)
+      (sctx_add x T_ann m ?Σ1) e2 T ?Σ2 ?R2 roots,
+    Hexcl_roots : roots_exclude x roots,
+    Hexcl_env : root_env_excludes x (root_env_remove x ?R2) |- _ =>
+      pose proof (proj1 preservation_ready_eval_store_names_mutual
+                    env s e1 s1 v1 Heval1 Hready1) as Hnames1;
+      destruct (Hexpr env s e1 Ω n R Σ T1 Σ1 R1 roots1 Hready1 Hstore
+                  Htyped1 Hrn Hwithin Hnamed Hkeys)
+        as [_Hwithin1_static [Hnamed1_static [Hroots1_static Hkeys1_static]]];
+      assert (Hroots1_named : root_set_store_roots_named roots1 s1)
+      by (eapply root_set_store_roots_named_direct_route_store_names_eq;
+          eassumption);
+      assert (Hnamed1 : root_env_store_roots_named R1 s1)
+      by (eapply root_env_store_roots_named_direct_route_store_names_eq;
+          eassumption);
+      assert (Hkeys1 : root_env_store_keys_named R1 s1)
+      by (eapply root_env_store_keys_named_direct_route_store_names_eq;
+          eassumption);
+      destruct (proj1 Htyping_prefix env s e1 s1 v1 Heval1 Ω n Σ T1 Σ1
+                  Hready1 Hstore
+                  (typed_env_roots_structural env Ω n R Σ e1 T1 Σ1 R1
+                    roots1 Htyped1))
+        as [Hstore1 [Hv1 _Hpres1]];
+      destruct (proj1 Hroots_ready env s e1 s1 v1 Heval1 Ω n R Σ T1 Σ1
+                  R1 roots1
+                  (preservation_ready_expr_implies_provenance_ready_direct_call
+                    e1 Hready1)
+                  Hwithin Hshadow Hrn Htyped1)
+        as [Hwithin1 [_Hvroots1 [Hshadow1 Hrn1]]];
+      assert (Hfresh_store : store_lookup x s1 = None)
+      by (eapply store_roots_within_lookup_none; eassumption);
+      assert (Hadd_pres :
+        store_ref_targets_preserved env s1 (store_add x T_ann v1 s1))
+      by (apply store_add_fresh_ref_targets_preserved; exact Hfresh_store);
+      pose proof (ty_compatible_b_sound Ω T1 T_ann Hcompat) as Hcompat_prop;
+      pose proof (store_typed_prefix_add_compatible env Ω s1 Σ1 x T1 T_ann m v1
+                    Hstore1 Hv1 Hcompat_prop Hadd_pres) as Hstore_add;
+      assert (Hwithin_add :
+        store_roots_within (root_env_add x roots1 R1)
+          (store_add x T_ann v1 s1))
+      by (eapply store_add_roots_within; eassumption);
+      assert (Hshadow_add : store_no_shadow (store_add x T_ann v1 s1))
+      by (apply store_no_shadow_add; assumption);
+      assert (Hrn_add : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption);
+      assert (Hnamed_add :
+        root_env_store_roots_named (root_env_add x roots1 R1)
+          (store_add x T_ann v1 s1))
+      by (eapply root_env_store_roots_named_add_env_store_add; eassumption);
+      assert (Hkeys_add :
+        root_env_store_keys_named (root_env_add x roots1 R1)
+          (store_add x T_ann v1 s1))
+      by (eapply root_env_store_keys_named_add_env_store_add; eassumption);
+      pose proof (proj1 preservation_ready_eval_store_names_mutual
+                    env (store_add x T_ann v1 s1) e2 s2 v2 Heval2 Hready2)
+        as Hnames2;
+      destruct (Hexpr env (store_add x T_ann v1 s1) e2 Ω n
+                  (root_env_add x roots1 R1) (sctx_add x T_ann m Σ1)
+                  T Σ2 R2 roots Hready2 Hstore_add Htyped2 Hrn_add
+                  Hwithin_add Hnamed_add Hkeys_add)
+        as [_Hwithin2_static [Hnamed2_static [Hroots2_static Hkeys2_static]]];
+      assert (Hnamed2 : root_env_store_roots_named R2 s2)
+      by (eapply root_env_store_roots_named_direct_route_store_names_eq;
+          eassumption);
+      assert (Hroots2_named : root_set_store_roots_named roots s2)
+      by (eapply root_set_store_roots_named_direct_route_store_names_eq;
+          eassumption);
+      assert (Hkeys2 : root_env_store_keys_named R2 s2)
+      by (eapply root_env_store_keys_named_direct_route_store_names_eq;
+          eassumption);
+      destruct (proj1 Hroots_ready env (store_add x T_ann v1 s1) e2 s2 v2
+                  Heval2 Ω n (root_env_add x roots1 R1)
+                  (sctx_add x T_ann m Σ1) T Σ2 R2 roots
+                  (preservation_ready_expr_implies_provenance_ready_direct_call
+                    e2 Hready2)
+                  Hwithin_add Hshadow_add Hrn_add Htyped2)
+        as [Hwithin2 [_Hvroots2 [Hshadow2 Hrn2]]];
+      assert (Hremove_names :
+        forall se, In se (store_remove x s2) -> se_name se <> x)
+      by (apply store_no_shadow_remove_no_name; exact Hshadow2);
+      assert (Hwithin_final :
+        store_roots_within (root_env_remove x R2) (store_remove x s2))
+      by (eapply store_remove_roots_within; eassumption);
+      assert (Hremain_names :
+        forall z,
+          In z (store_names s2) ->
+          z <> x ->
+          In z (store_names (store_remove x s2)))
+      by (intros z Hin Hneq; apply store_names_remove_keeps_other; assumption);
+      assert (Hnamed_removed :
+        root_env_store_roots_named (root_env_remove x R2) s2)
+      by (eapply root_env_store_roots_named_remove_env; eassumption);
+      assert (Hnamed_final :
+        root_env_store_roots_named (root_env_remove x R2) (store_remove x s2));
+      [ eapply root_env_store_roots_named_store_remove_excluding;
+        [ intros y roots_y Hlookup;
+          apply Hexcl_env with (y := y) (roots := roots_y);
+          [ exact Hlookup
+          | intros Heq; subst y;
+            rewrite root_env_lookup_remove_eq_no_shadow in Hlookup
+              by exact Hrn2;
+            discriminate ]
+        | exact Hnamed_removed
+        | exact Hremain_names ]
+      | assert (Hroots_final :
+          root_set_store_roots_named roots (store_remove x s2))
+        by (eapply root_set_store_roots_named_store_remove_excluding;
+            eassumption);
+        assert (Hkeys_final :
+          root_env_store_keys_named (root_env_remove x R2) (store_remove x s2))
+        by (eapply root_env_store_keys_named_remove_env_store_remove;
+            eassumption);
+        repeat split; assumption ]
+  end.
+Qed.
+
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->

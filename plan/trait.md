@@ -80,9 +80,10 @@ validity checks must be represented in Rocq and the extracted checker.
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge
   legacy static-runtime premises into the prefix chain.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure
-  success, checked-env name uniqueness, strict exact-closure readiness, and a
-  direct-endpoint success
-  fact when the checked env also passes the direct receiver gate. The mixed
+  success, checked-env name uniqueness, strict exact-closure readiness, an
+  endpoint-level split between no receiver-method bodies and the full direct
+  receiver gate, and a direct-endpoint success fact for the direct-ready
+  branch. The mixed
   runtime wrappers now consume those reusable facts. The public runtime-safety
   theorem still needs a stronger static-runtime bridge before it can target the
   mixed endpoint.

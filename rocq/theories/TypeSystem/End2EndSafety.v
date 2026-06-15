@@ -11658,6 +11658,25 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_ready_cases :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+      env = infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false \/
+    check_env_end2end_direct_receiver_ready env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
+    eqn:Hmixed_ready; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_end2end_direct_receiver_mixed_ready_cases.
+  exact Hmixed_ready.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_direct_ready_endpoint :
   forall env env',
     infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed

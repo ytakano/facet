@@ -70,8 +70,9 @@ validity checks must be represented in Rocq and the extracted checker.
   runtime non-store-safe lookup, env lookup, env lookup check, and
   strict non-store-safe route, check, and body-lookup check wrapper layers, plus
   the first exact-body route-package layers, including per-function,
-  reachable package-provider summary, reachable package-provider, and reachable
-  package-and-target-provider variants, expose prefix-callback theorems while
+  reachable package-provider summary, reachable package-provider,
+  reachable package-provider frame, and reachable package-and-target-provider
+  variants, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge
   legacy static-runtime premises into the prefix chain.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure

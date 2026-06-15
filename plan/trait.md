@@ -48,16 +48,16 @@ validity checks must be represented in Rocq and the extracted checker.
   contradictions for the no-method branch, collapse back to ordinary
   captured/component readiness there, branch runtime bridges for both
   direct-ready and no-receiver-method cases, a public case-split runtime
-  wrapper over the mixed endpoint, and an exact-body route-package wrapper for
-  that mixed case split.
+  wrapper over the mixed endpoint, an exact-body route-package wrapper for that
+  mixed case split, and a checked component-summary bridge for mixed component
+  store-safe callbacks.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
   store-typed-prefix root naming for direct places and borrows, prefix-facing
   route wrappers through the mixed static-component runtime wrapper, and legacy
-  wrapper shapes that delegate through the prefix bridge. The mixed exact-body
-  wrapper still relies on the base store-safe route premise required by the
-  existing exact-body derivation helper, so the remaining runtime theorem gap is
-  deriving that route/prefix-static evidence without adding a premise to the
-  required public theorem.
+  wrapper shapes that delegate through the prefix bridge. The mixed component
+  callback route can now consume the checked component-summary boolean directly.
+  The remaining runtime theorem gap is deriving the route/prefix-static evidence
+  needed by the required public theorem without adding a new premise.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -108,9 +108,10 @@ validity checks must be represented in Rocq and the extracted checker.
   broad enough to be the active CLI authority.
 - The mixed endpoint avoids that gate for programs without direct
   receiver-method bodies. Its direct-ready/no-receiver branch runtimes, public
-  case-split runtime wrapper, and mixed exact-body route-package wrapper are
-  proven. The remaining public theorem bridge still needs to remove the extra
-  store-safe route/static-runtime callback evidence before
+  case-split runtime wrapper, mixed exact-body route-package wrapper, and checked
+  component-summary bridge are proven. The remaining public theorem bridge still
+  needs to remove the extra store-safe route/static-runtime callback evidence
+  before
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` can target the
   mixed endpoint without widening its interface.
 - The concrete proof gap is deriving prefix/static-runtime naming evidence from

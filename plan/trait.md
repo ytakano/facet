@@ -49,7 +49,8 @@ validity checks must be represented in Rocq and the extracted checker.
   or generic direct receiver-method shape. It has checker-boundary soundness
   aliases, and the required public soundness aliases now target it. A runtime
   branch theorem covers mixed results whose checked env also passes the direct
-  receiver gate. The mixed base-route theorem now uses env-local component
+  receiver gate, and a public wrapper exposes that mixed direct-ready branch
+  without a static-runtime premise. The mixed base-route theorem now uses env-local component
   route evidence for checked functions instead of global provider premises,
   and a static-runtime callback variant removes that route-evidence premise entirely.
   Direct `root_of_place` store-root naming helpers are proven for explicit

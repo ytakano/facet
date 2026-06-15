@@ -62,8 +62,8 @@ validity checks must be represented in Rocq and the extracted checker.
   The argument-root helper now takes the prefix-aware callback directly. The
   first core cleanup route, the exact-body cleanup core/package-at routes,
   the exact-body package height route, the frame-scope exact-body package,
-  package-at, and reachable package-provider routes, and the first exact-body
-  route-package layers, including per-function,
+  package-at, reachable package-provider, and reachable package-and-target-provider
+  routes, and the first exact-body route-package layers, including per-function,
   reachable package-provider summary, reachable package-provider, and reachable
   package-and-target-provider variants, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge

@@ -2814,6 +2814,76 @@ Proof.
     + constructor; assumption.
 Qed.
 
+Lemma preservation_ready_struct_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s sname lts args fields (Ω : outlives_ctx) (n : nat)
+      R Σ T Σ' R' roots,
+    preservation_ready_fields fields ->
+    Forall (fun field =>
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow (snd field)) fields ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EStruct sname lts args fields) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s sname lts args fields Ω n R Σ T Σ' R' roots
+    Hready Hall Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hfields : typed_fields_roots _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+      destruct (typed_fields_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow
+                  Hexpr env s Ω n lts args R Σ fields (struct_fields sdef)
+                  Σ' R' roots Hready Hall Hstore Hfields Hrn Hwithin Hnamed Hkeys)
+        as [Hstore' [Hwithin' [Hnamed' [Hroots_named Hkeys']]]]
+  end.
+  repeat split; assumption.
+Qed.
+
+Lemma preservation_ready_enum_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s enum_name variant_name lts variant_lts args payloads
+      (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_args payloads ->
+    Forall preservation_ready_expr_static_runtime_named_leaf_or_borrow payloads ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ
+      (EEnum enum_name variant_name lts variant_lts args payloads)
+      T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s enum_name variant_name lts variant_lts args payloads Ω n
+    R Σ T Σ' R' roots Hready Hall Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hargs : typed_args_roots _ _ _ _ _ payloads _ _ _ _ |- _ =>
+      destruct (typed_args_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow
+                  Hexpr env s payloads Ω n R Σ
+                  (params_of_tys
+                    (map (instantiate_enum_variant_field_ty lts variant_lts args)
+                      (enum_variant_fields vdef)))
+                  Σ' R' payload_roots Hready Hall Hstore Hargs Hrn Hwithin
+                  Hnamed Hkeys)
+        as [Hstore' [Hwithin' [Hnamed' [Hpayloads_named Hkeys']]]]
+  end.
+  repeat split; try assumption.
+  apply root_sets_union_store_roots_named. exact Hpayloads_named.
+Qed.
+
 Lemma typed_args_roots_preservation_ready_static_runtime_named :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args

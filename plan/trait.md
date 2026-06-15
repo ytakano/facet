@@ -64,7 +64,8 @@ validity checks must be represented in Rocq and the extracted checker.
   the exact-body package height route, the frame-scope exact-body package,
   package-at, reachable package-provider, and reachable package-and-target-provider
   routes, the from-typed-route frame bridge, the combined exact-body
-  package route, and the first exact-body route-package layers, including per-function,
+  package and package-at-all routes, and the first exact-body route-package
+  layers, including per-function,
   reachable package-provider summary, reachable package-provider, and reachable
   package-and-target-provider variants, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge

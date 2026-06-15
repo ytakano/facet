@@ -15957,13 +15957,13 @@ Proof.
   exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
-Theorem eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all :
+Theorem eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all_prefix :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
@@ -16038,7 +16038,7 @@ Proof.
     - intros env s fname args s' v Heval Hheight Omega n R Σ T Σ' R' roots
         Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hsummary
         Hevidence.
-      eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at;
+      eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at_prefix;
         try eassumption.
       + exact (Hbody_package_at env fname).
       + intros m Hlt. exact (proj1 (IH m Hlt)).
@@ -16046,7 +16046,7 @@ Proof.
     - intros env s fname args s' v Heval Hheight Omega n R Σ T Σ' R' roots
         ps frame Hready Hstore Hnamed Hkeys Htyped Hunique Hsummary Hevidence
         Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
-      eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at;
+      eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at_prefix;
         try eassumption.
       + exact (Hbody_package_at env fname).
       + intros m Hlt. exact (proj1 (IH m Hlt)).
@@ -16064,6 +16064,37 @@ Proof.
     exact (proj2 (Hall n_call) env s fname args s' v Heval Hheight Omega n R
       Σ T Σ' R' roots ps frame Hready Hstore Hnamed Hkeys Htyped Hunique
       Hsummary Hevidence Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam).
+Qed.
+
+Theorem eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  (forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement /\
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic.
+  eapply
+    eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all_prefix;
+    try eassumption.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all_no_scope :

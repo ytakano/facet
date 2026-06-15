@@ -2751,6 +2751,45 @@ Proof.
     constructor; assumption.
 Qed.
 
+Lemma typed_args_roots_preservation_ready_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args
+      arg_roots,
+    preservation_ready_args args ->
+    store_typed_prefix env s Σ ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_args /\
+    store_roots_within R_args s /\
+    root_env_store_roots_named R_args s /\
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+    root_env_store_keys_named R_args s.
+Proof.
+  intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
+    Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  revert Hready Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [R0 Σ0
+    | R0 R1 R2 Σ0 Σ1 Σ2 e es p ps0 T_e roots roots_rest
+        Htyped_e Hcompat Htyped_rest IH];
+    intros Hready Hstore Hrn Hwithin Hnamed Hkeys.
+  - dependent destruction Hready.
+    repeat split; try constructor; assumption.
+  - dependent destruction Hready.
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (Hexpr env s e Ω n R0 Σ0 T_e Σ1 R1 roots H Hstore
+                Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_named Hkeys1]]]].
+    destruct (IH Hready Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    constructor; assumption.
+Qed.
+
 Lemma preservation_ready_fields_leaf_or_borrow_lookup_direct_route :
   forall fields name e,
     Forall (fun field =>
@@ -2822,6 +2861,45 @@ Proof.
     { eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
         eassumption. }
     destruct (IH Hready Hall Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    apply root_set_store_roots_named_union; assumption.
+Qed.
+
+Lemma typed_fields_roots_preservation_ready_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s (Ω : outlives_ctx) (n : nat) lts args R Σ fields defs
+      Σ_fields R_fields roots_fields,
+    preservation_ready_fields fields ->
+    store_typed_prefix env s Σ ->
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ_fields R_fields roots_fields ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_fields /\
+    store_roots_within R_fields s /\
+    root_env_store_roots_named R_fields s /\
+    root_set_store_roots_named roots_fields s /\
+    root_env_store_keys_named R_fields s.
+Proof.
+  intros Hexpr env s Ω n lts args R Σ fields defs Σ_fields R_fields
+    roots_fields Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  revert Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [lts args R0 Σ0 fields0
+    | lts args R0 R1 R2 Σ0 Σ1 Σ2 fields0 f rest e_field T_field
+        roots_field roots_rest Hlookup Htyped_e Hcompat Htyped_rest IH];
+    intros Hstore Hrn Hwithin Hnamed Hkeys.
+  - repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - assert (Hready_e : preservation_ready_expr e_field).
+    { eapply preservation_ready_fields_lookup_direct_route; eassumption. }
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (Hexpr env s e_field Ω n R0 Σ0 T_field Σ1 R1 roots_field
+                Hready_e Hstore Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_field_named Hkeys1]]]].
+    destruct (IH Hready Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
       as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
     repeat split; try assumption.
     apply root_set_store_roots_named_union; assumption.
@@ -2931,6 +3009,58 @@ Proof.
         eassumption. }
     simpl in HΣv. subst Σv.
     destruct (IH Hready Hall Hstore Hrn Hwithin Hnamed Hkeys)
+      as [Hstores_tail Hroots_tail].
+    split.
+    + constructor; assumption.
+    + constructor; assumption.
+Qed.
+
+Lemma typed_match_tail_roots_preservation_ready_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s (Ω : outlives_ctx) (n : nat) lts args R roots_scrut Σ
+      branches variants expected_core R_out Σs Ts rootss,
+    preservation_ready_match_branches branches ->
+    store_typed_prefix env s Σ ->
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    Forall (store_typed_prefix env s) Σs /\
+    Forall (fun roots => root_set_store_roots_named roots s) rootss.
+Proof.
+  intros Hexpr env s Ω n lts args R roots_scrut Σ branches variants
+    expected_core R_out Σs Ts rootss Hready Hstore Htyped Hrn Hwithin Hnamed
+    Hkeys.
+  revert Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [lts args R0 roots_scrut Σ0 branches0 expected_core R_out
+    | R0 R_payload Rv_payload Rv Σ0 branches0 v rest e T Σv_payload Σv
+        R_out roots Σs Ts rootss expected_core binders ps lts args
+        roots_scrut Hbinders Hparams Hnodup Hctx_none Hroot_none Hlookup
+        HR_payload Htyped_e Hno_lbound Hparams_ok Hroots_excl HRv
+        HRv_excl HΣv Hcore HRout Htyped_tail IH];
+    intros Hstore Hrn Hwithin Hnamed Hkeys.
+  - repeat constructor.
+  - assert (Hbinders_empty : binders = []).
+    { eapply lookup_expr_branch_binders_preservation_ready_empty;
+        eassumption. }
+    subst binders.
+    assert (Hps_empty : ps = []).
+    { eapply match_payload_params_empty_direct_route; eassumption. }
+    subst ps.
+    simpl in HR_payload. subst R_payload.
+    simpl in Htyped_e.
+    assert (Hready_e : preservation_ready_expr e).
+    { eapply preservation_ready_match_branches_lookup_direct_route;
+        eassumption. }
+    destruct (Hexpr env s e Ω n R0 Σ0 T Σv_payload Rv_payload roots
+                Hready_e Hstore Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hstore_payload [Hwithin_payload [Hnamed_payload
+          [Hroots_named Hkeys_payload]]]].
+    simpl in HΣv. subst Σv.
+    destruct (IH Hready Hstore Hrn Hwithin Hnamed Hkeys)
       as [Hstores_tail Hroots_tail].
     split.
     + constructor; assumption.

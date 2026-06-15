@@ -60,7 +60,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the legacy callback, a direct-borrow instance, and prefix-shaped argument-root
   naming compatibility consumed by the current core route cleanup bridge branches.
   The argument-root helper now takes the prefix-aware callback directly, while
-  higher route wrappers still bridge legacy static-runtime premises into it.
+  the first core cleanup route exposes a prefix-callback theorem and keeps the
+  legacy public shape as a wrapper. Higher route wrappers still bridge legacy
+  static-runtime premises into the prefix chain.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure
   success, checked-env name uniqueness, strict exact-closure readiness, and a
   direct-endpoint success

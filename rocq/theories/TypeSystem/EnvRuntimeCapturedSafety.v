@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
-  EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness.
+  EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
+  CheckerRootSidecars.
 From Facet.TypeSystem Require Export EnvRuntimeNonCapturingSafety.
 From Facet.TypeSystem Require Import TypeSafetyDirectCallWrappers
   TypeSafetyBasePreservationControl.
@@ -7992,6 +7993,71 @@ Proof.
     receiver_args, method_args, target_synthetic_body, hidden_synthetic_body,
     receiver_callee, method_callee, T_body, Gamma_body, R_body, roots_body.
   repeat split; try eassumption.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary_absurd_of_no_target :
+  forall env fdef,
+    direct_call_receiver_method_target_expr (fn_body fdef) = None ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    False.
+Proof.
+  intros env fdef Hnone Hsummary.
+  destruct
+    (callee_body_root_shadow_captured_call_direct_receiver_method_store_safe_summary_hidden_body_checked
+      env fdef Hsummary) as
+    (method_name & type_args & receiver_name & receiver_args & method_args &
+      target_synthetic_body & hidden_synthetic_body & receiver_callee &
+      method_callee & T_body & Gamma_body & R_out & roots & Htarget & _).
+  rewrite Hnone in Htarget. discriminate.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary_absurd_of_no_target :
+  forall env fdef,
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) = None ->
+    callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    False.
+Proof.
+  intros env fdef Hnone Hsummary.
+  destruct
+    (callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_checked
+      env fdef Hsummary) as
+    (method_name & type_args & receiver_name & receiver_type_args &
+      receiver_args & method_args & target_synthetic_body &
+      hidden_synthetic_body & receiver_callee & method_callee &
+      T_body & Gamma_body & R_out & roots & Htarget & _).
+  rewrite Hnone in Htarget. discriminate.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary_absurd_of_env_no_receiver_method :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    False.
+Proof.
+  intros env fdef Hpresent Hin Hsummary.
+  destruct (check_env_root_shadow_direct_receiver_method_present_false_facts
+    env fdef Hpresent Hin) as [Hdirect _].
+  eapply callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary_absurd_of_no_target;
+    eauto.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary_absurd_of_env_no_receiver_method :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    False.
+Proof.
+  intros env fdef Hpresent Hin Hsummary.
+  destruct (check_env_root_shadow_direct_receiver_method_present_false_facts
+    env fdef Hpresent Hin) as [_ Hgeneric].
+  eapply callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary_absurd_of_no_target;
+    eauto.
 Qed.
 
 Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_typed :

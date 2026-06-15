@@ -12894,10 +12894,10 @@ Proof.
               Hroots Hshadow Hrn Hnodup Hfresh_params Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
-    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr
+    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Hstatic env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -13196,10 +13196,10 @@ Proof.
               Hroots Hshadow Hrn Hnodup Hfresh_params Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
-    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr
+    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Hstatic env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -13503,10 +13503,10 @@ Proof.
               Hroots Hshadow Hrn Hnodup Hfresh_params Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
-    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr
+    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Hstatic env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named
@@ -14518,10 +14518,10 @@ Proof.
               Hroots Hshadow Hrn Hnodup Hfresh_params Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct
-    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr
+    (eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr_prefix
       Hstatic env s args s_args vs Omega n R Σ
       (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots H1
-      Hready_args Hrn Hroots Hnamed Hkeys H7)
+      Hready_args Hstore Hrn Hroots Hnamed Hkeys H7)
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   assert (Hnamed_bind :
     root_env_store_roots_named

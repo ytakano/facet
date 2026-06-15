@@ -12575,6 +12575,115 @@ Proof.
   exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider_prefix :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  forall base_env base_fname env s fname args s' v n_call,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    (forall m, m < n_call ->
+      forall env s fname args s' v,
+        eval env s (ECall fname args) s' v ->
+        direct_call_eval_height env s (ECall fname args) s' v m ->
+        forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+          preservation_ready_args args ->
+          store_typed_prefix env s Sigma ->
+          store_roots_within R s ->
+          store_no_shadow s ->
+          root_env_no_shadow R ->
+          root_env_store_roots_named R s ->
+          root_env_store_keys_named R s ->
+          typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+            roots ->
+          fn_env_unique_by_name env ->
+          fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+            fname ->
+          direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+            env fname ->
+          store_typed_prefix env s' Sigma' /\
+          value_has_type env s' v T /\
+          store_ref_targets_preserved env s s' /\
+          store_roots_within R' s' /\
+          value_roots_within roots v /\
+          store_no_shadow s' /\
+          root_env_no_shadow R') ->
+    (forall m, m < n_call ->
+      forall env s fname args s' v,
+        eval env s (ECall fname args) s' v ->
+        direct_call_eval_height env s (ECall fname args) s' v m ->
+        forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots
+            ps frame,
+          preservation_ready_args args ->
+          store_typed_prefix env s Sigma ->
+          root_env_store_roots_named R s ->
+          root_env_store_keys_named R s ->
+          typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+            roots ->
+          fn_env_unique_by_name env ->
+          fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+            fname ->
+          direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+            env fname ->
+          root_env_covers_params ps R ->
+          store_roots_within R s ->
+          store_no_shadow s ->
+          root_env_no_shadow R ->
+          store_frame_scope ps Sigma s frame ->
+          store_frame_static_fresh Sigma frame ->
+          store_param_scope ps s frame ->
+          store_frame_scope ps Sigma' s' frame /\
+          exists frame', store_param_scope ps s' frame') ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+      preservation_ready_args args ->
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+        roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+        env fname ->
+      store_typed_prefix env s' Sigma' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hexact_body_target base_env base_fname env s fname args s' v
+    n_call Hreachable Hprovider Heval Hheight Htyping_less Hscope_less Omega
+    n R Sigma T Sigma' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Htyped Hunique Hsummary Hevidence.
+  eapply
+    (eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at_prefix
+      Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+      Hstatic Hexact_body_target);
+    try eassumption.
+  eapply Hprovider. exact Hreachable.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -12672,13 +12781,11 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefi
       root_env_no_shadow R'.
 Proof.
   intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
-    Hstatic Hexact_body_target base_env base_fname env s fname args s' v
-    n_call Hreachable Hprovider Heval Hheight Htyping_less Hscope_less Omega
-    n R Sigma T Sigma' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed
-    Hkeys Htyped Hunique Hsummary Hevidence.
-  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at;
+    Hstatic.
+  eapply
+    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider_prefix;
     try eassumption.
-  eapply Hprovider. exact Hreachable.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package :

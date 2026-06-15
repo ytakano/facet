@@ -15487,6 +15487,59 @@ Proof.
       Hfresh Hparam).
 Qed.
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_provider_prefix :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  forall base_env base_fname fdef,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    In fdef (env_fns base_env) ->
+    fn_name fdef = base_fname ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at
+      base_env fdef.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target base_env base_fname
+    fdef Hprovider Hin_base Hname_base.
+  pose proof
+    (eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_reachable_exact_body_call_route_package_provider_prefix
+      Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys Hstatic
+      Hframe_ready Hparam_ready Hexact_body_target base_env base_fname
+      Hprovider) as Hroute.
+  destruct Hroute as [Htyping_route _Hscope_route].
+  unfold
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at.
+  intros fname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
+    Hrename Htarget Hsafe_args Hready Htyped Hunique Hsummary Hevidence
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval n_body_call Hheight.
+  assert (Hreachable_body :
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname
+      (global_env_with_local_bounds base_env (fn_bounds fcall)) fname_body).
+  { eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call_step.
+    - constructor.
+    - exact Hin_base.
+    - exact Hname_base.
+    - exact Hrename.
+    - exact Htarget. }
+  eapply Htyping_route; try eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_provider :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -15513,31 +15566,11 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_
       base_env fdef.
 Proof.
   intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
-    Hstatic Hframe_ready Hparam_ready Hexact_body_target base_env base_fname
-    fdef Hprovider Hin_base Hname_base.
-  pose proof
-    (eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_reachable_exact_body_call_route_package_provider
-      Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys Hstatic
-      Hframe_ready Hparam_ready Hexact_body_target base_env base_fname
-      Hprovider) as Hroute.
-  destruct Hroute as [Htyping_route _Hscope_route].
-  unfold
-    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at.
-  intros fname fcall used used' s_args s_body vs ret R_args arg_roots
-    fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
-    Hrename Htarget Hsafe_args Hready Htyped Hunique Hsummary Hevidence
-    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval n_body_call Hheight.
-  assert (Hreachable_body :
-    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
-      base_env base_fname
-      (global_env_with_local_bounds base_env (fn_bounds fcall)) fname_body).
-  { eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call_step.
-    - constructor.
-    - exact Hin_base.
-    - exact Hname_base.
-    - exact Hrename.
-    - exact Htarget. }
-  eapply Htyping_route; try eassumption.
+    Hstatic.
+  eapply
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_provider_prefix;
+    try eassumption.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_and_target_provider :

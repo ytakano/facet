@@ -3220,6 +3220,141 @@ Proof.
     + apply root_sets_union_store_roots_named. exact Hroots_tail.
 Qed.
 
+Lemma preservation_ready_struct_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s sname lts args fields (Ω : outlives_ctx) (n : nat)
+      R Σ T Σ' R' roots,
+    preservation_ready_fields fields ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EStruct sname lts args fields) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s sname lts args fields Ω n R Σ T Σ' R' roots
+    Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hfields : typed_fields_roots _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+      destruct (typed_fields_roots_preservation_ready_static_runtime_named_prefix_store
+                  Hexpr env s Ω n lts args R Σ fields (struct_fields sdef)
+                  Σ' R' roots Hready Hstore Hfields Hrn Hwithin Hnamed Hkeys)
+        as [Hstore' [Hwithin' [Hnamed' [Hroots_named Hkeys']]]]
+  end.
+  repeat split; assumption.
+Qed.
+
+Lemma preservation_ready_enum_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s enum_name variant_name lts variant_lts args payloads
+      (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_args payloads ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ
+      (EEnum enum_name variant_name lts variant_lts args payloads)
+      T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s enum_name variant_name lts variant_lts args payloads Ω n
+    R Σ T Σ' R' roots Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hargs : typed_args_roots _ _ _ _ _ payloads _ _ _ _ |- _ =>
+      destruct (typed_args_roots_preservation_ready_static_runtime_named_prefix_store
+                  Hexpr env s payloads Ω n R Σ
+                  (params_of_tys
+                    (map (instantiate_enum_variant_field_ty lts variant_lts args)
+                      (enum_variant_fields vdef)))
+                  Σ' R' payload_roots Hready Hstore Hargs Hrn Hwithin
+                  Hnamed Hkeys)
+        as [Hstore' [Hwithin' [Hnamed' [Hpayloads_named Hkeys']]]]
+  end.
+  repeat split; try assumption.
+  apply root_sets_union_store_roots_named. exact Hpayloads_named.
+Qed.
+
+Lemma preservation_ready_match_static_runtime_named_prefix_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  forall env s scrut branches (Ω : outlives_ctx) (n : nat) R Σ T Σ' R'
+      roots,
+    preservation_ready_expr scrut ->
+    preservation_ready_match_branches branches ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EMatch scrut branches) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s scrut branches Ω n R Σ T Σ' R' roots Hready_scrut
+    Hready_branches Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hscrut : typed_env_roots _ _ _ _ _ scrut _ _ _ _ |- _ =>
+      destruct (Hexpr env s scrut Ω n R Σ T_scrut Σ1 R1 roots_scrut
+                Hready_scrut Hstore Hscrut Hrn Hwithin Hnamed Hkeys)
+        as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_scrut_named Hkeys1]]]];
+      assert (Hrn1 : root_env_no_shadow R1) by
+        (eapply typed_env_roots_no_shadow; eassumption)
+  end.
+  assert (Hbinders_head_empty : binders_head = []).
+  { eapply lookup_expr_branch_binders_preservation_ready_empty; eassumption. }
+  subst binders_head.
+  assert (Hps_head_empty : ps_head = []).
+  { eapply match_payload_params_empty_direct_route; eassumption. }
+  subst ps_head.
+  simpl in *.
+  assert (Hready_head : preservation_ready_expr e_head).
+  { eapply preservation_ready_match_branches_lookup_direct_route; eassumption. }
+  match goal with
+  | Hhead : typed_env_roots _ _ _ _ _ e_head _ _ _ _ |- _ =>
+      destruct (Hexpr env s e_head Ω n R1 Σ1 T_head Σ_head_payload
+                R_head_payload roots_head Hready_head Hstore1 Hhead Hrn1 Hwithin1
+                Hnamed1 Hkeys1)
+        as [Hstore_head [Hwithin_head [Hnamed_head
+            [Hroots_head_named Hkeys_head]]]]
+  end.
+  match goal with
+  | Htail : typed_match_tail_roots _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+      pose proof Htail as Htail_ready
+  end.
+  match goal with
+  | Hmerge : ctx_merge_many (ctx_of_sctx _) _ = Some _ |- _ =>
+      pose proof Hmerge as Hmerge_ready
+  end.
+  destruct (typed_match_tail_roots_preservation_ready_static_runtime_named_prefix_store
+              Hexpr env s Ω n lts args R1 roots_scrut Σ1 branches v_tail
+              (ty_core T_head) R_head_payload Σ_tail Ts_tail roots_tail
+              Hready_branches Hstore1 Htail_ready Hrn1 Hwithin1 Hnamed1 Hkeys1)
+    as [Hstores_tail Hroots_tail].
+  repeat split; try assumption.
+  - eapply store_typed_prefix_ctx_merge_many_left_direct_route.
+    + exact Hstore_head.
+    + exact Hmerge_ready.
+  - apply root_set_store_roots_named_union.
+    + exact Hroots_head_named.
+    + apply root_sets_union_store_roots_named. exact Hroots_tail.
+Qed.
+
 Lemma preservation_ready_if_static_runtime_named_prefix_leaf_or_borrow :
   preservation_ready_expr_static_runtime_named_prefix_statement ->
   forall env s e1 e2 e3 (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,

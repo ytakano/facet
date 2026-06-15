@@ -136,11 +136,10 @@ validity checks must be represented in Rocq and the extracted checker.
   helper that keeps local freshness under typed/root premises. A stronger
   prefix static callback shape now carries `store_typed_prefix`, with a
   leaf/borrow instance, a forgetful bridge back to the existing weaker
-  callback, and argument/field/match-tail traversals. The remaining static
-  callback work is migrating compound wrappers to the stronger callback,
-  finishing local packaging, and then packaging that through the higher
-  route/combined callback chain so the public theorem does not need a new
-  premise.
+  callback, and argument/field/match-tail traversals. Struct, enum, and match wrappers now use the stronger callback. The remaining
+  static callback work is migrating control/mutation wrappers, finishing local
+  packaging, and then packaging that through the higher route/combined callback
+  chain so the public theorem does not need a new premise.
 
 ## Key Decisions
 

@@ -59,7 +59,8 @@ validity checks must be represented in Rocq and the extracted checker.
   for root-env union updates, static-only `store_typed_prefix` stability for
   consumed paths, leaf/borrow prefix traversals for typed argument, field, and
   match-tail branch lists, struct/enum/match/if/drop/assign/replace compound prefix
-  wrappers, an evaluated `let` root-name/key helper for prefix stores,
+  wrappers, an evaluated `let` root-name/key helper for prefix stores, a
+  stronger prefix static callback shape that carries `store_typed_prefix`,
   prefix-facing route wrappers through the mixed static-component runtime
   wrapper, and legacy wrapper shapes that delegate through the prefix bridge.
   The mixed component callback route can now consume the checked
@@ -132,11 +133,13 @@ validity checks must be represented in Rocq and the extracted checker.
   `store_typed_prefix`; leaf/borrow argument, field, and match-tail branch lists
   have prefix traversals; struct/enum/match/if/drop/assign/replace compounds
   have prefix wrappers; and evaluated `let` has a prefix-store root-name/key
-  helper that keeps local freshness under typed/root premises. The remaining
-  static callback work is the mutual preservation-ready traversal for final
-  local packaging and final compound expressions, then packaging that through
-  the higher route/combined callback chain so the public theorem does not need a
-  new premise.
+  helper that keeps local freshness under typed/root premises. A stronger
+  prefix static callback shape now carries `store_typed_prefix`, with a
+  leaf/borrow instance and a forgetful bridge back to the existing weaker
+  callback. The remaining static callback work is migrating list/compound
+  traversals to the stronger callback, finishing local packaging, and then
+  packaging that through the higher route/combined callback chain so the public
+  theorem does not need a new premise.
 
 ## Key Decisions
 

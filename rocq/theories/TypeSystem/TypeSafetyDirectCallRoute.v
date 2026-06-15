@@ -2176,6 +2176,33 @@ Definition preservation_ready_expr_static_runtime_named_prefix_statement : Prop 
     root_set_store_roots_named roots s /\
     root_env_store_keys_named R' s.
 
+Definition preservation_ready_expr_static_runtime_named_prefix_store_statement : Prop :=
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+
+Lemma preservation_ready_expr_static_runtime_named_prefix_of_store :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement.
+Proof.
+  intros Hstatic env s e Ω n R Σ T Σ' R' roots Hready Hstore Htyped
+    Hrn Hwithin Hnamed Hkeys.
+  destruct (Hstatic env s e Ω n R Σ T Σ' R' roots Hready Hstore Htyped
+              Hrn Hwithin Hnamed Hkeys)
+    as [_ [Hwithin' [Hnamed' [Hroots_named Hkeys']]]].
+  repeat split; assumption.
+Qed.
+
 Lemma preservation_ready_expr_static_runtime_named_prefix_of_static :
   preservation_ready_expr_static_runtime_named_statement ->
   preservation_ready_expr_static_runtime_named_prefix_statement.
@@ -2652,6 +2679,31 @@ Proof.
   - inversion H; subst; inversion Htyped; subst; try exact Hstore;
       eapply store_typed_prefix_static_consume_path_direct_route; eassumption.
   - inversion Htyped; subst; exact Hstore.
+Qed.
+
+Lemma preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_complete_store :
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e ->
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros env s e Ω n R Σ T Σ' R' roots Hcase Hready Hstore Htyped
+    Hrn Hwithin Hnamed Hkeys.
+  split.
+  - eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+      eassumption.
+  - eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_complete;
+      eassumption.
 Qed.
 
 Lemma typed_args_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow :

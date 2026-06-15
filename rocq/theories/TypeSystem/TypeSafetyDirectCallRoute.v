@@ -2230,6 +2230,34 @@ Proof.
   - eapply root_of_place_ctx_roots_named. exact Htyped.
 Qed.
 
+Lemma root_env_store_roots_named_update_env_union_direct_route :
+  forall R s x roots_old roots_new,
+    root_env_store_roots_named R s ->
+    root_env_lookup x R = Some roots_old ->
+    root_set_store_roots_named roots_new s ->
+    root_env_store_roots_named
+      (root_env_update x (root_set_union roots_old roots_new) R) s.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s x roots_old roots_new Hnamed Hlookup_old Hroots_new y roots
+    z Hlookup_y Hin.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    rewrite (root_env_lookup_update_eq x (root_set_union roots_old roots_new)
+      R roots_old Hlookup_old) in Hlookup_y.
+    inversion Hlookup_y; subst roots.
+    assert (Hunion :
+      root_set_store_roots_named (root_set_union roots_old roots_new) s).
+    { apply root_set_store_roots_named_union.
+      - unfold root_set_store_roots_named.
+        intros z0 Hin0. eapply Hnamed; eassumption.
+      - exact Hroots_new. }
+    exact (Hunion z Hin).
+  - rewrite root_env_lookup_update_neq in Hlookup_y.
+    + eapply Hnamed; eassumption.
+    + intros Hsame. subst y. rewrite ident_eqb_refl in Heq. discriminate.
+Qed.
+
 Lemma root_env_store_keys_named_update_env_direct_route :
   forall R s x roots,
     root_env_store_keys_named R s ->
@@ -3073,6 +3101,46 @@ Proof.
       repeat split; try assumption;
       apply root_set_store_roots_named_nil
   end.
+Qed.
+
+Lemma preservation_ready_assign_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s p e_new (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e_new ->
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e_new ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EAssign p e_new) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s p e_new Ω n R Σ T Σ' R' roots Hready Hleaf Hstore
+    Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst;
+    match goal with
+    | Hchild : typed_env_roots _ _ _ R Σ e_new ?Tnew Σ' ?R1 ?roots_new,
+      Hlookup : root_env_lookup ?x ?R1 = Some ?roots_old |- _ =>
+        destruct (Hexpr env s e_new Ω n R Σ Tnew Σ' R1 roots_new
+                  Hready Hstore Hchild Hrn Hwithin Hnamed Hkeys)
+          as [Hwithin1 [Hnamed1 [Hroots_new_named Hkeys1]]];
+        assert (Hstore' : store_typed_prefix env s Σ') by
+          (eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+            eassumption);
+        repeat split; try assumption;
+        [ eapply typed_env_roots_store_roots_within_update_result_direct_route;
+          eassumption
+        | eapply root_env_store_roots_named_update_env_union_direct_route;
+          eassumption
+        | apply root_set_store_roots_named_nil
+        | eapply root_env_store_keys_named_update_env_direct_route;
+          eassumption ]
+    end.
 Qed.
 
 Lemma typed_args_roots_preservation_ready_static_runtime_named :

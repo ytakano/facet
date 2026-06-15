@@ -84,10 +84,12 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint-level split between no receiver-method bodies and the full direct
   receiver gate, per-function no-receiver target facts for the no-method
   branch, contradiction facts ruling out direct and generic receiver-method
-  summaries in that no-method branch, and a direct-endpoint success fact for the
-  direct-ready branch. The mixed runtime wrappers now consume those reusable
-  facts. The public runtime-safety theorem still needs a stronger
-  static-runtime bridge before it can target the mixed endpoint.
+  summaries there, a collapse from the direct-extended captured/component
+  readiness predicate back to the ordinary captured/component predicate in that
+  branch, and a direct-endpoint success fact for the direct-ready branch. The
+  mixed runtime wrappers now consume those reusable facts. The public
+  runtime-safety theorem still needs a stronger static-runtime bridge before it
+  can target the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps

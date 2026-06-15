@@ -8060,6 +8060,54 @@ Proof.
     eauto.
 Qed.
 
+Lemma callee_body_root_shadow_captured_call_store_safe_summary_of_with_direct_receiver_method_no_receiver_method :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env fdef ->
+    callee_body_root_shadow_captured_call_store_safe_summary env fdef.
+Proof.
+  intros env fdef Hpresent Hin [Hcaptured | Hdirect].
+  - exact Hcaptured.
+  - exfalso.
+    eapply callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary_absurd_of_env_no_receiver_method;
+      eauto.
+Qed.
+
+Lemma callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_with_direct_receiver_method_no_receiver_method :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    callee_body_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env fdef ->
+    callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env fdef.
+Proof.
+  intros env fdef Hpresent Hin [Hcaptured | Hcomponent].
+  - left.
+    eapply callee_body_root_shadow_captured_call_store_safe_summary_of_with_direct_receiver_method_no_receiver_method;
+      eauto.
+  - right. exact Hcomponent.
+Qed.
+
+Lemma env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready_of_with_direct_receiver_method_no_receiver_method :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    env_fns_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
+      env ->
+    env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
+      env.
+Proof.
+  intros env Hpresent Hready fname fdef Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  eapply callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_with_direct_receiver_method_no_receiver_method.
+  - exact Hpresent.
+  - exact Hin.
+  - exact (Hready fname fdef Hlookup).
+Qed.
+
 Lemma callee_body_root_shadow_captured_call_generic_direct_receiver_method_store_safe_summary_hidden_body_typed :
   forall env fdef,
     callee_body_root_shadow_captured_call_generic_direct_receiver_method_narrow_store_safe_summary

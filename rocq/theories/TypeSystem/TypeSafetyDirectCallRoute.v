@@ -2544,6 +2544,29 @@ Proof.
     unfold binding_available_b. simpl. rewrite Hstatic. reflexivity.
 Qed.
 
+Lemma sctx_restore_path_available_noop_direct_route :
+  forall Σ x p,
+    sctx_path_available Σ x p = infer_ok tt ->
+    sctx_restore_path Σ x p = infer_ok Σ.
+Proof.
+  induction Σ as [| [[[n T] st] m] rest IH]; intros x p Havailable.
+  - unfold sctx_path_available in Havailable. discriminate.
+  - unfold sctx_path_available in Havailable. simpl in Havailable.
+    destruct (ident_eqb x n) eqn:Heq.
+    + destruct (binding_available_b st p) eqn:Hbinding; try discriminate.
+      unfold sctx_restore_path. simpl. rewrite Heq.
+      rewrite (state_restore_path_available_noop st p Hbinding). reflexivity.
+    + fold (ctx_lookup_state x rest) in Havailable.
+      unfold sctx_restore_path. simpl. rewrite Heq.
+      fold (ctx_update_state x (state_restore_path p) rest).
+      assert (Hrest : sctx_restore_path rest x p = infer_ok rest).
+      { apply IH. exact Havailable. }
+      unfold sctx_restore_path, sctx_update_state in Hrest |- *.
+      destruct (ctx_update_state x (state_restore_path p) rest) as [rest' |];
+        try discriminate.
+      inversion Hrest; subst rest'. reflexivity.
+Qed.
+
 Lemma store_typed_prefix_static_consume_path_direct_route :
   forall env s Σ x p Σ',
     store_typed_prefix env s Σ ->
@@ -3140,6 +3163,80 @@ Proof.
         | apply root_set_store_roots_named_nil
         | eapply root_env_store_keys_named_update_env_direct_route;
           eassumption ]
+    end.
+Qed.
+
+Lemma preservation_ready_replace_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s p e_new (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e_new ->
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e_new ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EReplace p e_new) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s p e_new Ω n R Σ T Σ' R' roots Hready Hleaf Hstore
+    Htyped Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  - match goal with
+    | Hchild : typed_env_roots _ _ _ R Σ e_new ?Tnew ?Σ1 ?R1 ?roots_new,
+      Hlookup : root_env_lookup ?x ?R1 = Some ?roots_old,
+      Hrestore : sctx_restore_path ?Σ1 ?x ?path = infer_ok Σ' |- _ =>
+        destruct (Hexpr env s e_new Ω n R Σ Tnew Σ1 R1 roots_new
+                  Hready Hstore Hchild Hrn Hwithin Hnamed Hkeys)
+          as [Hwithin1 [Hnamed1 [Hroots_new_named Hkeys1]]];
+        assert (Hstore1 : store_typed_prefix env s Σ1) by
+          (eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+            eassumption);
+        assert (Hrestore_noop : Σ' = Σ1)
+      end.
+    { match goal with
+      | Havailable : sctx_path_available ?Σ1 ?x ?path = infer_ok tt,
+        Hrestore : sctx_restore_path ?Σ1 ?x ?path = infer_ok Σ' |- _ =>
+          pose proof (sctx_restore_path_available_noop_direct_route
+                        Σ1 x path Havailable) as Hnoop;
+          rewrite Hrestore in Hnoop; inversion Hnoop; reflexivity
+      end. }
+    subst Σ'.
+    repeat split; try assumption.
+    + eapply typed_env_roots_store_roots_within_update_result_direct_route;
+        eassumption.
+    + eapply root_env_store_roots_named_update_env_union_direct_route;
+        eassumption.
+    + match goal with
+      | Hresult : root_env_lookup _ R = Some _ |- _ =>
+          eapply root_env_lookup_store_roots_named_direct_route;
+          [ exact Hnamed | exact Hresult ]
+      end.
+    + eapply root_env_store_keys_named_update_env_direct_route; eassumption.
+  - match goal with
+    | Hchild : typed_env_roots _ _ _ R Σ e_new ?Tnew Σ' ?R1 ?roots_new,
+      Hlookup : root_env_lookup ?x ?R1 = Some ?roots_old |- _ =>
+        destruct (Hexpr env s e_new Ω n R Σ Tnew Σ' R1 roots_new
+                  Hready Hstore Hchild Hrn Hwithin Hnamed Hkeys)
+          as [Hwithin1 [Hnamed1 [Hroots_new_named Hkeys1]]];
+        assert (Hstore' : store_typed_prefix env s Σ') by
+          (eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+            eassumption);
+        repeat split; try assumption;
+        [ eapply typed_env_roots_store_roots_within_update_result_direct_route;
+          eassumption
+        | eapply root_env_store_roots_named_update_env_union_direct_route;
+          eassumption
+        | match goal with
+          | Hresult : root_env_lookup _ R = Some _ |- _ =>
+              eapply root_env_lookup_store_roots_named_direct_route;
+              [ exact Hnamed | exact Hresult ]
+          end
+        | eapply root_env_store_keys_named_update_env_direct_route; eassumption ]
     end.
 Qed.
 

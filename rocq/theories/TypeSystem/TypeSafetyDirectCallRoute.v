@@ -17577,6 +17577,49 @@ Proof.
 Qed.
 
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height_prefix :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  forall component_ready,
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    component_ready env fdef) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+    component_ready ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic Hexact_body_target component_ready
+    Hcomponent_provider Hscoped_package.
+  eapply
+    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height_prefix;
+    try eassumption.
+  intros env fname fdef fcall used used' fname_body args_body Hin Hname
+    Hrename Htarget.
+  pose proof (Hcomponent_provider env fname fdef fcall used used' fname_body
+    args_body (ECall fname_body args_body) Hin Hname Hrename Htarget)
+    as Hcomponent.
+  eapply Hscoped_package; eassumption.
+Qed.
+
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
@@ -17606,17 +17649,11 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefi
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
 Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys Hstatic Hexact_body_target component_ready
-    Hcomponent_provider Hscoped_package.
+    Hroot_names Hroot_keys Hstatic.
   eapply
-    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height;
+    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height_prefix;
     try eassumption.
-  intros env fname fdef fcall used used' fname_body args_body Hin Hname
-    Hrename Htarget.
-  pose proof (Hcomponent_provider env fname fdef fcall used used' fname_body
-    args_body (ECall fname_body args_body) Hin Hname Hrename Htarget)
-    as Hcomponent.
-  eapply Hscoped_package; eassumption.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 

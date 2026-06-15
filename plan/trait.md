@@ -137,11 +137,11 @@ validity checks must be represented in Rocq and the extracted checker.
   prefix static callback shape now carries `store_typed_prefix`, with a
   leaf/borrow instance, a forgetful bridge back to the existing weaker
   callback, and argument/field/match-tail traversals. Struct, enum, match, if, drop, assign, and replace wrappers now have stronger
-  callback variants, and scoped exact-body route packages can consume the
-  stronger callback through forgetful bridges. The remaining static callback
-  work is finishing local expression packaging and then packaging that through
-  the higher combined callback chain so the public theorem does not need a new
-  premise.
+  callback variants, and scoped exact-body route packages and the mixed static-component endpoint
+  wrapper can consume the stronger callback through forgetful bridges. The
+  remaining static callback work is finishing local expression packaging and
+  then packaging that through the higher combined callback chain so the public
+  theorem does not need a new premise.
 
 ## Key Decisions
 

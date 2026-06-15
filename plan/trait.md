@@ -63,7 +63,8 @@ validity checks must be represented in Rocq and the extracted checker.
   first core cleanup route, the exact-body cleanup core/package-at routes,
   the exact-body package height route, the frame-scope exact-body package,
   package-at, reachable package-provider, and reachable package-and-target-provider
-  routes, and the first exact-body route-package layers, including per-function,
+  routes, the from-typed-route frame bridge, and the first exact-body
+  route-package layers, including per-function,
   reachable package-provider summary, reachable package-provider, and reachable
   package-and-target-provider variants, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge

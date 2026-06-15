@@ -46,8 +46,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, a ready/no-method case split,
   no-receiver target contradictions for the no-method branch, collapse back to
-  ordinary captured/component readiness there, and a direct-endpoint success
-  fact for the direct-ready branch.
+  ordinary captured/component readiness there, a direct-endpoint success fact for
+  the direct-ready branch, and an explicit no-receiver-method runtime bridge
+  through the assoc strict exact-closure route.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
   store-typed-prefix root naming for direct places and borrows, prefix-facing
   route wrappers through the mixed static-component runtime wrapper, and legacy
@@ -104,9 +105,9 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-or-component=true, component=false. The endpoint is verified but not
   broad enough to be the active CLI authority.
 - The mixed endpoint avoids that gate for programs without direct
-  receiver-method bodies, and its direct-ready runtime branch is proven. The
-  remaining public theorem bridge still needs to remove the extra
-  static-runtime callback premise before
+  receiver-method bodies. Its direct-ready runtime branch and store-safe
+  no-receiver-method runtime branch are proven. The remaining public theorem
+  bridge still needs to remove the extra static-runtime callback premise before
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` can target the
   mixed endpoint without widening its interface.
 - The concrete proof gap is deriving prefix/static-runtime naming evidence from

@@ -2628,6 +2628,82 @@ Proof.
     constructor; assumption.
 Qed.
 
+Lemma preservation_ready_fields_leaf_or_borrow_lookup_direct_route :
+  forall fields name e,
+    Forall (fun field =>
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow (snd field)) fields ->
+    lookup_field_b name fields = Some e ->
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e.
+Proof.
+  intros fields name e Hall Hlookup.
+  unfold lookup_field_b in Hlookup.
+  induction Hall as [| [fname field_expr] rest Hfield Hrest IH];
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name fname) eqn:Hname.
+    + inversion Hlookup; subst. exact Hfield.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma preservation_ready_fields_lookup_direct_route :
+  forall fields name e,
+    preservation_ready_fields fields ->
+    lookup_field_b name fields = Some e ->
+    preservation_ready_expr e.
+Proof.
+  intros fields name e Hready Hlookup.
+  rewrite lookup_field_b_lookup_expr_field in Hlookup.
+  eapply preservation_ready_fields_lookup; eassumption.
+Qed.
+
+Lemma typed_fields_roots_preservation_ready_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s (Ω : outlives_ctx) (n : nat) lts args R Σ fields defs
+      Σ_fields R_fields roots_fields,
+    preservation_ready_fields fields ->
+    Forall (fun field =>
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow (snd field)) fields ->
+    store_typed_prefix env s Σ ->
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ_fields R_fields roots_fields ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_fields /\
+    store_roots_within R_fields s /\
+    root_env_store_roots_named R_fields s /\
+    root_set_store_roots_named roots_fields s /\
+    root_env_store_keys_named R_fields s.
+Proof.
+  intros Hexpr env s Ω n lts args R Σ fields defs Σ_fields R_fields
+    roots_fields Hready Hall Hstore Htyped Hrn Hwithin Hnamed Hkeys.
+  revert Hstore Hrn Hwithin Hnamed Hkeys.
+  induction Htyped as
+    [lts args R0 Σ0 fields0
+    | lts args R0 R1 R2 Σ0 Σ1 Σ2 fields0 f rest e_field T_field
+        roots_field roots_rest Hlookup Htyped_e Hcompat Htyped_rest IH];
+    intros Hstore Hrn Hwithin Hnamed Hkeys.
+  - repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - assert (Hready_e : preservation_ready_expr e_field).
+    { eapply preservation_ready_fields_lookup_direct_route; eassumption. }
+    assert (Hleaf_e :
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow e_field).
+    { eapply preservation_ready_fields_leaf_or_borrow_lookup_direct_route;
+        eassumption. }
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (Hexpr env s e_field Ω n R0 Σ0 T_field Σ1 R1 roots_field
+                Hready_e Hstore Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hwithin1 [Hnamed1 [Hroots_field_named Hkeys1]]].
+    assert (Hstore1 : store_typed_prefix env s Σ1).
+    { eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+        eassumption. }
+    destruct (IH Hready Hall Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    apply root_set_store_roots_named_union; assumption.
+Qed.
+
 Lemma typed_args_roots_preservation_ready_static_runtime_named :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args

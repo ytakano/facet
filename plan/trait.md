@@ -57,8 +57,8 @@ validity checks must be represented in Rocq and the extracted checker.
   rooted typing outputs, packaged static root-name/key transport through
   `typed_roots_ctx_roots_named_mutual`, same-store `store_roots_within` transport
   for root-env union updates, static-only `store_typed_prefix` stability for
-  consumed paths, a leaf/borrow prefix traversal for typed argument lists,
-  prefix-facing route wrappers through the mixed static-component runtime
+  consumed paths, leaf/borrow prefix traversals for typed argument and field
+  lists, prefix-facing route wrappers through the mixed static-component runtime
   wrapper, and legacy wrapper shapes that delegate through the prefix bridge. The
   mixed component callback route can now consume the checked component-summary
   boolean directly. The remaining runtime theorem gap is packaging the compound
@@ -126,11 +126,11 @@ validity checks must be represented in Rocq and the extracted checker.
   store under `store_typed_prefix`; leaf and direct-borrow expressions have a
   packaged prefix callback; assign/replace root-env union updates preserve
   same-store `store_roots_within`; static path consumes preserve
-  `store_typed_prefix`; and leaf/borrow argument lists have a prefix traversal.
-  The remaining static callback work is the mutual preservation-ready traversal
-  for compound args, fields, match tails, and expressions, then packaging that
-  through the higher route/combined callback chain so the public theorem does
-  not need a new premise.
+  `store_typed_prefix`; and leaf/borrow argument and field lists have prefix
+  traversals. The remaining static callback work is the mutual
+  preservation-ready traversal for compound args, match tails, and expressions,
+  then packaging that through the higher route/combined callback chain so the
+  public theorem does not need a new premise.
 
 ## Key Decisions
 

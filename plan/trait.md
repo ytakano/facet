@@ -88,7 +88,8 @@ validity checks must be represented in Rocq and the extracted checker.
   readiness predicate back to the ordinary captured/component predicate in that
   branch, and a direct-endpoint success fact for the direct-ready branch. The
   mixed runtime wrappers now consume those reusable facts and expose public
-  direct-ready, static-runtime, and provider-based component callback route wrappers.
+  direct-ready, prefix static-runtime, legacy static-runtime, and provider-based
+  component callback route wrappers.
   The public runtime-safety theorem still needs a stronger static-runtime bridge
   before it can target the mixed endpoint.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
@@ -148,8 +149,9 @@ validity checks must be represented in Rocq and the extracted checker.
   gate for programs without direct receiver-method bodies; its direct-ready
   runtime branch is proven, and a base-route mixed runtime theorem now
   recovers assoc strict exact-closure safety for that branch from
-  env-local component route evidence. A mixed-ready case-split lemma and a
-  static-runtime callback theorem are available, but the remaining public theorem
+  env-local component route evidence. A mixed-ready case-split lemma and both
+  internal and public prefix-aware static-runtime callback theorems are
+  available, but the remaining public theorem
   bridge now has mixed-success base and direct-ready facts threaded through
   the reusable mixed runtime wrappers. It still needs to remove the extra
   static-runtime premise before the required public runtime-safety theorem
@@ -159,11 +161,12 @@ validity checks must be represented in Rocq and the extracted checker.
   connects typed-place context membership to the runtime store. The new
   prefix-typed-place and direct-borrow helpers cover that store-typing route
   locally, and a prefix-aware callback shape can carry the needed
-  `store_typed_prefix` premise. Argument-root naming now consumes that
-  prefix-aware callback shape directly, with route wrappers still bridging from
-  the legacy callback. The public bridge still needs the remaining higher route
-  and combined package callback chain to expose the prefix-aware callback shape
-  directly.
+  `store_typed_prefix` premise. Argument-root naming and the mixed static
+  runtime wrapper now consume that prefix-aware callback shape directly, with
+  some route wrappers still bridging
+  from the legacy callback. The public bridge still needs the remaining higher
+  route and combined package callback chain to expose the prefix-aware callback
+  shape directly.
 
 ## Key Decisions
 

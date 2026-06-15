@@ -61,8 +61,9 @@ validity checks must be represented in Rocq and the extracted checker.
   naming compatibility consumed by the current core route cleanup bridge branches.
   The argument-root helper now takes the prefix-aware callback directly. The
   first core cleanup route, the exact-body cleanup core/package-at routes,
-  the exact-body package height route, the frame-scope exact-body package
-  route, and the first exact-body route-package layers, including per-function,
+  the exact-body package height route, the frame-scope exact-body package and
+  package-at routes, and the first exact-body route-package layers, including
+  per-function,
   reachable package-provider summary, reachable package-provider, and reachable
   package-and-target-provider variants, expose prefix-callback theorems while
   keeping legacy public shapes as wrappers. Higher route wrappers still bridge

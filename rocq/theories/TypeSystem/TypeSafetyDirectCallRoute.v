@@ -2408,6 +2408,38 @@ Proof.
     eassumption.
 Qed.
 
+Inductive preservation_ready_expr_static_runtime_named_leaf_or_borrow : expr -> Prop :=
+  | PRSRNB_Leaf : forall e,
+      preservation_ready_expr_static_runtime_named_leaf e ->
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow e
+  | PRSRNB_Borrow : forall rk p x path,
+      place_path p = Some (x, path) ->
+      preservation_ready_expr_static_runtime_named_leaf_or_borrow (EBorrow rk p).
+
+Lemma preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_complete :
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e ->
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros env s e Ω n R Σ T Σ' R' roots Hcase Hready Hstore Htyped
+    Hrn Hwithin Hnamed Hkeys.
+  inversion Hcase; subst.
+  - eapply preservation_ready_expr_static_runtime_named_leaf_complete;
+      eassumption.
+  - eapply preservation_ready_borrow_static_runtime_named_prefix_instance;
+      eassumption.
+Qed.
+
 Lemma root_env_store_roots_named_direct_route_store_names_eq :
   forall R s s',
     store_names s' = store_names s ->

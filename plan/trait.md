@@ -52,16 +52,16 @@ validity checks must be represented in Rocq and the extracted checker.
   mixed case split, and a checked component-summary bridge for mixed component
   store-safe callbacks.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
-  store-typed-prefix root naming for direct places and borrows, context-name to
-  store-name transport for rooted typing outputs, packaged static root-name/key
-  transport through `typed_roots_ctx_roots_named_mutual`, same-store
-  `store_roots_within` transport for root-env union updates, prefix-facing route
-  wrappers through the mixed static-component runtime wrapper, and legacy wrapper
-  shapes that delegate through the prefix bridge. The mixed component callback
-  route can now consume the checked component-summary boolean directly. The
-  remaining runtime theorem gap is packaging the full preservation-ready static
-  `store_roots_within` traversal needed by the required public theorem without
-  adding a new premise.
+  store-typed-prefix root naming for direct places and borrows, a packaged
+  leaf-or-borrow static prefix callback, context-name to store-name transport for
+  rooted typing outputs, packaged static root-name/key transport through
+  `typed_roots_ctx_roots_named_mutual`, same-store `store_roots_within` transport
+  for root-env union updates, prefix-facing route wrappers through the mixed
+  static-component runtime wrapper, and legacy wrapper shapes that delegate
+  through the prefix bridge. The mixed component callback route can now consume
+  the checked component-summary boolean directly. The remaining runtime theorem
+  gap is packaging the compound preservation-ready static traversal needed by the
+  required public theorem without adding a new premise.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -121,10 +121,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The concrete proof gap is deriving prefix/static-runtime evidence from the
   required runtime-safety theorem's existing hypotheses. Static root-name and key
   evidence can now be transported from rooted typing outputs back to the runtime
-  store under `store_typed_prefix`, and assign/replace root-env union updates now
+  store under `store_typed_prefix`; leaf and direct-borrow expressions have a
+  packaged prefix callback; and assign/replace root-env union updates now
   preserve same-store `store_roots_within`. The remaining static callback work is
-  the mutual preservation-ready traversal for args, fields, match tails, and
-  expressions, then packaging that through the higher route/combined callback
+  the mutual preservation-ready traversal for compound args, fields, match tails,
+  and expressions, then packaging that through the higher route/combined callback
   chain so the public theorem does not need a new premise.
 
 ## Key Decisions

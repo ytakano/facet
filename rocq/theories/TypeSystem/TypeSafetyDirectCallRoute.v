@@ -12470,14 +12470,14 @@ Proof.
     eassumption.
 Qed.
 
-Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package :
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package_prefix :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
@@ -12525,7 +12525,7 @@ Proof.
     R Sigma T Sigma' R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed
     Hkeys Htyped Hunique Hsummary_at Hevidence_at.
   eapply
-    eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body;
+    eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body_prefix;
     try eassumption.
   - intros fdef fcall used used' fname_body args_body synthetic_body
       Hin Hname Hrename Htarget.
@@ -12546,6 +12546,33 @@ Proof.
       Hrn_bind Hnamed_bind Hkeys_bind Heval_nested n_body_call
       Hheight_nested Hlt.
     eapply IH; try eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic.
+  eapply
+    eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package_prefix;
+    try eassumption.
+  exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider :

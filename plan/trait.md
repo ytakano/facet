@@ -68,7 +68,7 @@ validity checks must be represented in Rocq and the extracted checker.
   projection wrappers, the frame-scope, statement, height, scoped summary,
   scoped prefix-call, scoped call-routes, body-call-callback, and
   runtime non-store-safe lookup, env lookup, env lookup check, and
-  strict non-store-safe route, check, and body-lookup check wrapper layers, plus
+  strict non-store-safe route, check, body-lookup check, and body-lookup provider wrapper layers, plus
   the first exact-body route-package layers, including per-function,
   reachable package-provider summary, reachable package-provider,
   reachable package-provider frame, reachable package-provider combined,

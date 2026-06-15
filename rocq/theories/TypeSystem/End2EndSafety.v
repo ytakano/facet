@@ -6159,6 +6159,51 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe_prefix :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env' = true ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env' ->
+    component_body_no_capture_direct_call_component_target_in_provider env' ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check
+    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe_prefix.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hstatic.
+  - exact Hunique.
+  - exact Hstrict_check.
+  - exact Hsummary_at_provider.
+  - exact Htarget_provider.
+  - exact Halpha_lookup_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -6181,28 +6226,17 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check
-    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
-  assert (Hunique : fn_env_unique_by_name env').
-  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
-  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe.
+    Hroot_names Hroot_keys Hstatic.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hstatic.
-  - exact Hunique.
-  - exact Hstrict_check.
-  - exact Hsummary_at_provider.
-  - exact Htarget_provider.
-  - exact Halpha_lookup_provider.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
+
 
 
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check :
@@ -6248,6 +6282,51 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe_prefix :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env' = true ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env' ->
+    component_body_no_capture_direct_call_component_target_in_provider env' ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check
+    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { eapply infer_program_env_end2end_assoc_unique_by_name. exact Hprog. }
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe_prefix.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hstatic.
+  - exact Hunique.
+  - exact Hstrict_check.
+  - exact Hsummary_at_provider.
+  - exact Htarget_provider.
+  - exact Halpha_lookup_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -6270,28 +6349,17 @@ Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check
-    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
-  assert (Hunique : fn_env_unique_by_name env').
-  { eapply infer_program_env_end2end_assoc_unique_by_name. exact Hprog. }
-  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe.
+    Hroot_names Hroot_keys Hstatic.
+  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hstatic.
-  - exact Hunique.
-  - exact Hstrict_check.
-  - exact Hsummary_at_provider.
-  - exact Htarget_provider.
-  - exact Halpha_lookup_provider.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
+
 
 
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks :

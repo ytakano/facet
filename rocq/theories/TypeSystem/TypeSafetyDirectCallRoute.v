@@ -3042,6 +3042,39 @@ Proof.
   - exact Hkeys2.
 Qed.
 
+Lemma preservation_ready_drop_static_runtime_named_prefix_leaf_or_borrow :
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e ->
+    preservation_ready_expr_static_runtime_named_leaf_or_borrow e ->
+    store_typed_prefix env s Σ ->
+    typed_env_roots env Ω n R Σ (EDrop e) T Σ' R' roots ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+Proof.
+  intros Hexpr env s e Ω n R Σ T Σ' R' roots Hready Hleaf Hstore Htyped
+    Hrn Hwithin Hnamed Hkeys.
+  inversion Htyped; subst.
+  match goal with
+  | Hchild : typed_env_roots _ _ _ _ _ e _ _ _ _ |- _ =>
+      destruct (Hexpr env s e Ω n R Σ T0 Σ' R' roots0 Hready Hstore
+                Hchild Hrn Hwithin Hnamed Hkeys)
+        as [Hwithin' [Hnamed' [_ Hkeys']]];
+      assert (Hstore' : store_typed_prefix env s Σ') by
+        (eapply preservation_ready_expr_static_runtime_named_prefix_leaf_or_borrow_store_typed_prefix;
+          eassumption);
+      repeat split; try assumption;
+      apply root_set_store_roots_named_nil
+  end.
+Qed.
+
 Lemma typed_args_roots_preservation_ready_static_runtime_named :
   preservation_ready_expr_static_runtime_named_statement ->
   forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args

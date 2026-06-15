@@ -82,8 +82,8 @@ validity checks must be represented in Rocq and the extracted checker.
   Mixed endpoint success now exposes the underlying assoc strict exact-closure
   success, checked-env name uniqueness, strict exact-closure readiness, an
   endpoint-level split between no receiver-method bodies and the full direct
-  receiver gate, and a direct-endpoint success fact for the direct-ready
-  branch. The mixed
+  receiver gate, per-function no-receiver target facts for the no-method
+  branch, and a direct-endpoint success fact for the direct-ready branch. The mixed
   runtime wrappers now consume those reusable facts. The public runtime-safety
   theorem still needs a stronger static-runtime bridge before it can target the
   mixed endpoint.

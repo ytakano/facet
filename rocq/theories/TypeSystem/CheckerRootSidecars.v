@@ -2341,6 +2341,55 @@ Definition check_env_root_shadow_direct_receiver_method_present
   existsb (check_fn_root_shadow_direct_receiver_method_present env)
     (env_fns env).
 
+Lemma check_fn_root_shadow_direct_receiver_method_present_false_facts :
+  forall env fdef,
+    check_fn_root_shadow_direct_receiver_method_present env fdef = false ->
+    direct_call_receiver_method_target_expr (fn_body fdef) = None /\
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) = None.
+Proof.
+  intros env fdef Hpresent.
+  unfold check_fn_root_shadow_direct_receiver_method_present in Hpresent.
+  destruct (direct_call_receiver_method_target_expr (fn_body fdef))
+    eqn:Hdirect; [discriminate |].
+  destruct (generic_direct_call_receiver_method_target_expr (fn_body fdef))
+    eqn:Hgeneric; [discriminate |].
+  split; reflexivity.
+Qed.
+
+Lemma check_env_root_shadow_direct_receiver_method_present_false_forall :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_direct_receiver_method_present env fdef = false.
+Proof.
+  intros env fdef Hpresent Hin.
+  unfold check_env_root_shadow_direct_receiver_method_present in Hpresent.
+  induction (env_fns env) as [| fdef' fdefs IH]
+      in fdef, Hpresent, Hin |- *.
+  - contradiction.
+  - simpl in Hpresent, Hin.
+    destruct Hin as [Heq | Hin].
+    + subst fdef'.
+      destruct (check_fn_root_shadow_direct_receiver_method_present env fdef)
+        eqn:Hfn; [discriminate | reflexivity].
+    + destruct (check_fn_root_shadow_direct_receiver_method_present env fdef')
+        eqn:Hfn; [discriminate |].
+      eapply IH; eauto.
+Qed.
+
+Lemma check_env_root_shadow_direct_receiver_method_present_false_facts :
+  forall env fdef,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    In fdef (env_fns env) ->
+    direct_call_receiver_method_target_expr (fn_body fdef) = None /\
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) = None.
+Proof.
+  intros env fdef Hpresent Hin.
+  apply (check_fn_root_shadow_direct_receiver_method_present_false_facts env fdef).
+  eapply check_env_root_shadow_direct_receiver_method_present_false_forall;
+    eauto.
+Qed.
+
 Definition check_env_end2end_direct_receiver_mixed_ready
     (env : global_env) : bool :=
   negb (check_env_root_shadow_direct_receiver_method_present env) ||

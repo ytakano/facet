@@ -2075,6 +2075,47 @@ Proof.
   - exact Hsubset.
 Qed.
 
+Lemma store_roots_within_update_env_union_same_direct_route :
+  forall R s x roots_old roots_new,
+    store_roots_within R s ->
+    root_env_lookup x R = Some roots_old ->
+    store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) s.
+Proof.
+  intros R s x roots_old roots_new Hwithin Hlookup_x.
+  induction Hwithin as [R | R se rest Hentry Hrest IH].
+  - constructor.
+  - inversion Hentry as [R0 sx sT sv sst roots Hlookup_se Hvalue_se];
+      subst R0 se.
+    constructor.
+    + destruct (ident_eqb x sx) eqn:Heq.
+      * apply ident_eqb_eq in Heq. subst sx.
+        rewrite Hlookup_x in Hlookup_se. inversion Hlookup_se; subst roots.
+        eapply SERW_Entry.
+        -- eapply root_env_lookup_update_eq. exact Hlookup_x.
+        -- apply value_roots_within_union_l. exact Hvalue_se.
+      * eapply SERW_Entry.
+        -- rewrite root_env_lookup_update_neq.
+           ++ exact Hlookup_se.
+           ++ intros Hsame. subst sx.
+              rewrite ident_eqb_refl in Heq. discriminate.
+        -- exact Hvalue_se.
+    + apply IH. exact Hlookup_x.
+Qed.
+
+Lemma typed_env_roots_store_roots_within_update_result_direct_route :
+  forall env s Ω n R Σ e_new T_new Σ1 R1 roots_new x roots_old,
+    typed_env_roots env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
+    store_roots_within R1 s ->
+    root_env_lookup x R1 = Some roots_old ->
+    store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s.
+Proof.
+  intros env s Ω n R Σ e_new T_new Σ1 R1 roots_new x roots_old
+    _Htyped Hwithin Hlookup.
+  eapply store_roots_within_update_env_union_same_direct_route; eassumption.
+Qed.
+
 Lemma typed_env_roots_preserves_store_root_names_keys_prefix :
   forall env s Ω n R Σ e T Σ' R' roots,
     preservation_ready_expr e ->

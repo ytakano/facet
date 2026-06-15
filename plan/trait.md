@@ -16,8 +16,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Method-local type parameters are supported for trait and impl methods,
   including method-local bounds and generic-trait impl remapping. Method-local
   lifetime generics remain deferred and are rejected by tests.
-- Method calls use Facet's ordinary prefix call shape: `(callee args...)`.
-  Explicit UFCS is `(<Ty as Trait>::method receiver args...)`; short UFCS is
+- Method calls use Facet's ordinary prefix call shape. Explicit UFCS is
+  `(<Ty as Trait>::method receiver args...)`; short UFCS is
   `(Trait::method receiver args...)`; the receiver is always the first
   argument. Dot method-call syntax is intentionally rejected in this phase.
 - Short UFCS currently accepts receiver types known before checker execution:
@@ -32,80 +32,38 @@ validity checks must be represented in Rocq and the extracted checker.
   packaging, final-store matching, method-body replay, scoped live/consumed
   expression-lift providers, and boolean soundness for the direct-extended
   captured/direct-receiver-or-component summary gate.
-- The extracted checker now exposes transitional strict and assoc strict
-  direct-receiver endpoints:
-  `infer_program_env_end2end_strict_exact_closure_direct_receiver` and
-  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver`. These
-  wrap the existing strict exact-closure routes with executable env checks for
-  provenance summary, preservation readiness, the direct-extended
-  captured/direct-receiver-or-component gate, and the no-capture component gate.
-  End-to-end safety wrappers discharge those executable premises from the new
-  endpoints, including provider-free strict and assoc direct-receiver safety
-  wrappers backed by theorem-level scoped body-lift providers.
-- A mixed assoc direct-receiver endpoint,
-  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`,
-  is exported. It runs the assoc strict exact-closure checker, then requires the
-  direct-receiver safety gate only when an elaborated function body has a direct
-  or generic direct receiver-method shape. It has checker-boundary soundness
-  aliases, and the required public soundness aliases now target it. A runtime
-  branch theorem covers mixed results whose checked env also passes the direct
-  receiver gate, and a public wrapper exposes that mixed direct-ready branch
-  without a static-runtime premise. The mixed base-route theorem now uses env-local component
-  route evidence for checked functions instead of global provider premises,
-  and a static-runtime callback variant removes that route-evidence premise entirely.
-  Direct `root_of_place` store-root naming helpers are proven for explicit
-  store-name membership and for prefix-typed stores. Prefix-typed-place and
-  preservation-ready borrow helpers now package store naming for direct place
-  roots, direct borrow roots, borrowed place roots, and resolved place roots.
-  A prefix-aware static-runtime callback shape is defined, with a bridge from
-  the legacy callback, a direct-borrow instance, and prefix-shaped argument-root
-  naming compatibility consumed by the current core route cleanup bridge branches.
-  The argument-root helper now takes the prefix-aware callback directly. The
-  first core cleanup route, the exact-body cleanup core/package-at routes,
-  the exact-body package height route, the frame-scope exact-body package,
-  package-at, reachable package-provider, and reachable package-and-target-provider
-  routes, the from-typed-route frame bridge, the combined exact-body
-  package and package-at-all routes, their exact-body and package-at-all
-  projection wrappers, the frame-scope, statement, height, scoped summary,
-  scoped prefix-call, scoped call-routes, body-call-callback, and
-  runtime non-store-safe lookup, env lookup, env lookup check, and
-  strict non-store-safe route, check, body-lookup check, and body-lookup provider wrapper layers, plus
-  the first exact-body route-package layers, including per-function,
-  reachable package-provider summary, reachable package-provider,
-  reachable package-provider frame, reachable package-provider combined,
-  reachable package-provider body-callback, reachable package-and-target summary,
-  reachable package-and-target body-callback, exact-body package body-callback,
-  and package-at-all body-callback bridge variants, plus strict and assoc
-  pointwise exact-body route-package, branch-local strict exact-closure, scoped exact-body package, scoped exact-body package non-store-safe, exact-body package component summary/check, public exact-body package summary-provider, component callback-provider, target-callback runtime, and mixed static-component runtime wrappers, expose prefix-callback theorems while
-  keeping legacy public shapes as wrappers. Higher route wrappers still bridge
-  legacy static-runtime premises into the prefix chain.
-  Mixed endpoint success now exposes the underlying assoc strict exact-closure
-  success, checked-env name uniqueness, strict exact-closure readiness, an
-  endpoint-level split between no receiver-method bodies and the full direct
-  receiver gate, per-function no-receiver target facts for the no-method
-  branch, contradiction facts ruling out direct and generic receiver-method
-  summaries there, a collapse from the direct-extended captured/component
-  readiness predicate back to the ordinary captured/component predicate in that
-  branch, and a direct-endpoint success fact for the direct-ready branch. The
-  mixed runtime wrappers now consume those reusable facts and expose public
-  direct-ready, prefix static-runtime, legacy static-runtime, and provider-based
-  component callback route wrappers.
-  The public runtime-safety theorem still needs a stronger static-runtime bridge
-  before it can target the mixed endpoint.
+- The extracted checker exports transitional strict and assoc strict
+  direct-receiver endpoints plus the mixed assoc direct-receiver endpoint,
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
+  The mixed endpoint runs the assoc strict exact-closure checker, then requires
+  the direct-receiver safety gate only when an elaborated function body has a
+  direct or generic direct receiver-method shape.
+- Required public checker soundness aliases target the mixed endpoint:
+  `infer_program_env_end2end_sound` and `check_program_env_end2end_sound`. The
+  required public runtime-safety theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
+  the non-mixed assoc direct-receiver endpoint.
+- Mixed endpoint success exposes the underlying assoc strict exact-closure
+  success, checked-env uniqueness/readiness facts, a ready/no-method case split,
+  no-receiver target contradictions for the no-method branch, collapse back to
+  ordinary captured/component readiness there, and a direct-endpoint success
+  fact for the direct-ready branch.
+- Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
+  store-typed-prefix root naming for direct places and borrows, prefix-facing
+  route wrappers through the mixed static-component runtime wrapper, and legacy
+  wrapper shapes that delegate through the prefix bridge. The remaining runtime
+  theorem gap is not a missing compatibility wrapper; it is deriving the needed
+  prefix/static-runtime callback evidence without adding a premise to the
+  required public theorem.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
   surface raw expressions and normalizes associated projections only at core
-  checker boundaries such as headers, expected types, annotations, explicit type
-  arguments, closure/letrec signatures, and `RawCore` embedding.
+  checker boundaries.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
-  exported, and covered by assoc-boundary soundness. The required public
-  soundness theorem names target the assoc strict exact-closure mixed
-  direct-receiver endpoint; the required public runtime-safety theorem still
-  targets the non-mixed direct-receiver endpoint. Extraction is current, but the
-  OCaml CLI still uses the older assoc-aware endpoint until the mixed endpoint
-  has the required public runtime-safety theorem and can become the sole CLI
-  authority.
+  exported, and covered by assoc-boundary soundness. The OCaml CLI still uses
+  the older assoc-aware endpoint until the mixed endpoint has the required
+  public runtime-safety theorem and can become the sole CLI authority.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -113,11 +71,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Route the public runtime-safety theorem name through the mixed assoc
-     direct-receiver endpoint, preserving the direct gate for actual direct
-     receiver-method bodies.
+   - Prove the required public runtime-safety theorem against the mixed assoc
+     direct-receiver endpoint without widening its interface.
    - Switch the OCaml accept/reject path to the extracted mixed endpoint once
-     the required public theorem names target it.
+     all required public theorem names target it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -145,28 +102,21 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. On `tests/valid/assign/basic_assign.facet`,
   the direct gate reports provenance=true, preservation=false,
   direct-or-component=true, component=false. The endpoint is verified but not
-  broad enough to be the active CLI authority. The mixed endpoint avoids this
-  gate for programs without direct receiver-method bodies; its direct-ready
-  runtime branch is proven, and a base-route mixed runtime theorem now
-  recovers assoc strict exact-closure safety for that branch from
-  env-local component route evidence. A mixed-ready case-split lemma and both
-  internal and public prefix-aware static-runtime callback theorems are
-  available, but the remaining public theorem
-  bridge now has mixed-success base and direct-ready facts threaded through
-  the reusable mixed runtime wrappers. It still needs to remove the extra
-  static-runtime premise before the required public runtime-safety theorem
-  can target the mixed endpoint without widening its interface. The attempted
-  global static-runtime proof now has a concrete subgoal: direct place/borrow
-  roots need either `In x (store_names s)` or a store-typing premise that
-  connects typed-place context membership to the runtime store. The new
-  prefix-typed-place and direct-borrow helpers cover that store-typing route
-  locally, and a prefix-aware callback shape can carry the needed
-  `store_typed_prefix` premise. Argument-root naming and the mixed static
-  runtime wrapper now consume that prefix-aware callback shape directly, with
-  some route wrappers still bridging
-  from the legacy callback. The public bridge still needs the remaining higher
-  route and combined package callback chain to expose the prefix-aware callback
-  shape directly.
+  broad enough to be the active CLI authority.
+- The mixed endpoint avoids that gate for programs without direct
+  receiver-method bodies, and its direct-ready runtime branch is proven. The
+  remaining public theorem bridge still needs to remove the extra
+  static-runtime callback premise before
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` can target the
+  mixed endpoint without widening its interface.
+- The concrete proof gap is deriving prefix/static-runtime naming evidence from
+  the required runtime-safety theorem's existing hypotheses. Direct place and
+  borrow roots need either explicit `In x (store_names s)` evidence or a
+  `store_typed_prefix` premise connecting typed-place context membership to the
+  runtime store. Existing prefix-typed-place and direct-borrow helpers cover
+  that route locally; the remaining work is packaging it through the higher
+  route/combined package callback chain so the public theorem does not need a
+  new premise.
 
 ## Key Decisions
 

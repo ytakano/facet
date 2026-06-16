@@ -6317,6 +6317,58 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_evidence :
+  eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_provider env' ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hpackage env env' f s s' v Hprog Hsummary_at_provider
+    Hbody_evidence_provider Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_evidence.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hsummary_at_provider.
+  - exact Hbody_evidence_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_in_evidence :
+  eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env' ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_in_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hpackage env env' f s s' v Hprog Hsummary_at_provider
+    Hbody_evidence_provider Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_in_evidence.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hsummary_at_provider.
+  - exact Hbody_evidence_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_in_evidence :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

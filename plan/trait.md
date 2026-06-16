@@ -119,11 +119,12 @@ validity checks must be represented in Rocq and the extracted checker.
   branch. The checker exposes the captured-summary absence gate, synthetic
   direct-call summary gate, endpoint-local local-bounds facts, public/local-
   bounds branch wrappers, and runtime safety wrappers for both stricter
-  endpoints. A temporary CLI swap to the absence-mixed endpoint rejected broad
-  existing valid coverage (`basic_assign`, borrow, core, enum, trait, and
-  type-safety-ready-gap cases) with `ErrEndToEndSafetyGateFailed`, so these are
-  proof infrastructure rather than behavior-compatible authorities until a
-  stricter endpoint is shown to preserve valid coverage. The active mixed
+  endpoints. Temporary CLI swaps to the absence-mixed endpoint and the
+  synthetic-mixed endpoint both rejected broad existing valid coverage
+  (`basic_assign`, assign/borrow/core/enum/function/lifetime/module/struct/
+  trait, and type-safety-ready-gap cases) with `ErrEndToEndSafetyGateFailed`,
+  so these are proof infrastructure rather than behavior-compatible authorities
+  until a stricter endpoint is shown to preserve valid coverage. The active mixed
   endpoint still does not require either stronger gate in the no-receiver
   branch, so the public theorem cannot be retargeted to the active CLI
   authority yet. Current receiver-method target absence is insufficient because

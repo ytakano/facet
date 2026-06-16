@@ -61,13 +61,13 @@ validity checks must be represented in Rocq and the extracted checker.
   match-tail branch lists, struct/enum/match/if/drop/assign/replace compound prefix
   wrappers, an evaluated `let` root-name/key helper for prefix stores, a
   stronger prefix static callback shape that carries `store_typed_prefix`,
-  prefix-facing route wrappers through the mixed static-component runtime
-  wrapper, and legacy wrapper shapes that delegate through the prefix bridge.
-  The mixed component callback route can now consume the checked
-  component-summary boolean directly.
-  The remaining runtime theorem gap is packaging the remaining compound
-  preservation-ready static traversal needed by the required public theorem
-  without adding a new premise.
+  a mutual typed-roots package proving that callback for preservation-ready
+  expressions, prefix-facing route wrappers through the mixed static-component
+  runtime wrapper, and legacy wrapper shapes that delegate through the prefix
+  bridge. The mixed component callback route can now consume the checked
+  component-summary boolean directly. The remaining runtime theorem gap is
+  threading the packaged stronger callback through the higher combined wrapper
+  chain so the required public theorem needs no new premise.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -139,9 +139,10 @@ validity checks must be represented in Rocq and the extracted checker.
   callback, and argument/field/match-tail traversals. Struct, enum, match, if, drop, assign, and replace wrappers now have stronger
   callback variants, and scoped exact-body route packages and the mixed static-component endpoint
   wrapper can consume the stronger callback through forgetful bridges. The
-  remaining static callback work is finishing local expression packaging and
-  then packaging that through the higher combined callback chain so the public
-  theorem does not need a new premise.
+  local expression packaging now provides the stronger prefix static callback.
+  The remaining static callback work is packaging that theorem through the
+  higher combined callback chain so the public theorem does not need a new
+  premise.
 
 ## Key Decisions
 

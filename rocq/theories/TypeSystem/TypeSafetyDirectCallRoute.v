@@ -3241,7 +3241,7 @@ Proof.
     Hready Hstore Htyped Hrn Hwithin Hnamed Hkeys.
   inversion Htyped; subst.
   match goal with
-  | Hfields : typed_fields_roots _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+  | Hfields : typed_fields_roots env Ω n lts args R Σ fields _ Σ' R' roots |- _ =>
       destruct (typed_fields_roots_preservation_ready_static_runtime_named_prefix_store
                   Hexpr env s Ω n lts args R Σ fields (struct_fields sdef)
                   Σ' R' roots Hready Hstore Hfields Hrn Hwithin Hnamed Hkeys)
@@ -3729,6 +3729,298 @@ Proof.
           end
         | eapply root_env_store_keys_named_update_env_direct_route; eassumption ]
     end.
+Qed.
+
+
+Theorem preservation_ready_typed_roots_static_runtime_named_prefix_store_mutual :
+  forall env Ω n,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    forall s,
+    preservation_ready_expr e ->
+    store_typed_prefix env s Σ ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ' /\
+    store_roots_within R' s /\
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s) /\
+  (forall R Σ args ps Σ_args R_args arg_roots,
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    forall s,
+    preservation_ready_args args ->
+    store_typed_prefix env s Σ ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_args /\
+    store_roots_within R_args s /\
+    root_env_store_roots_named R_args s /\
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+    root_env_store_keys_named R_args s) /\
+  (forall lts args R Σ fields defs Σ_fields R_fields roots_fields,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ_fields R_fields roots_fields ->
+    forall s,
+    preservation_ready_fields fields ->
+    store_typed_prefix env s Σ ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed_prefix env s Σ_fields /\
+    store_roots_within R_fields s /\
+    root_env_store_roots_named R_fields s /\
+    root_set_store_roots_named roots_fields s /\
+    root_env_store_keys_named R_fields s) /\
+  (forall lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    forall s,
+    preservation_ready_match_branches branches ->
+    store_typed_prefix env s Σ ->
+    root_env_no_shadow R ->
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    Forall (store_typed_prefix env s) Σs /\
+    Forall (fun roots => root_set_store_roots_named roots s) rootss).
+Proof.
+  intros env Ω n.
+  apply typed_roots_ind; intros; try solve [match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr end].
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try assumption.
+    eapply root_env_lookup_store_roots_named_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try assumption.
+    + eapply store_typed_prefix_static_consume_path_direct_route; eassumption.
+    + eapply root_env_lookup_store_roots_named_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try assumption.
+    eapply root_env_lookup_store_roots_named_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try assumption.
+    + eapply store_typed_prefix_static_consume_path_direct_route; eassumption.
+    + eapply root_env_lookup_store_roots_named_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - assert (Hfields_ready : preservation_ready_fields fields).
+    { match goal with
+      | Hr : preservation_ready_expr (EStruct _ _ _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hfields_ready H1 H2 H3 H4 H5)
+      as [Hstore' [Hwithin' [Hnamed' [Hroots_named Hkeys']]]].
+    repeat split; try assumption.
+  - assert (Hargs_ready : preservation_ready_args payloads).
+    { match goal with
+      | Hr : preservation_ready_expr (EEnum _ _ _ _ _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hargs_ready H1 H2 H3 H4 H5)
+      as [Hstore' [Hwithin' [Hnamed' [Hpayloads_named Hkeys']]]].
+    repeat split; try assumption.
+    apply root_sets_union_store_roots_named. exact Hpayloads_named.
+  - assert (Hready_scrut : preservation_ready_expr scrut).
+    { match goal with
+      | Hr : preservation_ready_expr (EMatch _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    assert (Hready_branches : preservation_ready_match_branches branches).
+    { match goal with
+      | Hr : preservation_ready_expr (EMatch _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hready_scrut H3 H4 H5 H6 H7)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_scrut_named Hkeys1]]]].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Hbinders_empty : binders_head = []).
+    { eapply lookup_expr_branch_binders_preservation_ready_empty; eassumption. }
+    subst binders_head.
+    assert (Hps_empty : ps_head = []).
+    { eapply match_payload_params_empty_direct_route; eassumption. }
+    subst ps_head.
+    simpl in *.
+    subst R_payload.
+    subst Σ_head.
+    subst R_out.
+    assert (Hready_head : preservation_ready_expr e_head).
+    { eapply preservation_ready_match_branches_lookup_direct_route; eassumption. }
+    destruct (H0 s Hready_head Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore_head [Hwithin_head [Hnamed_head
+          [Hroots_head_named Hkeys_head]]]].
+    destruct (H1 s Hready_branches Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstores_tail Hroots_tail].
+    repeat split; try assumption.
+    + eapply store_typed_prefix_ctx_merge_many_left_direct_route.
+      * exact Hstore_head.
+      * eassumption.
+    + apply root_set_store_roots_named_union.
+      * exact Hroots_head_named.
+      * apply root_sets_union_store_roots_named. exact Hroots_tail.
+  - assert (Hready_child : preservation_ready_expr e).
+    { match goal with
+      | Hr : preservation_ready_expr (EDrop _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hready_child H1 H2 H3 H4 H5)
+      as [Hstore' [Hwithin' [Hnamed' [_ Hkeys']]]].
+    repeat split; try assumption.
+    apply root_set_store_roots_named_nil.
+  - assert (Hready_child : preservation_ready_expr e_new).
+    { match goal with
+      | Hr : preservation_ready_expr (EReplace _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hready_child H1 H2 H3 H4 H5)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_new_named Hkeys1]]]].
+    assert (Hrestore_noop : Σ2 = Σ1).
+    { pose proof (sctx_restore_path_available_noop_direct_route
+                    Σ1 x path e3) as Hnoop;
+      rewrite e4 in Hnoop; inversion Hnoop; reflexivity. }
+    subst Σ2.
+    repeat split; try assumption.
+    + eapply typed_env_roots_store_roots_within_update_result_direct_route;
+        eassumption.
+    + eapply root_env_store_roots_named_update_env_union_direct_route;
+        eassumption.
+    + eapply root_env_lookup_store_roots_named_direct_route.
+      * exact H4.
+      * exact e0.
+    + eapply root_env_store_keys_named_update_env_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => dependent destruction Hr; congruence end.
+  - assert (Hready_child : preservation_ready_expr e_new).
+    { match goal with
+      | Hr : preservation_ready_expr (EAssign _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hready_child H1 H2 H3 H4 H5)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_new_named Hkeys1]]]].
+    repeat split; try assumption.
+    + eapply typed_env_roots_store_roots_within_update_result_direct_route;
+        eassumption.
+    + eapply root_env_store_roots_named_update_env_union_direct_route;
+        eassumption.
+    + apply root_set_store_roots_named_nil.
+    + eapply root_env_store_keys_named_update_env_direct_route; eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => dependent destruction Hr; congruence end.
+  - repeat split; try assumption.
+    eapply root_of_place_store_roots_named_direct_route_of_store_typed_prefix;
+      eassumption.
+  - match goal with Hr : preservation_ready_expr _ |- _ => dependent destruction Hr; congruence end.
+  - match goal with Hr : preservation_ready_expr _ |- _ => dependent destruction Hr; congruence end.
+  - repeat split; try assumption.
+    unfold root_set_store_roots_named. simpl. intros z [Hz | []].
+    inversion Hz; subst.
+    eapply store_typed_prefix_ctx_names_in_store_names.
+    + exact H0.
+    + eapply sctx_lookup_mut_in_ctx_names; eassumption.
+  - match goal with Hr : preservation_ready_expr (EBorrow _ _) |- _ =>
+      inversion Hr; subst; congruence
+    end.
+  - match goal with Hr : preservation_ready_expr (EBorrow _ _) |- _ =>
+      inversion Hr; subst; congruence
+    end.
+  - match goal with Hr : preservation_ready_expr (EBorrow _ _) |- _ =>
+      inversion Hr; subst; congruence
+    end.
+  - assert (Hready1 : preservation_ready_expr e1).
+    { match goal with
+      | Hr : preservation_ready_expr (EIf _ _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    assert (Hready2 : preservation_ready_expr e2).
+    { match goal with
+      | Hr : preservation_ready_expr (EIf _ _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    assert (Hready3 : preservation_ready_expr e3).
+    { match goal with
+      | Hr : preservation_ready_expr (EIf _ _ _) |- _ =>
+          inversion Hr; subst; assumption
+      end. }
+    destruct (H s Hready1 H3 H4 H5 H6 H7)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_cond_named Hkeys1]]]].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (H0 s Hready2 Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots2_named Hkeys2]]]].
+    destruct (H1 s Hready3 Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [_ [_ [_ [Hroots3_named _]]]].
+    repeat split.
+    + eapply store_typed_prefix_ctx_merge_left.
+      * exact Hstore2.
+      * exact e4.
+    + exact Hwithin2.
+    + exact Hnamed2.
+    + apply root_set_store_roots_named_union; assumption.
+    + exact Hkeys2.
+  - match goal with Hr : preservation_ready_args _ |- _ => inversion Hr; subst; clear Hr end.
+    repeat split; try constructor; assumption.
+  - assert (Hready_head : preservation_ready_expr e).
+    { inversion H1; subst; assumption. }
+    assert (Hready_tail : preservation_ready_args es).
+    { inversion H1; subst; assumption. }
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (H s Hready_head H2 H3 H4 H5 H6)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_named Hkeys1]]]].
+    destruct (H0 s Hready_tail Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    constructor; assumption.
+  - repeat split; try apply root_set_store_roots_named_nil; assumption.
+  - assert (Hready_e : preservation_ready_expr e_field).
+    { eapply preservation_ready_fields_lookup_direct_route; eassumption. }
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    destruct (H s Hready_e H2 H3 H4 H5 H6)
+      as [Hstore1 [Hwithin1 [Hnamed1 [Hroots_field_named Hkeys1]]]].
+    destruct (H0 s H1 Hstore1 Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hstore2 [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]]].
+    repeat split; try assumption.
+    apply root_set_store_roots_named_union; assumption.
+  - repeat constructor.
+  - assert (Hbinders_empty : binders = []).
+    { eapply lookup_expr_branch_binders_preservation_ready_empty; eassumption. }
+    subst binders.
+    assert (Hps_empty : ps = []).
+    { eapply match_payload_params_empty_direct_route; eassumption. }
+    subst ps.
+    simpl in *.
+    subst R_payload.
+    subst Σv.
+    assert (Hready_e : preservation_ready_expr e).
+    { eapply preservation_ready_match_branches_lookup_direct_route; eassumption. }
+    destruct (H s Hready_e H2 H3 H4 H5 H6)
+      as [Hstore_payload [Hwithin_payload [Hnamed_payload
+          [Hroots_named Hkeys_payload]]]].
+    destruct (H0 s H1 H2 H3 H4 H5 H6)
+      as [Hstores_tail Hroots_tail].
+    split; constructor; assumption.
+Qed.
+
+Theorem preservation_ready_expr_static_runtime_named_prefix_store_complete :
+  preservation_ready_expr_static_runtime_named_prefix_store_statement.
+Proof.
+  intros env s e Ω n R Σ T Σ' R' roots Hready Hstore Htyped Hrn Hwithin
+    Hnamed Hkeys.
+  exact (proj1 (preservation_ready_typed_roots_static_runtime_named_prefix_store_mutual
+                  env Ω n)
+          R Σ e T Σ' R' roots Htyped s Hready Hstore Hrn Hwithin Hnamed
+          Hkeys).
 Qed.
 
 Lemma typed_args_roots_preservation_ready_static_runtime_named :

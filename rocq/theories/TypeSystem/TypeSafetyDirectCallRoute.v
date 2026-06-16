@@ -1475,6 +1475,41 @@ Proof.
     eapply Hevidence_at_all.
 Qed.
 
+
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_shadow_summary_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname) ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hprefix Hroot_names Hroot_keys Hsummary_at_all env s fname args
+    s' v Heval Ω n R Σ T Σ' R' roots Hsafe_args Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys Htyped Hunique Hsummary_at _Hevidence_at.
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement.
+    exact Hprefix.
+  - exact Heval.
+  - eapply store_safe_function_value_call_args_preservation_ready.
+    exact Hsafe_args.
+  - exact Hstore.
+  - exact Hroots.
+  - exact Hshadow.
+  - exact Hrn.
+  - exact Hnamed.
+  - exact Hkeys.
+  - exact Htyped.
+  - exact Hunique.
+  - exact Hsummary_at.
+  - intros fname_top.
+    eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact (Hsummary_at_all env fname_top).
+    + exact Hunique.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   (forall env fname,

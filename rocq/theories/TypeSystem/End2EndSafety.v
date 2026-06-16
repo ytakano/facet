@@ -17753,6 +17753,54 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_shadow_summary_at_all_callbacks :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed
+      env = infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall env0 fname,
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          env0 fname) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hsummary_at_all_when_no_receiver Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_store_safe_evidence_at_callbacks.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver.
+    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_shadow_summary_at_all.
+    + exact Hsynthetic_route.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact (Hsummary_at_all_when_no_receiver Hno_receiver).
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_evidence_at_all_callbacks :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

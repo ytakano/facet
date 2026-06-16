@@ -42,9 +42,10 @@ validity checks must be represented in Rocq and the extracted checker.
   route families, no-receiver receiver-method target absence/collapse facts,
   exact-closure bridges for local-bounds routes, seen callees, direct-callee
   component checks, exact-body targets, unconditional Prop-level combined
-  local-bounds summaries, no-receiver receiver-aware combined readiness, and
+  local-bounds summaries, no-receiver receiver-aware combined readiness,
   component-body/component-with-body-summary providers from component checks and
-  from the direct-ready branch.
+  from the direct-ready branch, and an extracted captured-summary absence gate
+  with endpoint-local facts consumable by exact/non-captured branch wrappers.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -104,11 +105,11 @@ validity checks must be represented in Rocq and the extracted checker.
   closure summary, local-bounds route evidence, endpoint-derived not-captured
   evidence, exact non-captured evidence, or an exact-body scoped package.
 - The strongest existing assoc-base path is still the exact/non-captured branch
-  wrapper. It would become usable if the checker exposed a fact that every
-  local-bounds-family function in the no-receiver branch has
-  `check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false`.
-  Current receiver-method target absence is insufficient because ordinary
-  captured-call summaries are distinct from receiver-method summaries.
+  wrapper. The checker now exposes an extracted captured-summary absence gate
+  and endpoint-local local-bounds facts for it, but the active mixed endpoint
+  does not yet require that gate in the no-receiver branch. Current
+  receiver-method target absence is insufficient because ordinary captured-call
+  summaries are distinct from receiver-method summaries.
 
 ## Key Decisions
 

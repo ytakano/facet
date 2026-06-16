@@ -16434,6 +16434,19 @@ let check_fn_root_shadow_captured_call_base_store_safe_summary =
 let check_fn_root_shadow_captured_call_store_safe_summary =
   check_fn_root_shadow_captured_call_base_store_safe_summary
 
+(** val check_fn_root_shadow_captured_call_store_safe_summary_absent :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_store_safe_summary_absent env fdef =
+  negb (check_fn_root_shadow_captured_call_store_safe_summary env fdef)
+
+(** val check_env_root_shadow_captured_call_store_safe_summary_absent :
+    global_env -> bool **)
+
+let check_env_root_shadow_captured_call_store_safe_summary_absent env =
+  forallb (check_fn_root_shadow_captured_call_store_safe_summary_absent env)
+    env.env_fns
+
 (** val check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method :
     global_env -> fn_def -> bool **)
 

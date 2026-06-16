@@ -13824,6 +13824,51 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_env_root_shadow_captured_call_store_safe_summary_absent_facts :
+  forall env fdef,
+    check_env_root_shadow_captured_call_store_safe_summary_absent env = true ->
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = false.
+Proof.
+  intros env fdef Habsent Hin.
+  unfold check_env_root_shadow_captured_call_store_safe_summary_absent
+    in Habsent.
+  apply forallb_forall with (x := fdef) in Habsent; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_absent
+    in Habsent.
+  apply negb_true_iff in Habsent. exact Habsent.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_not_captured_of_absent_check :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_env_root_shadow_captured_call_store_safe_summary_absent env' = true ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false.
+Proof.
+  intros _env env' fdef _Hprog _Hno_receiver Habsent Hin.
+  eapply check_env_root_shadow_captured_call_store_safe_summary_absent_facts;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_not_captured_in_local_bounds_family_of_absent_check :
+  forall env env' env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_env_root_shadow_captured_call_store_safe_summary_absent env' = true ->
+    global_env_local_bounds_family env' env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false.
+Proof.
+  intros env env' env0 fdef Hprog Hno_receiver Habsent Hfamily Hin.
+  destruct Hfamily as (bounds & ->).
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_not_captured_of_absent_check;
+    eassumption.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
   forall env base env0 fdef,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary

@@ -16,10 +16,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - Method-local type parameters are supported for trait and impl methods,
   including method-local bounds and generic-trait impl remapping. Method-local
   lifetime generics remain deferred and are rejected by tests.
-- Method calls use Facet's ordinary prefix call shape. Explicit UFCS is
-  `(<Ty as Trait>::method receiver args...)`; short UFCS is
-  `(Trait::method receiver args...)`; the receiver is always the first
-  argument. Dot method-call syntax is intentionally rejected in this phase.
+- Method calls use receiver-first prefix UFCS forms:
+  `(<Ty as Trait>::method receiver args...)` and
+  `(Trait::method receiver args...)`. Dot method-call syntax is intentionally
+  rejected in this phase.
 - Short UFCS currently accepts receiver types known before checker execution:
   function parameters, syntactically typed literals, immutable pure local
   literals after receiver-let elimination, fieldless struct literals, and
@@ -47,45 +47,20 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   the strict mixed endpoint.
 - The assoc-base mixed endpoint is exported, covered by assoc-boundary
-  soundness, has branch runtime bridges for direct-ready and no-receiver-method
-  cases, and has public-layer runtime wrappers for the major route families:
-  case-split routes, exact-body route packages, summary exact/call packages,
-  summary-at routes, call-statement routes, component-summary providers,
-  checked component summaries, and exact-body scoped/local-bounds packages.
-  These wrappers expose active-endpoint paths. Public-layer retarget
-  candidates now prove runtime safety for the assoc-base mixed endpoint from the
-  existing public premises plus explicit store-safe evidence-at route evidence,
-  either globally or only in the no-receiver-method branch; the required public
-  theorem still lacks that evidence source. Public
-  callback bridges now derive the summary exact-call package for the assoc-base
-  mixed endpoint when global store-safe summary evidence, a checked component
-  summary, or a component-body store-safe summary provider is available. The
-  active mixed endpoint has named lemmas exposing its combined
-  captured-or-component summary gate both as a checker result and as Prop-level
-  summary readiness, but that gate is still weaker than the missing route
-  evidence. The remaining viable routes are through global
-  store-safe summary, component-body store-safe, or exact-body/local-bounds
-  evidence providers. Branch-aware public wrappers now close the direct-ready
-  branch with existing callbacks and require store-safe summary evidence, a
-  checked component summary, component-body store-safe summary evidence, or
-  local-bounds route evidence only for the no-receiver-method branch. The
-  branch-local-bounds route family now covers ordinary component, exact
-  component, and uncaptured component variants, and non-captured provider
-  routes, including exact non-captured providers, have the same no-receiver-only
-  shape. The no-receiver branch also
-  exports
-  reusable direct/generic receiver-method target absence facts through
-  local-bounds environments; these facts are intentionally kept separate from
-  ordinary direct-call exact-body route packages. The active endpoint now also
-  exposes the exact-body synthetic-evidence route with component-body closure
-  checks through public mixed wrappers, including branch-aware wrappers that
-  require exact-body evidence, component-body closure, static exact-body route
-  packages, exact-body package plus component-check/body-summary-provider
-  routes, static non-captured component providers, static exact non-captured
-  providers, static exact local-bounds providers, or static assoc-base
-  non-captured component providers only in the no-receiver-method branch. These
-  routes still require those explicit exact-body/local-bounds/component facts
-  when that branch is taken.
+  soundness, and has branch runtime bridges for direct-ready and
+  no-receiver-method cases. Public-layer wrappers now cover the active endpoint
+  for the main route families: store-safe evidence-at, summary exact/call
+  packages, checked component summaries, component-body summaries,
+  exact-body/local-bounds packages, non-captured and exact non-captured
+  providers, static provider variants, call-statement routes, and branch-scoped
+  direct-ready/no-receiver splits. These wrappers isolate the unresolved public
+  theorem gap to one missing no-receiver-branch evidence source rather than to
+  the direct-ready branch.
+- The no-receiver branch exports reusable direct/generic receiver-method target
+  absence facts through local-bounds environments. These facts are intentionally
+  separate from ordinary direct-call target facts and do not by themselves
+  discharge the exact-body or store-safe route packages needed by the public
+  runtime theorem.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -93,8 +68,15 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Retarget the required public runtime theorem name to the assoc-base
-     mixed endpoint without adding OCaml fallback logic.
+   - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
+     OCaml fallback logic or weakening the public theorem with a new premise.
+   - Derive, from the active endpoint or existing public callbacks, one concrete
+     no-receiver-branch provider strong enough for the existing active-endpoint
+     wrappers: store-safe evidence-at, store-safe summary evidence, checked
+     component summary, component-body store-safe/summary evidence,
+     local-bounds route evidence, non-captured/exact non-captured provider
+     evidence, or an exact-body package provider.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -121,44 +103,16 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- The remaining direct-call receiver activation blocker is proof-side: retarget
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding a new
-  public premise. Existing assoc-base wrappers can consume several explicit
-  exact-closure, component-summary, exact-body package, branch-aware, and
-  local-bounds provider shapes. The direct retarget candidate only needs
-  store-safe evidence-at route evidence in the no-receiver-method branch, and
-  the public callbacks can now feed a summary-exact route when supplied with
-  global store-safe summary evidence, the
-  checked component summary, or component-body store-safe summary evidence. The
-  active endpoint exposes the combined captured-or-component gate at both
-  checker and Prop-ready levels, and the direct-ready branch is closed by
-  existing checks. The public theorem still
-  lacks a concrete source for one stronger route fact in the
-  no-receiver-method branch, now isolated as conditional store-safe summary
-  evidence, a checked component summary, component-body store-safe summary
-  evidence, branch-local-bounds route evidence, non-captured or exact
-  non-captured provider evidence, static non-captured/exact/component provider
-  evidence, or an equivalent exact-body package/static exact-body provider.
-  The branch does
-  expose local-bounds receiver-target absence facts, but receiver-method targets
-  are distinct from ordinary direct-call targets, so those absence facts do not
-  discharge exact-body ordinary call packages by themselves and are not yet
-  connected to one of the stronger store/root-safe evidence providers.
-  Static runtime preservation helps only after such a provider has supplied
-  route-local evidence; it is not itself an evidence-at provider. The
-  component-body closure-check route is exposed for the active endpoint and can
-  now be branch-scoped to the no-receiver-method case, but it packages provider
-  consequences only after the exact-body synthetic-evidence route is supplied,
-  so it does not by itself discharge the public theorem.
-- The direct public-prefix route alone is insufficient because it requires
-  global callee evidence, while the assoc-base mixed case split needs
-  route-local evidence-at or component-branch route facts for the no-receiver
-  branch.
-- Verification note: targeted `End2EndSafety.v` compiles, full `cd rocq && make`
-  has completed after the recorded proof-performance fixes in
-  `EnvRuntimeCapturedSafety.v`, and the OCaml valid/invalid plus FIR regression
-  suites pass with the assoc-base mixed endpoint.
+- The remaining direct-call receiver activation blocker is proof-side. The
+  active mixed endpoint exposes the combined captured-or-component gate and
+  closes the direct-ready branch, but the public runtime theorem still lacks a
+  concrete source for one stronger route fact in the no-receiver-method branch.
+  Existing branch wrappers can consume that fact once supplied; they do not
+  derive it.
+- Receiver-method target absence is not enough: those targets are distinct from
+  ordinary direct-call targets, so the no-receiver facts do not imply ordinary
+  exact-body packages or store/root-safe evidence. Static runtime preservation
+  helps only after a provider has supplied route-local evidence.
 
 ## Key Decisions
 

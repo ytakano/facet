@@ -70,7 +70,8 @@ validity checks must be represented in Rocq and the extracted checker.
   checked component summary, component-body store-safe summary evidence, or
   local-bounds route evidence only for the no-receiver-method branch. The
   branch-local-bounds route family now covers ordinary component, exact
-  component, and uncaptured component variants. The no-receiver branch also
+  component, and uncaptured component variants, and non-captured provider
+  routes have the same no-receiver-only shape. The no-receiver branch also
   exports
   reusable direct/generic receiver-method target absence facts through
   local-bounds environments; these facts are intentionally kept separate from
@@ -131,8 +132,8 @@ validity checks must be represented in Rocq and the extracted checker.
   lacks a concrete source for one stronger route fact in the
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary
-  evidence, branch-local-bounds route evidence, or an equivalent exact-body
-  provider.
+  evidence, branch-local-bounds route evidence, non-captured provider evidence,
+  or an equivalent exact-body provider.
   The branch does
   expose local-bounds receiver-target absence facts, but receiver-method targets
   are distinct from ordinary direct-call targets, so those absence facts do not

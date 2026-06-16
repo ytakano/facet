@@ -155,9 +155,12 @@ validity checks must be represented in Rocq and the extracted checker.
   now uses ordinary inversion, and
   `timeout 300 rocq compile -time-file /tmp/EnvRuntimeCapturedSafety.after2.time
   -R theories Facet -o /tmp/EnvRuntimeCapturedSafety.vo -noglob
-  theories/TypeSystem/EnvRuntimeCapturedSafety.v` completes. The next known
-  compile-time hotspot is the later `dependent destruction Htyped_call` near
-  `EnvRuntimeCapturedSafety.v:22534`, measured at about 189.006 seconds.
+  theories/TypeSystem/EnvRuntimeCapturedSafety.v` completes. A follow-up
+  profile found a later `dependent destruction Htyped_call` near
+  `EnvRuntimeCapturedSafety.v:22534`, measured at about 189.006 seconds. That
+  branch now also uses ordinary inversion, and
+  `/tmp/EnvRuntimeCapturedSafety.after3.time` shows the largest completed
+  command in the file at about 4.95 seconds.
 
 ## Key Decisions
 

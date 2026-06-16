@@ -22531,12 +22531,26 @@ Proof.
       (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
       (ECallGeneric fname type_args args) T_body_core (sctx_of_ctx Gamma_out)
       R_body roots_body Htyped_call_shadow) as Htyped_call.
-    dependent destruction Htyped_call.
-    assert (fdef = fcallee) as ->.
-    { eapply Hunique.
-      - exact H.
-      - exact Hin_callee.
-      - exact (eq_sym Hname_callee). }
+    inversion Htyped_call; subst; clear Htyped_call.
+    match goal with
+    | Hin_call : In ?fdef_call (env_fns body_env),
+      Hname_call : fn_name ?fdef_call = fn_name fcallee |- _ =>
+        assert (fdef_call = fcallee) as -> by
+          (eapply Hunique;
+            [ exact Hin_call | exact Hin_callee | exact Hname_call ])
+    | Hin_call : In ?fdef_call (env_fns body_env),
+      Hname_call : fn_name fcallee = fn_name ?fdef_call |- _ =>
+        assert (fdef_call = fcallee) as -> by
+          (eapply Hunique;
+            [ exact Hin_call | exact Hin_callee | symmetry; exact Hname_call ])
+    | Hin_call : In ?fdef_call (env_fns body_env),
+      Hname_call : fn_name ?fdef_call = ?call_name,
+      Hname_target : fn_name fcallee = ?call_name |- _ =>
+        assert (fdef_call = fcallee) as -> by
+          (eapply Hunique;
+            [ exact Hin_call | exact Hin_callee
+            | rewrite Hname_call; symmetry; exact Hname_target ])
+    end.
     pose proof
       (eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel
         body_env (fn_outlives f) (fn_lifetimes f)
@@ -22544,7 +22558,7 @@ Proof.
         (fn_name fcallee) type_args args σ _ _ _ s s' v fcallee 10000
         Hsafe_args_body Hcallee_summary_body Hstore_body_env Hroots
         Hshadow Hrn Hnamed Hkeys Hsummary_store_body_env Heval_call
-        Hunique Hin_callee Hname_callee H1 H4 H5) as Hv_body.
+        Hunique Hin_callee eq_refl H4 H13 H14) as Hv_body.
     assert (Hv_env :
       value_has_type env s' v
         (apply_lt_ty σ

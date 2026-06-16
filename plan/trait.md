@@ -62,8 +62,9 @@ validity checks must be represented in Rocq and the extracted checker.
   mixed case split, a checked component-summary bridge for mixed component
   store-safe callbacks, the non-strict assoc local-bounds route theorem
   needed by the assoc-base mixed base-route bridge, and assoc-base mixed
-  local-bounds callback wrappers that route through that bridge when supplied
-  the per-component local-bounds route callback.
+  local-bounds callback wrappers, including prefix, store-static, and static
+  variants, that route through that bridge when supplied the per-component
+  local-bounds route callback.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
   store-typed-prefix root naming for direct places and borrows, a packaged
   leaf-or-borrow static prefix callback, context-name to store-name transport for
@@ -79,7 +80,9 @@ validity checks must be represented in Rocq and the extracted checker.
   runtime wrapper, and legacy wrapper shapes that delegate through the prefix
   bridge. The mixed component callback route can now consume the checked
   component-summary boolean directly, and the assoc-base mixed local-bounds
-  wrappers can consume an explicit per-component local-bounds route callback.
+  wrapper family can consume an explicit per-component local-bounds route
+  callback in the same prefix/store-static/static shapes as the old final
+  wrapper chain.
   The remaining runtime theorem gap is deriving that callback from the
   public/static completeness chain without adding a premise, then retargeting
   the required public theorem.

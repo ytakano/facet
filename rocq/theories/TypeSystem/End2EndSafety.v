@@ -13147,6 +13147,60 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_exact_local_bounds_provider_callbacks :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (forall base env0 fdef,
+      global_env_local_bounds_family env' base ->
+      global_env_local_bounds_family base env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env' fdef = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hexact_provider
+    Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_exact_local_bounds_route_callbacks.
+  - exact Hscope_synthetic.
+  - exact eval_preserves_typing_ready_mutual.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - intros f_component Hin_component Hexact_component.
+    eapply infer_program_env_end2end_assoc_component_local_bounds_route_of_exact_closure_provider.
+    + exact Hscope_synthetic.
+    + exact Htyping_prefix.
+    + exact Hprefix_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+      exact Hprog.
+    + exists (fn_bounds f_component). reflexivity.
+    + intros env0 fdef Hfamily Hin0.
+      eapply Hexact_provider.
+      * exists (fn_bounds f_component). reflexivity.
+      * exact Hfamily.
+      * exact Hin0.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_local_bounds_route_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->

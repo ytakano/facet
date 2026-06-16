@@ -1839,6 +1839,77 @@ Proof.
       exact Hexact.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_of_exact_closure :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' fdef = true ->
+    fn_env_unique_by_name env0 /\
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env0 fdef /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env0 fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hexact.
+  split.
+  - eapply infer_program_env_end2end_assoc_unique_by_name_in_local_bounds_family;
+      eassumption.
+  - destruct Hbase as (bounds_base & ->).
+    destruct Henv as (bounds & ->).
+    change (env_fns
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env' bounds_base) bounds))
+      with (env_fns env') in Hin.
+    destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+                env' fdef Hexact) as [Hcomponent _Hexact_target].
+    split.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+      * eapply fn_env_unique_by_name_global_env_with_local_bounds.
+        eapply infer_program_env_end2end_assoc_unique_by_name.
+        exact Hprog.
+      * eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+        -- eapply infer_program_env_end2end_assoc_unique_by_name.
+           exact Hprog.
+        -- exact Hcomponent.
+    + rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      exact Hexact.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_exact_body_route_package_at_of_exact_closure_in_local_bounds_family :
+  forall env env' base env0 fname fdef,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    fn_name fdef = fname ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' fdef = true ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env0 fname.
+Proof.
+  intros env env' base env0 fname fdef Hprog Hbase Henv Hin Hname
+    Hexact fdef0 fcall used used' fname_body args_body Hin0 Hname0
+    Hrename Htarget.
+  assert (Hunique : fn_env_unique_by_name env0).
+  { eapply infer_program_env_end2end_assoc_unique_by_name_in_local_bounds_family;
+      eassumption. }
+  assert (Heq : fdef0 = fdef).
+  { eapply Hunique; try eassumption.
+    rewrite Hname0. exact (eq_sym Hname). }
+  subst fdef0.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready;
+    try eassumption.
+  destruct
+    (infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_of_exact_closure
+      env env' base env0 fdef Hprog Hbase Henv Hin Hexact)
+    as [Hunique0 Hpayload].
+  split; [exact Hunique0 | exact Hpayload].
+Qed.
+
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family :
   forall env env' base env0 fname fdef,
     infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
@@ -4816,6 +4887,83 @@ Proof.
     eapply Hcomponent_provider; eassumption.
   - intros env0 fdef [_Hroute_summary Hexact]. exact Hexact.
   - exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_component_local_bounds_route_of_exact_closure_provider_package_at :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' base,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    (forall env0 fdef,
+      global_env_local_bounds_family base env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env' fdef = true) ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' base Hprog Hbase Hexact_provider.
+  eapply
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_package_at_provider.
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body Hfamily Hin Hname Hrename Htarget.
+    destruct
+      (infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_of_exact_closure
+        env env' base env0 fdef Hprog Hbase Hfamily Hin
+        (Hexact_provider env0 fdef Hfamily Hin))
+      as [_ [_ Hexact]].
+    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any.
+    + destruct
+        (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+          env0 fdef Hexact) as [_ Hexact_target].
+      exact Hexact_target.
+    + exact Hrename.
+    + exact Htarget.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body Hfamily Hin Hname Hrename Htarget.
+    eapply infer_program_env_end2end_assoc_exact_body_route_package_at_of_exact_closure_in_local_bounds_family.
+    + exact Hprog.
+    + exact Hbase.
+    + exact Hfamily.
+    + exact Hin.
+    + exact Hname.
+    + eapply Hexact_provider; eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_component_local_bounds_route_of_exact_closure_provider :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' base,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    (forall env0 fdef,
+      global_env_local_bounds_family base env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env' fdef = true) ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' base Hprog Hbase Hexact_provider.
+  eapply infer_program_env_end2end_assoc_component_local_bounds_route_of_exact_closure_provider_package_at;
+    eassumption.
 Qed.
 
 Lemma infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider_package_at :

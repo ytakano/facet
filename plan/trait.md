@@ -83,7 +83,7 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper family can consume an explicit per-component local-bounds route
   callback in the same prefix/store-static/static shapes as the old final
   wrapper chain.
-  The remaining runtime theorem gap is deriving a concrete exact-closure provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider into the local-bounds route callback needed by the mixed wrapper, and mixed prefix/store-static/static wrappers can consume that provider directly. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms.
+  The remaining runtime theorem gap is deriving a concrete exact-closure provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider or a branch-aware non-captured component provider into the local-bounds route callback needed by the mixed wrapper, and mixed prefix/store-static/static wrappers can consume the exact provider directly. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps

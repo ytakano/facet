@@ -18813,6 +18813,104 @@ Proof.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_static.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_exact_body_call_route_local_bounds_package_and_component_check :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall env0 fname,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence env0 ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          env0 fname) ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall env0 fname fdef fcall used used' fname_body args_body
+          synthetic_body,
+        In fdef (env_fns env0) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, fn_body fcall)) ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall env0 fname fdef fcall used used' fname_body args_body
+          synthetic_body,
+        In fdef (env_fns env0) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        global_env_local_bounds_family env' env0 /\
+          check_fn_root_shadow_captured_call_store_safe_summary
+            env' fdef = false /\
+          check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+            env' fdef = true) ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_prefix Hprefix_ready
+    Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Hparam_ready Hstatic env env' f s s' v Hprog
+    Hsummary_when_no_receiver Hexact_body_when_no_receiver
+    Hcomponent_package_when_no_receiver Hcomponent_check_when_no_receiver
+    Hinitial Hin Hstore Heval.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_exact_body_call_route_local_bounds_package_and_component_check_static.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_prefix.
+    + exact Hprefix_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hstatic.
+    + exact (Hsummary_when_no_receiver Hno_receiver).
+    + exact (Hexact_body_when_no_receiver Hno_receiver).
+    + exact Hprog.
+    + exact (Hcomponent_package_when_no_receiver Hno_receiver).
+    + exact (Hcomponent_check_when_no_receiver Hno_receiver).
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_exact_body_call_route_scoped_package_and_component_check_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

@@ -18,8 +18,8 @@ validity checks must be represented in Rocq and the extracted checker.
   lifetime generics remain deferred and are rejected by tests.
 - Method calls use receiver-first prefix UFCS forms:
   `(<Ty as Trait>::method receiver args...)` and
-  `(Trait::method receiver args...)`. Dot method-call syntax is intentionally
-  rejected in this phase.
+  `(Trait::method receiver args...)`. Dot syntax remains rejected for this
+  phase.
 - Short UFCS currently accepts receiver types known before checker execution:
   function parameters, typed literals, immutable pure local literals after
   receiver-let elimination, fieldless struct literals, and payloadless enum
@@ -39,28 +39,19 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Direct-call receiver proof work has established the active mixed endpoint,
   branch splits for direct-ready/no-receiver cases, public wrappers for the main
-  route families, no-receiver receiver-method target absence/collapse facts, and
+  route families, no-receiver receiver-method target absence/collapse facts,
   exact-closure bridges for local-bounds routes, seen callees, direct-callee
-  component checks, component-body providers from component checks, exact-body
-  targets, unconditional plain Prop-level combined local-bounds summaries, and
-  no-receiver receiver-aware combined readiness.
-- The remaining activation gap is proof-side: the active endpoint exposes a
-  combined captured-or-component gate, component-body providers when a full
-  no-capture component check is available, and unconditional plain Prop-level
-  local-bounds summaries, but still needs one concrete no-receiver
-  route/evidence source consumable by existing wrappers. Captured-call summaries
-  do not convert to plain synthetic shadow-summary evidence. Exact-closure
-  callee facts provide component/target facts, but route-summary packages also
-  need recursive summary-evidence-at for each callee body; `seen [root]` cannot be promoted to
-  full `seen []` exact closure because `seen` is the cycle cutoff.
-  The strict mixed endpoint has static-component callback wrappers that close
-  this route from `infer_program_env_end2end_assoc_strict_exact_closure`, but
-  that proof does not retarget the active assoc-base endpoint used by the CLI.
-  The strongest existing assoc-base path is the exact/non-captured branch
-  wrapper, which would reduce activation to proving captured-summary absence
-  through local-bounds-family environments in the no-receiver-method branch. The
-  current captured-summary checker has a broad whole-body fallback, so this
-  absence does not follow from receiver-method target absence alone.
+  component checks, exact-body targets, unconditional Prop-level combined
+  local-bounds summaries, no-receiver receiver-aware combined readiness, and
+  component-body/component-with-body-summary providers from component checks and
+  from the direct-ready branch.
+- The remaining activation gap is proof-side and specific to the no-receiver
+  branch. The active endpoint exposes only a combined captured-or-component
+  summary there. Existing route wrappers need either plain synthetic summary
+  evidence, a no-capture component/closure provider, an exact-body route
+  package, or captured-summary absence for local-bounds-family functions. The
+  current captured-summary checker can succeed on whole function bodies, so
+  receiver-method target absence alone does not imply captured-summary absence.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -105,28 +96,19 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- The remaining direct-call receiver activation blocker is proof-side. The
-  active mixed endpoint exposes the combined captured-or-component gate, now
-  pointwise and as unconditional plain Prop local-bounds summaries, with
-  component-body and component-with-body-summary providers available from full
-  component checks and directly from the direct-ready branch, but the public
-  runtime theorem still lacks a concrete source for one route fact in the
-  no-receiver-method branch. The
-  available static-component route is tied to the strict exact-closure base
-  endpoint, so the next proof step must derive an assoc-base route/evidence
-  provider rather than reuse that strict wrapper. The exact/non-captured provider shape remains the cleanest
-  existing assoc-base wrapper, but it now requires a new checker-side distinction
-  or a stronger endpoint fact: for every local-bounds-family function, prove
-  `check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false`
-  under the no-receiver-method branch. Existing branch wrappers can consume that
-  fact once supplied; they do not derive it, and receiver-method target absence
-  alone is insufficient because captured-summary checking can succeed on the
-  whole function body.
-- Receiver-method target absence is not enough: those targets are distinct from
-  ordinary direct-call targets. Even after collapsing receiver-method summary
-  checks and deriving boolean, Prop-level, and local-bounds direct-combined
-  gates in the no-receiver branch, a route-local exact-body or store/root
-  evidence provider is still required.
+- The remaining direct-call receiver activation blocker is the no-receiver
+  route/evidence source. The active mixed endpoint gives combined
+  captured-or-component summaries, but existing public runtime wrappers still
+  need one stronger input: exact-body route package, summary-at/store-safe
+  evidence-at, store-safe/plain shadow summary evidence, checked component or
+  closure summary, local-bounds route evidence, endpoint-derived not-captured
+  evidence, exact non-captured evidence, or an exact-body scoped package.
+- The strongest existing assoc-base path is still the exact/non-captured branch
+  wrapper. It would become usable if the checker exposed a fact that every
+  local-bounds-family function in the no-receiver branch has
+  `check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false`.
+  Current receiver-method target absence is insufficient because ordinary
+  captured-call summaries are distinct from receiver-method summaries.
 
 ## Key Decisions
 

@@ -41,15 +41,16 @@ validity checks must be represented in Rocq and the extracted checker.
   branch splits for direct-ready/no-receiver cases, public wrappers for the main
   route families, no-receiver receiver-method target absence/collapse facts, and
   exact-closure bridges for local-bounds routes, seen callees, direct-callee
-  component checks, and exact-body targets.
+  component checks, exact-body targets, and Prop-level combined summaries through
+  local-bounds families.
 - The remaining activation gap is proof-side: the active endpoint exposes a
-  combined captured-or-component gate, but the no-receiver branch still needs one
-  concrete route/evidence source consumable by existing wrappers. Captured-call
-  summaries do not currently convert to plain synthetic shadow-summary evidence
-  or lift as Prop summaries through local-bounds environments. Exact-closure
-  callee facts provide component/target facts, but route-summary packages also
-  need recursive summary-evidence-at for each callee body; `seen [root]` cannot
-  be promoted to full `seen []` exact closure because `seen` is the cycle cutoff.
+  combined captured-or-component gate, including Prop-level no-receiver evidence
+  through local-bounds families, but still needs one concrete route/evidence
+  source consumable by existing wrappers. Captured-call summaries do not convert
+  to plain synthetic shadow-summary evidence. Exact-closure callee facts provide
+  component/target facts, but route-summary packages also need recursive
+  summary-evidence-at for each callee body; `seen [root]` cannot be promoted to
+  full `seen []` exact closure because `seen` is the cycle cutoff.
   The strict mixed endpoint has static-component callback wrappers that close
   this route from `infer_program_env_end2end_assoc_strict_exact_closure`, but
   that proof does not retarget the active assoc-base endpoint used by the CLI.
@@ -104,9 +105,10 @@ validity checks must be represented in Rocq and the extracted checker.
   authority.
 - The remaining direct-call receiver activation blocker is proof-side. The
   active mixed endpoint exposes the combined captured-or-component gate, now
-  pointwise through local-bounds-family environments, and closes the direct-ready
-  branch, but the public runtime theorem still lacks a concrete source for one
-  route fact in the no-receiver-method branch. The available static-component
+  pointwise and as Prop evidence through local-bounds-family environments, and
+  closes the direct-ready branch, but the public runtime theorem still lacks a
+  concrete source for one route fact in the no-receiver-method branch. The
+  available static-component
   route is tied to the strict exact-closure base endpoint, so the next proof step
   must derive an assoc-base route/evidence provider rather than reuse that
   strict wrapper. The exact/non-captured provider shape remains the cleanest

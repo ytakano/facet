@@ -58,16 +58,17 @@ validity checks must be represented in Rocq and the extracted checker.
   summary-at routes now feed the store-safe evidence-at wrapper, and
   no-receiver exact-body route packages feed that summary-at wrapper. The
   active endpoint exposes uniqueness plus the ordinary captured-or-component
-  gate through local-bounds-family environments, and an explicit bridge turns an
-  active-endpoint not-captured provider into store-safe summary evidence. Public
-  prefix preservation now specializes to store-safe evidence-at routes when
-  all-callee direct-call evidence-at is supplied, and also when all-callee
-  shadow summary-at evidence is supplied together with root-name/root-key
-  readiness. Public callbacks now also consume plain component-body summary
-  evidence and no-receiver whole-env shadow summary evidence. Single-callee
-  evidence remains insufficient for the whole-environment callback. The
-  unresolved public theorem gap is isolated to deriving one such
-  no-receiver-branch evidence source rather than to the direct-ready branch.
+  gate through local-bounds-family environments, and explicit bridges turn an
+  active-endpoint not-captured provider into store-safe and plain shadow summary
+  evidence. Public prefix preservation now specializes to store-safe evidence-at
+  routes when all-callee direct-call evidence-at is supplied, and also when
+  all-callee shadow summary-at evidence is supplied together with
+  root-name/root-key readiness. Public callbacks now also consume plain
+  component-body summary evidence, no-receiver whole-env shadow summary
+  evidence, and no-receiver all-not-captured evidence. Single-callee evidence
+  remains insufficient for the whole-environment callback. The unresolved public
+  theorem gap is isolated to deriving one such no-receiver-branch evidence
+  source from the active endpoint rather than to the direct-ready branch.
 - The no-receiver branch exports reusable direct/generic receiver-method target
   absence facts through local-bounds environments. Those facts now collapse
   receiver-method store-safe summaries to the ordinary captured-call summary,
@@ -92,9 +93,9 @@ validity checks must be represented in Rocq and the extracted checker.
      wrappers: exact-body route-package, summary-at or store-safe
      evidence-at, store-safe or plain shadow summary evidence, checked
      component summary, component-body store-safe/summary evidence,
-     local-bounds route evidence, a
-     not-captured/non-captured provider, exact non-captured provider evidence,
-     or an exact-body local-bounds/scoped package provider.
+     local-bounds route evidence, an endpoint-derived not-captured/non-captured
+     provider, exact non-captured provider evidence, or an exact-body
+     local-bounds/scoped package provider.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

@@ -89,6 +89,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body or store-safe route packages needed by the public runtime theorem:
   route-summary packages additionally need recursive summary-evidence-at for
   each callee body, not just the callee component check and exact-body target.
+  The exact-closure `seen [root]` callee fact also cannot simply be promoted to
+  a full `seen []` exact-closure check, because `seen` is the cycle cutoff.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

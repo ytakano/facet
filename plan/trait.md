@@ -139,7 +139,24 @@ validity checks must be represented in Rocq and the extracted checker.
   blocker is proof-side: discharge the assoc-base mixed local-bounds route
   callback from the higher static/component callback wrapper chain without a
   new public premise, then retarget the required public runtime theorem to this
-  assoc-base mixed endpoint.
+  assoc-base mixed endpoint. Current proof plumbing includes a generic adapter
+  from non-store-safe evidence-at direct-call routes to store-safe evidence-at
+  routes, using the existing store-safe-args-to-preservation-ready bridge.
+  Retargeting the public theorem directly through the assoc-base mixed
+  case-split still needs a valid source of route-local evidence-at for the
+  no-direct-ready branch; the public prefix route alone requires global callee
+  evidence and is not sufficient.
+- Verification note: `rocq compile -R theories Facet
+  theories/TypeSystem/TypeSafetyDirectCallRoute.v` passes for the adapter.
+  A full `cd rocq && make` rebuild was stopped after it spent several minutes
+  in `EnvRuntimeCapturedSafety.v`; targeted profiling with
+  `timeout 180 rocq compile -time-file /tmp/EnvRuntimeCapturedSafety.time -R
+  theories Facet -o /tmp/EnvRuntimeCapturedSafety.vo -noglob
+  theories/TypeSystem/EnvRuntimeCapturedSafety.v` timed out at 180 seconds.
+  The partial timing file identifies a pre-existing bottleneck at
+  `EnvRuntimeCapturedSafety.v:755`, where `dependent destruction Htyped_shadow`
+  took about 101.857 seconds. This should be addressed before repeated full
+  rebuild attempts.
 
 ## Key Decisions
 

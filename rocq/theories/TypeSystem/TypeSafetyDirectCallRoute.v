@@ -459,6 +459,18 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_su
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_summary_at_prefix_call_statement_evidence_at :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hroute env s fname args s' v Heval Omega n R Sigma T Sigma' R'
+    roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hevidence.
+  eapply Hroute; try eassumption.
+  eapply store_safe_function_value_call_args_preservation_ready.
+  exact Hsafe_args.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_statement :
   forall env,
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->

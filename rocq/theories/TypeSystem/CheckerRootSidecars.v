@@ -126,19 +126,31 @@ Definition let_bound_generic_direct_call_target_expr
   | _ => None
   end.
 
+Definition string_prefix_b (prefix s : string) : bool :=
+  String.eqb (String.substring 0 (String.length prefix) s) prefix.
+
+Definition synthetic_impl_method_ident_b (fname : ident) : bool :=
+  string_prefix_b "__facet_impl_"%string (fst fname).
+
 Definition direct_call_receiver_method_target_expr
     (e : expr) : option (ident * list Ty * ident * list expr * list expr * expr) :=
   match e with
   | ECallGeneric method_name type_args
       (ECall receiver_name receiver_args :: method_args) =>
-      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+      if synthetic_impl_method_ident_b method_name
+      then Some (method_name, type_args, receiver_name, receiver_args,
+        method_args,
         ECallGeneric method_name type_args
           (ECall receiver_name receiver_args :: method_args))
+      else None
   | ECallGeneric method_name type_args
       (ECallExpr (EFn receiver_name) receiver_args :: method_args) =>
-      Some (method_name, type_args, receiver_name, receiver_args, method_args,
+      if synthetic_impl_method_ident_b method_name
+      then Some (method_name, type_args, receiver_name, receiver_args,
+        method_args,
         ECallGeneric method_name type_args
           (ECall receiver_name receiver_args :: method_args))
+      else None
   | _ => None
   end.
 
@@ -168,11 +180,13 @@ Definition generic_direct_call_receiver_method_target_expr
   match e with
   | ECallGeneric method_name type_args
       (ECallGeneric receiver_name receiver_type_args receiver_args :: method_args) =>
-      Some (method_name, type_args, receiver_name, receiver_type_args,
+      if synthetic_impl_method_ident_b method_name
+      then Some (method_name, type_args, receiver_name, receiver_type_args,
         receiver_args, method_args,
         ECallGeneric method_name type_args
           (ECallGeneric receiver_name receiver_type_args receiver_args ::
             method_args))
+      else None
   | _ => None
   end.
 

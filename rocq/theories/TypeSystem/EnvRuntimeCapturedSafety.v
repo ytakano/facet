@@ -4107,9 +4107,13 @@ Proof.
       destruct args as [| receiver method_args0]; try discriminate
   end.
   destruct receiver; try discriminate.
-  - inversion Htarget; subst; clear Htarget.
+  - destruct (synthetic_impl_method_ident_b i) eqn:Hsynthetic;
+      try discriminate.
+    inversion Htarget; subst; clear Htarget.
     split; [left; reflexivity | reflexivity].
   - destruct receiver; try discriminate.
+    destruct (synthetic_impl_method_ident_b i) eqn:Hsynthetic;
+      try discriminate.
     inversion Htarget; subst; clear Htarget.
     split; [right; reflexivity | reflexivity].
 Qed.
@@ -4136,6 +4140,8 @@ Proof.
       destruct args as [| receiver method_args0]; try discriminate
   end.
   destruct receiver; try discriminate.
+  destruct (synthetic_impl_method_ident_b i) eqn:Hsynthetic;
+    try discriminate.
   inversion Htarget; subst; clear Htarget.
   split; reflexivity.
 Qed.

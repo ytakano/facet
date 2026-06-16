@@ -612,6 +612,53 @@ let rec outlives_b_fuel fuel _UU03a9_ a b =
 let outlives_b _UU03a9_ a b =
   outlives_b_fuel (length _UU03a9_) _UU03a9_ a b
 
+(** val length0 : string -> Big_int_Z.big_int **)
+
+let rec length0 s =
+  (* If this appears, you're using String internals. Please don't *)
+ (fun f0 f1 s ->
+    let l = String.length s in
+    if l = 0 then f0 () else f1 (String.get s 0) (String.sub s 1 (l-1)))
+
+    (fun _ -> Big_int_Z.zero_big_int)
+    (fun _ s' -> Big_int_Z.succ_big_int (length0 s'))
+    s
+
+(** val substring :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> string -> string **)
+
+let rec substring n m s =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ ->
+    (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+      (fun _ -> "")
+      (fun m' ->
+      (* If this appears, you're using String internals. Please don't *)
+ (fun f0 f1 s ->
+    let l = String.length s in
+    if l = 0 then f0 () else f1 (String.get s 0) (String.sub s 1 (l-1)))
+
+        (fun _ -> s)
+        (fun c s' ->
+        (* If this appears, you're using String internals. Please don't *)
+  (fun (c, s) -> String.make 1 c ^ s)
+
+        (c, (substring Big_int_Z.zero_big_int m' s')))
+        s)
+      m)
+    (fun n' ->
+    (* If this appears, you're using String internals. Please don't *)
+ (fun f0 f1 s ->
+    let l = String.length s in
+    if l = 0 then f0 () else f1 (String.get s 0) (String.sub s 1 (l-1)))
+
+      (fun _ -> s)
+      (fun _ s' -> substring n' m s')
+      s)
+    n
+
 type mutability =
 | MImmutable
 | MMutable
@@ -14426,6 +14473,16 @@ let let_bound_generic_direct_call_target_expr = function
    | _ -> None)
 | _ -> None
 
+(** val string_prefix_b : string -> string -> bool **)
+
+let string_prefix_b prefix s =
+  (=) (substring Big_int_Z.zero_big_int (length0 prefix) s) prefix
+
+(** val synthetic_impl_method_ident_b : ident -> bool **)
+
+let synthetic_impl_method_ident_b fname =
+  string_prefix_b "__facet_impl_" (fst fname)
+
 (** val direct_call_receiver_method_target_expr :
     expr -> (((((ident * ty list) * ident) * expr list) * expr list) * expr)
     option **)
@@ -14437,15 +14494,21 @@ let direct_call_receiver_method_target_expr = function
    | e0 :: method_args ->
      (match e0 with
       | ECall (receiver_name, receiver_args) ->
-        Some (((((method_name, type_args), receiver_name), receiver_args),
-          method_args), (ECallGeneric (method_name, type_args, ((ECall
-          (receiver_name, receiver_args)) :: method_args))))
+        if synthetic_impl_method_ident_b method_name
+        then Some (((((method_name, type_args), receiver_name),
+               receiver_args), method_args), (ECallGeneric (method_name,
+               type_args, ((ECall (receiver_name,
+               receiver_args)) :: method_args))))
+        else None
       | ECallExpr (e1, receiver_args) ->
         (match e1 with
          | EFn receiver_name ->
-           Some (((((method_name, type_args), receiver_name), receiver_args),
-             method_args), (ECallGeneric (method_name, type_args, ((ECall
-             (receiver_name, receiver_args)) :: method_args))))
+           if synthetic_impl_method_ident_b method_name
+           then Some (((((method_name, type_args), receiver_name),
+                  receiver_args), method_args), (ECallGeneric (method_name,
+                  type_args, ((ECall (receiver_name,
+                  receiver_args)) :: method_args))))
+           else None
          | _ -> None)
       | _ -> None))
 | _ -> None
@@ -14474,10 +14537,13 @@ let generic_direct_call_receiver_method_target_expr = function
    | e0 :: method_args ->
      (match e0 with
       | ECallGeneric (receiver_name, receiver_type_args, receiver_args) ->
-        Some ((((((method_name, type_args), receiver_name),
-          receiver_type_args), receiver_args), method_args), (ECallGeneric
-          (method_name, type_args, ((ECallGeneric (receiver_name,
-          receiver_type_args, receiver_args)) :: method_args))))
+        if synthetic_impl_method_ident_b method_name
+        then Some ((((((method_name, type_args), receiver_name),
+               receiver_type_args), receiver_args), method_args),
+               (ECallGeneric (method_name, type_args, ((ECallGeneric
+               (receiver_name, receiver_type_args,
+               receiver_args)) :: method_args))))
+        else None
       | _ -> None))
 | _ -> None
 

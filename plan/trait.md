@@ -37,7 +37,9 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
   The mixed endpoint runs the assoc strict exact-closure checker, then requires
   the direct-receiver safety gate only when an elaborated function body has a
-  direct or generic direct receiver-method shape.
+  direct or generic direct receiver-method shape. Receiver-method target
+  detection is now restricted to synthetic impl method names, avoiding ordinary
+  generic calls whose first argument happens to be a direct call.
 - Required public checker soundness aliases target the mixed endpoint:
   `infer_program_env_end2end_sound` and `check_program_env_end2end_sound`. The
   required public runtime-safety theorem
@@ -114,14 +116,14 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct gate reports provenance=true, preservation=false,
   direct-or-component=true, component=false. The endpoint is verified but not
   broad enough to be the active CLI authority.
-- The mixed endpoint avoids that gate for programs without direct
-  receiver-method bodies. Its direct-ready/no-receiver branch runtimes, public
-  case-split runtime wrapper, mixed exact-body route-package wrapper, checked
-  component-summary bridge, stronger prefix static callback package, and public
-  runtime-safety theorem are proven without widening the public theorem
-  interface. The remaining activation blocker is switching the OCaml CLI
-  authority to the mixed endpoint and then adding positive direct-call receiver
-  UFCS tests that pass through that verified path.
+- The mixed endpoint avoids the final direct-receiver gate for programs
+  without direct receiver-method bodies, and receiver-method target detection is
+  no longer triggered by ordinary non-impl generic calls. A trial CLI switch to
+  the mixed endpoint still rejects existing valid direct-call and HRT/module
+  programs before the mixed gate runs, because its underlying assoc strict
+  exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
+  The next activation blocker is broadening or retargeting that strict
+  exact-closure base while preserving the required public theorem names.
 
 ## Key Decisions
 

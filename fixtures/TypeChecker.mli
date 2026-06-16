@@ -120,6 +120,10 @@ val outlives_b_fuel :
 
 val outlives_b : outlives_ctx -> lifetime -> lifetime -> bool
 
+val length0 : string -> Big_int_Z.big_int
+
+val substring : Big_int_Z.big_int -> Big_int_Z.big_int -> string -> string
+
 type mutability =
 | MImmutable
 | MMutable
@@ -1351,6 +1355,10 @@ val generic_direct_call_target_expr :
 
 val let_bound_generic_direct_call_target_expr :
   expr -> ((((ident * ty list) * expr list) * ty) * expr) option
+
+val string_prefix_b : string -> string -> bool
+
+val synthetic_impl_method_ident_b : ident -> bool
 
 val direct_call_receiver_method_target_expr :
   expr -> (((((ident * ty list) * ident) * expr list) * expr list) * expr)

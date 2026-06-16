@@ -57,8 +57,8 @@ validity checks must be represented in Rocq and the extracted checker.
   consumers are also available in no-receiver-only form, no-receiver
   summary-at routes now feed the store-safe evidence-at wrapper, and
   no-receiver exact-body route packages feed that summary-at wrapper. The
-  active endpoint exposes the ordinary captured-or-component gate through
-  local-bounds-family environments, and an explicit bridge turns an
+  active endpoint exposes uniqueness plus the ordinary captured-or-component
+  gate through local-bounds-family environments, and an explicit bridge turns an
   active-endpoint not-captured provider into store-safe summary evidence. The
   unresolved public theorem gap is isolated to deriving one such
   no-receiver-branch evidence source rather than to the direct-ready branch.

@@ -8780,6 +8780,97 @@ Proof.
     + exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_exact_local_bounds_family :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_ready Hroots_ready Hroot_names Hroot_keys
+    env env' f s s' v Hprog Hcomponent_route Hinitial Hin Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { eapply infer_program_env_end2end_assoc_unique_by_name. exact Hprog. }
+  assert (Hcheck_env :
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env' = true).
+  { eapply infer_program_env_end2end_assoc_check_env_ready. exact Hprog. }
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck_env.
+  apply forallb_forall with (x := f) in Hcheck_env; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck_env.
+  apply orb_true_iff in Hcheck_env as [Hcaptured_check | Hexact_check].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + apply check_fn_root_shadow_captured_call_store_safe_summary_sound.
+      exact Hcaptured_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+                env' f Hexact_check) as [Hcomponent _Hexact_target].
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_in_local_bounds_family.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + eapply Hcomponent_route; eassumption.
+    + intros fname args synthetic_body Htarget.
+      pose proof Hcomponent as Hcomponent_summary.
+      destruct Hcomponent_summary as
+        (fname0 & args0 & raw_body0 & synthetic_body0 & fcallee & T_body0 &
+          Gamma_out0 & R_body0 & roots_body0 & _Hcaptures0 & Hbody0 &
+          Htarget0 & _Hsynthetic0 & _Hsafe_args0 & Hin_callee & Hname_callee &
+          _Hcallee_captures0 & _Hnodup0 & _Htyped0 & _Hcompat0 & _Hroots0 &
+          _Henv0).
+      rewrite Hbody0 in Htarget.
+      rewrite Htarget0 in Htarget. injection Htarget as <- <- <-.
+      intros fdef Hlookup_target.
+      eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+      eapply component_body_no_capture_direct_call_component_target_in_of_exact_closure_check.
+      * exact Hunique.
+      * exact Hin.
+      * exact Hcomponent.
+      * exact Hexact_check.
+      * rewrite Hbody0. exact Htarget0.
+      * exact Hlookup_target.
+    + intros fname args synthetic_body fdef Htarget Hlookup_target.
+      eapply component_body_no_capture_direct_call_component_target_in_of_exact_closure_check.
+      * exact Hunique.
+      * exact Hin.
+      * exact Hcomponent.
+      * exact Hexact_check.
+      * exact Htarget.
+      * exact Hlookup_target.
+    + intros fname_component args_component synthetic_component fdef
+        Htarget_component Hlookup_component Hfdef_component fcall used used'
+        fname_body args_body synthetic_body Hrename Htarget_body ftarget
+        Hlookup_target.
+      eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+      eapply component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_exact_closure_check;
+        eassumption.
+    + exact Hcomponent.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

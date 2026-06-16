@@ -83,9 +83,7 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper family can consume an explicit per-component local-bounds route
   callback in the same prefix/store-static/static shapes as the old final
   wrapper chain.
-  The remaining runtime theorem gap is deriving that callback from the
-  public/static completeness chain without adding a premise, then retargeting
-  the required public theorem.
+  The remaining runtime theorem gap is deriving a concrete exact-closure local-bounds route callback from the public/static completeness chain without adding a premise, then retargeting the required public theorem.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps

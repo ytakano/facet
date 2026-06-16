@@ -9584,7 +9584,6 @@ Proof.
 Qed.
 
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package :
-  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -9608,9 +9607,9 @@ Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_ini
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hstore_safe_route Hscope_synthetic Htyping_prefix Hprefix_ready
-    Hroots_ready Hroot_names Hroot_keys Hexact_body_target Hbody_package
-    env env' f s s' v Hprog Hinitial Hin Hstore Heval.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hexact_body_target Hbody_package env env' f s s'
+    v Hprog Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route.
   - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height;
       eassumption.
@@ -9735,7 +9734,6 @@ Proof.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package :
-  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -9759,11 +9757,11 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_check
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hstore_safe_route Hscope_synthetic Htyping_prefix Hprefix_ready
-    Hroots_ready Hroot_names Hroot_keys Hexact_body_target Hbody_package
-    env env' f s s' v Hprog Hinitial Hin Hstore Heval.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hexact_body_target Hbody_package env env' f s s'
+    v Hprog Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route.
-  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package;
+  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height;
       eassumption.
   - exact Hscope_synthetic.
   - exact eval_preserves_typing_ready_mutual.

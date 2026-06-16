@@ -38,8 +38,7 @@ validity checks must be represented in Rocq and the extracted checker.
   and the assoc-base mixed endpoint
   `infer_program_env_end2end_assoc_direct_receiver_mixed`. The OCaml CLI now
   uses the assoc-base mixed endpoint as its single extracted checker authority.
-  The assoc-base
-  mixed endpoint runs the older assoc checker, then requires the
+  The assoc-base mixed endpoint runs the older assoc checker, then requires the
   direct-receiver safety gate only when an elaborated function body has a direct
   or generic direct receiver-method shape. Receiver-method target detection is
   restricted to synthetic impl method names, avoiding ordinary generic calls

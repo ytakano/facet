@@ -42,11 +42,11 @@ validity checks must be represented in Rocq and the extracted checker.
   route families, no-receiver receiver-method target absence/collapse facts, and
   exact-closure bridges for local-bounds routes, seen callees, direct-callee
   component checks, exact-body targets, and receiver-aware plus plain Prop-level
-  combined summaries through local-bounds families.
+  combined readiness and summaries through local-bounds families.
 - The remaining activation gap is proof-side: the active endpoint exposes a
   combined captured-or-component gate, including receiver-aware and plain
-  Prop-level no-receiver evidence through local-bounds families, but still needs
-  one concrete route/evidence
+  Prop-level no-receiver readiness/evidence through local-bounds families, but
+  still needs one concrete route/evidence
   source consumable by existing wrappers. Captured-call summaries do not convert
   to plain synthetic shadow-summary evidence. Exact-closure callee facts provide
   component/target facts, but route-summary packages also need recursive
@@ -106,9 +106,9 @@ validity checks must be represented in Rocq and the extracted checker.
   authority.
 - The remaining direct-call receiver activation blocker is proof-side. The
   active mixed endpoint exposes the combined captured-or-component gate, now
-  pointwise and as receiver-aware/plain Prop evidence through local-bounds-family
-  environments, and closes the direct-ready branch, but the public runtime
-  theorem still lacks a concrete source for one route fact in the
+  pointwise and as receiver-aware/plain Prop readiness/evidence through
+  local-bounds-family environments, and closes the direct-ready branch, but the
+  public runtime theorem still lacks a concrete source for one route fact in the
   no-receiver-method branch. The available static-component
   route is tied to the strict exact-closure base endpoint, so the next proof step
   must derive an assoc-base route/evidence provider rather than reuse that

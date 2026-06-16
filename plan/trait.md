@@ -79,9 +79,12 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds-family environments. The captured-call side remains a separate
   safety route: there is no existing conversion from captured-call store-safe
   summaries to plain synthetic shadow-summary evidence, so the active combined
-  gate still cannot be split into a whole-env summary provider. This still does
-  not by itself discharge the exact-body or store-safe route packages needed by
-  the public runtime theorem.
+  gate still cannot be split into a whole-env summary provider. A proof-only
+  bridge now exposes the assoc exact-closure local-bounds route constructor
+  directly under the active mixed endpoint, so public wrappers can reuse
+  active-endpoint exact-closure providers without re-opening the base endpoint.
+  This still does not by itself discharge the exact-body or store-safe route
+  packages needed by the public runtime theorem.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

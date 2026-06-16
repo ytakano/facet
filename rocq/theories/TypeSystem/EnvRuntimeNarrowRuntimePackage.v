@@ -610,6 +610,25 @@ Proof.
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
   - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (ELit lit) T Σ' R' roots H)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (ELit lit) s' ret Heval
+      Omega n R Σ T Σ' R' roots (ProvReady_Lit lit)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (ELit lit) s' ret Heval
+      Omega n R Σ T Σ' R' roots (ProvReady_Lit lit)
+      Hstore Hroots Hshadow Hrn Hnamed Htyped_roots) as [Hnamed' Hrootset_named].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (ELit lit) s' ret Heval
+      Omega n R Σ T Σ' R' roots (ProvReady_Lit lit)
+      Hstore Hroots Hshadow Hrn Hkeys Htyped_roots) as Hkeys'.
+    assert (Hsummary' : store_function_closure_targets_summary env s').
+    { inversion Heval; subst; exact Hsummary_store. }
+    repeat split; try eassumption.
+  - pose proof (typed_env_roots_shadow_safe_roots
       env Omega n R Σ (EStruct name lts args []) T Σ' R' roots H1)
       as Htyped_roots.
     destruct (proj1 eval_preserves_typing_roots_ready_mutual

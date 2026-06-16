@@ -252,6 +252,15 @@ Proof.
         as Htyped_unit.
       exists roots.
       apply ERSSN_Unit. exact Htyped_unit.
+    + match goal with
+      | Hinfer_lit : infer_core_env_state_fuel_roots_shadow_safe _ _ _ _ _ _
+            ?expr_lit = _ |- _ =>
+          pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+            (S fuel') env Omega n R Σ expr_lit T Σ' R' roots Hinfer_lit)
+            as Htyped_lit
+      end.
+      exists roots.
+      apply ERSSN_Lit. exact Htyped_lit.
     + simpl in Hcheck.
       pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
         (S fuel') env Omega n R Σ (EVar i) T Σ' R' roots Hinfer)

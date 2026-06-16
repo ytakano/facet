@@ -15153,6 +15153,7 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
       let (t, _) = p1 in
       (match e with
        | EUnit -> true
+       | ELit _ -> true
        | EVar _ -> non_function_value_ty_b t
        | ELet (m, x, t_hidden, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env

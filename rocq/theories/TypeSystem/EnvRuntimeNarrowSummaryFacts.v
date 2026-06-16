@@ -95,6 +95,10 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       typed_env_roots_shadow_safe env Omega n R Σ EUnit T Σ' R' roots ->
       expr_root_shadow_store_safe_narrow_summary
         env Omega n R Σ EUnit T Σ' R' roots roots
+  | ERSSN_Lit : forall R Σ lit T Σ' R' roots,
+      typed_env_roots_shadow_safe env Omega n R Σ (ELit lit) T Σ' R' roots ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (ELit lit) T Σ' R' roots roots
   | ERSSN_EmptyStructRootless : forall R Σ name lts args T Σ' R' roots sdef,
       lookup_struct name env = Some sdef ->
       struct_bounds sdef = [] ->
@@ -488,6 +492,7 @@ Proof.
   - exact H.
   - exact H.
   - exact H.
+  - exact H.
   - exact H1.
   - exact H.
   - exact H10.
@@ -696,6 +701,7 @@ Proof.
   - apply root_set_equiv_refl.
   - exact IHHsummary2.
   - exact IHHsummary2.
+  - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.

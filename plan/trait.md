@@ -43,14 +43,11 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-closure bridges for local-bounds routes, seen callees, direct-callee
   component checks, exact-body targets, unconditional Prop-level combined
   local-bounds summaries, no-receiver receiver-aware combined readiness,
-  component-body/component-with-body-summary providers from component checks and
-  from the direct-ready branch, and an extracted captured-summary absence gate
-  with endpoint-local facts plus public and local-bounds branch wrappers
-  consumable by exact/non-captured routes. Separate extracted proof endpoints
-  now cover captured-summary absence, synthetic direct-call summary evidence,
-  and an assoc direct-receiver-base per-function gate that admits either the
-  existing exact-closure summary or a direct-receiver method summary. These
-  endpoints have checker soundness aliases and are not active CLI authorities.
+  component-body/component-with-body-summary providers, extracted absence and
+  synthetic proof endpoints, an assoc direct-receiver-base per-function gate,
+  and literal narrow-summary support. The direct-receiver method sidecar now
+  accepts the basic UFCS direct receiver fixture, and the assoc direct-receiver-
+  base endpoint accepts that fixture; it is still not the active CLI authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -104,21 +101,20 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- Direct-call receiver activation has two proof/checker frontiers. First, the
-  direct-receiver method sidecar itself still rejects the basic direct-call
-  receiver fixture: after alpha elaboration, `main` has a receiver-method target
-  but `check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method`
-  is false. Second, after that sidecar is fixed, the active mixed endpoint still
-  exposes only combined captured-or-component summaries on the no-receiver
-  branch; existing active mixed case-split wrappers can use those summaries only
-  with additional route-preservation or exact-body callbacks, and the final
-  public theorem currently has no such extra premise.
-- The strongest existing assoc-base paths are proof endpoints, not behavior-
+- Direct-call receiver activation is now blocked on the no-receiver branch of
+  the active mixed endpoint. The direct-receiver method sidecar is true for
+  `main` in the basic direct-call receiver fixture, and
+  `infer_program_env_end2end_assoc_direct_receiver_base` accepts it, but the
+  active mixed endpoint still rejects `main` with `ErrEndToEndSafetyGateFailed`.
+  Existing active mixed case-split wrappers can use combined summaries only with
+  additional route-preservation or exact-body callbacks, and the final public
+  theorem currently has no such extra premise.
+- The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with
-  `ErrEndToEndSafetyGateFailed`. A temporary swap to the assoc direct-receiver-
-  base endpoint still rejected the basic direct-call receiver fixture because
-  the direct-receiver method summary sidecar is false for `main`.
+  `ErrEndToEndSafetyGateFailed`; the assoc direct-receiver-base endpoint now
+  accepts the basic direct-call receiver fixture but is not the active CLI
+  authority.
 
 ## Key Decisions
 

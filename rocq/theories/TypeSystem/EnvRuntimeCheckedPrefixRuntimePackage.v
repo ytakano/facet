@@ -954,6 +954,24 @@ Proof.
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (ELit lit) T Σ' R' roots H)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+      env s (ELit lit) s' ret Heval
+      Omega n R Σ T Σ' R' roots (ProvReady_Lit lit)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hvalue [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
+    assert (Hsummary' : store_function_closure_targets_summary env s').
+    { inversion Heval; subst; exact Hsummary_store. }
+    assert (Hnarrow : expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (ELit lit) T Σ' R' roots roots).
+    { apply ERSSN_Lit. exact H. }
+    destruct (expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed_prefix_ctx
+      env Omega n R Σ (ELit lit) T Σ' R' roots roots s'
+      Hnarrow Hrn Hctx_roots Hctx_keys Hstore' Hrn')
+      as [Hnamed' [Hrootset_named Hkeys']].
+    repeat split; try eassumption.
   - assert (Hempty_shape : Σ' = Σ /\ R' = R /\ roots = []).
     { inversion H1; subst; try congruence.
       match goal with
@@ -2039,6 +2057,13 @@ Proof.
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - inversion H; subst; try discriminate;
+      inversion Heval; subst;
+      repeat split; try exact Hstore; try constructor;
+      try apply store_ref_targets_preserved_refl; try exact Hroots;
+      try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
+      try exact Hsummary_store; eauto;
+      try (unfold root_set_store_roots_named; intros z Hin; contradiction).
   - assert (Hempty_shape : Σ' = Σ /\ R' = R /\ roots = []).
     { inversion H1; subst; try congruence.
       match goal with

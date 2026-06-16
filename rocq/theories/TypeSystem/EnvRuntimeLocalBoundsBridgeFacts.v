@@ -802,6 +802,9 @@ Proof.
   - apply ERSSN_Unit.
     inversion H; subst; try congruence.
     constructor.
+  - apply ERSSN_Lit.
+    eapply typed_env_roots_shadow_safe_lit_global_env_with_local_bounds.
+    exact H.
   - eapply ERSSN_EmptyStructRootless.
     + change (lookup_struct name (global_env_with_local_bounds env bounds))
         with (lookup_struct name env). exact H.

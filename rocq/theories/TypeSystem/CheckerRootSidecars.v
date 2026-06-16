@@ -744,6 +744,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | infer_ok (T, Σ', R', roots) =>
       match e with
       | EUnit => true
+      | ELit _ => true
       | EStruct name _ _ [] =>
           match lookup_struct name env with
           | Some sdef =>

@@ -287,6 +287,10 @@ Proof.
     eapply typed_env_roots_shadow_safe_tail_frame.
     + exact H.
     + unfold root_env_tail_fresh_names. intros y Hy. contradiction.
+  - apply ERSSN_Lit.
+    eapply typed_env_roots_shadow_safe_tail_frame.
+    + exact H.
+    + unfold root_env_tail_fresh_names. intros y Hy. contradiction.
   - eapply ERSSN_EmptyStructRootless.
     + exact H.
     + exact H0.
@@ -389,6 +393,7 @@ Proof.
     | Omega0 n0 R Σ rk p T Σ' R' roots x path Htyped Hpath Hsingle
     | Omega0 n0 R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle
     | Omega0 n0 R Σ T Σ' R' roots Htyped
+    | Omega0 n0 R Σ lit T Σ' R' roots Htyped
     | Omega0 n0 R Σ name lts args T Σ' R' roots sdef Hlookup_struct Hbounds_struct Htyped Hfree
     | Omega0 n0 R Σ p lit T Σ' R' roots Htyped
     | Omega0 n0 R Σ x fname type_args T Σ' R' roots fcallee T_body Sigma_body
@@ -996,6 +1001,16 @@ Proof.
     + apply ERSSN_Unit. exact Htypedr.
     + repeat split; try eassumption; try apply Hrootsr.
   - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega0 n0 rho R Rr0 Σ Σr0 (ELit lit) er used used' T Σ' R' roots
+      Htyped Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR HnocollR'
+      Hctx_used Hrange_used Hdisj Hrename)
+      as (Σr' & Rr' & rootsr & Htypedr & Hctxr & Hnsr & HRr' & Hrootsr).
+    simpl in Hrename. injection Hrename as <- <-.
+    exists Σr', Rr', rootsr, rootsr.
+    split.
+    + apply ERSSN_Lit. exact Htypedr.
+    + repeat split; try eassumption; try apply Hrootsr.
+  - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
       env Omega0 n0 rho R Rr0 Σ Σr0 (EStruct name lts args []) er used used'
       T Σ' R' roots Htyped Hctx HnsR HnsRr HRr Hkeys Hroots
       HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename)
@@ -1328,6 +1343,13 @@ Proof.
     exists Runit0, roots0, roots0. split.
     + apply ERSSN_Unit. exact Htyped0.
     + split; [exact Hns0 | split; [exact HRunit0 | exact Hroots0]].
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (ELit lit) T Σ' R' roots
+      R0 H Hfresh HnsR HnsR0 HR0)
+      as (Rlit0 & roots0 & Htyped0 & Hns0 & HRlit0 & Hroots0).
+    exists Rlit0, roots0, roots0. split.
+    + apply ERSSN_Lit. exact Htyped0.
+    + split; [exact Hns0 | split; [exact HRlit0 | exact Hroots0]].
   - destruct (typed_env_roots_shadow_safe_instantiate_fresh
       env Omega n rho R Σ (EStruct name lts args []) T Σ' R' roots
       R0 H1 Hfresh HnsR HnsR0 HR0)

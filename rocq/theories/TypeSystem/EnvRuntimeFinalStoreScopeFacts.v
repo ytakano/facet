@@ -883,6 +883,10 @@ Proof.
     inversion H; subst; try congruence;
       repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
       try exact Hrn; try exact Hscope; try exact Hfresh.
+  - inversion H; subst; try discriminate;
+      inversion Heval; subst;
+      repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
+      try exact Hrn; try exact Hscope; try exact Hfresh.
   - assert (Hempty_shape : Σ' = Σ /\ R' = R).
     { inversion H1; subst; try congruence.
       match goal with
@@ -1057,6 +1061,7 @@ Proof.
       ps R1 x roots1 Hcover1) as Hcover_add.
     pose proof (IHHsummary2 ps Hcover_add) as Hcover2.
     eapply root_env_covers_params_remove_non_param; eassumption.
+  - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
@@ -1362,6 +1367,7 @@ Proof.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
+  - inversion H; subst; try discriminate; inversion Heval; subst; exists frame; exact Hscope.
   - assert (Hs_eq : s' = s).
     { inversion Heval; subst.
       eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }

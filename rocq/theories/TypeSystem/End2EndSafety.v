@@ -1016,6 +1016,19 @@ Proof.
   - exact Hcheck.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_combined_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  eapply infer_program_env_end2end_assoc_combined_check_env_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured :
   forall env env' f_component,
     infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->

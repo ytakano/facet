@@ -391,7 +391,6 @@ Proof.
 Qed.
 
 
-
 Theorem infer_fn_env_end2end_assoc_strict_exact_closure_sound :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end_assoc_strict_exact_closure env f =
@@ -5770,7 +5769,6 @@ Proof.
 Qed.
 
 
-
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_store_safe_summary_evidence :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
@@ -5929,8 +5927,6 @@ Proof.
   - exact Hstore.
   - exact Heval.
 Qed.
-
-
 
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_summary_evidence :
@@ -7494,7 +7490,6 @@ Proof.
 Qed.
 
 
-
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -7615,7 +7610,6 @@ Proof.
   - exact Hroot_keys.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
-
 
 
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks :
@@ -7915,7 +7909,6 @@ Proof.
   - exact Hstore.
   - exact Heval.
 Qed.
-
 
 
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_body_call_store_safe_callback_height_at_target_callbacks :
@@ -10183,7 +10176,6 @@ Proof.
 Qed.
 
 
-
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_branch_local_strict_exact_closure_check :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -11826,7 +11818,6 @@ Proof.
 Qed.
 
 
-
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route_and_branch_local_strict_exact_closure_check :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -12609,7 +12600,6 @@ Proof.
   - exact Hroot_keys.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_store Hstatic).
 Qed.
-
 
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_check_prefix :
@@ -13958,8 +13948,6 @@ Proof.
 Qed.
 
 
-
-
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -14745,7 +14733,6 @@ Proof.
   - exact Hstore.
   - exact Heval.
 Qed.
-
 
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_prefix :
@@ -17385,9 +17372,6 @@ Proof.
 Qed.
 
 
-
-
-
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_store_safe_summary_evidence :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -17766,6 +17750,52 @@ Proof.
     + exact Hin.
     + exact Hstore.
     + exact Heval.
+Qed.
+
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_evidence_at_all_callbacks :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed
+      env = infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall env0 fname,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env0 fname) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hevidence_at_all_when_no_receiver Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_store_safe_evidence_at_callbacks.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver.
+    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_evidence_at_all.
+    + exact Hsynthetic_route.
+    + exact (Hevidence_at_all_when_no_receiver Hno_receiver).
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 

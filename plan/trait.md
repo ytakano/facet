@@ -59,9 +59,12 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver exact-body route packages feed that summary-at wrapper. The
   active endpoint exposes uniqueness plus the ordinary captured-or-component
   gate through local-bounds-family environments, and an explicit bridge turns an
-  active-endpoint not-captured provider into store-safe summary evidence. The
-  unresolved public theorem gap is isolated to deriving one such
-  no-receiver-branch evidence source rather than to the direct-ready branch.
+  active-endpoint not-captured provider into store-safe summary evidence. Public
+  prefix preservation now specializes to store-safe evidence-at routes when
+  all-callee direct-call evidence-at is supplied; single-callee evidence remains
+  insufficient for the whole-environment callback. The unresolved public theorem
+  gap is isolated to deriving one such no-receiver-branch evidence source
+  rather than to the direct-ready branch.
 - The no-receiver branch exports reusable direct/generic receiver-method target
   absence facts through local-bounds environments. Those facts now collapse
   receiver-method store-safe summaries to the ordinary captured-call summary,

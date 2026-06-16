@@ -111,6 +111,18 @@ Definition eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_s
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement.
+Proof.
+  intros Hprefix env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+    Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hevidence.
+  eapply Hprefix; try eassumption.
+  apply PDCR_Call. exact Hready_args.
+Qed.
+
 Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement
     : Prop :=
   forall env s fname args s' v,
@@ -1431,6 +1443,36 @@ Proof.
   eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all.
   intros fname_top.
   eapply Hevidence_at_all.
+Qed.
+
+
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_evidence_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  (forall env fname,
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname) ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hprefix Hevidence_at_all env s fname args s' v Heval Ω n R Σ T
+    Σ' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+    Hunique Hsummary_at _Hevidence_at.
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement.
+    exact Hprefix.
+  - exact Heval.
+  - eapply store_safe_function_value_call_args_preservation_ready.
+    exact Hsafe_args.
+  - exact Hstore.
+  - exact Hroots.
+  - exact Hshadow.
+  - exact Hrn.
+  - exact Hnamed.
+  - exact Hkeys.
+  - exact Htyped.
+  - exact Hunique.
+  - exact Hsummary_at.
+  - intros fname_top.
+    eapply Hevidence_at_all.
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider :
@@ -12790,7 +12832,6 @@ Proof.
 Qed.
 
 
-
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_reachable_less_callbacks_and_exact_body_call_route_package_and_target_provider_prefix :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -13509,8 +13550,6 @@ Proof.
 Qed.
 
 
-
-
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
@@ -13730,7 +13769,6 @@ Proof.
   - eapply direct_call_value_roots_within_store_subset; eassumption.
   - rewrite Hremoved_exact. exact Hshadow_args.
 Qed.
-
 
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body_package_at_prefix :
@@ -19505,7 +19543,6 @@ Proof.
       args_body synthetic_body Hin Hname Hrename Htarget) as [_ Hsafe].
     exact Hsafe.
 Qed.
-
 
 
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package :

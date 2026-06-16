@@ -109,11 +109,14 @@ validity checks must be represented in Rocq and the extracted checker.
   authority.
 - The remaining direct-call receiver activation blocker is the no-receiver
   route/evidence source. The active mixed endpoint gives combined
-  captured-or-component summaries, but existing public runtime wrappers still
-  need one stronger input: exact-body route package, summary-at/store-safe
-  evidence-at, store-safe/plain shadow summary evidence, checked component or
-  closure summary, local-bounds route evidence, endpoint-derived not-captured
-  evidence, exact non-captured evidence, or an exact-body scoped package.
+  captured-or-component summaries. Existing active mixed case-split wrappers can
+  use those summaries only with additional route-preservation or exact-body
+  callbacks, and the final public theorem currently has no such extra premise.
+  Existing public runtime wrappers still need one stronger input: exact-body
+  route package, summary-at/store-safe evidence-at, store-safe/plain shadow
+  summary evidence, checked component or closure summary, local-bounds route
+  evidence, endpoint-derived not-captured evidence, exact non-captured evidence,
+  or an exact-body scoped package.
 - The strongest existing assoc-base paths are now stricter proof endpoints for
   captured-summary absence and synthetic-summary evidence on the no-receiver
   branch. The checker exposes the captured-summary absence gate, synthetic

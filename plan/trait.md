@@ -135,10 +135,12 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
   The assoc-base mixed endpoint now avoids that strict exact-closure base and
   has assoc-boundary soundness wrappers, a direct-ready runtime branch theorem,
-  and public direct-ready/case-split route wrappers. The public checker
-  soundness aliases now target it. The next activation blocker is the
-  no-receiver/assoc branch: derive the remaining static/component callback
-  wrapper chain, or equivalent summary/provider premises, from the public
+  public direct-ready/case-split route wrappers, and an explicit-call-route
+  assoc-base component-check bridge. The public checker soundness aliases now
+  target it. The next activation blocker is the no-receiver/assoc branch:
+  derive the missing synthetic direct-call typing route for the
+  static/component callback wrapper chain, or equivalent summary/provider premises,
+  from the public
   synthetic direct-call-ready/runtime assumptions so the required public runtime
   theorem can target this assoc-base mixed endpoint, then switch the CLI to it.
 

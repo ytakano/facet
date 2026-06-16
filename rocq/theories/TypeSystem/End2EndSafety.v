@@ -1016,6 +1016,38 @@ Proof.
   - exact Hcheck.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcaptured.
+  eapply infer_program_env_end2end_assoc_component_ready_when_not_captured.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hin.
+  - exact Hcaptured.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_exact_closure_when_not_captured :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcaptured.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured
+              env env' f_component Hprog Hin Hcaptured) as [_ Hexact].
+  exact Hexact.
+Qed.
+
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
@@ -1837,6 +1869,34 @@ Proof.
     + rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
       rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
       exact Hexact.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_payload_in_local_bounds_family_when_not_captured :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_summary
+      env' fdef = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    fn_env_unique_by_name env0 /\
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env0 fdef /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env0 fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcaptured
+    Hcomponent_check.
+  eapply infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_when_not_captured.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hbase.
+  - exact Henv.
+  - exact Hin.
+  - exact Hcaptured.
+  - exact Hcomponent_check.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_of_exact_closure :

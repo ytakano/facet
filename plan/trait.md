@@ -71,7 +71,10 @@ validity checks must be represented in Rocq and the extracted checker.
   for the no-receiver-method branch. The no-receiver branch now also exports
   reusable direct/generic receiver-method target absence facts through
   local-bounds environments; these facts are intentionally kept separate from
-  ordinary direct-call exact-body route packages.
+  ordinary direct-call exact-body route packages. The active endpoint now also
+  exposes the exact-body synthetic-evidence route with component-body closure
+  checks through public mixed wrappers, but that route still requires explicit
+  exact-body/local-bounds route evidence plus a component-body closure provider.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -129,7 +132,10 @@ validity checks must be represented in Rocq and the extracted checker.
   discharge exact-body ordinary call packages by themselves and are not yet
   connected to one of the stronger store/root-safe evidence providers.
   Static runtime preservation helps only after such a provider has supplied
-  route-local evidence; it is not itself an evidence-at provider.
+  route-local evidence; it is not itself an evidence-at provider. The
+  component-body closure-check route is exposed for the active endpoint, but it
+  packages provider consequences only after the exact-body synthetic-evidence
+  route is supplied, so it does not by itself discharge the public theorem.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs
   route-local evidence-at or component-branch route facts for the no-receiver

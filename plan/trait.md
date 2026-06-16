@@ -59,9 +59,10 @@ validity checks must be represented in Rocq and the extracted checker.
   callback bridges now derive the summary exact-call package for the assoc-base
   mixed endpoint when global store-safe summary evidence, a checked component
   summary, or a component-body store-safe summary provider is available. The
-  active mixed endpoint has a named lemma exposing its combined
-  captured-or-component summary gate, but that gate is still weaker than the
-  missing route evidence. The remaining viable routes are through global
+  active mixed endpoint has named lemmas exposing its combined
+  captured-or-component summary gate both as a checker result and as Prop-level
+  summary readiness, but that gate is still weaker than the missing route
+  evidence. The remaining viable routes are through global
   store-safe summary, component-body store-safe, or exact-body/local-bounds
   evidence providers. Branch-aware public wrappers now close the direct-ready
   branch with existing callbacks and require store-safe summary evidence, a
@@ -114,8 +115,9 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe evidence-at route premise, and the public callbacks can now feed a
   summary-exact route when supplied with global store-safe summary evidence, the
   checked component summary, or component-body store-safe summary evidence. The
-  active endpoint exposes the combined captured-or-component gate, and the
-  direct-ready branch is closed by existing checks. The public theorem still
+  active endpoint exposes the combined captured-or-component gate at both
+  checker and Prop-ready levels, and the direct-ready branch is closed by
+  existing checks. The public theorem still
   lacks a concrete source for one stronger route fact in the
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary

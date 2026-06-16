@@ -60,8 +60,10 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-ready and no-receiver-method cases, a public case-split runtime
   wrapper over the mixed endpoint, an exact-body route-package wrapper for that
   mixed case split, a checked component-summary bridge for mixed component
-  store-safe callbacks, and the non-strict assoc local-bounds route theorem
-  needed by the assoc-base mixed base-route bridge.
+  store-safe callbacks, the non-strict assoc local-bounds route theorem
+  needed by the assoc-base mixed base-route bridge, and assoc-base mixed
+  local-bounds callback wrappers that route through that bridge when supplied
+  the per-component local-bounds route callback.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
   store-typed-prefix root naming for direct places and borrows, a packaged
   leaf-or-borrow static prefix callback, context-name to store-name transport for
@@ -76,9 +78,11 @@ validity checks must be represented in Rocq and the extracted checker.
   expressions, prefix-facing route wrappers through the mixed static-component
   runtime wrapper, and legacy wrapper shapes that delegate through the prefix
   bridge. The mixed component callback route can now consume the checked
-  component-summary boolean directly. The remaining runtime theorem gap is
-  threading the packaged stronger callback through the higher combined wrapper
-  chain so the required public theorem needs no new premise.
+  component-summary boolean directly, and the assoc-base mixed local-bounds
+  wrappers can consume an explicit per-component local-bounds route callback.
+  The remaining runtime theorem gap is deriving that callback from the
+  public/static completeness chain without adding a premise, then retargeting
+  the required public theorem.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -131,9 +135,10 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint now avoids the strict exact-closure base that rejected existing valid
   direct-call and HRT/module programs, and the CLI switch to this endpoint
   passes the valid/invalid and FIR regression suites. The remaining activation
-  blocker is proof-side: thread the assoc-base mixed base-route bridge through
-  the higher static/component callback wrapper chain, then retarget the required
-  public runtime theorem to this assoc-base mixed endpoint.
+  blocker is proof-side: discharge the assoc-base mixed local-bounds route
+  callback from the higher static/component callback wrapper chain without a
+  new public premise, then retarget the required public runtime theorem to this
+  assoc-base mixed endpoint.
 
 ## Key Decisions
 

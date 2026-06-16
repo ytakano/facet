@@ -41,8 +41,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Required public checker soundness aliases target the mixed endpoint:
   `infer_program_env_end2end_sound` and `check_program_env_end2end_sound`. The
   required public runtime-safety theorem
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
-  the non-mixed assoc direct-receiver endpoint.
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` now also
+  targets the mixed assoc direct-receiver endpoint.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
   contradictions for the no-method branch, collapse back to ordinary
@@ -84,10 +84,8 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Prove the required public runtime-safety theorem against the mixed assoc
-     direct-receiver endpoint without widening its interface.
-   - Switch the OCaml accept/reject path to the extracted mixed endpoint once
-     all required public theorem names target it.
+   - Switch the OCaml accept/reject path to the extracted mixed endpoint now
+     that all required public theorem names target it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -118,31 +116,12 @@ validity checks must be represented in Rocq and the extracted checker.
   broad enough to be the active CLI authority.
 - The mixed endpoint avoids that gate for programs without direct
   receiver-method bodies. Its direct-ready/no-receiver branch runtimes, public
-  case-split runtime wrapper, mixed exact-body route-package wrapper, and checked
-  component-summary bridge are proven. The remaining public theorem bridge still
-  needs to remove the extra store-safe route/static-runtime callback evidence
-  before
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` can target the
-  mixed endpoint without widening its interface.
-- The concrete proof gap is deriving prefix/static-runtime evidence from the
-  required runtime-safety theorem's existing hypotheses. Static root-name and key
-  evidence can now be transported from rooted typing outputs back to the runtime
-  store under `store_typed_prefix`; leaf and direct-borrow expressions have a
-  packaged prefix callback; assign/replace root-env union updates preserve
-  same-store `store_roots_within`; static path consumes preserve
-  `store_typed_prefix`; leaf/borrow argument, field, and match-tail branch lists
-  have prefix traversals; struct/enum/match/if/drop/assign/replace compounds
-  have prefix wrappers; and evaluated `let` has a prefix-store root-name/key
-  helper that keeps local freshness under typed/root premises. A stronger
-  prefix static callback shape now carries `store_typed_prefix`, with a
-  leaf/borrow instance, a forgetful bridge back to the existing weaker
-  callback, and argument/field/match-tail traversals. Struct, enum, match, if, drop, assign, and replace wrappers now have stronger
-  callback variants, and scoped exact-body route packages and the mixed static-component endpoint
-  wrapper can consume the stronger callback through forgetful bridges. The
-  local expression packaging now provides the stronger prefix static callback.
-  The remaining static callback work is packaging that theorem through the
-  higher combined callback chain so the public theorem does not need a new
-  premise.
+  case-split runtime wrapper, mixed exact-body route-package wrapper, checked
+  component-summary bridge, stronger prefix static callback package, and public
+  runtime-safety theorem are proven without widening the public theorem
+  interface. The remaining activation blocker is switching the OCaml CLI
+  authority to the mixed endpoint and then adding positive direct-call receiver
+  UFCS tests that pass through that verified path.
 
 ## Key Decisions
 

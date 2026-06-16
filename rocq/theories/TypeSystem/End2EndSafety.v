@@ -12279,8 +12279,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
     check_env_end2end_direct_receiver_ready env' = true ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
@@ -12288,7 +12288,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
 Qed.
 
 
@@ -12303,15 +12303,15 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes.
 Qed.
 
 
@@ -12336,8 +12336,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
       Some (fname_body, args_body, fn_body fcall)) ->
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->

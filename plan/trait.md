@@ -83,7 +83,7 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper family can consume an explicit per-component local-bounds route
   callback in the same prefix/store-static/static shapes as the old final
   wrapper chain.
-  The remaining runtime theorem gap is deriving a concrete exact-closure or component-summary provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider or a branch-aware non-captured component provider into the local-bounds route callback needed by the mixed wrapper. The mixed runtime wrapper can consume either the global exact provider or the branch-aware provider; prefix/store-static/static variants exist for both paths. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms. The assoc-base mixed endpoint also has exact-body route-package wrappers that route through the summary-at/component-body-summary provider path. The direct public-prefix route is not itself enough to build the no-direct-ready evidence-at route because it requires global callee evidence, while the case-split wrapper needs route-local evidence-at facts for the no-receiver branch.
+  The remaining runtime theorem gap is deriving a concrete exact-closure or component-summary provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider or a branch-aware non-captured component provider into the local-bounds route callback needed by the mixed wrapper. The mixed runtime wrapper can consume either the global exact provider or the branch-aware provider; prefix/store-static/static variants exist for both paths. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms. The assoc-base mixed endpoint also has exact-body route-package wrappers for component-summary providers and checked component summaries, both routing through the summary-at/component-body-summary provider path. The direct public-prefix route is not itself enough to build the no-direct-ready evidence-at route because it requires global callee evidence, while the case-split wrapper needs route-local evidence-at facts for the no-receiver branch.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -150,7 +150,8 @@ validity checks must be represented in Rocq and the extracted checker.
   theories/TypeSystem/TypeSafetyDirectCallRoute.v` passes for the adapter, and
   targeted `timeout 300 rocq compile -R theories Facet -o
   /tmp/End2EndSafety.vo -noglob theories/TypeSystem/End2EndSafety.v` passes for
-  the assoc-base mixed exact-body route-package wrappers.
+  the assoc-base mixed exact-body route-package wrappers, including the checked
+  component-summary variant.
   The first targeted profile found a pre-existing bottleneck at
   `EnvRuntimeCapturedSafety.v:755`, where `dependent destruction Htyped_shadow`
   took about 101.857 seconds. That branch now uses ordinary inversion. A

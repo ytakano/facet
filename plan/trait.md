@@ -63,7 +63,9 @@ validity checks must be represented in Rocq and the extracted checker.
   captured-or-component summary gate, but that gate is still weaker than the
   missing route evidence. The remaining viable routes are through global
   store-safe summary, component-body store-safe, or exact-body/local-bounds
-  evidence providers.
+  evidence providers. A branch-aware public wrapper now closes the direct-ready
+  branch with existing callbacks and requires store-safe summary evidence only
+  for the no-receiver-method branch.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -108,10 +110,12 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe evidence-at route premise, and the public callbacks can now feed a
   summary-exact route when supplied with global store-safe summary evidence, the
   checked component summary, or component-body store-safe summary evidence. The
-  active endpoint exposes the combined captured-or-component gate, but the
-  public theorem still lacks a concrete source for one of those stronger facts
-  in the no-direct-ready branch. Static runtime preservation helps only after a
-  global, component-body, or exact-body/local-bounds provider has supplied
+  active endpoint exposes the combined captured-or-component gate, and the
+  direct-ready branch is closed by existing checks. The public theorem still
+  lacks a concrete source for one stronger route fact in the
+  no-receiver-method branch, now isolated as conditional store-safe summary
+  evidence (or an equivalent component-body/exact-body/local-bounds provider).
+  Static runtime preservation helps only after such a provider has supplied
   route-local evidence; it is not itself an evidence-at provider.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs

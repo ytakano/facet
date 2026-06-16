@@ -56,10 +56,11 @@ validity checks must be represented in Rocq and the extracted checker.
   candidate now proves runtime safety for the assoc-base mixed endpoint from the
   existing public premises plus one explicit store-safe evidence-at route
   premise; the required public theorem still lacks that premise. A public
-  callback bridge now derives the summary exact-call package for the assoc-base
-  mixed endpoint when a component-body store-safe summary provider is available.
-  Env-level component checks alone remain too weak because they do not imply
-  captured-call store-safety; the remaining viable routes are through
+  callback bridges now derive the summary exact-call package for the assoc-base
+  mixed endpoint when either the checked component summary or a component-body
+  store-safe summary provider is available. Env-level component checks alone
+  remain too weak to supply the direct evidence-at premise because they do not
+  imply captured-call store-safety; the remaining viable routes are through
   component-body store-safe or exact-body/local-bounds evidence providers.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
@@ -103,11 +104,12 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-closure, component-summary, exact-body package, branch-aware, and
   local-bounds provider shapes. The direct retarget candidate only needs a
   store-safe evidence-at route premise, and the public callbacks can now feed a
-  summary-exact route when supplied with component-body store-safe summary
-  evidence, but the public theorem still lacks a concrete source for that
-  evidence in the no-direct-ready branch. Static runtime preservation helps only
-  after a component-body or exact-body/local-bounds provider has supplied
-  route-local evidence; it is not itself an evidence-at provider.
+  summary-exact route when supplied with either the checked component summary or
+  component-body store-safe summary evidence, but the public theorem still lacks
+  a concrete source for those facts in the no-direct-ready branch. Static runtime
+  preservation helps only after a component-body or exact-body/local-bounds
+  provider has supplied route-local evidence; it is not itself an evidence-at
+  provider.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs
   route-local evidence-at or component-branch route facts for the no-receiver

@@ -47,9 +47,9 @@ validity checks must be represented in Rocq and the extracted checker.
   `check_program_env_end2end_sound`. The required public runtime-safety theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   the strict mixed endpoint. The assoc-base mixed endpoint is exported, covered
-  by assoc-boundary soundness wrappers, and has a runtime-safety wrapper under
-  the existing stronger store-safe direct-call route premise, but is not yet the
-  public runtime-safety target.
+  by assoc-boundary soundness wrappers, and has runtime-safety wrappers under
+  the existing store-safe route premise and the summary-at route plus
+  component-body summary-provider premise.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
   contradictions for the no-method branch, collapse back to ordinary
@@ -132,12 +132,13 @@ validity checks must be represented in Rocq and the extracted checker.
   programs before the mixed gate runs, because its underlying assoc strict
   exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
   The assoc-base mixed endpoint now avoids that strict exact-closure base and
-  has assoc-boundary soundness wrappers plus a runtime wrapper under the
-  stronger store-safe route premise. The public checker soundness aliases now
-  target it. The next activation blocker is bridging the public synthetic
-  direct-call-ready premise to the stronger store-safe route premise so the
-  required public runtime-safety theorem can target this assoc-base mixed
-  endpoint, then switching the CLI to it.
+  has assoc-boundary soundness wrappers plus runtime wrappers under the
+  existing store-safe route premise and the summary-at route plus component-body
+  summary-provider premise. The public checker soundness aliases now target it.
+  The next activation blocker is deriving those summary/provider premises from
+  the public synthetic direct-call-ready/runtime assumptions, so the required
+  public runtime-safety theorem can target this assoc-base mixed endpoint, then
+  switching the CLI to it.
 
 ## Key Decisions
 

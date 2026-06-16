@@ -752,7 +752,7 @@ Proof.
         rename Hlookup_runtime into Hlookup_runtime
     end.
     rewrite Hbody in Htyped_shadow.
-    dependent destruction Htyped_shadow.
+    inversion Htyped_shadow; subst; clear Htyped_shadow.
     * match goal with
       | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ _ (MkTy _ (TFn _ _)) _ _ _ |- _ =>
           pose proof (typed_env_roots_shadow_safe_roots _ _ _ _ _ _ _ _ _ _
@@ -761,7 +761,7 @@ Proof.
       destruct (proj1 eval_preserves_typing_roots_ready_mutual
           body_env s (EVar x) s_fn (VClosure fname captured) Heval_callee
           (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f)) (MkTy u (TFn param_tys ret))
+          (sctx_of_ctx (fn_body_ctx f)) (MkTy u (TFn param_tys T_body))
           Σ1 R1 roots_callee0
           (ProvReady_Var x) Hstore_body_env Hroots Hstore_shadow Hroot_shadow
           Htyped_callee_roots)
@@ -814,40 +814,50 @@ Proof.
       simpl in *.
       destruct (eval_call_expr_tfn_components_preserve_typing_with_callee_summary
         body_env s s_fn s_args s_body (EVar callee_var) args fname [] fdef fcall
-        vs ret0 used' Heval_callee H1 H2 H3 Heval_body_env2
+        vs ret used' Heval_callee H H0 H1 Heval_body_env2
         (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-        (sctx_of_ctx (fn_body_ctx f)) Σ1 R1 (sctx_of_ctx Γ_out) R'
-        roots_callee0 arg_roots u param_tys ret
+        (sctx_of_ctx (fn_body_ctx f)) Σ1 R1 (sctx_of_ctx Γ_out) R_body
+        roots_callee0 arg_roots u param_tys T_body
         Hready_args (ProvReady_Var x) Hstore_body_env Hroots Hstore_shadow
-        Hroot_shadow Hnamed Hkeys Htyped_shadow H0 Hunique
+        Hroot_shadow Hnamed Hkeys H7 H12 Hunique
         Hcallee_summary_runtime)
       as [_ [Hv _]].
       assert (Hv_env :
           value_has_type env
             (store_remove_params (fn_captures fcall)
                (store_remove_params (fn_params fcall) s_body))
-            ret0 ret).
+            ret T_body).
       { subst body_env.
         eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
       eapply VHT_Compatible;
         [ exact Hv_env | apply ty_compatible_b_sound; exact Hcompat ].
-    * pose proof
-        (typed_env_roots_shadow_safe_evar_infer_core
-          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (fn_body_ctx f) x (MkTy u (TClosure env_lt param_tys ret))
-          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
-          Htyped_shadow Hinfer_callee) as Hcore.
+    * match goal with
+      | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+          (MkTy u (TClosure env_lt param_tys T_body)) _ _ _ |- _ =>
+          pose proof
+            (typed_env_roots_shadow_safe_evar_infer_core
+              body_env (fn_outlives f) (fn_lifetimes f)
+              (initial_root_env_for_fn f) (fn_body_ctx f) x
+              (MkTy u (TClosure env_lt param_tys T_body))
+              Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+              Htyped_callee_shadow Hinfer_callee) as Hcore
+      end.
       simpl in Hcore.
       destruct Hcallee_shape as
         [Tshape params_shape ret_shape Hshape
         | Tshape m_shape bounds_shape body_shape params_shape ret_shape
             Hshape Hbody_shape]; rewrite Hcore in Hshape; discriminate.
-    * pose proof
-        (typed_env_roots_shadow_safe_evar_infer_core
-          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (fn_body_ctx f) x (MkTy u (TTypeForall type_params bounds body_ty))
-          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
-          Htyped_shadow Hinfer_callee) as Hcore.
+    * match goal with
+      | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+          (MkTy u (TTypeForall type_params bounds body_ty)) _ _ _ |- _ =>
+          pose proof
+            (typed_env_roots_shadow_safe_evar_infer_core
+              body_env (fn_outlives f) (fn_lifetimes f)
+              (initial_root_env_for_fn f) (fn_body_ctx f) x
+              (MkTy u (TTypeForall type_params bounds body_ty))
+              Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+              Htyped_callee_shadow Hinfer_callee) as Hcore
+      end.
       simpl in Hcore.
       destruct Hcallee_shape as
         [Tshape params_shape ret_shape Hshape
@@ -856,13 +866,19 @@ Proof.
         [ rewrite Hcore in Hshape; discriminate
         | rewrite Hcore in Hshape; inversion Hshape; subst;
           simpl in Hbody_shape; discriminate ].
-    * pose proof
-        (typed_env_roots_shadow_safe_evar_infer_core
-          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (fn_body_ctx f) x
-          (MkTy u (TForall m bounds (MkTy u_body (TTypeForall type_params type_bounds body_ty))))
-          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
-          Htyped_shadow Hinfer_callee) as Hcore.
+    * match goal with
+      | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+          (MkTy u (TForall m bounds
+            (MkTy u_body (TTypeForall type_params type_bounds body_ty)))) _ _ _ |- _ =>
+          pose proof
+            (typed_env_roots_shadow_safe_evar_infer_core
+              body_env (fn_outlives f) (fn_lifetimes f)
+              (initial_root_env_for_fn f) (fn_body_ctx f) x
+              (MkTy u (TForall m bounds
+                (MkTy u_body (TTypeForall type_params type_bounds body_ty))))
+              Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+              Htyped_callee_shadow Hinfer_callee) as Hcore
+      end.
       simpl in Hcore.
       destruct Hcallee_shape as
         [Tshape params_shape ret_shape Hshape
@@ -871,12 +887,17 @@ Proof.
         [ rewrite Hcore in Hshape; discriminate
         | rewrite Hcore in Hshape; inversion Hshape; subst;
           simpl in Hbody_shape; discriminate ].
-    * pose proof
-        (typed_env_roots_shadow_safe_evar_infer_core
-          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (fn_body_ctx f) x (MkTy u (TForall m bounds body_ty))
-          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
-          Htyped_shadow Hinfer_callee) as Hcore.
+    * match goal with
+      | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+          (MkTy u (TForall m bounds body_ty)) _ _ _ |- _ =>
+          pose proof
+            (typed_env_roots_shadow_safe_evar_infer_core
+              body_env (fn_outlives f) (fn_lifetimes f)
+              (initial_root_env_for_fn f) (fn_body_ctx f) x
+              (MkTy u (TForall m bounds body_ty))
+              Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+              Htyped_callee_shadow Hinfer_callee) as Hcore
+      end.
       simpl in Hcore.
       match goal with
       | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ _
@@ -912,13 +933,13 @@ Proof.
       subst captured.
       destruct
         (value_has_type_empty_closure_tforall_tfn_components
-          body_env s_fn fname fdef u m bounds body_ty param_tys ret σ
-          Hv_callee H5 Hunique H0)
+          body_env s_fn fname fdef u m bounds body_ty param_tys ret0 σ
+          Hv_callee H Hunique H6)
         as [Htype_params [Hcaps_fdef Hbridge]].
       pose proof (typed_args_roots_shadow_safe_roots
         body_env (fn_outlives f) (fn_lifetimes f) R1 Σ1 args
         (params_of_tys (map (open_bound_ty σ) param_tys))
-        (sctx_of_ctx Γ_out) R' arg_roots H4) as Htyped_args.
+        (sctx_of_ctx Γ_out) R_body arg_roots H16) as Htyped_args.
       pose proof (preservation_ready_args_implies_provenance_ready_closure
                     args Hready_args) as Hprov_args.
       assert (Hcallee_summary_runtime :
@@ -964,26 +985,26 @@ Proof.
           exact Hsummary_target. }
       assert (Hcallee_route :
         callee_body_root_shadow_provenance_ready_at_result_subset body_env fcall
-          (call_param_root_env (fn_params fcall) arg_roots R')
+          (call_param_root_env (fn_params fcall) arg_roots R_body)
           (root_sets_union arg_roots)).
       { eapply
           direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset;
           eassumption. }
       destruct
         (eval_evar_call_expr_lifetime_forall_tfn_components_preserve_typing_with_callee_summary_route
-          body_env s s_fn s_args s_body x args fname [] fdef fcall vs ret0 used'
-          Heval_callee H5 H6 H7 Heval_body_env2
+          body_env s s_fn s_args s_body x args fname [] fdef fcall vs ret used'
+          Heval_callee H H0 H1 Heval_body_env2
           (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f)) Σ1 R1 (sctx_of_ctx Γ_out) R'
-          roots_callee0 arg_roots u m bounds body_ty param_tys ret σ
+          (sctx_of_ctx (fn_body_ctx f)) Σ1 R1 (sctx_of_ctx Γ_out) R_body
+          roots_callee0 arg_roots u m bounds body_ty param_tys ret0 σ
           Hready_args Hstore_body_env Hroots Hstore_shadow Hroot_shadow
-          Htyped_shadow H0 H4 Htype_params Hcaps_fdef Hbridge Hcallee_route)
+          H5 H6 H16 Htype_params Hcaps_fdef Hbridge Hcallee_route)
         as [_ [Hv _]].
       assert (Hv_env :
           value_has_type env
             (store_remove_params (fn_captures fcall)
                (store_remove_params (fn_params fcall) s_body))
-            ret0 (open_bound_ty σ ret)).
+            ret (open_bound_ty σ ret0)).
       { subst body_env.
         eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
       eapply VHT_Compatible;
@@ -993,7 +1014,7 @@ Proof.
           body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
           (fn_body_ctx f) x (MkTy u (TForall m bounds body_ty))
           Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
-          Htyped_shadow Hinfer_callee) as Hcore.
+          H5 Hinfer_callee) as Hcore.
       simpl in Hcore.
       destruct Hcallee_shape as
         [Tshape params_shape ret_shape Hshape
@@ -1001,7 +1022,7 @@ Proof.
             Hshape Hbody_shape];
         [ rewrite Hcore in Hshape; discriminate
         | rewrite Hcore in Hshape; inversion Hshape; subst;
-          rewrite H0 in Hbody_shape; discriminate ].
+          rewrite H6 in Hbody_shape; discriminate ].
   - destruct Hcaptured_summary as [Hbase_captured | Hcaptured_summary].
     + destruct Hbase_captured as [Hbase_captured Hready_body].
       destruct Hbase_captured as

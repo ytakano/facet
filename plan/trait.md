@@ -149,14 +149,15 @@ validity checks must be represented in Rocq and the extracted checker.
 - Verification note: `rocq compile -R theories Facet
   theories/TypeSystem/TypeSafetyDirectCallRoute.v` passes for the adapter.
   A full `cd rocq && make` rebuild was stopped after it spent several minutes
-  in `EnvRuntimeCapturedSafety.v`; targeted profiling with
-  `timeout 180 rocq compile -time-file /tmp/EnvRuntimeCapturedSafety.time -R
-  theories Facet -o /tmp/EnvRuntimeCapturedSafety.vo -noglob
-  theories/TypeSystem/EnvRuntimeCapturedSafety.v` timed out at 180 seconds.
-  The partial timing file identifies a pre-existing bottleneck at
-  `EnvRuntimeCapturedSafety.v:755`, where `dependent destruction Htyped_shadow`
-  took about 101.857 seconds. This should be addressed before repeated full
-  rebuild attempts.
+  in `EnvRuntimeCapturedSafety.v`. The first targeted profile found a
+  pre-existing bottleneck at `EnvRuntimeCapturedSafety.v:755`, where
+  `dependent destruction Htyped_shadow` took about 101.857 seconds. That branch
+  now uses ordinary inversion, and
+  `timeout 300 rocq compile -time-file /tmp/EnvRuntimeCapturedSafety.after2.time
+  -R theories Facet -o /tmp/EnvRuntimeCapturedSafety.vo -noglob
+  theories/TypeSystem/EnvRuntimeCapturedSafety.v` completes. The next known
+  compile-time hotspot is the later `dependent destruction Htyped_call` near
+  `EnvRuntimeCapturedSafety.v:22534`, measured at about 189.006 seconds.
 
 ## Key Decisions
 

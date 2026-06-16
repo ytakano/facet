@@ -55,7 +55,10 @@ validity checks must be represented in Rocq and the extracted checker.
   These wrappers expose active-endpoint paths. A public-layer retarget
   candidate now proves runtime safety for the assoc-base mixed endpoint from the
   existing public premises plus one explicit store-safe evidence-at route
-  premise; the required public theorem still lacks that premise.
+  premise; the required public theorem still lacks that premise. The latest
+  proof audit confirmed that env-level component checks alone are too weak to
+  supply the premise because they do not imply captured-call store-safety; the
+  viable route is through exact-body/local-bounds evidence providers.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -98,7 +101,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-closure, component-summary, exact-body package, branch-aware, and
   local-bounds provider shapes, and the direct retarget candidate only needs a
   store-safe evidence-at route premise, but the public theorem still lacks a
-  concrete source for that route in the no-direct-ready branch.
+  concrete source for that route in the no-direct-ready branch. Static runtime
+  preservation helps only after an exact-body/local-bounds package has supplied
+  route-local evidence; it is not itself an evidence-at provider.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs
   route-local evidence-at or component-branch route facts for the no-receiver

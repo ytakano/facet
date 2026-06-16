@@ -83,7 +83,7 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper family can consume an explicit per-component local-bounds route
   callback in the same prefix/store-static/static shapes as the old final
   wrapper chain.
-  The remaining runtime theorem gap is deriving a concrete exact-closure provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider or a branch-aware non-captured component provider into the local-bounds route callback needed by the mixed wrapper. The mixed runtime wrapper can consume either the global exact provider or the branch-aware provider; prefix/store-static/static variants exist for both paths. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms.
+  The remaining runtime theorem gap is deriving a concrete exact-closure provider for the mixed endpoint from the public/static completeness chain without adding a premise, then retargeting the required public theorem. Assoc-base proof plumbing can now turn a global exact-closure provider or a branch-aware non-captured component provider into the local-bounds route callback needed by the mixed wrapper. The mixed runtime wrapper can consume either the global exact provider or the branch-aware provider; prefix/store-static/static variants exist for both paths. Mixed endpoint facts now expose no-capture-branch exact-closure payloads in top-level and local-bounds-family forms. The direct public-prefix route is not itself enough to build the no-direct-ready evidence-at route because it requires global callee evidence, while the case-split wrapper needs route-local evidence-at facts for the no-receiver branch.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
@@ -148,19 +148,15 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence and is not sufficient.
 - Verification note: `rocq compile -R theories Facet
   theories/TypeSystem/TypeSafetyDirectCallRoute.v` passes for the adapter.
-  A full `cd rocq && make` rebuild was stopped after it spent several minutes
-  in `EnvRuntimeCapturedSafety.v`. The first targeted profile found a
-  pre-existing bottleneck at `EnvRuntimeCapturedSafety.v:755`, where
-  `dependent destruction Htyped_shadow` took about 101.857 seconds. That branch
-  now uses ordinary inversion, and
-  `timeout 300 rocq compile -time-file /tmp/EnvRuntimeCapturedSafety.after2.time
-  -R theories Facet -o /tmp/EnvRuntimeCapturedSafety.vo -noglob
-  theories/TypeSystem/EnvRuntimeCapturedSafety.v` completes. A follow-up
-  profile found a later `dependent destruction Htyped_call` near
+  The first targeted profile found a pre-existing bottleneck at
+  `EnvRuntimeCapturedSafety.v:755`, where `dependent destruction Htyped_shadow`
+  took about 101.857 seconds. That branch now uses ordinary inversion. A
+  follow-up profile found a later `dependent destruction Htyped_call` near
   `EnvRuntimeCapturedSafety.v:22534`, measured at about 189.006 seconds. That
   branch now also uses ordinary inversion, and
   `/tmp/EnvRuntimeCapturedSafety.after3.time` shows the largest completed
-  command in the file at about 4.95 seconds.
+  command in the file at about 4.95 seconds. After both fixes, full
+  `cd rocq && make` completed successfully.
 
 ## Key Decisions
 

@@ -16746,3 +16746,43 @@ Proof.
   - exact Hstore.
   - exact Heval.
 Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_summary_call_package_and_component_body_summary_evidence :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_provider
+      env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_summary_evidence.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_summary_call_package_and_component_check :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_check.
+Qed.

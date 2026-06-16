@@ -57,12 +57,13 @@ validity checks must be represented in Rocq and the extracted checker.
   existing public premises plus one explicit store-safe evidence-at route
   premise; the required public theorem still lacks that premise. Public
   callback bridges now derive the summary exact-call package for the assoc-base
-  mixed endpoint when either the checked component summary or a component-body
-  store-safe summary provider is available. The active mixed endpoint now has a
-  named lemma exposing its combined captured-or-component summary gate, but that
-  gate is still weaker than a component-only check and does not by itself supply
-  the direct evidence-at premise. The remaining viable routes are through
-  component-body store-safe or exact-body/local-bounds evidence providers.
+  mixed endpoint when global store-safe summary evidence, a checked component
+  summary, or a component-body store-safe summary provider is available. The
+  active mixed endpoint has a named lemma exposing its combined
+  captured-or-component summary gate, but that gate is still weaker than the
+  missing route evidence. The remaining viable routes are through global
+  store-safe summary, component-body store-safe, or exact-body/local-bounds
+  evidence providers.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -105,13 +106,13 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-closure, component-summary, exact-body package, branch-aware, and
   local-bounds provider shapes. The direct retarget candidate only needs a
   store-safe evidence-at route premise, and the public callbacks can now feed a
-  summary-exact route when supplied with either the checked component summary or
-  component-body store-safe summary evidence. The active endpoint exposes the
-  combined captured-or-component gate, but the public theorem still lacks a
-  concrete source for the stronger component-only or component-body facts in the
-  no-direct-ready branch. Static runtime preservation helps only after a
-  component-body or exact-body/local-bounds provider has supplied route-local
-  evidence; it is not itself an evidence-at provider.
+  summary-exact route when supplied with global store-safe summary evidence, the
+  checked component summary, or component-body store-safe summary evidence. The
+  active endpoint exposes the combined captured-or-component gate, but the
+  public theorem still lacks a concrete source for one of those stronger facts
+  in the no-direct-ready branch. Static runtime preservation helps only after a
+  global, component-body, or exact-body/local-bounds provider has supplied
+  route-local evidence; it is not itself an evidence-at provider.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs
   route-local evidence-at or component-branch route facts for the no-receiver

@@ -5670,6 +5670,40 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_exact_package_and_store_safe_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env env' f s s' v Hprog
+    Hsummary Hinitial Hin Hstore Heval.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_store_safe_summary_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_unique_by_name.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_combined_check_env_ready.
+    exact Hprog.
+  - exact Hsummary.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_store_safe_summary_evidence :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
@@ -16242,6 +16276,44 @@ Proof.
 Qed.
 
 
+
+
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_store_safe_summary_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed
+      env = infer_ok env' ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hsummary Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_exact_package_and_store_safe_summary_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_final_roots_and_cleanup;
+      eassumption.
+  - exact Hprog.
+  - exact Hsummary.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
 
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_component_check :

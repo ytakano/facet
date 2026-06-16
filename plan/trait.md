@@ -51,8 +51,7 @@ validity checks must be represented in Rocq and the extracted checker.
   by assoc-boundary soundness wrappers, has a direct-ready runtime branch
   theorem, and is now the target of the public direct-ready, case-split route,
   and exact-body route-package mixed runtime wrappers. It also has a base-route
-  bridge that will retarget the mixed runtime path once the non-strict assoc
-  local-bounds route theorem is available. The missing theorem is
+  bridge that can consume the non-strict assoc local-bounds route theorem
   `infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family`.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
@@ -60,8 +59,9 @@ validity checks must be represented in Rocq and the extracted checker.
   captured/component readiness there, branch runtime bridges for both
   direct-ready and no-receiver-method cases, a public case-split runtime
   wrapper over the mixed endpoint, an exact-body route-package wrapper for that
-  mixed case split, and a checked component-summary bridge for mixed component
-  store-safe callbacks.
+  mixed case split, a checked component-summary bridge for mixed component
+  store-safe callbacks, and the non-strict assoc local-bounds route theorem
+  needed by the assoc-base mixed base-route bridge.
 - Runtime proof plumbing now has prefix-aware static-runtime callback shapes,
   store-typed-prefix root naming for direct places and borrows, a packaged
   leaf-or-borrow static prefix callback, context-name to store-name transport for
@@ -131,9 +131,9 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint now avoids the strict exact-closure base that rejected existing valid
   direct-call and HRT/module programs, and the CLI switch to this endpoint
   passes the valid/invalid and FIR regression suites. The remaining activation
-  blocker is proof-side: derive the non-strict assoc local-bounds route theorem
-  named above, or split the captured/non-captured branch earlier, then retarget
-  the required public runtime theorem to this assoc-base mixed endpoint.
+  blocker is proof-side: thread the assoc-base mixed base-route bridge through
+  the higher static/component callback wrapper chain, then retarget the required
+  public runtime theorem to this assoc-base mixed endpoint.
 
 ## Key Decisions
 

@@ -175,6 +175,130 @@ Proof.
   eapply infer_program_env_end2end_assoc_sound; eauto.
 Qed.
 
+
+Theorem infer_fn_env_end2end_assoc_direct_receiver_base_sound :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end_assoc_direct_receiver_base env f =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    checked_fn_env_roots_checked_assoc_boundary env f
+      (initial_root_env_for_params (fn_params f ++ fn_captures f))
+      R_out roots.
+Proof.
+  intros env f T Gamma_out R_out roots Hend.
+  unfold infer_fn_env_end2end_assoc_direct_receiver_base in Hend.
+  destruct (infer_full_env_roots_checked_assoc env f
+              (initial_root_env_for_params
+                (fn_params f ++ fn_captures f)))
+    as [[[[T' Gamma'] R'] roots'] | err] eqn:Hinfer; try discriminate.
+  destruct (check_fn_root_shadow_assoc_direct_receiver_base_summary env f);
+    try discriminate.
+  injection Hend as <- <- <- <-.
+  eapply infer_full_env_roots_checked_assoc_entry_boundary_sound.
+  exact Hinfer.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_direct_receiver_base_in_sound :
+  forall env fns f,
+    infer_fns_env_end2end_assoc_direct_receiver_base env fns = infer_ok tt ->
+    In f fns ->
+    exists T Gamma_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env f =
+        infer_ok (T, Gamma_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  induction fns as [| f_head rest IH]; intros f Hinfer Hin.
+  - contradiction.
+  - simpl in Hinfer. simpl in Hin.
+    destruct (infer_fn_env_end2end_assoc_direct_receiver_base env f_head)
+      as [[[[T_head Gamma_head] R_head] roots_head] | err] eqn:Hhead;
+      try discriminate.
+    destruct Hin as [-> | Hin].
+    + exists T_head, Gamma_head, R_head, roots_head.
+      split; [exact Hhead |].
+      eapply infer_fn_env_end2end_assoc_direct_receiver_base_sound.
+      exact Hhead.
+    + eapply IH; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Gamma_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Gamma_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hprog.
+  destruct (global_names_unique_b (alpha_normalize_global_env env));
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
+              env_elab (env_fns env_elab)) as [[] | err]
+    eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  eapply infer_fns_env_end2end_assoc_direct_receiver_base_in_sound;
+    eassumption.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_base_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_base in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
+    as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_base env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Gamma_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Gamma_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_sound; eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Gamma_out R_out roots,
+          infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+            infer_ok (T, Gamma_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_base_infer_ok
+      env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_sound; eauto.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

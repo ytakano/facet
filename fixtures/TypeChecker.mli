@@ -1579,6 +1579,20 @@ val infer_program_env_end2end_assoc : global_env -> global_env infer_result
 
 val check_program_env_end2end_assoc : global_env -> bool
 
+val check_fn_root_shadow_assoc_direct_receiver_base_summary :
+  global_env -> fn_def -> bool
+
+val infer_fn_env_end2end_assoc_direct_receiver_base :
+  global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_fns_env_end2end_assoc_direct_receiver_base :
+  global_env -> fn_def list -> unit infer_result
+
+val infer_program_env_end2end_assoc_direct_receiver_base :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_assoc_direct_receiver_base : global_env -> bool
+
 val infer_fn_env_end2end_strict_exact_closure :
   global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result
 

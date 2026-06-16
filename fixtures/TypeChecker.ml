@@ -16700,6 +16700,61 @@ let check_program_env_end2end_assoc env =
   | Infer_ok _ -> true
   | Infer_err _ -> false
 
+(** val check_fn_root_shadow_assoc_direct_receiver_base_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_assoc_direct_receiver_base_summary env f =
+  (||)
+    (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env f)
+    (check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env f)
+
+(** val infer_fn_env_end2end_assoc_direct_receiver_base :
+    global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_fn_env_end2end_assoc_direct_receiver_base env f =
+  let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
+  (match infer_full_env_roots_checked_assoc env f r0 with
+   | Infer_ok res ->
+     if check_fn_root_shadow_assoc_direct_receiver_base_summary env f
+     then Infer_ok res
+     else Infer_err ErrEndToEndSafetyGateFailed
+   | Infer_err err -> Infer_err err)
+
+(** val infer_fns_env_end2end_assoc_direct_receiver_base :
+    global_env -> fn_def list -> unit infer_result **)
+
+let rec infer_fns_env_end2end_assoc_direct_receiver_base env = function
+| [] -> Infer_ok ()
+| f :: rest ->
+  (match infer_fn_env_end2end_assoc_direct_receiver_base env f with
+   | Infer_ok _ -> infer_fns_env_end2end_assoc_direct_receiver_base env rest
+   | Infer_err err -> Infer_err (ErrInFunction (f.fn_name, err)))
+
+(** val infer_program_env_end2end_assoc_direct_receiver_base :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_base env =
+  let env_alpha = alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha
+  then (match infer_program_env_alpha_elab env with
+        | Infer_ok env_elab ->
+          (match infer_fns_env_end2end_assoc_direct_receiver_base env_elab
+                   env_elab.env_fns with
+           | Infer_ok _ -> Infer_ok env_elab
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+  else Infer_err ErrGlobalNamesNotUnique
+
+(** val check_program_env_end2end_assoc_direct_receiver_base :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_base env =
+  match infer_program_env_end2end_assoc_direct_receiver_base env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
 (** val infer_fn_env_end2end_strict_exact_closure :
     global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result **)
 

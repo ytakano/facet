@@ -46,14 +46,11 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body/component-with-body-summary providers from component checks and
   from the direct-ready branch, and an extracted captured-summary absence gate
   with endpoint-local facts plus public and local-bounds branch wrappers
-  consumable by exact/non-captured routes. Separate extracted stricter
-  endpoints now cover two no-receiver branch shapes:
-  `infer_program_env_end2end_assoc_direct_receiver_absent_mixed` requires
-  captured-summary absence, and
-  `infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed` requires
-  plain synthetic direct-call summary evidence. Both endpoints have checker
-  soundness aliases, imply the active mixed endpoint, and have public runtime
-  safety wrappers.
+  consumable by exact/non-captured routes. Separate extracted proof endpoints
+  now cover captured-summary absence, synthetic direct-call summary evidence,
+  and an assoc direct-receiver-base per-function gate that admits either the
+  existing exact-closure summary or a direct-receiver method summary. These
+  endpoints have checker soundness aliases and are not active CLI authorities.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -107,31 +104,21 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- The remaining direct-call receiver activation blocker is the no-receiver
-  route/evidence source. The active mixed endpoint gives combined
-  captured-or-component summaries. Existing active mixed case-split wrappers can
-  use those summaries only with additional route-preservation or exact-body
-  callbacks, and the final public theorem currently has no such extra premise.
-  Existing public runtime wrappers still need one stronger input: exact-body
-  route package, summary-at/store-safe evidence-at, store-safe/plain shadow
-  summary evidence, checked component or closure summary, local-bounds route
-  evidence, endpoint-derived not-captured evidence, exact non-captured evidence,
-  or an exact-body scoped package.
-- The strongest existing assoc-base paths are now stricter proof endpoints for
-  captured-summary absence and synthetic-summary evidence on the no-receiver
-  branch. The checker exposes the captured-summary absence gate, synthetic
-  direct-call summary gate, endpoint-local local-bounds facts, public/local-
-  bounds branch wrappers, and runtime safety wrappers for both stricter
-  endpoints. Temporary CLI swaps to the absence-mixed endpoint and the
-  synthetic-mixed endpoint both rejected broad existing valid coverage
-  (`basic_assign`, assign/borrow/core/enum/function/lifetime/module/struct/
-  trait, and type-safety-ready-gap cases) with `ErrEndToEndSafetyGateFailed`,
-  so these are proof infrastructure rather than behavior-compatible authorities
-  until a stricter endpoint is shown to preserve valid coverage. The active mixed
-  endpoint still does not require either stronger gate in the no-receiver
-  branch, so the public theorem cannot be retargeted to the active CLI
-  authority yet. Current receiver-method target absence is insufficient because
-  ordinary captured-call summaries are distinct from receiver-method summaries.
+- Direct-call receiver activation has two proof/checker frontiers. First, the
+  direct-receiver method sidecar itself still rejects the basic direct-call
+  receiver fixture: after alpha elaboration, `main` has a receiver-method target
+  but `check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method`
+  is false. Second, after that sidecar is fixed, the active mixed endpoint still
+  exposes only combined captured-or-component summaries on the no-receiver
+  branch; existing active mixed case-split wrappers can use those summaries only
+  with additional route-preservation or exact-body callbacks, and the final
+  public theorem currently has no such extra premise.
+- The strongest existing assoc-base paths are proof endpoints, not behavior-
+  compatible authorities. Temporary CLI swaps to the absence-mixed and
+  synthetic-mixed endpoints rejected broad existing valid coverage with
+  `ErrEndToEndSafetyGateFailed`. A temporary swap to the assoc direct-receiver-
+  base endpoint still rejected the basic direct-call receiver fixture because
+  the direct-receiver method summary sidecar is false for `main`.
 
 ## Key Decisions
 

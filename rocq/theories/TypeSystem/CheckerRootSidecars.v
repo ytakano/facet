@@ -2418,6 +2418,12 @@ Definition check_env_end2end_direct_receiver_mixed_ready
   negb (check_env_root_shadow_direct_receiver_method_present env) ||
   check_env_end2end_direct_receiver_ready env.
 
+Definition check_env_end2end_direct_receiver_absent_mixed_ready
+    (env : global_env) : bool :=
+  (negb (check_env_root_shadow_direct_receiver_method_present env) &&
+   check_env_root_shadow_captured_call_store_safe_summary_absent env) ||
+  check_env_end2end_direct_receiver_ready env.
+
 Lemma check_env_end2end_direct_receiver_mixed_ready_cases :
   forall env,
     check_env_end2end_direct_receiver_mixed_ready env = true ->
@@ -2430,6 +2436,35 @@ Proof.
     eqn:Hpresent; simpl in Hready.
   - right. exact Hready.
   - left. reflexivity.
+Qed.
+
+Lemma check_env_end2end_direct_receiver_absent_mixed_ready_cases :
+  forall env,
+    check_env_end2end_direct_receiver_absent_mixed_ready env = true ->
+    (check_env_root_shadow_direct_receiver_method_present env = false /\
+     check_env_root_shadow_captured_call_store_safe_summary_absent env = true) \/
+    check_env_end2end_direct_receiver_ready env = true.
+Proof.
+  intros env Hready.
+  unfold check_env_end2end_direct_receiver_absent_mixed_ready in Hready.
+  apply orb_true_iff in Hready as [Habsent | Hdirect_ready].
+  - apply andb_true_iff in Habsent as [Hpresent Habsent].
+    apply negb_true_iff in Hpresent. left. split; assumption.
+  - right. exact Hdirect_ready.
+Qed.
+
+Lemma check_env_end2end_direct_receiver_mixed_ready_of_absent_mixed_ready :
+  forall env,
+    check_env_end2end_direct_receiver_absent_mixed_ready env = true ->
+    check_env_end2end_direct_receiver_mixed_ready env = true.
+Proof.
+  intros env Hready.
+  unfold check_env_end2end_direct_receiver_absent_mixed_ready in Hready.
+  unfold check_env_end2end_direct_receiver_mixed_ready.
+  apply orb_true_iff in Hready as [Habsent | Hdirect_ready].
+  - apply andb_true_iff in Habsent as [Hpresent _Habsent].
+    apply orb_true_iff. left. exact Hpresent.
+  - apply orb_true_iff. right. exact Hdirect_ready.
 Qed.
 
 Definition infer_program_env_end2end_strict_exact_closure_direct_receiver
@@ -2479,6 +2514,23 @@ Definition infer_program_env_end2end_assoc_direct_receiver_mixed
 Definition check_program_env_end2end_assoc_direct_receiver_mixed
     (env : global_env) : bool :=
   match infer_program_env_end2end_assoc_direct_receiver_mixed env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+
+Definition infer_program_env_end2end_assoc_direct_receiver_absent_mixed
+    (env : global_env) : infer_result global_env :=
+  match infer_program_env_end2end_assoc env with
+  | infer_err err => infer_err err
+  | infer_ok env' =>
+      if check_env_end2end_direct_receiver_absent_mixed_ready env'
+      then infer_ok env'
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Definition check_program_env_end2end_assoc_direct_receiver_absent_mixed
+    (env : global_env) : bool :=
+  match infer_program_env_end2end_assoc_direct_receiver_absent_mixed env with
   | infer_ok _ => true
   | infer_err _ => false
   end.

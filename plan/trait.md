@@ -46,7 +46,11 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body/component-with-body-summary providers from component checks and
   from the direct-ready branch, and an extracted captured-summary absence gate
   with endpoint-local facts plus public and local-bounds branch wrappers
-  consumable by exact/non-captured routes.
+  consumable by exact/non-captured routes. A separate extracted
+  `infer_program_env_end2end_assoc_direct_receiver_absent_mixed` endpoint now
+  requires captured-summary absence on the no-receiver branch or direct-ready
+  evidence, has checker soundness aliases, implies the active mixed endpoint,
+  and has a public runtime safety wrapper.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -70,8 +74,10 @@ validity checks must be represented in Rocq and the extracted checker.
      evidence-at, store-safe or plain shadow summary evidence, checked
      component summary, component-body store-safe/summary evidence,
      local-bounds route evidence, an endpoint-derived not-captured/non-captured
-     provider, exact non-captured provider evidence, or an exact-body
-     local-bounds/scoped package provider.
+     provider, exact non-captured provider evidence, an exact-body
+     local-bounds/scoped package provider, or a behavior-preserving way to make
+     the active mixed endpoint require the extracted absence gate only where it
+     is needed.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -107,11 +113,12 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, exact non-captured evidence, or an exact-body scoped package.
 - The strongest existing assoc-base path is still the exact/non-captured branch
   wrapper. The checker now exposes an extracted captured-summary absence gate,
-  endpoint-local local-bounds facts, and public/local-bounds branch wrappers
-  for that gate, but the active mixed endpoint does not yet require the gate in
-  the no-receiver branch. Current receiver-method target absence is
-  insufficient because ordinary captured-call summaries are distinct from
-  receiver-method summaries.
+  endpoint-local local-bounds facts, public/local-bounds branch wrappers, and a
+  stricter assoc-base absence-mixed endpoint with runtime safety. The active
+  mixed endpoint still does not require that gate in the no-receiver branch, so
+  the public theorem cannot be retargeted to the active CLI authority yet.
+  Current receiver-method target absence is insufficient because ordinary
+  captured-call summaries are distinct from receiver-method summaries.
 
 ## Key Decisions
 

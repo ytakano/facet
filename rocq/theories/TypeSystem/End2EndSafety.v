@@ -1042,6 +1042,31 @@ Proof.
 Qed.
 
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_combined_local_bounds_family_provider :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_combined_check_env_ready
+      env env' Hprog) as Hcombined.
+  destruct Hbase as (bounds_base & ->).
+  destruct Hfamily as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined.
+  eapply forallb_forall; eauto.
+Qed.
+
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured :
   forall env env' f_component,
     infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->

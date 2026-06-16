@@ -10620,6 +10620,44 @@ Proof.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_and_exact_closure_provider :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env' = true ->
+    component_body_no_capture_direct_call_component_exact_closure_check_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hstrict_check
+    Hexact_provider Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_and_exact_closure_provider.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hstrict_check.
+  - exact Hexact_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_component_check_route_package :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

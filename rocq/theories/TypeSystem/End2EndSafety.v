@@ -13277,6 +13277,67 @@ Proof.
     eauto.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_summary_facts :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_direct_receiver_method_store_safe_summary
+      env' fdef = false /\
+    check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary
+      env' fdef = false.
+Proof.
+  intros env env' fdef Hprog Hno_receiver Hin.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts
+      env env' fdef Hprog Hno_receiver Hin) as [Hdirect Hgeneric].
+  split.
+  - unfold check_fn_root_shadow_direct_receiver_method_store_safe_summary.
+    rewrite Hdirect. reflexivity.
+  - unfold check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary.
+    rewrite Hgeneric. reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_summary_facts_in_local_bounds_family :
+  forall env env' env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    global_env_local_bounds_family env' env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_direct_receiver_method_store_safe_summary
+      env' fdef = false /\
+    check_fn_root_shadow_generic_direct_receiver_method_store_safe_summary
+      env' fdef = false.
+Proof.
+  intros env env' env0 fdef Hprog Hno_receiver Hfamily Hin.
+  destruct Hfamily as (bounds & ->).
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_summary_facts;
+    eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_captured_summary_with_receiver_methods_eq :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods
+      env' fdef =
+    check_fn_root_shadow_captured_call_store_safe_summary env' fdef.
+Proof.
+  intros env env' fdef Hprog Hno_receiver Hin.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_summary_facts
+      env env' fdef Hprog Hno_receiver Hin) as [Hdirect Hgeneric].
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_with_receiver_methods.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method.
+  rewrite Hdirect, Hgeneric.
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary env' fdef);
+    reflexivity.
+Qed.
+
 
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
   forall env base env0 fdef,

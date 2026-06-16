@@ -59,10 +59,10 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence. The unresolved public theorem gap is isolated to deriving one such
   no-receiver-branch evidence source rather than to the direct-ready branch.
 - The no-receiver branch exports reusable direct/generic receiver-method target
-  absence facts through local-bounds environments. These facts are intentionally
-  separate from ordinary direct-call target facts and do not by themselves
-  discharge the exact-body or store-safe route packages needed by the public
-  runtime theorem.
+  absence facts through local-bounds environments, and those facts now collapse
+  receiver-method store-safe summaries to the ordinary captured-call summary.
+  This still does not by itself discharge the exact-body or store-safe route
+  packages needed by the public runtime theorem.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -113,9 +113,9 @@ validity checks must be represented in Rocq and the extracted checker.
   Existing branch wrappers can consume that fact once supplied; they do not
   derive it.
 - Receiver-method target absence is not enough: those targets are distinct from
-  ordinary direct-call targets, so the no-receiver facts do not imply ordinary
-  exact-body packages or store/root-safe evidence. Static runtime preservation
-  helps only after a provider has supplied route-local evidence.
+  ordinary direct-call targets. Even after collapsing receiver-method summary
+  checks away in the no-receiver branch, a route-local exact-body or store/root
+  evidence provider is still required.
 
 ## Key Decisions
 

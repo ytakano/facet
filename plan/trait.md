@@ -86,7 +86,9 @@ validity checks must be represented in Rocq and the extracted checker.
   Active-endpoint exact-closure callee bridges now also recover seen-callee,
   direct-callee component-check, and exact-body target facts through
   local-bounds environments. This still does not by itself discharge the
-  exact-body or store-safe route packages needed by the public runtime theorem.
+  exact-body or store-safe route packages needed by the public runtime theorem:
+  route-summary packages additionally need recursive summary-evidence-at for
+  each callee body, not just the callee component check and exact-body target.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

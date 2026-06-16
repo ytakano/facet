@@ -42,12 +42,12 @@ validity checks must be represented in Rocq and the extracted checker.
   or generic direct receiver-method shape. Receiver-method target detection is
   restricted to synthetic impl method names, avoiding ordinary generic calls
   whose first argument happens to be a direct call.
-- Required public checker soundness aliases still target the strict mixed
+- Required public checker soundness aliases now target the assoc-base mixed
   endpoint: `infer_program_env_end2end_sound` and
   `check_program_env_end2end_sound`. The required public runtime-safety theorem
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` also still
-  targets the strict mixed endpoint. The assoc-base mixed endpoint is exported
-  and covered by assoc-boundary soundness wrappers, but is not yet the public
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
+  the strict mixed endpoint. The assoc-base mixed endpoint is exported and
+  covered by assoc-boundary soundness wrappers, but is not yet the public
   runtime-safety target.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
@@ -92,8 +92,8 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Retarget the required public checker/runtime theorem names to the
-     assoc-base mixed endpoint without adding OCaml fallback logic.
+   - Retarget the required public runtime theorem name to the assoc-base
+     mixed endpoint without adding OCaml fallback logic.
    - Switch the OCaml accept/reject path to the extracted assoc-base mixed
      endpoint after the public runtime theorem targets it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
@@ -131,9 +131,10 @@ validity checks must be represented in Rocq and the extracted checker.
   programs before the mixed gate runs, because its underlying assoc strict
   exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
   The assoc-base mixed endpoint now avoids that strict exact-closure base and
-  has assoc-boundary soundness wrappers. The next activation blocker is
-  retargeting the required public runtime-safety theorem to this assoc-base
-  mixed endpoint, then switching the CLI to it.
+  has assoc-boundary soundness wrappers. The public checker soundness aliases
+  now target it. The next activation blocker is retargeting the required public
+  runtime-safety theorem to this assoc-base mixed endpoint, then switching the
+  CLI to it.
 
 ## Key Decisions
 

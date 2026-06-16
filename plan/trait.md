@@ -68,7 +68,8 @@ validity checks must be represented in Rocq and the extracted checker.
   checked component summary, or component-body store-safe summary evidence only
   for the no-receiver-method branch. The no-receiver branch now also exports
   reusable direct/generic receiver-method target absence facts through
-  local-bounds environments.
+  local-bounds environments; these facts are intentionally kept separate from
+  ordinary direct-call exact-body route packages.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -119,7 +120,9 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary
   evidence, or an equivalent exact-body/local-bounds provider. The branch does
-  expose local-bounds receiver-target absence facts, but those facts are not yet
+  expose local-bounds receiver-target absence facts, but receiver-method targets
+  are distinct from ordinary direct-call targets, so those absence facts do not
+  discharge exact-body ordinary call packages by themselves and are not yet
   connected to one of the stronger store/root-safe evidence providers.
   Static runtime preservation helps only after such a provider has supplied
   route-local evidence; it is not itself an evidence-at provider.

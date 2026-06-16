@@ -54,9 +54,10 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/local-bounds packages, non-captured and exact non-captured
   providers, static provider variants, call-statement routes, and branch-scoped
   direct-ready/no-receiver splits. Exact-body local-bounds and scoped-package
-  consumers are also available in no-receiver-only form. These wrappers isolate
-  the unresolved public theorem gap to one missing no-receiver-branch evidence
-  source rather than to the direct-ready branch.
+  consumers are also available in no-receiver-only form, and an explicit bridge
+  now turns an active-endpoint not-captured provider into store-safe summary
+  evidence. The unresolved public theorem gap is isolated to deriving one such
+  no-receiver-branch evidence source rather than to the direct-ready branch.
 - The no-receiver branch exports reusable direct/generic receiver-method target
   absence facts through local-bounds environments. These facts are intentionally
   separate from ordinary direct-call target facts and do not by themselves
@@ -76,8 +77,9 @@ validity checks must be represented in Rocq and the extracted checker.
      no-receiver-branch provider strong enough for the existing active-endpoint
      wrappers: store-safe evidence-at, store-safe summary evidence, checked
      component summary, component-body store-safe/summary evidence,
-     local-bounds route evidence, non-captured/exact non-captured provider
-     evidence, or an exact-body local-bounds/scoped package provider.
+     local-bounds route evidence, a not-captured/non-captured provider, exact
+     non-captured provider evidence, or an exact-body local-bounds/scoped
+     package provider.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

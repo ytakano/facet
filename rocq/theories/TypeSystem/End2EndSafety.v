@@ -1074,6 +1074,24 @@ Proof.
   exact Hexact.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_summary_evidence_when_not_captured :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    (forall fdef,
+      In fdef (env_fns env') ->
+      check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false) ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env'.
+Proof.
+  intros env env' Hprog Hnot_captured fname fdef Hlookup.
+  pose proof (lookup_fn_in fname (env_fns env') fdef Hlookup) as Hin.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured
+              env env' fdef Hprog Hin (Hnot_captured fdef Hin))
+    as [Hcomponent _].
+  eapply callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  exact Hcomponent.
+Qed.
+
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->

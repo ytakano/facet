@@ -55,8 +55,9 @@ validity checks must be represented in Rocq and the extracted checker.
   providers, static provider variants, call-statement routes, and branch-scoped
   direct-ready/no-receiver splits. Exact-body local-bounds and scoped-package
   consumers are also available in no-receiver-only form, no-receiver
-  summary-at routes now feed the store-safe evidence-at wrapper, the active
-  endpoint exposes the ordinary captured-or-component gate through
+  summary-at routes now feed the store-safe evidence-at wrapper, and
+  no-receiver exact-body route packages feed that summary-at wrapper. The
+  active endpoint exposes the ordinary captured-or-component gate through
   local-bounds-family environments, and an explicit bridge turns an
   active-endpoint not-captured provider into store-safe summary evidence. The
   unresolved public theorem gap is isolated to deriving one such
@@ -82,11 +83,11 @@ validity checks must be represented in Rocq and the extracted checker.
      OCaml fallback logic or weakening the public theorem with a new premise.
    - Derive, from the active endpoint or existing public callbacks, one concrete
      no-receiver-branch provider strong enough for the existing active-endpoint
-     wrappers: summary-at or store-safe evidence-at, store-safe summary
-     evidence, checked component summary, component-body store-safe/summary
-     evidence, local-bounds route evidence, a not-captured/non-captured
-     provider, exact non-captured provider evidence, or an exact-body
-     local-bounds/scoped package provider.
+     wrappers: exact-body route-package, summary-at or store-safe
+     evidence-at, store-safe summary evidence, checked component summary,
+     component-body store-safe/summary evidence, local-bounds route evidence, a
+     not-captured/non-captured provider, exact non-captured provider evidence,
+     or an exact-body local-bounds/scoped package provider.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

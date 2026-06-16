@@ -14680,6 +14680,28 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_exact_closure_in_local_bounds_family_when_not_captured :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_summary
+      env' fdef = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin Hcaptured.
+  destruct Hbase as (bounds_base & ->).
+  destruct Hfamily as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_exact_closure_when_not_captured;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_uncaptured_local_bounds_route_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->

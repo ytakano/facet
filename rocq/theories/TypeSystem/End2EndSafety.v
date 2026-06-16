@@ -13339,6 +13339,29 @@ Proof.
 Qed.
 
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_combined_summary_with_direct_receiver_eq :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' fdef =
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' fdef.
+Proof.
+  intros env env' fdef Hprog Hno_receiver Hin.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_summary_facts
+      env env' fdef Hprog Hno_receiver Hin) as [Hdirect _Hgeneric].
+  unfold check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  rewrite Hdirect.
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary env' fdef);
+    reflexivity.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
   forall env base env0 fdef,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary

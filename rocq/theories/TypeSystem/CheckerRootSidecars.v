@@ -2630,6 +2630,23 @@ Definition check_program_env_end2end_assoc_direct_receiver_mixed
   | infer_err _ => false
   end.
 
+Definition infer_program_env_end2end_assoc_direct_receiver_base_mixed
+    (env : global_env) : infer_result global_env :=
+  match infer_program_env_end2end_assoc_direct_receiver_base env with
+  | infer_err err => infer_err err
+  | infer_ok env' =>
+      if check_env_end2end_direct_receiver_mixed_ready env'
+      then infer_ok env'
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Definition check_program_env_end2end_assoc_direct_receiver_base_mixed
+    (env : global_env) : bool :=
+  match infer_program_env_end2end_assoc_direct_receiver_base_mixed env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+
 Definition infer_program_env_end2end_assoc_direct_receiver_absent_mixed
     (env : global_env) : infer_result global_env :=
   match infer_program_env_end2end_assoc env with

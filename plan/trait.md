@@ -45,9 +45,12 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds summaries, no-receiver receiver-aware combined readiness,
   component-body/component-with-body-summary providers, extracted absence and
   synthetic proof endpoints, an assoc direct-receiver-base per-function gate,
-  and literal narrow-summary support. The direct-receiver method sidecar now
-  accepts the basic UFCS direct receiver fixture, and the assoc direct-receiver-
-  base endpoint accepts that fixture; it is still not the active CLI authority.
+  literal narrow-summary support, and an assoc direct-receiver-base mixed proof
+  endpoint that combines the per-function gate with the existing mixed env gate.
+  The direct-receiver method sidecar now accepts the basic UFCS direct receiver
+  fixture, and the assoc direct-receiver-base endpoint accepts that fixture; the
+  new base-mixed endpoint is proof infrastructure and is not the active CLI
+  authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -104,8 +107,12 @@ validity checks must be represented in Rocq and the extracted checker.
 - Direct-call receiver activation is now blocked on the no-receiver branch of
   the active mixed endpoint. The direct-receiver method sidecar is true for
   `main` in the basic direct-call receiver fixture, and
-  `infer_program_env_end2end_assoc_direct_receiver_base` accepts it, but the
-  active mixed endpoint still rejects `main` with `ErrEndToEndSafetyGateFailed`.
+  `infer_program_env_end2end_assoc_direct_receiver_base` accepts it. A temporary
+  retarget from active mixed to the base per-function endpoint clears the
+  per-function gate and then fails at the env-level mixed gate. Diagnostics for
+  the basic fixture show `captured_or_component_with_direct=true` for all
+  functions, but `provenance=false`, `preservation=false`, and
+  `component=false`, so `check_env_end2end_direct_receiver_ready=false`.
   Existing active mixed case-split wrappers can use combined summaries only with
   additional route-preservation or exact-body callbacks, and the final public
   theorem currently has no such extra premise.

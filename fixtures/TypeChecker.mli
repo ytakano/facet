@@ -1646,6 +1646,12 @@ val infer_program_env_end2end_assoc_direct_receiver_mixed :
 
 val check_program_env_end2end_assoc_direct_receiver_mixed : global_env -> bool
 
+val infer_program_env_end2end_assoc_direct_receiver_base_mixed :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_assoc_direct_receiver_base_mixed :
+  global_env -> bool
+
 val infer_program_env_end2end_assoc_direct_receiver_absent_mixed :
   global_env -> global_env infer_result
 

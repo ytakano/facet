@@ -387,6 +387,97 @@ Proof.
     eauto.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_base :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
+    try discriminate.
+  injection Hprog as <-.
+  reflexivity.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_mixed_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_sound; eauto.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_mixed_base.
+  exact Hprog.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_base_mixed_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+        infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_base_mixed in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_mixed env)
+    as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_mixed_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_base_mixed env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_mixed_sound;
+    eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_mixed_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+        infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_base_mixed_infer_ok
+       env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_mixed_sound;
+    eauto.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_absent_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_absent_mixed env =

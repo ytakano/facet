@@ -16960,6 +16960,25 @@ let check_program_env_end2end_assoc_direct_receiver_mixed env =
   | Infer_ok _ -> true
   | Infer_err _ -> false
 
+(** val infer_program_env_end2end_assoc_direct_receiver_base_mixed :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+  match infer_program_env_end2end_assoc_direct_receiver_base env with
+  | Infer_ok env' ->
+    if check_env_end2end_direct_receiver_mixed_ready env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_direct_receiver_base_mixed :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_base_mixed env =
+  match infer_program_env_end2end_assoc_direct_receiver_base_mixed env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
 (** val infer_program_env_end2end_assoc_direct_receiver_absent_mixed :
     global_env -> global_env infer_result **)
 

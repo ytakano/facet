@@ -65,10 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
   receiver-method store-safe summaries to the ordinary captured-call summary,
   collapse the direct-receiver combined gate to the ordinary
   captured-or-component gate for each function, lift that collapse to a
-  whole-env direct-combined gate fact for the active endpoint, and expose the
-  direct-combined gate pointwise through local-bounds-family environments. This
-  still does not by itself discharge the exact-body or store-safe route packages
-  needed by the public runtime theorem.
+  whole-env direct-combined gate fact for the active endpoint, expose the
+  direct-combined gate as Prop-level readiness, and expose it pointwise through
+  local-bounds-family environments. This still does not by itself discharge the
+  exact-body or store-safe route packages needed by the public runtime theorem.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -121,9 +121,9 @@ validity checks must be represented in Rocq and the extracted checker.
   derive it.
 - Receiver-method target absence is not enough: those targets are distinct from
   ordinary direct-call targets. Even after collapsing receiver-method summary
-  checks and deriving whole-env and local-bounds direct-combined gates in the
-  no-receiver branch, a route-local exact-body or store/root evidence provider
-  is still required.
+  checks and deriving boolean, Prop-level, and local-bounds direct-combined
+  gates in the no-receiver branch, a route-local exact-body or store/root
+  evidence provider is still required.
 
 ## Key Decisions
 

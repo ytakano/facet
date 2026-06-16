@@ -13440,6 +13440,20 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_direct_combined_summary_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    env_fns_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
+      env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_direct_combined_check_ready;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_direct_combined_local_bounds_family_provider :
   forall env env' base env0 fdef,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

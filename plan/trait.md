@@ -108,9 +108,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - The remaining direct-call receiver activation blocker is proof-side. The
   active mixed endpoint exposes the combined captured-or-component gate, now
   pointwise and as unconditional plain Prop local-bounds summaries, with
-  component-body providers available from full component checks and directly
-  from the direct-ready branch, but the public runtime theorem still lacks a
-  concrete source for one route fact in the no-receiver-method branch. The
+  component-body and component-with-body-summary providers available from full
+  component checks and directly from the direct-ready branch, but the public
+  runtime theorem still lacks a concrete source for one route fact in the
+  no-receiver-method branch. The
   available static-component route is tied to the strict exact-closure base
   endpoint, so the next proof step must derive an assoc-base route/evidence
   provider rather than reuse that strict wrapper. The exact/non-captured provider shape remains the cleanest

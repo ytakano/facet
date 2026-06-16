@@ -5902,6 +5902,20 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_with_body_summary_provider_of_component_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+      env'.
+Proof.
+  intros env env' Hprog Hcomponent_check.
+  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
@@ -13502,6 +13516,19 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_compone
 Proof.
   intros env env' Hprog Hdirect_ready.
   eapply component_body_synthetic_direct_call_ready_summary_provider_of_store_safe.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+      env'.
+Proof.
+  intros env env' Hprog Hdirect_ready.
+  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
     eassumption.
 Qed.

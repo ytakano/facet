@@ -11346,6 +11346,60 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hdirect_ready Hinitial Hin Hstore Heval.
+  destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
+    as (Hprov_check & Hpres_check & Hdirect_check & Hcomponent_check).
+  assert (Hbase : infer_program_env_end2end_assoc env = infer_ok env').
+  { eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog. }
+  assert (Hunique : fn_env_unique_by_name env').
+  { eapply infer_program_env_end2end_assoc_unique_by_name. exact Hbase. }
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hunique.
+  - eapply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
+    eapply check_env_root_shadow_provenance_summary_ready.
+    exact Hprov_check.
+  - eapply check_env_preservation_ready_sound.
+    exact Hpres_check.
+  - exact Hdirect_check.
+  - exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
+Qed.
+
 
 Theorem infer_program_env_end2end_strict_exact_closure_direct_receiver_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->

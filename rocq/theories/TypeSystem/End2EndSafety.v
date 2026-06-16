@@ -478,6 +478,54 @@ Proof.
     eauto.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_ready_cases :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false \/
+    check_env_end2end_direct_receiver_ready env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
+    eqn:Hmixed_ready; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_end2end_direct_receiver_mixed_ready_cases.
+  exact Hmixed_ready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_of_no_receiver_method :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env'.
+Proof.
+  intros env env' Hbase Hno_receiver.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_mixed.
+  rewrite Hbase.
+  unfold check_env_end2end_direct_receiver_mixed_ready.
+  rewrite Hno_receiver. reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_of_direct_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env'.
+Proof.
+  intros env env' Hbase Hdirect_ready.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_mixed.
+  rewrite Hbase.
+  unfold check_env_end2end_direct_receiver_mixed_ready.
+  rewrite Hdirect_ready.
+  destruct (check_env_root_shadow_direct_receiver_method_present env');
+    reflexivity.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_absent_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_absent_mixed env =

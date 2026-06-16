@@ -50,7 +50,8 @@ validity checks must be represented in Rocq and the extracted checker.
   The direct-receiver method sidecar now accepts the basic UFCS direct receiver
   fixture, and the assoc direct-receiver-base endpoint accepts that fixture; the
   new base-mixed endpoint is proof infrastructure and is not the active CLI
-  authority.
+  authority. Its proof facts now expose the no-receiver/direct-ready branch
+  split and constructors from the base endpoint plus either branch condition.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary

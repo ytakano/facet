@@ -13479,6 +13479,33 @@ Proof.
 Qed.
 
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env'.
+Proof.
+  intros env env' Hprog Hdirect_ready.
+  destruct (check_env_end2end_direct_receiver_ready_facts
+    env' Hdirect_ready) as
+    (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_check).
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    component_body_synthetic_direct_call_ready_summary_provider env'.
+Proof.
+  intros env env' Hprog Hdirect_ready.
+  eapply component_body_synthetic_direct_call_ready_summary_provider_of_store_safe.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

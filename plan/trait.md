@@ -67,8 +67,9 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe summary, component-body store-safe, or exact-body/local-bounds
   evidence providers. Branch-aware public wrappers now close the direct-ready
   branch with existing callbacks and require store-safe summary evidence, a
-  checked component summary, or component-body store-safe summary evidence only
-  for the no-receiver-method branch. The no-receiver branch now also exports
+  checked component summary, component-body store-safe summary evidence, or
+  local-bounds route evidence only for the no-receiver-method branch. The
+  no-receiver branch now also exports
   reusable direct/generic receiver-method target absence facts through
   local-bounds environments; these facts are intentionally kept separate from
   ordinary direct-call exact-body route packages. The active endpoint now also
@@ -128,7 +129,8 @@ validity checks must be represented in Rocq and the extracted checker.
   lacks a concrete source for one stronger route fact in the
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary
-  evidence, or an equivalent exact-body/local-bounds provider. The branch does
+  evidence, local-bounds route evidence, or an equivalent exact-body provider.
+  The branch does
   expose local-bounds receiver-target absence facts, but receiver-method targets
   are distinct from ordinary direct-call targets, so those absence facts do not
   discharge exact-body ordinary call packages by themselves and are not yet

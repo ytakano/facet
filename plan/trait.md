@@ -46,11 +46,14 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body/component-with-body-summary providers from component checks and
   from the direct-ready branch, and an extracted captured-summary absence gate
   with endpoint-local facts plus public and local-bounds branch wrappers
-  consumable by exact/non-captured routes. A separate extracted
-  `infer_program_env_end2end_assoc_direct_receiver_absent_mixed` endpoint now
-  requires captured-summary absence on the no-receiver branch or direct-ready
-  evidence, has checker soundness aliases, implies the active mixed endpoint,
-  and has a public runtime safety wrapper.
+  consumable by exact/non-captured routes. Separate extracted stricter
+  endpoints now cover two no-receiver branch shapes:
+  `infer_program_env_end2end_assoc_direct_receiver_absent_mixed` requires
+  captured-summary absence, and
+  `infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed` requires
+  plain synthetic direct-call summary evidence. Both endpoints have checker
+  soundness aliases, imply the active mixed endpoint, and have public runtime
+  safety wrappers.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -111,18 +114,20 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence-at, store-safe/plain shadow summary evidence, checked component or
   closure summary, local-bounds route evidence, endpoint-derived not-captured
   evidence, exact non-captured evidence, or an exact-body scoped package.
-- The strongest existing assoc-base path is still the exact/non-captured branch
-  wrapper. The checker now exposes an extracted captured-summary absence gate,
-  endpoint-local local-bounds facts, public/local-bounds branch wrappers, and a
-  stricter assoc-base absence-mixed endpoint with runtime safety. A temporary
-  CLI swap to that stricter endpoint rejected broad existing valid coverage
-  (`basic_assign`, borrow, core, enum, trait, and type-safety-ready-gap cases)
-  with `ErrEndToEndSafetyGateFailed`, so it is proof infrastructure rather than
-  a behavior-compatible authority. The active mixed endpoint still does not
-  require that gate in the no-receiver branch, so the public theorem cannot be
-  retargeted to the active CLI authority yet. Current receiver-method target
-  absence is insufficient because ordinary captured-call summaries are distinct
-  from receiver-method summaries.
+- The strongest existing assoc-base paths are now stricter proof endpoints for
+  captured-summary absence and synthetic-summary evidence on the no-receiver
+  branch. The checker exposes the captured-summary absence gate, synthetic
+  direct-call summary gate, endpoint-local local-bounds facts, public/local-
+  bounds branch wrappers, and runtime safety wrappers for both stricter
+  endpoints. A temporary CLI swap to the absence-mixed endpoint rejected broad
+  existing valid coverage (`basic_assign`, borrow, core, enum, trait, and
+  type-safety-ready-gap cases) with `ErrEndToEndSafetyGateFailed`, so these are
+  proof infrastructure rather than behavior-compatible authorities until a
+  stricter endpoint is shown to preserve valid coverage. The active mixed
+  endpoint still does not require either stronger gate in the no-receiver
+  branch, so the public theorem cannot be retargeted to the active CLI
+  authority yet. Current receiver-method target absence is insufficient because
+  ordinary captured-call summaries are distinct from receiver-method summaries.
 
 ## Key Decisions
 

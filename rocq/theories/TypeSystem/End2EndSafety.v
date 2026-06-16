@@ -374,6 +374,118 @@ Proof.
     eauto.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_base :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_synthetic_mixed_ready
+    env_checked); try discriminate.
+  injection Hprog as <-.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_of_synthetic_mixed :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed
+    in Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_synthetic_mixed_ready
+    env_checked) eqn:Hsynthetic_ready; try discriminate.
+  rewrite
+    (check_env_end2end_direct_receiver_mixed_ready_of_synthetic_mixed_ready
+      env_checked Hsynthetic_ready).
+  exact Hprog.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_sound; eauto.
+  eapply infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_base.
+  exact Hprog.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_synthetic_mixed_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_synthetic_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+        infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_synthetic_mixed
+    in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env)
+    as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_synthetic_mixed_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_synthetic_mixed env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_sound;
+    eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_synthetic_mixed_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_synthetic_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+        infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_synthetic_mixed_infer_ok
+       env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_sound;
+    eauto.
+Qed.
+
 Lemma check_program_env_end2end_infer_ok :
   forall env,
     check_program_env_end2end env = true ->
@@ -13682,6 +13794,91 @@ Proof.
   exact Hmixed_ready.
 Qed.
 
+
+Lemma check_fn_root_shadow_synthetic_direct_call_ready_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef = true ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_synthetic_direct_call_ready_summary in Hcheck.
+  destruct (direct_call_target_expr (fn_body fdef))
+    as [[[fname args] synthetic_body] |] eqn:Htarget; try discriminate.
+  apply andb_true_iff in Hcheck as [Hready Hcheck].
+  destruct (infer_env_roots_shadow_safe env
+              (fn_with_body fdef synthetic_body)
+              (initial_root_env_for_fn fdef))
+    as [[[[T_body Gamma_body] R_out] roots] | err] eqn:Hshadow;
+    try discriminate.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[Hcompat Hroots] Henv].
+  assert (Hsynthetic_body : synthetic_body = ECall fname args).
+  { unfold direct_call_target_expr in Htarget.
+    destruct (fn_body fdef); try discriminate.
+    - inversion Htarget. reflexivity.
+    - destruct e; try discriminate.
+      inversion Htarget. reflexivity. }
+  assert (Hargs_ready : preservation_ready_args args).
+  { unfold direct_call_ready_expr_b in Hready.
+    rewrite Hsynthetic_body in Hready.
+    simpl in Hready.
+    apply preservation_ready_args_b_sound. exact Hready. }
+  split.
+  - change (NoDup
+      (ctx_names
+        (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+    eapply infer_env_roots_shadow_safe_params_nodup. exact Hshadow.
+  - pose proof
+      (infer_env_roots_shadow_safe_sound env
+        (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+        T_body Gamma_body R_out roots Hshadow) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_actual & Gamma_actual & Htyped_body & Hcompat_body & _).
+    exists fname, args, synthetic_body, T_actual, Gamma_actual, R_out, roots.
+    repeat split.
+    + exact Htarget.
+    + exact Hsynthetic_body.
+    + rewrite Hsynthetic_body. apply PDCR_Call. exact Hargs_ready.
+    + exact Htyped_body.
+    + exact Hcompat_body.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_env_root_shadow_synthetic_direct_call_ready_summary_evidence :
+  forall env,
+    check_env_root_shadow_synthetic_direct_call_ready_summary env = true ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  pose proof (lookup_fn_in fname (env_fns env) fdef Hlookup) as Hin.
+  unfold check_env_root_shadow_synthetic_direct_call_ready_summary in Hcheck.
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  eapply check_fn_root_shadow_synthetic_direct_call_ready_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_ready_cases :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false /\
+     check_env_root_shadow_synthetic_direct_call_ready_summary env' = true) \/
+    check_env_end2end_direct_receiver_ready env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_synthetic_mixed_ready env_checked)
+    eqn:Hmixed_ready; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_end2end_direct_receiver_synthetic_mixed_ready_cases.
+  exact Hmixed_ready.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts :
   forall env env' fdef,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -18527,6 +18724,69 @@ Proof.
     + exact Hstore.
     + exact Heval.
 Qed.
+
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_big_step_safe_checked_initial_ready :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed
+      env = infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hinitial Hin Hstore Heval.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_of_synthetic_mixed
+      env env' Hprog) as Hmixed.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed_ready_cases
+      env env' Hprog) as [[_Hno_receiver Hsynthetic] | Hdirect_ready].
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_branch_shadow_summary_evidence.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hmixed.
+    + intros _Hno_receiver_branch.
+      eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
+      exact Hsynthetic.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hmixed.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_store_safe_evidence_at_callbacks :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->

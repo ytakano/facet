@@ -66,7 +66,9 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence providers. Branch-aware public wrappers now close the direct-ready
   branch with existing callbacks and require store-safe summary evidence, a
   checked component summary, or component-body store-safe summary evidence only
-  for the no-receiver-method branch.
+  for the no-receiver-method branch. The no-receiver branch now also exports
+  reusable direct/generic receiver-method target absence facts through
+  local-bounds environments.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -116,7 +118,9 @@ validity checks must be represented in Rocq and the extracted checker.
   lacks a concrete source for one stronger route fact in the
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary
-  evidence, or an equivalent exact-body/local-bounds provider.
+  evidence, or an equivalent exact-body/local-bounds provider. The branch does
+  expose local-bounds receiver-target absence facts, but those facts are not yet
+  connected to one of the stronger store/root-safe evidence providers.
   Static runtime preservation helps only after such a provider has supplied
   route-local evidence; it is not itself an evidence-at provider.
 - The direct public-prefix route alone is insufficient because it requires

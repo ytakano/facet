@@ -13160,6 +13160,37 @@ Proof.
   exact Hmixed_ready.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In fdef (env_fns env') ->
+    direct_call_receiver_method_target_expr (fn_body fdef) = None /\
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) = None.
+Proof.
+  intros env env' fdef _Hprog Hno_receiver Hin.
+  eapply check_env_root_shadow_direct_receiver_method_present_false_facts;
+    eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts_in_local_bounds_family :
+  forall env env' env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    global_env_local_bounds_family env' env0 ->
+    In fdef (env_fns env0) ->
+    direct_call_receiver_method_target_expr (fn_body fdef) = None /\
+    generic_direct_call_receiver_method_target_expr (fn_body fdef) = None.
+Proof.
+  intros env env' env0 fdef Hprog Hno_receiver Hfamily Hin.
+  destruct Hfamily as (bounds & ->).
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts;
+    eauto.
+Qed.
+
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
   forall env base env0 fdef,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary

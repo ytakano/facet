@@ -9,10 +9,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Current State
 
-- Trait and impl items are parsed, lowered into Rocq/extracted environments,
-  and checked for duplicate, missing, extra, and mismatched associated types and
-  methods. Impl method bodies are elaborated to hidden functions and checked by
-  the extracted checker even when the method is not called.
+- Traits, impls, associated types, and trait methods are parsed, lowered into
+  Rocq/extracted environments, and checked by the extracted checker for
+  duplicate/missing/extra/mismatched associated items. Impl method bodies are
+  elaborated to hidden functions and checked even when the method is not called.
 - Method-local type parameters are supported for trait and impl methods,
   including method-local bounds and generic-trait impl remapping. Method-local
   lifetime generics remain deferred and are rejected by tests.
@@ -21,76 +21,35 @@ validity checks must be represented in Rocq and the extracted checker.
   `(Trait::method receiver args...)`. Dot method-call syntax is intentionally
   rejected in this phase.
 - Short UFCS currently accepts receiver types known before checker execution:
-  function parameters, syntactically typed literals, immutable pure local
-  literals after receiver-let elimination, fieldless struct literals, and
-  payloadless enum constructors whose store-safe argument evidence is checked in
-  Rocq. Field-bearing struct literals, payload-bearing enum constructors,
-  direct-call receivers, generic direct-call receivers, non-pure inferred
-  locals, and general annotated locals remain gated.
+  function parameters, typed literals, immutable pure local literals after
+  receiver-let elimination, fieldless struct literals, and payloadless enum
+  constructors whose store-safe argument evidence is checked in Rocq.
+  Field-bearing struct literals, payload-bearing enum constructors, direct-call
+  receivers, generic direct-call receivers, non-pure inferred locals, and
+  general annotated locals remain gated.
 - Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
   accepted inside the current trait/impl context. Generic projections under
   local trait bounds are preserved and regression-tested. Raw elaboration keeps
   surface raw expressions and normalizes associated projections only at core
   checker boundaries.
-- Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
-  exported, and covered by assoc-boundary soundness. The OCaml CLI uses
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` as its only extracted
-  checker authority, with no fallback acceptance path.
-- Direct-call receiver support has Rocq-side runtime replay infrastructure for
-  hidden receiver lets, direct receiver-method summaries, raw/hidden evaluation
-  packaging, final-store matching, method-body replay, scoped live/consumed
-  expression-lift providers, and boolean soundness for the direct-extended
-  captured/direct-receiver-or-component summary gate.
-- The required public checker soundness aliases target the assoc-base mixed
-  endpoint: `infer_program_env_end2end_sound` and
-  `check_program_env_end2end_sound`. The required public runtime-safety theorem
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
-  the strict mixed endpoint.
-- The assoc-base mixed endpoint is exported, covered by assoc-boundary
-  soundness, and has branch runtime bridges for direct-ready and
-  no-receiver-method cases. Public-layer wrappers now cover the active endpoint
-  for the main route families: store-safe evidence-at, summary exact/call
-  packages, checked component summaries, component-body summaries,
-  exact-body/local-bounds packages, non-captured and exact non-captured
-  providers, static provider variants, call-statement routes, and branch-scoped
-  direct-ready/no-receiver splits. Exact-body local-bounds and scoped-package
-  consumers are also available in no-receiver-only form, no-receiver
-  summary-at routes now feed the store-safe evidence-at wrapper, and
-  no-receiver exact-body route packages feed that summary-at wrapper. The
-  active endpoint exposes uniqueness plus the ordinary captured-or-component
-  gate through local-bounds-family environments, and explicit bridges turn an
-  active-endpoint not-captured provider into store-safe and plain shadow summary
-  evidence. Public prefix preservation now specializes to store-safe evidence-at
-  routes when all-callee direct-call evidence-at is supplied, and also when
-  all-callee shadow summary-at evidence is supplied together with
-  root-name/root-key readiness. Public callbacks now also consume plain
-  component-body summary evidence, no-receiver whole-env shadow summary
-  evidence, and no-receiver all-not-captured evidence. Single-callee evidence
-  remains insufficient for the whole-environment callback. The unresolved public
-  theorem gap is isolated to deriving one such no-receiver-branch evidence
-  source from the active endpoint rather than to the direct-ready branch.
-- The no-receiver branch exports reusable direct/generic receiver-method target
-  absence facts through local-bounds environments. Those facts now collapse
-  receiver-method store-safe summaries to the ordinary captured-call summary,
-  collapse the direct-receiver combined gate to the ordinary
-  captured-or-component gate for each function, lift that collapse to a
-  whole-env direct-combined gate fact for the active endpoint, expose the
-  direct-combined gate as Prop-level readiness, and expose it pointwise through
-  local-bounds-family environments. The captured-call side remains a separate
-  safety route: there is no existing conversion from captured-call store-safe
-  summaries to plain synthetic shadow-summary evidence, so the active combined
-  gate still cannot be split into a whole-env summary provider. A proof-only
-  bridge now exposes the assoc exact-closure local-bounds route constructor
-  directly under the active mixed endpoint, so public wrappers can reuse
-  active-endpoint exact-closure providers without re-opening the base endpoint.
-  Active-endpoint exact-closure callee bridges now also recover seen-callee,
-  direct-callee component-check, and exact-body target facts through
-  local-bounds environments. This still does not by itself discharge the
-  exact-body or store-safe route packages needed by the public runtime theorem:
-  route-summary packages additionally need recursive summary-evidence-at for
-  each callee body, not just the callee component check and exact-body target.
-  The exact-closure `seen [root]` callee fact also cannot simply be promoted to
-  a full `seen []` exact-closure check, because `seen` is the cycle cutoff.
+- The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
+  its only extracted checker authority, with no fallback acceptance path. Public
+  checker soundness aliases target this assoc-base mixed endpoint. The public
+  runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
+  still targets the strict mixed endpoint.
+- Direct-call receiver proof work has established the active mixed endpoint,
+  branch splits for direct-ready/no-receiver cases, public wrappers for the main
+  route families, no-receiver receiver-method target absence/collapse facts, and
+  exact-closure bridges for local-bounds routes, seen callees, direct-callee
+  component checks, and exact-body targets.
+- The remaining activation gap is proof-side: the active endpoint exposes a
+  combined captured-or-component gate, but the no-receiver branch still needs one
+  concrete route/evidence source consumable by existing wrappers. Captured-call
+  summaries do not currently convert to plain synthetic shadow-summary evidence
+  or lift as Prop summaries through local-bounds environments. Exact-closure
+  callee facts provide component/target facts, but route-summary packages also
+  need recursive summary-evidence-at for each callee body; `seen [root]` cannot
+  be promoted to full `seen []` exact closure because `seen` is the cycle cutoff.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.

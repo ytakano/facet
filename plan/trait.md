@@ -114,11 +114,15 @@ validity checks must be represented in Rocq and the extracted checker.
 - The strongest existing assoc-base path is still the exact/non-captured branch
   wrapper. The checker now exposes an extracted captured-summary absence gate,
   endpoint-local local-bounds facts, public/local-bounds branch wrappers, and a
-  stricter assoc-base absence-mixed endpoint with runtime safety. The active
-  mixed endpoint still does not require that gate in the no-receiver branch, so
-  the public theorem cannot be retargeted to the active CLI authority yet.
-  Current receiver-method target absence is insufficient because ordinary
-  captured-call summaries are distinct from receiver-method summaries.
+  stricter assoc-base absence-mixed endpoint with runtime safety. A temporary
+  CLI swap to that stricter endpoint rejected broad existing valid coverage
+  (`basic_assign`, borrow, core, enum, trait, and type-safety-ready-gap cases)
+  with `ErrEndToEndSafetyGateFailed`, so it is proof infrastructure rather than
+  a behavior-compatible authority. The active mixed endpoint still does not
+  require that gate in the no-receiver branch, so the public theorem cannot be
+  retargeted to the active CLI authority yet. Current receiver-method target
+  absence is insufficient because ordinary captured-call summaries are distinct
+  from receiver-method summaries.
 
 ## Key Decisions
 

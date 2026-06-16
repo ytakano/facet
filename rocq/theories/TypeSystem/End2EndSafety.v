@@ -990,6 +990,32 @@ Proof.
   exact Hfns.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_component_ready_when_not_captured :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcaptured.
+  pose proof (infer_program_env_end2end_assoc_check_env_ready
+                env env' Hprog) as Hcheck.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck.
+  apply forallb_forall with (x := f_component) in Hcheck; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck.
+  rewrite Hcaptured in Hcheck.
+  split.
+  - destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+                env' f_component Hcheck) as [Hcomponent _].
+    exact Hcomponent.
+  - exact Hcheck.
+Qed.
+
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->

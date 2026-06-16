@@ -50,9 +50,11 @@ validity checks must be represented in Rocq and the extracted checker.
   by assoc-boundary soundness wrappers, has a direct-ready runtime branch
   theorem, and is now the target of the public direct-ready, case-split route,
   and exact-body route-package mixed runtime wrappers. The assoc-base component
-  bridge now accepts explicit call routes and exact-body scoped route packages;
-  the remaining public runtime path is the static/component callback wrapper
-  chain.
+  bridge now accepts explicit call routes and
+  exact-body scoped route packages. Assoc-base endpoint success exposes
+  no-capture component exact-closure only in the non-captured branch; the
+  remaining public runtime path must thread that branch evidence through the
+  static/component callback wrapper chain.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
   contradictions for the no-method branch, collapse back to ordinary
@@ -140,8 +142,9 @@ validity checks must be represented in Rocq and the extracted checker.
   assoc-base component-check bridge, and an exact-body scoped route-package
   bridge into that component path. The public checker soundness aliases now
   target it. The next activation blocker is the no-receiver/assoc branch:
-  thread the static callback package through this route-package bridge, or
-  derive equivalent summary/provider premises, from the public
+  thread the static callback package and non-captured branch evidence through
+  this route-package bridge, or derive equivalent summary/provider premises,
+  from the public
   synthetic direct-call-ready/runtime assumptions so the required public runtime
   theorem can target this assoc-base mixed endpoint, then switch the CLI to it.
 

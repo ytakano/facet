@@ -2680,6 +2680,84 @@ Proof.
     exact Hlookup.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_callee_seen_of_lookup_in_local_bounds_family :
+  forall env env' base env0 f_component fname args synthetic_body fcallee,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname (env_fns env0) = Some fcallee ->
+    exists fuel',
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+        fuel' [fn_name f_component] env' fcallee = true.
+Proof.
+  intros env env' base env0 f_component fname args synthetic_body fcallee
+    _Hprog Hbase Henv Hexact Htarget Hlookup.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hlookup.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen.
+  - exact Hexact.
+  - exact Htarget.
+  - eapply lookup_fn_b_of_lookup_fn.
+    exact Hlookup.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_callee_component_check_of_lookup_in_local_bounds_family :
+  forall env env' base env0 f_component fname args synthetic_body fcallee,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname (env_fns env0) = Some fcallee ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fcallee = true.
+Proof.
+  intros env env' base env0 f_component fname args synthetic_body fcallee
+    Hprog Hbase Henv Hin_component Hcomponent_check Hexact Htarget Hlookup.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_callee_seen_of_lookup_in_local_bounds_family
+              env env' base env0 f_component fname args synthetic_body fcallee
+              Hprog Hbase Henv Hexact Htarget Hlookup) as (fuel' & Hseen).
+  destruct (CheckerOrdinary.ident_in_b (fn_name fcallee) [fn_name f_component])
+    eqn:Hseen_name.
+  - simpl in Hseen_name.
+    destruct (ident_eqb (fn_name fcallee) (fn_name f_component))
+      eqn:Hname; try discriminate.
+    apply ident_eqb_eq in Hname.
+    destruct Hbase as (bounds_base & ->).
+    destruct Henv as (bounds & ->).
+    change (lookup_fn fname
+      (env_fns
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' bounds_base) bounds)) =
+      Some fcallee) with
+      (lookup_fn fname (env_fns env') = Some fcallee) in Hlookup.
+    destruct (lookup_fn_in_name fname (env_fns env') fcallee Hlookup)
+      as [Hin_callee _Hname_callee].
+    assert (Heq : fcallee = f_component).
+    { eapply infer_program_env_end2end_assoc_direct_receiver_mixed_unique_by_name.
+      - exact Hprog.
+      - exact Hin_callee.
+      - exact Hin_component.
+      - exact Hname. }
+    subst fcallee.
+    exact Hcomponent_check.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_direct_callee_component_check_of_lookup_in_local_bounds_family :
   forall env env' base env0 f_component fname args synthetic_body fcallee,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

@@ -83,7 +83,9 @@ validity checks must be represented in Rocq and the extracted checker.
   bridge now exposes the assoc exact-closure local-bounds route constructor
   directly under the active mixed endpoint, so public wrappers can reuse
   active-endpoint exact-closure providers without re-opening the base endpoint.
-  This still does not by itself discharge the exact-body or store-safe route
+  Active-endpoint exact-closure callee bridges now also recover seen-callee and
+  direct-callee component-check facts through local-bounds environments. This
+  still does not by itself discharge the exact-body or store-safe route
   packages needed by the public runtime theorem.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is

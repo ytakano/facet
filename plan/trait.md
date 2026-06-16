@@ -52,10 +52,11 @@ validity checks must be represented in Rocq and the extracted checker.
   case-split routes, exact-body route packages, summary exact/call packages,
   summary-at routes, call-statement routes, component-summary providers,
   checked component summaries, and exact-body scoped/local-bounds packages.
-  These wrappers expose active-endpoint paths. A public-layer retarget
-  candidate now proves runtime safety for the assoc-base mixed endpoint from the
-  existing public premises plus one explicit store-safe evidence-at route
-  premise; the required public theorem still lacks that premise. Public
+  These wrappers expose active-endpoint paths. Public-layer retarget
+  candidates now prove runtime safety for the assoc-base mixed endpoint from the
+  existing public premises plus explicit store-safe evidence-at route evidence,
+  either globally or only in the no-receiver-method branch; the required public
+  theorem still lacks that evidence source. Public
   callback bridges now derive the summary exact-call package for the assoc-base
   mixed endpoint when global store-safe summary evidence, a checked component
   summary, or a component-body store-safe summary provider is available. The
@@ -111,9 +112,10 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding a new
   public premise. Existing assoc-base wrappers can consume several explicit
   exact-closure, component-summary, exact-body package, branch-aware, and
-  local-bounds provider shapes. The direct retarget candidate only needs a
-  store-safe evidence-at route premise, and the public callbacks can now feed a
-  summary-exact route when supplied with global store-safe summary evidence, the
+  local-bounds provider shapes. The direct retarget candidate only needs
+  store-safe evidence-at route evidence in the no-receiver-method branch, and
+  the public callbacks can now feed a summary-exact route when supplied with
+  global store-safe summary evidence, the
   checked component summary, or component-body store-safe summary evidence. The
   active endpoint exposes the combined captured-or-component gate at both
   checker and Prop-ready levels, and the direct-ready branch is closed by

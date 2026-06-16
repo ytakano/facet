@@ -80,8 +80,10 @@ validity checks must be represented in Rocq and the extracted checker.
   exposes the exact-body synthetic-evidence route with component-body closure
   checks through public mixed wrappers, including branch-aware wrappers that
   require exact-body evidence, component-body closure, static exact-body route
-  packages, or static assoc-base non-captured component providers only in the
-  no-receiver-method branch. These routes still require those explicit
+  packages, static non-captured component providers, static exact
+  non-captured providers, static exact local-bounds providers, or static
+  assoc-base non-captured component providers only in the no-receiver-method
+  branch. These routes still require those explicit
   exact-body/local-bounds/component facts when that branch is taken.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
@@ -135,8 +137,8 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver-method branch, now isolated as conditional store-safe summary
   evidence, a checked component summary, component-body store-safe summary
   evidence, branch-local-bounds route evidence, non-captured or exact
-  non-captured provider evidence, a static non-captured component provider, or
-  an equivalent exact-body/static exact-body provider.
+  non-captured provider evidence, static non-captured/exact/component provider
+  evidence, or an equivalent exact-body/static exact-body provider.
   The branch does
   expose local-bounds receiver-target absence facts, but receiver-method targets
   are distinct from ordinary direct-call targets, so those absence facts do not

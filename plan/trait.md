@@ -54,8 +54,10 @@ validity checks must be represented in Rocq and the extracted checker.
   this route from `infer_program_env_end2end_assoc_strict_exact_closure`, but
   that proof does not retarget the active assoc-base endpoint used by the CLI.
   The strongest existing assoc-base path is the exact/non-captured branch
-  wrapper, which reduces activation to proving captured-summary absence through
-  local-bounds-family environments in the no-receiver-method branch.
+  wrapper, which would reduce activation to proving captured-summary absence
+  through local-bounds-family environments in the no-receiver-method branch. The
+  current captured-summary checker has a broad whole-body fallback, so this
+  absence does not follow from receiver-method target absence alone.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -107,11 +109,14 @@ validity checks must be represented in Rocq and the extracted checker.
   route fact in the no-receiver-method branch. The available static-component
   route is tied to the strict exact-closure base endpoint, so the next proof step
   must derive an assoc-base route/evidence provider rather than reuse that
-  strict wrapper. The current preferred target is the exact/non-captured
-  provider shape: for every local-bounds-family function, prove
+  strict wrapper. The exact/non-captured provider shape remains the cleanest
+  existing assoc-base wrapper, but it now requires a new checker-side distinction
+  or a stronger endpoint fact: for every local-bounds-family function, prove
   `check_fn_root_shadow_captured_call_store_safe_summary env' fdef = false`
   under the no-receiver-method branch. Existing branch wrappers can consume that
-  fact once supplied; they do not derive it.
+  fact once supplied; they do not derive it, and receiver-method target absence
+  alone is insufficient because captured-summary checking can succeed on the
+  whole function body.
 - Receiver-method target absence is not enough: those targets are distinct from
   ordinary direct-call targets. Even after collapsing receiver-method summary
   checks and deriving boolean, Prop-level, and local-bounds direct-combined

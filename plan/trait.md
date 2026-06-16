@@ -50,16 +50,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the strict mixed endpoint. The assoc-base mixed endpoint is exported, covered
   by assoc-boundary soundness wrappers, has a direct-ready runtime branch
   theorem, and is now the target of the public direct-ready, case-split route,
-  and exact-body route-package mixed runtime wrappers. The assoc-base component
-  bridge now accepts explicit call routes and
-  exact-body scoped route packages. Assoc-base endpoint success exposes
-  no-capture component exact-closure only in the non-captured branch, and that
-  branch now has a local-bounds exact-body scoped route package. The remaining
-  public runtime path has a prefix adapter for this package, but still exposes
-  the existing whole-env component-summary premise. The next step is to derive
-  the route-context non-captured/component provider, or split the captured and
-  non-captured branches before that bridge, so the public runtime theorem can
-  stop requiring the stronger component check.
+  and exact-body route-package mixed runtime wrappers. It also has a base-route
+  bridge that will retarget the mixed runtime path once the non-strict assoc
+  local-bounds route theorem is available. The missing theorem is
+  `infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family`.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
   contradictions for the no-method branch, collapse back to ordinary
@@ -92,10 +86,8 @@ validity checks must be represented in Rocq and the extracted checker.
   checker boundaries.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
   exported, and covered by assoc-boundary soundness. The assoc-base mixed
-  endpoint is also executable, exported, and proved against the assoc boundary.
-  The OCaml CLI still uses the older assoc-aware endpoint until the assoc-base
-  mixed endpoint has the required public runtime-safety theorem and can become
-  the sole CLI authority.
+  endpoint is also executable, exported, proved against the assoc boundary, and
+  used by the OCaml CLI as the sole accept/reject checker authority.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -105,8 +97,6 @@ validity checks must be represented in Rocq and the extracted checker.
 1. Finish direct-call receiver activation.
    - Retarget the required public runtime theorem name to the assoc-base
      mixed endpoint without adding OCaml fallback logic.
-   - Switch the OCaml accept/reject path to the extracted assoc-base mixed
-     endpoint after the public runtime theorem targets it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -137,21 +127,13 @@ validity checks must be represented in Rocq and the extracted checker.
   broad enough to be the active CLI authority.
 - The mixed endpoint avoids the final direct-receiver gate for programs
   without direct receiver-method bodies, and receiver-method target detection is
-  no longer triggered by ordinary non-impl generic calls. A trial CLI switch to
-  the mixed endpoint still rejects existing valid direct-call and HRT/module
-  programs before the mixed gate runs, because its underlying assoc strict
-  exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
-  The assoc-base mixed endpoint now avoids that strict exact-closure base and
-  has assoc-boundary soundness wrappers, a direct-ready runtime branch theorem,
-  public direct-ready/case-split route wrappers, an explicit-call-route
-  assoc-base component-check bridge, and an exact-body scoped route-package
-  bridge into that component path. The public checker soundness aliases now
-  target it. The next activation blocker is the no-receiver/assoc branch:
-  the static callback package now has a non-captured local-bounds route-package
-  adapter, but it still needs either a derived route-context provider for
-  captured=false plus component=true or an earlier captured/non-captured branch
-  split. Once that removes the whole-env component-summary premise, retarget the
-  required public runtime theorem to this assoc-base mixed endpoint.
+  no longer triggered by ordinary non-impl generic calls. The assoc-base mixed
+  endpoint now avoids the strict exact-closure base that rejected existing valid
+  direct-call and HRT/module programs, and the CLI switch to this endpoint
+  passes the valid/invalid and FIR regression suites. The remaining activation
+  blocker is proof-side: derive the non-strict assoc local-bounds route theorem
+  named above, or split the captured/non-captured branch earlier, then retarget
+  the required public runtime theorem to this assoc-base mixed endpoint.
 
 ## Key Decisions
 

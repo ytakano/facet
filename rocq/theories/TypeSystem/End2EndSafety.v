@@ -1538,6 +1538,22 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_unique_by_name_in_local_bounds_family :
+  forall env env' base env0,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    fn_env_unique_by_name env0.
+Proof.
+  intros env env' base env0 Hprog Hbase Henv.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply infer_program_env_end2end_assoc_unique_by_name.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_closure_check_in_provider :
   forall env env',
     infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
@@ -1777,6 +1793,50 @@ Proof.
       * exact Hprog.
       * exact Hin.
       * exact Hcomponent_check.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_when_not_captured :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_summary
+      env' fdef = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    fn_env_unique_by_name env0 /\
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env0 fdef /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env0 fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcaptured
+    _Hcomponent_check.
+  split.
+  - eapply infer_program_env_end2end_assoc_unique_by_name_in_local_bounds_family;
+      eassumption.
+  - destruct Hbase as (bounds_base & ->).
+    destruct Henv as (bounds & ->).
+    change (env_fns
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env' bounds_base) bounds))
+      with (env_fns env') in Hin.
+    destruct (infer_program_env_end2end_assoc_component_ready_when_not_captured
+                env env' fdef Hprog Hin Hcaptured)
+      as [Hcomponent Hexact].
+    split.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+      * eapply fn_env_unique_by_name_global_env_with_local_bounds.
+        eapply infer_program_env_end2end_assoc_unique_by_name.
+        exact Hprog.
+      * eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+        -- eapply infer_program_env_end2end_assoc_unique_by_name.
+           exact Hprog.
+        -- exact Hcomponent.
+    + rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      exact Hexact.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family :
@@ -2025,6 +2085,32 @@ Proof.
     exact Hprog.
   - eapply infer_program_env_end2end_assoc_strict_exact_closure_summary_at_check_in_provider.
     exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_exact_body_route_scoped_package_local_bounds_family_when_not_captured :
+  forall env env',
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+      (fun env0 fdef =>
+        global_env_local_bounds_family env' env0 /\
+          In fdef (env_fns env0) /\
+          check_fn_root_shadow_captured_call_store_safe_summary
+            env' fdef = false /\
+          check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+            env' fdef = true).
+Proof.
+  intros env env' Hprog env0 fname fdef fcall used used' fname_body
+    args_body (Hfamily & Hin_component & Hcaptured & Hcomponent_check)
+    Hin Hname Hrename Htarget.
+  destruct
+    (infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_when_not_captured
+      env env' env' env0 fdef Hprog
+      (global_env_local_bounds_family_base env') Hfamily Hin_component
+      Hcaptured Hcomponent_check)
+    as [Hunique Hpayload].
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready;
+    try eassumption.
+  split; [exact Hunique | exact Hpayload].
 Qed.
 
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_scoped_package_local_bounds_family_with_route_summary :

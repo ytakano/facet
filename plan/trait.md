@@ -50,6 +50,9 @@ validity checks must be represented in Rocq and the extracted checker.
   callee facts provide component/target facts, but route-summary packages also
   need recursive summary-evidence-at for each callee body; `seen [root]` cannot
   be promoted to full `seen []` exact closure because `seen` is the cycle cutoff.
+  The strict mixed endpoint has static-component callback wrappers that close
+  this route from `infer_program_env_end2end_assoc_strict_exact_closure`, but
+  that proof does not retarget the active assoc-base endpoint used by the CLI.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -98,9 +101,11 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint exposes the combined captured-or-component gate, now
   pointwise through local-bounds-family environments, and closes the direct-ready
   branch, but the public runtime theorem still lacks a concrete source for one
-  route fact in the no-receiver-method branch.
-  Existing branch wrappers can consume that fact once supplied; they do not
-  derive it.
+  route fact in the no-receiver-method branch. The available static-component
+  route is tied to the strict exact-closure base endpoint, so the next proof step
+  must derive an assoc-base route/evidence provider rather than reuse that
+  strict wrapper. Existing branch wrappers can consume that fact once supplied;
+  they do not derive it.
 - Receiver-method target absence is not enough: those targets are distinct from
   ordinary direct-call targets. Even after collapsing receiver-method summary
   checks and deriving boolean, Prop-level, and local-bounds direct-combined

@@ -52,9 +52,10 @@ validity checks must be represented in Rocq and the extracted checker.
   case-split routes, exact-body route packages, summary exact/call packages,
   summary-at routes, call-statement routes, component-summary providers,
   checked component summaries, and exact-body scoped/local-bounds packages.
-  These wrappers expose active-endpoint paths but do not yet discharge the final
-  public theorem's callback requirements without an extra route/provider
-  premise.
+  These wrappers expose active-endpoint paths. A public-layer retarget
+  candidate now proves runtime safety for the assoc-base mixed endpoint from the
+  existing public premises plus one explicit store-safe evidence-at route
+  premise; the required public theorem still lacks that premise.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -95,8 +96,9 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding a new
   public premise. Existing assoc-base wrappers can consume several explicit
   exact-closure, component-summary, exact-body package, branch-aware, and
-  local-bounds provider shapes, but the public theorem still lacks a concrete
-  route-local evidence/component provider for the no-direct-ready branch.
+  local-bounds provider shapes, and the direct retarget candidate only needs a
+  store-safe evidence-at route premise, but the public theorem still lacks a
+  concrete source for that route in the no-direct-ready branch.
 - The direct public-prefix route alone is insufficient because it requires
   global callee evidence, while the assoc-base mixed case split needs
   route-local evidence-at or component-branch route facts for the no-receiver

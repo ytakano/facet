@@ -13362,6 +13362,59 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_combined_env_with_direct_receiver_eq :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' =
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  unfold check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  assert (Hforallb_eq :
+    forall fdefs,
+      (forall fdef,
+        In fdef fdefs ->
+        check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+          env' fdef =
+        check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+          env' fdef) ->
+      forallb
+        (check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+          env') fdefs =
+      forallb
+        (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+          env') fdefs).
+  { induction fdefs as [| fdef fdefs IH]; intros Hpoint; simpl.
+    - reflexivity.
+    - rewrite Hpoint by (left; reflexivity).
+      rewrite IH; [reflexivity |].
+      intros fdef' Hin. apply Hpoint. right. exact Hin. }
+  apply Hforallb_eq.
+  intros fdef Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_combined_summary_with_direct_receiver_eq;
+    eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_direct_combined_check_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_combined_env_with_direct_receiver_eq
+    env env' Hprog Hno_receiver).
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_combined_check_env_ready.
+  exact Hprog.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
   forall env base env0 fdef,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary

@@ -45,8 +45,8 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds summaries, no-receiver receiver-aware combined readiness,
   component-body/component-with-body-summary providers from component checks and
   from the direct-ready branch, and an extracted captured-summary absence gate
-  with endpoint-local facts and a public branch wrapper consumable by
-  exact/non-captured routes.
+  with endpoint-local facts plus public and local-bounds branch wrappers
+  consumable by exact/non-captured routes.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -107,11 +107,11 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, exact non-captured evidence, or an exact-body scoped package.
 - The strongest existing assoc-base path is still the exact/non-captured branch
   wrapper. The checker now exposes an extracted captured-summary absence gate,
-  endpoint-local local-bounds facts, and a public branch wrapper for that gate,
-  but the active mixed endpoint does not yet require the gate in the
-  no-receiver branch. Current receiver-method target absence is insufficient
-  because ordinary captured-call summaries are distinct from receiver-method
-  summaries.
+  endpoint-local local-bounds facts, and public/local-bounds branch wrappers
+  for that gate, but the active mixed endpoint does not yet require the gate in
+  the no-receiver branch. Current receiver-method target absence is
+  insufficient because ordinary captured-call summaries are distinct from
+  receiver-method summaries.
 
 ## Key Decisions
 

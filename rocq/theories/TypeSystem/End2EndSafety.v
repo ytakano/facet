@@ -16169,6 +16169,63 @@ Proof.
     + exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_absent_captured_summary_local_bounds_callbacks :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      check_env_root_shadow_captured_call_store_safe_summary_absent
+        env' = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_prefix Hprefix_ready
+    Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Hparam_ready env env' f s s' v Hprog Habsent_when_no_receiver
+    Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_non_captured_callbacks.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver base env0 fdef Hbase Hfamily Hin0.
+    destruct Hbase as (bounds_base & ->).
+    destruct Hfamily as (bounds & ->).
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_not_captured_of_absent_check.
+    + exact Hprog.
+    + exact Hno_receiver.
+    + exact (Habsent_when_no_receiver Hno_receiver).
+    + change (env_fns
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' bounds_base) bounds))
+        with (env_fns env') in Hin0.
+      exact Hin0.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_non_captured_component_provider_callbacks :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

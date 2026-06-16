@@ -33,18 +33,22 @@ validity checks must be represented in Rocq and the extracted checker.
   expression-lift providers, and boolean soundness for the direct-extended
   captured/direct-receiver-or-component summary gate.
 - The extracted checker exports transitional strict and assoc strict
-  direct-receiver endpoints plus the mixed assoc direct-receiver endpoint,
-  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-  The mixed endpoint runs the assoc strict exact-closure checker, then requires
-  the direct-receiver safety gate only when an elaborated function body has a
-  direct or generic direct receiver-method shape. Receiver-method target
-  detection is now restricted to synthetic impl method names, avoiding ordinary
-  generic calls whose first argument happens to be a direct call.
-- Required public checker soundness aliases target the mixed endpoint:
-  `infer_program_env_end2end_sound` and `check_program_env_end2end_sound`. The
-  required public runtime-safety theorem
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` now also
-  targets the mixed assoc direct-receiver endpoint.
+  direct-receiver endpoints, the strict mixed assoc direct-receiver endpoint
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`,
+  and the assoc-base mixed endpoint
+  `infer_program_env_end2end_assoc_direct_receiver_mixed`. The assoc-base
+  mixed endpoint runs the older assoc checker, then requires the
+  direct-receiver safety gate only when an elaborated function body has a direct
+  or generic direct receiver-method shape. Receiver-method target detection is
+  restricted to synthetic impl method names, avoiding ordinary generic calls
+  whose first argument happens to be a direct call.
+- Required public checker soundness aliases still target the strict mixed
+  endpoint: `infer_program_env_end2end_sound` and
+  `check_program_env_end2end_sound`. The required public runtime-safety theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` also still
+  targets the strict mixed endpoint. The assoc-base mixed endpoint is exported
+  and covered by assoc-boundary soundness wrappers, but is not yet the public
+  runtime-safety target.
 - Mixed endpoint success exposes the underlying assoc strict exact-closure
   success, checked-env uniqueness/readiness facts, no-receiver target
   contradictions for the no-method branch, collapse back to ordinary
@@ -76,9 +80,11 @@ validity checks must be represented in Rocq and the extracted checker.
   surface raw expressions and normalizes associated projections only at core
   checker boundaries.
 - Assoc-aware checked core/env/full/end-to-end entrypoints are executable,
-  exported, and covered by assoc-boundary soundness. The OCaml CLI still uses
-  the older assoc-aware endpoint until the mixed endpoint has the required
-  public runtime-safety theorem and can become the sole CLI authority.
+  exported, and covered by assoc-boundary soundness. The assoc-base mixed
+  endpoint is also executable, exported, and proved against the assoc boundary.
+  The OCaml CLI still uses the older assoc-aware endpoint until the assoc-base
+  mixed endpoint has the required public runtime-safety theorem and can become
+  the sole CLI authority.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -86,8 +92,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Switch the OCaml accept/reject path to the extracted mixed endpoint now
-     that all required public theorem names target it.
+   - Retarget the required public checker/runtime theorem names to the
+     assoc-base mixed endpoint without adding OCaml fallback logic.
+   - Switch the OCaml accept/reject path to the extracted assoc-base mixed
+     endpoint after the public runtime theorem targets it.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -122,8 +130,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the mixed endpoint still rejects existing valid direct-call and HRT/module
   programs before the mixed gate runs, because its underlying assoc strict
   exact-closure endpoint raises `ErrEndToEndSafetyGateFailed` for those bodies.
-  The next activation blocker is broadening or retargeting that strict
-  exact-closure base while preserving the required public theorem names.
+  The assoc-base mixed endpoint now avoids that strict exact-closure base and
+  has assoc-boundary soundness wrappers. The next activation blocker is
+  retargeting the required public runtime-safety theorem to this assoc-base
+  mixed endpoint, then switching the CLI to it.
 
 ## Key Decisions
 

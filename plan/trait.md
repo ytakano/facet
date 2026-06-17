@@ -43,10 +43,10 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe synthetic direct-call route, a public-prefix bridge that retargets
   the active mixed endpoint once the summary-evidence route is supplied, a
   runtime theorem for `assoc_direct_receiver_base` under the existing global
-  replay evidence, an exported verified
-  `assoc_direct_receiver_base_direct_component_ready_checks` diagnostic endpoint,
-  proved-safe absent/synthetic/component mixed endpoints, and a provider-based
-  runtime bridge for `assoc_direct_receiver_base_combined` that can route direct
+  replay evidence, exported verified `assoc_direct_receiver_base` diagnostic
+  endpoints with direct-component and global-summary ready checks, proved-safe
+  absent/synthetic/component mixed endpoints, and a provider-based runtime
+  bridge for `assoc_direct_receiver_base_combined` that can route direct
   receiver methods through scoped body-lift providers while routing no-capture
   components through component-body summary providers. The stronger endpoints
   remain proof diagnostics because their gates rejected broad existing valid
@@ -73,10 +73,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
-   - Package the `assoc_direct_receiver_base_combined` runtime bridge behind a
-     concrete verified wrapper by deriving its provenance, preservation,
-     component-body summary-provider, and exact-package premises without
-     reintroducing the broad global component gate.
+   - Derive the `assoc_direct_receiver_base_combined` component-body summary
+     provider from per-component checker evidence rather than from a broad
+     global synthetic-summary gate, then package that evidence in a verified
+     wrapper.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -119,9 +119,12 @@ validity checks must be represented in Rocq and the extracted checker.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid
-  flips. It is not active yet: the new runtime bridge still requires a concrete
-  wrapper that supplies provenance, preservation, component-body summary, and
-  exact-package evidence from checker premises.
+  flips. The exported `base_combined_summary_ready_checks` wrapper is proved
+  runtime-safe under the summary-exact package route, but a temporary CLI
+  retarget rejected those fixtures and representative valid programs because
+  the global synthetic-summary check is too broad. Activation now needs the
+  same component-body provider evidence derived locally for no-capture component
+  bodies instead of globally for every function.
 
 ## Key Decisions
 

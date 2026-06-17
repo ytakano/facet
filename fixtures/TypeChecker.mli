@@ -1667,6 +1667,12 @@ val infer_program_env_end2end_assoc_direct_receiver_base_combined :
 val check_program_env_end2end_assoc_direct_receiver_base_combined :
   global_env -> bool
 
+val infer_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready_checks :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready_checks :
+  global_env -> bool
+
 val infer_program_env_end2end_assoc_direct_receiver_base_direct_component :
   global_env -> global_env infer_result
 

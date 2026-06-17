@@ -88,6 +88,11 @@ validity checks must be represented in Rocq and the extracted checker.
   derived without a new public premise. The active endpoint exposes only a
   combined captured-or-component summary on the no-receiver branch, and
   receiver-method target absence alone does not imply captured-summary absence.
+  The existing local-bounds route wrappers can consume per-component synthetic
+  route evidence, but the no-receiver combined summary is disjunctive per
+  function: captured-summary functions do not yield the component synthetic
+  route evidence required by the component branch, and component-summary
+  evidence for all functions is behavior-incompatible with broad valid coverage.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -138,7 +143,11 @@ validity checks must be represented in Rocq and the extracted checker.
   theorem still has not been retargeted because the active CLI authority exposes
   only receiver-method absence on the no-receiver branch. Activation still needs
   a behavior-compatible no-receiver provider or an equivalent public-premise-free
-  lift.
+  lift. A route-specific proof pass confirmed that the available non-strict
+  combined-summary runtime paths still require either global store-safe
+  synthetic direct-call summary evidence or a full component-summary check, and
+  the strict exact-closure captured-or-component paths require strict exact
+  readiness that the active no-receiver branch does not expose.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

@@ -36,115 +36,30 @@ validity checks must be represented in Rocq and the extracted checker.
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Proof infrastructure for direct-call receivers includes active-mixed branch
-  splits, no-receiver/direct-ready bridges, local-bounds route helpers,
-  exact-body route/package bridges, public-callback wrappers for the active
-  mixed endpoint, active-mixed runtime theorems under the assoc-compatible
-  store-safe synthetic direct-call route, active public-form store-safe summary
-  route, and strict-public store-safe summary route, a public-prefix bridge
-  that retargets
-  the active mixed endpoint once the summary-evidence route is supplied, a
-  strict-public runtime bridge through that active mixed prefix/summary route,
-  strict-public exact-body/package, package-at, and component summary
-  provider/check, component-only same-result, assoc-base non-captured
-  provider, store-safe summary-evidence, component-check, component-body
-  store-safe summary, component-body summary, component-body summary scoped
-  provider branch, component-body summary boolean branch, branch shadow summary,
-  branch not-captured, branch
-  absent-captured summary, package-at component-body, and
-  package-at component-check branch, package-at-all component-check branch,
-  local-bounds component-check branch, derived local-bounds component-check
-  branch, scoped-package component-check branch, and call-statement
-  component-check bridges through active mixed public routes,
-  public-form
-  exact-body/package-to-summary route conversions, public
-  exact-body/package-to-store-safe summary route conversions, and a
-  public-callback exact-body/package route that now consumes the
-  store-safe summary route instead of the store-static sidecar,
-  exact-body/component store-static wrappers, the package component-check
-  static wrapper, the package component-body-summary provider wrapper, and
-  the local-bounds exact-body static wrapper factored through prefix routes,
-  the canonical public runtime
-  theorem narrowed through the prefix route,
-  the no-receiver component body-summary provider route exposed in
-  prefix-evidence form, the branch exact-body/package component-summary
-  provider route exposed in prefix-evidence form, the with-body variant of
-  that branch route exposed in prefix-evidence form, package-at-all
-  component-summary branch routes exposed in prefix-evidence form, the
-  branch exact-body/package component-check route exposed in prefix-evidence
-  form, and strict-public package-at-all component-check plus
-  local-bounds/derived-local-bounds/scoped-package component-check branch
-  routes exposed in prefix-evidence form,
-  and a runtime theorem for `assoc_direct_receiver_base` under
-  the existing global replay evidence, exported verified
-  `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
-  global-summary, per-component summary, and
-  single-sidecar provenance/preservation/component-summary ready checks plus
-  a component-only boolean evidence bridge, runtime theorem under explicit
-  provenance/preservation evidence, active-to-base and strict-to-active checker
-  agreement, and reconstructed same-result bridge into the active mixed
-  public-callback route,
-  proved-safe absent/synthetic/component mixed endpoints, explicit public
-  exact-body/package, package-at, component-summary branch package-at,
-  component-check branch package-at, no-capture scoped-package bridges,
-  local-bounds derived exact-body public route bridges, branch bridges that
-  remove the separate exact-body premise, accept package-at with-body-summary
-  providers, convert component body-summary booleans into membership-scoped
-  check providers, and expose public-callback no-receiver branch routes through
-  scoped Prop providers, scoped check providers, unscoped provider wrappers, or
-  booleans while preserving the direct-ready branch, plus a provider-based
-  runtime bridge for `assoc_direct_receiver_base_combined` that
-  can route direct receiver methods through scoped body-lift providers while
-  routing no-capture components through component-body summary providers. The
-  stronger endpoints remain proof diagnostics because their gates rejected broad
-  existing valid coverage or the direct-call receiver fixtures when tried as
-  active authorities.
-- The remaining activation gap is proof-side: the strict public subset now
-  implies active mixed checker success and has runtime bridges through the
-  active mixed public-form store-safe summary, strict-public store-safe
-  summary, prefix/summary, and exact-body/package routes, and
-  exact-body/package facts now expose the public-form and store-safe summary
-  routes directly, the public exact-body/package wrapper no longer depends on
-  the broad store-static sidecar, exact-body/component store-static wrappers,
-  the package component-check static wrapper, the package component-body-summary
-  provider wrapper, the local-bounds exact-body static wrapper,
-  the canonical public theorem,
-  the no-receiver component body-summary
-  provider route, the branch exact-body/package component-summary provider
-  route, its with-body provider variant, the package-at-all component-summary
-  branch routes, the branch exact-body/package component-check route, the
-  package-at-all component-check branch route, the local-bounds, derived
-  local-bounds, and scoped-package component-check branch routes, and
-  strict-public
-  package-at-all component-check plus local-bounds/derived-local-bounds/
-  scoped-package component-check branch routes now immediately narrow to prefix
-  routes, and
-  strict public routing can
-  consume the no-receiver component summary
-  provider/check, component-only same-result, assoc-base non-captured provider,
-  store-safe summary-evidence, component-check, component-body store-safe
-  summary, component-body summary, component-body summary scoped provider
-  branch, component-body summary boolean branch, branch shadow summary,
-  branch not-captured,
-  branch absent-captured summary, package-at component-body, package-at
-  component-check, call-statement component-check, local-bounds component-check,
-  and scoped-package component-check branches through active mixed; the canonical public theorem
-  still needs those facts derived from existing public premises.
-  The
-  active no-capture component branch now has scoped-package, public derived
-  exact-body, package-at with-body-summary provider bridges from component
-  routes, and a public-callback boolean component body-summary branch bridge;
-  it no longer needs a separate exact-body premise. Active mixed success now
-  implies the broader base checker,
-  and the component-only diagnostic endpoint can be reconstructed from active
-  mixed no-receiver plus the body-summary check. The no-receiver branch also
-  has public-callback routes that consume membership-scoped component
-  body-summary Prop or check providers directly, including a prefix-evidence
-  provider route and unscoped provider/boolean wrappers for existing diagnostics;
-  the canonical theorem still needs
-  one of those providers/checks derived without a new theorem premise. Receiver-method
-  absence alone does not imply that component route, so those paths remain
-  diagnostic rather than activation bridges.
+- Proof infrastructure for direct-call receivers is concentrated around the
+  active mixed endpoint. It now has no-receiver/direct-ready branch splits,
+  strict-to-active agreement, public-callback wrappers, exact-body/package and
+  package-at bridges, active/strict public store-safe summary routes,
+  prefix-evidence bridges, and component-summary/component-check routes for
+  package, package-at-all, local-bounds, derived local-bounds, scoped-package,
+  and call-statement variants. Recent cleanup has routed the package
+  component-check wrapper, package component-body-summary provider wrapper, and
+  local-bounds exact-body static wrapper through prefix evidence instead of
+  broad store-static sidecars.
+- Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
+  `assoc_direct_receiver_base_combined`, strict direct-receiver,
+  absence-mixed, synthetic-mixed, and component-mixed variants. They are useful
+  for proving route fragments and checking sampled fixtures, but they are not
+  active checker authorities because their gates reject either broad valid
+  coverage or the direct-call receiver safety-gate fixtures.
+- The remaining activation gap is proof-side. The canonical public runtime
+  theorem still targets the strict mixed endpoint; retargeting it to
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
+  from existing public premises, the no-receiver component summary/check
+  provider and per-callee summary/evidence-at facts consumed by the active
+  mixed public corollaries. Receiver-method absence alone does not imply those
+  component routes, so the provider/check paths remain diagnostic until that
+  derivation is proved without a new public theorem premise.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -191,37 +106,13 @@ validity checks must be represented in Rocq and the extracted checker.
   exported base direct-component ready-check endpoint is runtime-safe but still
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
-- The active mixed endpoint now has strict-to-active checker agreement,
-  explicit public exact-body/package, public-form store-safe summary,
-  strict-public store-safe summary, exact-body/package-to-summary route
-  conversions, strict-public exact-body/package, package-at, component
-  summary provider/check routes, component-only same-result routes, assoc-base
-  non-captured provider routes, store-safe summary-evidence routes,
-  component-check routes including prefix-evidence branch, package-at-all,
-  local-bounds, derived local-bounds, and scoped-package branch wrappers,
-  component-body store-safe summary routes, component-body summary routes,
-  component-body summary scoped provider branch
-  routes, component-body summary boolean branch routes, branch shadow summary
-  routes, branch not-captured routes, branch absent-captured summary routes, and package-at
-  component-body branch routes, package-at component-check branch routes,
-  call-statement component-check routes, local-bounds component-check branch
-  routes, scoped-package component-check routes, component-summary branch package-at, component-check branch
-  package-at, no-capture scoped-package, local-bounds derived
-  exact-body public bridges exposed through a prefix branch wrapper, a branch
-  bridge that derives the exact-body route from the component route instead of requiring a separate premise, branch
-  bridges that consume package or package-at with-body-summary providers
-  directly, prefix-evidence branch exact-body/package, package-at-all
-  summary/component-check and local-bounds/scoped-package component-check
-  wrappers, plus strict-public package-at-all and local-bounds/derived-local-bounds/
-  scoped-package component-check prefix wrappers, package component-check
-  static prefix routing, package component-body-summary provider prefix routing,
-  local-bounds exact-body static prefix routing, and static
-  local-bounds plus public-callback no-receiver branch
-  wrappers that consume
-  membership-scoped component body-summary Prop or check providers without
-  treating them as unrestricted global Prop providers. The canonical theorem
-  still lacks a proof that the required provider/check and per-callee
-  summary/evidence-at facts follow from its existing public premises.
+- The active mixed endpoint has enough routed lemmas for summary evidence,
+  exact-body/package, package-at, package-at-all, local-bounds, derived
+  local-bounds, scoped-package, component summary/check, component-body summary,
+  branch shadow/not-captured/absent-captured, call-statement component-check,
+  and public-callback no-receiver provider/check variants. The canonical theorem
+  still lacks the bridge from its public premises to the required
+  provider/check and per-callee summary/evidence-at facts.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

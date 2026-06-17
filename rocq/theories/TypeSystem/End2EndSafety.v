@@ -25229,7 +25229,7 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
 Proof.
   intros Hsynthetic_route Hscope_synthetic env env_out f s s_out v Hprog
     Hcomponent_check_provider Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_call_statement_routes_and_component_check_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed.
@@ -25257,7 +25257,7 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
 Proof.
   intros Hsynthetic_route Hscope_synthetic env env_out f s s_out v Hprog
     Hcomponent_check Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_call_statement_routes_and_component_check.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed.

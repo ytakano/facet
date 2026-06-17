@@ -45,8 +45,8 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, component-body store-safe-summary/summary/with-body/provider-in-env
   bridges, check-provider routes, active/strict redundant case-split theorem/alias,
   exact-body/static/public/at-all alias cleanup, strict exact-body public alias
-  cleanup, summary-route cleanup, strict public-route wrapper cleanup, and
-  component-only boolean bridges.
+  cleanup, summary-route cleanup, strict public-route/call-statement wrapper
+  cleanup, and component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
   `strict_mixed`, and

@@ -46,8 +46,9 @@ validity checks must be represented in Rocq and the extracted checker.
   component-check wrapper, package component-body-summary provider wrapper,
   local-bounds exact-body static wrapper, local-bounds component body-summary
   branch, uncaptured exact-body package branch, exact-non-captured and
-  exact-local-bounds provider branches, non-captured component branch, and
-  active/strict assoc-base branch callback routes through prefix evidence
+  exact-local-bounds provider branches, non-captured branch, non-captured
+  component branch, and active/strict assoc-base branch callback routes through
+  prefix evidence
   instead of broad store-static sidecars.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, strict direct-receiver,
@@ -115,8 +116,9 @@ validity checks must be represented in Rocq and the extracted checker.
   uncaptured exact-body package branch, exact-non-captured and exact-local-bounds
   provider branches, component summary/check, component-body summary, branch
   shadow/not-captured/absent-captured, call-statement component-check,
-  non-captured component branch and active/strict assoc-base branch callbacks,
-  and public-callback no-receiver provider/check variants. The canonical theorem
+  non-captured branch, non-captured component branch and active/strict
+  assoc-base branch callbacks, and public-callback no-receiver provider/check
+  variants. The canonical theorem
   still lacks the bridge from its public premises to the required
   provider/check and per-callee summary/evidence-at facts.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

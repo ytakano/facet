@@ -41,8 +41,9 @@ validity checks must be represented in Rocq and the extracted checker.
   strict-to-active agreement, public-callback wrappers, exact-body/package and
   package-at bridges, local-bounds/scoped-package/call-statement component
   routes, no-receiver component-summary provider/check routes, derived
-  active-mixed branch-to-unconditional component-body summary, provider-in-env,
-  and check bridges, and component-only boolean bridges. Recent cleanup removed
+  active-mixed branch-to-unconditional component check plus component-body
+  summary/provider-in-env/check bridges, and component-only boolean bridges.
+  Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
   `strict_mixed`, and
   renamed derived component-only runtime wrappers around their public

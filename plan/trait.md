@@ -51,7 +51,10 @@ validity checks must be represented in Rocq and the extracted checker.
   fixture, and the assoc direct-receiver-base endpoint accepts that fixture; the
   new base-mixed endpoint is proof infrastructure and is not the active CLI
   authority. Its proof facts now expose the no-receiver/direct-ready branch
-  split and constructors from the base endpoint plus either branch condition.
+  split and constructors from the base endpoint plus either branch condition. A
+  separate assoc direct-receiver-base combined endpoint now records the base
+  per-function gate plus the combined direct-receiver summary gate, without
+  requiring the full env-level provenance, preservation, and component gates.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -105,18 +108,15 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- Direct-call receiver activation is now blocked on the no-receiver branch of
-  the active mixed endpoint. The direct-receiver method sidecar is true for
-  `main` in the basic direct-call receiver fixture, and
-  `infer_program_env_end2end_assoc_direct_receiver_base` accepts it. A temporary
-  retarget from active mixed to the base per-function endpoint clears the
-  per-function gate and then fails at the env-level mixed gate. Diagnostics for
-  the basic fixture show `captured_or_component_with_direct=true` for all
-  functions, but `provenance=false`, `preservation=false`, and
-  `component=false`, so `check_env_end2end_direct_receiver_ready=false`.
-  Existing active mixed case-split wrappers can use combined summaries only with
-  additional route-preservation or exact-body callbacks, and the final public
-  theorem currently has no such extra premise.
+- Direct-call receiver activation is now blocked beyond the combined summary
+  gate. The direct-receiver method sidecar is true for `main` in the basic
+  direct-call receiver fixture, `infer_program_env_end2end_assoc_direct_receiver_base`
+  accepts it, and the new base-combined endpoint isolates the combined summary
+  gate. Temporary diagnostics still show the full direct-ready env gate failing
+  on `provenance=false`, `preservation=false`, and `component=false`, so the
+  public runtime theorem still needs either a no-receiver-branch provider or a
+  behavior-preserving direct-receiver branch that avoids requiring those global
+  gates for this shape.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

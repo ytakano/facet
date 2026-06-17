@@ -16979,6 +16979,26 @@ let check_program_env_end2end_assoc_direct_receiver_base_mixed env =
   | Infer_ok _ -> true
   | Infer_err _ -> false
 
+(** val infer_program_env_end2end_assoc_direct_receiver_base_combined :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+  match infer_program_env_end2end_assoc_direct_receiver_base env with
+  | Infer_ok env' ->
+    if check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+         env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_direct_receiver_base_combined :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_base_combined env =
+  match infer_program_env_end2end_assoc_direct_receiver_base_combined env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
 (** val infer_program_env_end2end_assoc_direct_receiver_absent_mixed :
     global_env -> global_env infer_result **)
 

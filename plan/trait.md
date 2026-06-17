@@ -51,8 +51,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package, package-at, component-summary branch package-at,
   component-check branch package-at, no-capture scoped-package bridges,
   local-bounds derived exact-body public route bridges, branch bridges that
-  remove the separate exact-body premise and accept with-body-summary providers
-  for the active mixed endpoint, plus a provider-based runtime bridge for
+  remove the separate exact-body premise and accept package-at
+  with-body-summary providers for the active mixed endpoint, plus a
+  provider-based runtime bridge for
   `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
@@ -62,10 +63,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - The remaining activation gap is proof-side: the public theorem can now be
   retargeted to the active mixed endpoint once the summary-evidence route is
   available under its existing public premises. The active no-capture component
-  branch now has scoped-package, public derived exact-body, and
-  with-body-summary provider bridges from component routes, and its branch bridge
-  no longer needs a separate exact-body premise, but the public prefix route
-  still needs the component route and per-callee summary/evidence-at facts
+  branch now has scoped-package, public derived exact-body, and package-at
+  with-body-summary provider bridges from component routes, and its branch
+  bridge no longer needs a separate exact-body premise, but the public prefix
+  route still needs the component route and per-callee summary/evidence-at facts
   derived without a new theorem premise. Receiver-method absence alone does not
   imply that
   component route, so those paths remain diagnostic rather than activation
@@ -120,10 +121,11 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at, component-summary branch package-at, component-check branch
   package-at, no-capture scoped-package, local-bounds derived exact-body public
   bridges, a branch bridge that derives the exact-body route from the component
-  route instead of requiring a separate premise, and a branch bridge that consumes
-  with-body-summary providers directly. The canonical theorem still lacks a
-  proof that the required component route and per-callee summary/evidence-at
-  facts follow from its existing public premises; the component-only boolean
+  route instead of requiring a separate premise, and branch bridges that consume
+  package or package-at with-body-summary providers directly. The canonical
+  theorem still lacks a proof that the required component route and per-callee
+  summary/evidence-at facts follow from its existing public premises; the
+  component-only boolean
   evidence is membership-scoped and cannot be treated as an unrestricted Prop
   provider without an additional route.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

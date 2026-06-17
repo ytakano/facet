@@ -15161,46 +15161,6 @@ Proof.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_check_store_static :
-  eval_preserves_typing_ready_prefix_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_prefix_store_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
-    In fdef (env_fns env) ->
-    fn_name fdef = fname ->
-    alpha_rename_fn_def used fdef = (fcall, used') ->
-    direct_call_target_expr (fn_body fcall) =
-      Some (fname_body, args_body, synthetic_body) ->
-    direct_call_target_expr (fn_body fcall) =
-      Some (fname_body, args_body, fn_body fcall)) ->
-  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
-    Hstatic.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_check_prefix.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact (preservation_ready_expr_static_runtime_named_prefix_of_store Hstatic).
-Qed.
-
-
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement ->

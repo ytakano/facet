@@ -91,7 +91,9 @@ validity checks must be represented in Rocq and the extracted checker.
   alone still does not imply those providers.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and has not been connected to
-  the public runtime theorem without stronger gates.
+  the public runtime theorem without stronger gates. Its mixed wrapper preserves
+  ordinary valid coverage but still rejects the direct-call receiver fixture
+  because the direct-ready branch requires the global component gate.
 
 ## Key Decisions
 

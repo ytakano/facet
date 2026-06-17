@@ -639,6 +639,60 @@ Proof.
   exact Hready.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env' ->
+    env_fns_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_check_env_ready.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_local_bounds_family_provider :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_base_combined_check_env_ready
+      env env' Hprog) as Hcombined.
+  destruct Hbase as (bounds_base & ->).
+  destruct Hfamily as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  unfold check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined.
+  eapply forallb_forall; eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_local_bounds_family_summary :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    callee_body_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' fdef.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin.
+  apply check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_sound.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_local_bounds_family_provider;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_absent_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_absent_mixed env =

@@ -54,7 +54,9 @@ validity checks must be represented in Rocq and the extracted checker.
   split and constructors from the base endpoint plus either branch condition. A
   separate assoc direct-receiver-base combined endpoint now records the base
   per-function gate plus the combined direct-receiver summary gate, without
-  requiring the full env-level provenance, preservation, and component gates.
+  requiring the full env-level provenance, preservation, and component gates;
+  its proof helpers expose Prop-level combined readiness and local-bounds-family
+  providers.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary

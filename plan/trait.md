@@ -39,8 +39,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers includes active-mixed branch
   splits, no-receiver/direct-ready bridges, local-bounds route helpers,
   exact-body route/package bridges, public-callback wrappers for the active
-  mixed endpoint, an active-mixed runtime theorem under the assoc-compatible
-  store-safe synthetic direct-call route, a public-prefix bridge that retargets
+  mixed endpoint, active-mixed runtime theorems under the assoc-compatible
+  store-safe synthetic direct-call route and public-form store-safe summary
+  route, a public-prefix bridge that retargets
   the active mixed endpoint once the summary-evidence route is supplied, a
   strict-public runtime bridge through that active mixed prefix/summary route,
   strict-public exact-body/package, package-at, and component summary
@@ -81,7 +82,8 @@ validity checks must be represented in Rocq and the extracted checker.
   active authorities.
 - The remaining activation gap is proof-side: the strict public subset now
   implies active mixed checker success and has runtime bridges through the
-  active mixed public prefix/summary and exact-body/package routes, and
+  active mixed public-form store-safe summary, prefix/summary, and
+  exact-body/package routes, and
   exact-body/package facts now expose the public-form summary route directly,
   and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
@@ -154,8 +156,9 @@ validity checks must be represented in Rocq and the extracted checker.
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint now has strict-to-active checker agreement,
-  explicit public exact-body/package, exact-body/package-to-summary route
-  conversions, strict-public exact-body/package, package-at, component
+  explicit public exact-body/package, public-form store-safe summary,
+  exact-body/package-to-summary route conversions, strict-public
+  exact-body/package, package-at, component
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
   component-check routes, component-body store-safe summary routes,

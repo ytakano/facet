@@ -16008,6 +16008,24 @@ let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary en
       env)
     env.env_fns
 
+(** val check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary env fdef =
+  (||)
+    (check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef)
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef)
+
+(** val check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary env =
+  forallb
+    (check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env)
+    env.env_fns
+
 (** val check_fn_root_shadow_captured_call_provenance_summary :
     global_env -> fn_def -> bool **)
 
@@ -17006,6 +17024,52 @@ let infer_program_env_end2end_assoc_direct_receiver_base_combined env =
 
 let check_program_env_end2end_assoc_direct_receiver_base_combined env =
   match infer_program_env_end2end_assoc_direct_receiver_base_combined env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_program_env_end2end_assoc_direct_receiver_base_direct_component :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+  match infer_program_env_end2end_assoc_direct_receiver_base env with
+  | Infer_ok env' ->
+    if check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+         env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_direct_receiver_base_direct_component :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+  match infer_program_env_end2end_assoc_direct_receiver_base_direct_component
+          env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_program_env_end2end_assoc_direct_receiver_base_direct_component_ready_checks :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_base_direct_component_ready_checks env =
+  match infer_program_env_end2end_assoc_direct_receiver_base_direct_component
+          env with
+  | Infer_ok env' ->
+    if (&&)
+         ((&&) (check_env_root_shadow_provenance_summary env')
+           (check_env_preservation_ready env'))
+         (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+           env')
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_direct_receiver_base_direct_component_ready_checks :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_base_direct_component_ready_checks env =
+  match infer_program_env_end2end_assoc_direct_receiver_base_direct_component_ready_checks
+          env with
   | Infer_ok _ -> true
   | Infer_err _ -> false
 

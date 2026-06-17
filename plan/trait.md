@@ -43,9 +43,12 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe synthetic direct-call route, a public-prefix bridge that retargets
   the active mixed endpoint once the summary-evidence route is supplied, a
   runtime theorem for `assoc_direct_receiver_base` under the existing global
-  replay evidence, and proved-safe absent/synthetic/component mixed endpoints.
-  The stronger endpoints remain proof diagnostics because their gates rejected
-  broad existing valid coverage when tried as active authorities.
+  replay evidence, an exported verified
+  `assoc_direct_receiver_base_direct_component_ready_checks` diagnostic endpoint,
+  and proved-safe absent/synthetic/component mixed endpoints. The stronger
+  endpoints remain proof diagnostics because their gates rejected broad existing
+  valid coverage or the direct-call receiver fixtures when tried as active
+  authorities.
 - The remaining activation gap is proof-side: the public theorem can now be
   retargeted to the active mixed endpoint once the summary-evidence route is
   available under its existing public premises. The current public prefix route
@@ -89,8 +92,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - Strict direct-receiver, absence-mixed, synthetic-mixed, and component-mixed
   endpoint trials reject broad valid coverage with
   `ErrEndToEndSafetyGateFailed`; the component-mixed endpoint was rechecked
-  against the current suite and still fails ordinary valid programs, so these
-  remain proof/diagnostic infrastructure, not active authorities.
+  against the current suite and still fails ordinary valid programs. The
+  exported base direct-component ready-check endpoint is runtime-safe but still
+  rejects both direct-call receiver safety-gate fixtures, so these remain
+  proof/diagnostic infrastructure, not active authorities.
 - The active mixed no-receiver branch has runtime safety routes when a
   no-receiver callback supplies absent-captured, synthetic-summary,
   component-summary, exact-body/package, or equivalent evidence, or when the
@@ -102,7 +107,8 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, but it is not the active CLI authority and is not connected to the
   public runtime theorem without extra evidence. Its mixed wrapper preserves
   ordinary valid coverage but still rejects the direct-call receiver fixture
-  because the direct-ready branch requires the global component gate.
+  because the direct-ready branch requires the global component gate; the
+  exported direct-component ready-check wrapper also rejects those fixtures.
 
 ## Key Decisions
 

@@ -61,8 +61,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package-to-store-safe summary route conversions, and a
   public-callback exact-body/package route that now consumes the
   store-safe summary route instead of the store-static sidecar,
-  exact-body/component store-static wrappers factored through prefix routes,
-  the canonical public runtime theorem narrowed through the prefix route,
+  exact-body/component store-static wrappers and the local-bounds exact-body
+  static wrapper factored through prefix routes, the canonical public runtime
+  theorem narrowed through the prefix route,
   the no-receiver component body-summary provider route exposed in
   prefix-evidence form, the branch exact-body/package component-summary
   provider route exposed in prefix-evidence form, the with-body variant of
@@ -103,7 +104,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package facts now expose the public-form and store-safe summary
   routes directly, the public exact-body/package wrapper no longer depends on
   the broad store-static sidecar, exact-body/component store-static wrappers,
-  the canonical public theorem, the no-receiver component body-summary
+  the local-bounds exact-body static wrapper, the canonical public theorem,
+  the no-receiver component body-summary
   provider route, the branch exact-body/package component-summary provider
   route, its with-body provider variant, the package-at-all component-summary
   branch routes, the branch exact-body/package component-check route, the
@@ -207,8 +209,8 @@ validity checks must be represented in Rocq and the extracted checker.
   directly, prefix-evidence branch exact-body/package, package-at-all
   summary/component-check and local-bounds/scoped-package component-check
   wrappers, plus strict-public package-at-all and local-bounds/derived-local-bounds/
-  scoped-package component-check prefix wrappers, and static local-bounds plus
-  public-callback no-receiver branch
+  scoped-package component-check prefix wrappers, local-bounds exact-body static
+  prefix routing, and static local-bounds plus public-callback no-receiver branch
   wrappers that consume
   membership-scoped component body-summary Prop or check providers without
   treating them as unrestricted global Prop providers. The canonical theorem

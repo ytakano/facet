@@ -26283,7 +26283,31 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_static.
+  intros Hsynthetic_route Hscope_synthetic Htyping_prefix Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic
+    Hsummary Hexact_body env env' f s s' v Hprog Hcomponent_package
+    Hcomponent_check Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_exact_body_call_route_local_bounds_package_and_component_check_prefix.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_static
+      Hstatic).
+  - exact Hsummary.
+  - exact Hexact_body.
+  - exact Hprog.
+  - exact Hcomponent_package.
+  - exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_exact_body_call_route_local_bounds_package_and_component_check_prefix :

@@ -48,8 +48,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provider, store-safe summary-evidence, component-check, component-body
   store-safe summary, component-body summary, branch shadow summary, branch
   not-captured, branch absent-captured summary, package-at component-body, and
-  package-at component-check branch, and call-statement component-check bridges
-  through active mixed public routes, public-form
+  package-at component-check branch, call-statement component-check, and
+  local-bounds component-check branch bridges through active mixed public
+  routes, public-form
   exact-body/package-to-summary route
   conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
@@ -85,9 +86,9 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, branch shadow summary, branch not-captured,
   branch absent-captured summary, package-at component-body, package-at
-  component-check, and call-statement component-check branches through active
-  mixed; the canonical
-  public theorem still needs those facts derived from existing public premises.
+  component-check, call-statement component-check, and local-bounds component-check
+  branches through active mixed; the canonical public theorem
+  still needs those facts derived from existing public premises.
   The
   active no-capture component branch now has scoped-package, public derived
   exact-body, package-at with-body-summary provider bridges from component
@@ -157,9 +158,9 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body summary routes, branch shadow summary routes, branch
   not-captured routes, branch absent-captured summary routes, and package-at
   component-body branch routes, package-at component-check branch routes,
-  call-statement component-check routes, component-summary branch package-at,
-  component-check branch package-at,
-  no-capture scoped-package, local-bounds derived
+  call-statement component-check routes, local-bounds component-check branch
+  routes, component-summary branch package-at, component-check branch
+  package-at, no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch
   bridges that consume package or package-at with-body-summary providers

@@ -56,10 +56,10 @@ validity checks must be represented in Rocq and the extracted checker.
   instead of broad store-static sidecars.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, strict direct-receiver,
-  absence-mixed, synthetic-mixed, and component-mixed variants. They are useful
-  for proving route fragments and checking sampled fixtures, but they are not
-  active checker authorities because their gates reject either broad valid
-  coverage or the direct-call receiver safety-gate fixtures.
+  absence-mixed, and synthetic-mixed variants. They are useful for proving
+  route fragments and checking sampled fixtures, but they are not active checker
+  authorities because their gates reject either broad valid coverage or the
+  direct-call receiver safety-gate fixtures.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint; retargeting it to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
@@ -107,12 +107,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- Strict direct-receiver, absence-mixed, synthetic-mixed, and component-mixed
-  endpoint trials reject broad valid coverage with
-  `ErrEndToEndSafetyGateFailed`; the component-mixed endpoint was rechecked
-  against the current suite and still fails ordinary valid programs. The base
-  direct-component endpoint remains proof/diagnostic infrastructure, not an
-  active authority.
+- Strict direct-receiver, absence-mixed, and synthetic-mixed endpoint trials
+  reject broad valid coverage with `ErrEndToEndSafetyGateFailed`. The rejected
+  component-mixed diagnostic has been removed; the base direct-component
+  endpoint remains proof/diagnostic infrastructure, not an active authority.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component
@@ -132,8 +130,7 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, but it is not the active CLI authority and is not connected to the
   public runtime theorem without extra evidence. Its mixed wrapper preserves
   ordinary valid coverage but still rejects the direct-call receiver fixture
-  because the direct-ready branch requires the global component gate; the
-  exported direct-component ready-check wrapper also rejects those fixtures.
+  because the direct-ready branch requires the global component gate.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid

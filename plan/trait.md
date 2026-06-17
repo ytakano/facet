@@ -63,8 +63,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the canonical public runtime theorem narrowed through the prefix route,
   the no-receiver component body-summary provider route exposed in
   prefix-evidence form, the branch exact-body/package component-summary
-  provider route exposed in prefix-evidence form, and the with-body variant of
-  that branch route exposed in prefix-evidence form,
+  provider route exposed in prefix-evidence form, the with-body variant of
+  that branch route exposed in prefix-evidence form, and the package-at-all
+  with-body branch route exposed in prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -98,8 +99,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the broad store-static sidecar, exact-body/component store-static wrappers,
   the canonical public theorem, the no-receiver component body-summary
   provider route, the branch exact-body/package component-summary provider
-  route, and its with-body provider variant now immediately narrow to prefix
-  routes, and strict public routing can
+  route, its with-body provider variant, and the package-at-all with-body
+  branch route now immediately narrow to prefix routes, and strict public
+  routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
@@ -188,8 +190,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch
   bridges that consume package or package-at with-body-summary providers
-  directly, prefix-evidence branch exact-body/package wrappers, and static
-  local-bounds plus public-callback no-receiver branch wrappers that consume
+  directly, prefix-evidence branch exact-body/package and package-at-all
+  wrappers, and static local-bounds plus public-callback no-receiver branch
+  wrappers that consume
   membership-scoped component body-summary Prop or check providers without
   treating them as unrestricted global Prop providers. The canonical theorem
   still lacks a proof that the required provider/check and per-callee

@@ -1154,6 +1154,23 @@ Proof.
   injection Hprog as ->. reflexivity.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
+      env = infer_ok env' ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    env_checked) eqn:Hsummary; try discriminate.
+  injection Hprog as ->. exact Hsummary.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_unique_by_name :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks
@@ -16352,6 +16369,24 @@ Proof.
   rewrite Hcomponent_check in Hcheck.
   eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
   exact Hcheck.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_component_body_summary_evidence :
+  forall env env_checked f_component,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
+      env = infer_ok env_checked ->
+    In f_component (env_fns env_checked) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env_checked f_component = true ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+      (global_env_with_local_bounds env_checked (fn_bounds f_component)).
+Proof.
+  intros env env_checked f_component Hprog Hin Hcomponent_check.
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_check.
+    exact Hprog.
+  - exact Hin.
+  - exact Hcomponent_check.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_big_step_safe_checked_initial_ready :

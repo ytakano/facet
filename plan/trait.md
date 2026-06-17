@@ -45,7 +45,8 @@ validity checks must be represented in Rocq and the extracted checker.
   runtime theorem for `assoc_direct_receiver_base` under the existing global
   replay evidence, exported verified `assoc_direct_receiver_base` diagnostic
   endpoints with direct-component, global-summary, per-component summary, and
-  single-sidecar provenance/preservation/component-summary ready checks,
+  single-sidecar provenance/preservation/component-summary ready checks plus
+  a component-only boolean evidence bridge for local body-summary evidence,
   proved-safe absent/synthetic/component mixed endpoints, and a provider-based
   runtime bridge for `assoc_direct_receiver_base_combined` that can route direct
   receiver methods through scoped body-lift providers while routing no-capture
@@ -73,10 +74,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
-   - Replace the over-broad provenance/preservation sidecars with the weakest
-     checker evidence needed by the runtime bridge; the isolated component-body
-     summary sidecar accepts the targeted direct-call receiver fixtures and
-     representative valid programs.
+   - Replace the over-broad provenance/preservation sidecars with a runtime
+     route that consumes the component-only boolean evidence bridge plus static
+     prefix/exact-body package facts, without requiring Prop-to-bool
+     completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -127,8 +128,11 @@ validity checks must be represented in Rocq and the extracted checker.
   `base_combined_preservation_ready_checks` reject the targeted direct-call
   receiver fixtures and representative valid programs, while
   `base_combined_component_only_summary_ready_checks` accepts all four sampled
-  cases. The next activation step is to remove or narrow the provenance and
-  preservation gates without reintroducing a broad global premise.
+  cases. That component-only endpoint now exposes local body-summary evidence
+  for checked components in the environment, but a full runtime theorem still
+  needs a route from the public static prefix/exact-body package facts to the
+  active direct-receiver branch without the global provenance/preservation
+  booleans.
 
 ## Key Decisions
 

@@ -14819,6 +14819,21 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_store_safe_summary_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env'.
+Proof.
+  intros env env' _Hprog Hdirect_ready.
+  destruct (check_env_end2end_direct_receiver_ready_facts
+    env' Hdirect_ready) as
+    (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_check).
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary_evidence.
+  exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_provider :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
@@ -14899,6 +14914,25 @@ Proof.
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
   - exact (Hbody_summary_when_no_receiver Hno_receiver).
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_summary_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+        env') ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env'.
+Proof.
+  intros env env' Hprog Hsummary_when_no_receiver.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - exact (Hsummary_when_no_receiver Hno_receiver).
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_store_safe_summary_evidence;
       eassumption.
 Qed.
 
@@ -20833,39 +20867,22 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hsummary_when_no_receiver Hinitial Hin Hstore Heval.
-  destruct
-    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
-      env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_store_safe_summary_evidence.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact (Hsummary_when_no_receiver Hno_receiver).
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
-  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_store_safe_summary_evidence.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_summary_evidence;
+      eassumption.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 

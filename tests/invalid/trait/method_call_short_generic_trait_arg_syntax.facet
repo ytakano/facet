@@ -1,0 +1,13 @@
+trait Into<T> {
+  fn into(self: Self) -> T;
+}
+
+impl Into<unrestricted isize> for unrestricted isize {
+  fn into(self: Self) -> unrestricted isize {
+    self
+  }
+}
+
+fn main(x: unrestricted isize) -> unrestricted isize {
+  (Into<unrestricted isize>::into x)
+}

@@ -18,8 +18,8 @@ validity checks must be represented in Rocq and the extracted checker.
   uncalled.
 - Method calls use receiver-first prefix UFCS forms:
   `(<Ty as Trait>::method receiver args...)` and
-  `(Trait::method receiver args...)`. Dot syntax remains rejected for this
-  phase.
+  `(Trait::method receiver args...)`. Generic trait arguments remain explicit
+  through the former spelling; dot syntax remains rejected for this phase.
 - Short UFCS currently accepts receiver types known before checker execution:
   function parameters, typed literals, immutable pure local literals after
   receiver-let elimination, fieldless struct literals, and payloadless enum

@@ -60,8 +60,10 @@ validity checks must be represented in Rocq and the extracted checker.
   supplied provenance, preservation, and synthetic-call summary evidence. A
   narrower direct-receiver-method-or-component summary now has checker and Prop
   readiness facts plus an assoc direct-receiver-base proof endpoint with
-  uniqueness, soundness, readiness, and local-bounds-family helpers. It remains
-  proof infrastructure and is not the active or extracted authority.
+  uniqueness, soundness, readiness, local-bounds-family helpers, and a runtime
+  bridge parameterized by the remaining provenance, preservation, synthetic-call
+  summary, and direct-receiver replay evidence. It remains proof infrastructure
+  and is not the active or extracted authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -122,12 +124,13 @@ validity checks must be represented in Rocq and the extracted checker.
   gate. Its runtime bridge now identifies the remaining missing evidence as
   provenance, preservation, and synthetic-call summary readiness. The new
   direct-receiver-method-or-component endpoint consumes the narrow checker gate
-  and isolates the direct branch needed to avoid those global gates, but no
-  runtime theorem or active endpoint has consumed it yet. Temporary diagnostics still show the full direct-ready env gate
-  failing on `provenance=false`, `preservation=false`, and `component=false`, so the
-  public runtime theorem still needs either a no-receiver-branch provider or a
-  behavior-preserving direct-receiver branch that avoids requiring those global
-  gates for this shape.
+  and now has a runtime bridge that avoids the captured-summary combined gate,
+  but the bridge still takes provenance, preservation, synthetic-call summary,
+  and direct-receiver replay evidence as premises. Temporary diagnostics still
+  show the full direct-ready env gate failing on `provenance=false`,
+  `preservation=false`, and `component=false`, so the public runtime theorem
+  still needs those facts derived from the active endpoint or replaced by a
+  behavior-preserving direct-receiver branch provider.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

@@ -39,9 +39,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers includes active-mixed branch
   splits, no-receiver/direct-ready bridges, local-bounds route helpers,
   exact-body route/package bridges, public-callback wrappers for the active
-  mixed endpoint, and proved-safe absent/synthetic/component mixed endpoints.
-  The stronger endpoints remain proof diagnostics because their gates rejected
-  broad existing valid coverage when tried as active authorities.
+  mixed endpoint, a runtime theorem for `assoc_direct_receiver_base` under the
+  existing global replay evidence, and proved-safe absent/synthetic/component
+  mixed endpoints. The stronger endpoints remain proof diagnostics because
+  their gates rejected broad existing valid coverage when tried as active
+  authorities.
 - The remaining activation gap is proof-side: the active mixed no-receiver
   branch has callback-based runtime safety routes, but the public theorem still
   needs a behavior-compatible, public-premise-free provider for the no-receiver
@@ -90,8 +92,9 @@ validity checks must be represented in Rocq and the extracted checker.
   component-summary, or equivalent evidence. Receiver-method target absence
   alone still does not imply those providers.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
-  fixture, but it is not the active CLI authority and has not been connected to
-  the public runtime theorem without stronger gates. Its mixed wrapper preserves
+  fixture and now has a runtime theorem under the existing global replay
+  evidence, but it is not the active CLI authority and is not connected to the
+  public runtime theorem without extra evidence. Its mixed wrapper preserves
   ordinary valid coverage but still rejects the direct-call receiver fixture
   because the direct-ready branch requires the global component gate.
 

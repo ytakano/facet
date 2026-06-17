@@ -1098,11 +1098,23 @@ let pure_unrestricted_receiver_expr ty expr =
   | NTy (UUnrestricted, NTIntegers), NLit (LInt _)
   | NTy (UUnrestricted, NTFloats), NLit (LFloat _)
   | NTy (UUnrestricted, NTBooleans), NLit (LBool _) -> Some expr
+  | NTy (UUnrestricted, NTNamed (ty_path, ty_args)),
+    NStruct (struct_path, struct_args, [])
+    when ty_path = struct_path && ty_args = struct_args -> Some expr
+  | NTy (UUnrestricted, NTNamed (ty_path, ty_args)),
+    NEnum (enum_path, enum_args, _, [], [])
+    when ty_path = enum_path && ty_args = enum_args -> Some expr
   | _ -> None
 
-let pure_unrestricted_receiver_inferred_expr = function
+let pure_unrestricted_receiver_inferred_expr ty_scope = function
   | NUnit -> Some (MkTy (UUnrestricted, TUnits), NUnit)
   | NLit lit as expr -> Some (lit_ty lit, expr)
+  | NStruct (name_path, args, []) as expr ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    Some (MkTy (UUnrestricted, TStruct (string_of_path name_path, lts, tys)), expr)
+  | NEnum (enum_name_path, args, _, [], []) as expr ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    Some (MkTy (UUnrestricted, TEnum (string_of_path enum_name_path, lts, tys)), expr)
   | _ -> None
 
 let rec named_place_mentions_name name = function
@@ -1392,7 +1404,7 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
   | NLet (m, name, None, e1, e2) ->
     let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let inferred_receiver = pure_unrestricted_receiver_inferred_expr e1 in
+    let inferred_receiver = pure_unrestricted_receiver_inferred_expr ty_scope e1 in
     let value_tys' =
       match inferred_receiver with
       | Some (inferred_ty, _) -> add_value_ty name inferred_ty value_tys
@@ -1808,7 +1820,7 @@ let rec method_call_targets_in_expr env fn_names ty_scope value_tys = function
       match ty_opt with
       | Some ty -> add_value_ty name (lower_named_ty ty_scope ty) value_tys
       | None ->
-        begin match pure_unrestricted_receiver_inferred_expr e1 with
+        begin match pure_unrestricted_receiver_inferred_expr ty_scope e1 with
         | Some (inferred_ty, _) -> add_value_ty name inferred_ty value_tys
         | None -> add_unknown_value_ty name value_tys
         end

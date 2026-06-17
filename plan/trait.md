@@ -64,17 +64,16 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges. A proof-only ready-check endpoint now packages provenance,
   preservation, and no-capture component checker gates and exposes soundness plus
   a zero-extra-premise runtime wrapper for that endpoint; direct-receiver replay
-  is discharged by a proven-provider variant. Selected raw,
-  scoped-body-lift-ready, and scoped-expr-lift variants remain available for
-  lower-level replay work. These endpoints remain proof infrastructure and are
-  not the active or extracted authority.
-- The remaining activation gap is proof-side and specific to the no-receiver
-  branch. The active endpoint exposes only a combined captured-or-component
-  summary there. Existing route wrappers need either plain synthetic summary
-  evidence, a no-capture component/closure provider, an exact-body route
-  package, or captured-summary absence for local-bounds-family functions. The
-  current captured-summary checker can succeed on whole function bodies, so
-  receiver-method target absence alone does not imply captured-summary absence.
+  is discharged by a proven-provider variant. The active mixed endpoint now also
+  has a public-callback-shaped runtime theorem whose only extra inputs are an
+  exact-body route target callback and an exact-body route package. These
+  endpoints remain proof infrastructure and are not the active public theorem.
+- The remaining activation gap is proof-side and specific to deriving the
+  exact-body route target/package evidence needed by that active mixed runtime
+  theorem. The active endpoint exposes only a combined captured-or-component
+  summary on the no-receiver branch. The current captured-summary checker can
+  succeed on whole function bodies, so receiver-method target absence alone does
+  not imply captured-summary absence.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -85,16 +84,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Derive, from the active endpoint or existing public callbacks, one concrete
-     no-receiver-branch provider strong enough for the existing active-endpoint
-     wrappers: exact-body route-package, summary-at or store-safe
-     evidence-at, store-safe or plain shadow summary evidence, checked
-     component summary, component-body store-safe/summary evidence,
-     local-bounds route evidence, an endpoint-derived not-captured/non-captured
-     provider, exact non-captured provider evidence, an exact-body
-     local-bounds/scoped package provider, or a behavior-preserving way to make
-     the active mixed endpoint require the extracted absence gate only where it
-     is needed.
+   - Derive the exact-body route target callback and exact-body route package
+     for the active mixed endpoint, or replace that requirement with an
+     equivalent behavior-preserving no-receiver branch provider.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -121,22 +113,16 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- Direct-call receiver activation is now blocked beyond the combined summary
-  gate. The direct-receiver method sidecar is true for `main` in the basic
-  direct-call receiver fixture, `infer_program_env_end2end_assoc_direct_receiver_base`
-  accepts it, and the new base-combined endpoint isolates the combined summary
-  gate. Its runtime bridge now identifies the remaining missing evidence as
-  provenance, preservation, and synthetic-call summary readiness. The new
-  direct-receiver-method-or-component endpoint consumes the narrow checker gate
-  and now has a runtime bridge that avoids the captured-summary combined gate.
-  Its remaining evidence can now be packaged by the proof-only ready-check
-  endpoint, but that endpoint is not a behavior-compatible active authority for
-  the existing suite and those gates are still not derived from the active
-  endpoint for this shape. Temporary diagnostics still show the full
-  direct-ready env gate failing on `provenance=false`, `preservation=false`, and
-  `component=false`, so the public runtime theorem still needs those facts
-  derived from the active endpoint or replaced by a behavior-preserving
-  direct-receiver branch provider.
+- Direct-call receiver activation is now blocked on route-package evidence for
+  the active mixed endpoint. The latest active mixed runtime theorem matches the
+  public callback shape but still requires an exact-body route target callback
+  and exact-body route package. Earlier direct-receiver-method-or-component
+  proof endpoints can package provenance, preservation, and component checker
+  gates, but they are not behavior-compatible active authorities for the
+  existing suite. Temporary diagnostics still show the full direct-ready env gate
+  failing on `provenance=false`, `preservation=false`, and `component=false`, so
+  activation still needs endpoint-derived route-package evidence or an
+  equivalent behavior-preserving branch provider.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

@@ -110,10 +110,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Strict direct-receiver, absence-mixed, synthetic-mixed, and component-mixed
   endpoint trials reject broad valid coverage with
   `ErrEndToEndSafetyGateFailed`; the component-mixed endpoint was rechecked
-  against the current suite and still fails ordinary valid programs. The
-  exported base direct-component ready-check endpoint is runtime-safe but still
-  rejects both direct-call receiver safety-gate fixtures, so these remain
-  proof/diagnostic infrastructure, not active authorities.
+  against the current suite and still fails ordinary valid programs. The base
+  direct-component endpoint remains proof/diagnostic infrastructure, not an
+  active authority.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component
@@ -138,7 +137,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid
-  flips. The rejected broad diagnostics have been removed.
+  flips. The rejected broad and direct-component ready-check diagnostics have
+  been removed.
   `base_combined_component_only_summary_ready_checks` remains because it accepts
   the sampled cases and has a runtime theorem under explicit
   provenance/preservation evidence. It is still diagnostic because the canonical

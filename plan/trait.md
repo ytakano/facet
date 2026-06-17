@@ -36,18 +36,18 @@ validity checks must be represented in Rocq and the extracted checker.
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Proof infrastructure for direct-call receivers now includes active-mixed
-  branch splits, no-receiver/direct-ready bridges, receiver-method absence
-  facts, local-bounds route helpers, exact-body route/package bridges, and
-  proof-only endpoints for stronger gates. These endpoints are useful for proof
-  diagnostics but are not behavior-compatible replacements for the active CLI
-  authority.
+- Proof infrastructure for direct-call receivers includes active-mixed branch
+  splits, no-receiver/direct-ready bridges, local-bounds route helpers,
+  exact-body route/package bridges, public-callback wrappers for the active
+  mixed endpoint, and proved-safe absent/synthetic/component mixed endpoints.
+  The stronger endpoints remain proof diagnostics because their gates rejected
+  broad existing valid coverage when tried as active authorities.
 - The remaining activation gap is proof-side: the active mixed no-receiver
-  branch exposes only receiver-method absence plus a disjunctive
-  captured-or-component summary. Existing runtime paths still need either
-  global synthetic direct-call summary evidence, a full component-summary check,
-  or strict exact readiness. Those stronger gates rejected broad existing valid
-  coverage when tried as active authorities.
+  branch has callback-based runtime safety routes, but the public theorem still
+  needs a behavior-compatible, public-premise-free provider for the no-receiver
+  branch. The available proven providers come from stronger absent, synthetic,
+  component, or strict exact gates that are not behavior-compatible with the
+  active CLI authority.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -58,8 +58,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Derive a behavior-compatible no-receiver evidence provider, or an
-     equivalent public-premise-free lift, from the active mixed endpoint.
+   - Derive a behavior-compatible no-receiver provider for the existing
+     active-mixed public-callback safety route, or an equivalent
+     public-premise-free lift, from the active mixed endpoint.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -83,11 +84,10 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint trials rejected broad existing valid coverage with
   `ErrEndToEndSafetyGateFailed`; they remain proof/diagnostic infrastructure,
   not active authorities.
-- The active mixed no-receiver branch does not currently imply the evidence
-  required by available runtime paths. Receiver-method target absence does not
-  imply captured-summary absence, and disjunctive captured-or-component summary
-  evidence does not provide component synthetic route evidence for captured
-  functions.
+- The active mixed no-receiver branch has runtime safety routes only when a
+  no-receiver callback supplies absent-captured, synthetic-summary,
+  component-summary, or equivalent evidence. Receiver-method target absence
+  alone still does not imply those providers.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and has not been connected to
   the public runtime theorem without stronger gates.

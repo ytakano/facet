@@ -52,9 +52,10 @@ validity checks must be represented in Rocq and the extracted checker.
   provider branch, component-body summary boolean branch, branch shadow summary,
   branch not-captured, branch
   absent-captured summary, package-at component-body, and
-  package-at component-check branch, call-statement component-check, and
-  local-bounds component-check branch, and scoped-package component-check
-  bridges through active mixed public routes, public-form
+  package-at component-check branch, package-at-all component-check branch,
+  call-statement component-check, local-bounds component-check branch, and
+  scoped-package component-check bridges through active mixed public routes,
+  public-form
   exact-body/package-to-summary route conversions, public
   exact-body/package-to-store-safe summary route conversions, and a
   public-callback exact-body/package route that now consumes the
@@ -103,9 +104,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the canonical public theorem, the no-receiver component body-summary
   provider route, the branch exact-body/package component-summary provider
   route, its with-body provider variant, the package-at-all component-summary
-  branch routes, the branch exact-body/package component-check route, and
-  strict-public package-at-all branch routes now immediately narrow to prefix
-  routes, and strict public routing can
+  branch routes, the branch exact-body/package component-check route, the
+  package-at-all component-check branch route, and strict-public package-at-all
+  branch routes
+  now immediately narrow to prefix routes, and strict public routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
@@ -183,8 +185,9 @@ validity checks must be represented in Rocq and the extracted checker.
   conversions, strict-public exact-body/package, package-at, component
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
-  component-check routes including a prefix-evidence branch wrapper,
-  component-body store-safe summary routes, component-body summary routes,
+  component-check routes including prefix-evidence branch and package-at-all
+  branch wrappers, component-body store-safe summary routes, component-body
+  summary routes,
   component-body summary scoped provider branch
   routes, component-body summary boolean branch routes, branch shadow summary
   routes, branch not-captured routes, branch absent-captured summary routes, and package-at
@@ -195,8 +198,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch
   bridges that consume package or package-at with-body-summary providers
-  directly, prefix-evidence branch exact-body/package, package-at-all, and
-  strict-public package-at-all provider wrappers, and static local-bounds plus
+  directly, prefix-evidence branch exact-body/package, package-at-all
+  summary/component-check, and strict-public package-at-all provider wrappers,
+  and static local-bounds plus
   public-callback no-receiver branch
   wrappers that consume
   membership-scoped component body-summary Prop or check providers without

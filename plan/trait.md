@@ -60,7 +60,9 @@ validity checks must be represented in Rocq and the extracted checker.
   public-callback exact-body/package route that now consumes the
   store-safe summary route instead of the store-static sidecar,
   exact-body/component store-static wrappers factored through prefix routes,
-  and the canonical public runtime theorem narrowed through the prefix route,
+  the canonical public runtime theorem narrowed through the prefix route,
+  and the no-receiver component body-summary provider route exposed in
+  prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -92,8 +94,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package facts now expose the public-form and store-safe summary
   routes directly, the public exact-body/package wrapper no longer depends on
   the broad store-static sidecar, exact-body/component store-static wrappers
-  and the canonical public theorem now immediately narrow to prefix routes,
-  and strict public routing can consume the no-receiver component summary
+  the canonical public theorem, and the no-receiver component body-summary
+  provider route now immediately narrow to prefix routes, and strict public
+  routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, component-body summary scoped provider
@@ -112,8 +115,9 @@ validity checks must be represented in Rocq and the extracted checker.
   and the component-only diagnostic endpoint can be reconstructed from active
   mixed no-receiver plus the body-summary check. The no-receiver branch also
   has public-callback routes that consume membership-scoped component
-  body-summary Prop or check providers directly, with unscoped provider and
-  boolean wrappers for existing diagnostics; the canonical theorem still needs
+  body-summary Prop or check providers directly, including a prefix-evidence
+  provider route and unscoped provider/boolean wrappers for existing diagnostics;
+  the canonical theorem still needs
   one of those providers/checks derived without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.

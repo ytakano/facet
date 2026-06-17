@@ -61,10 +61,11 @@ validity checks must be represented in Rocq and the extracted checker.
   narrower direct-receiver-method-or-component summary now has checker and Prop
   readiness facts plus an assoc direct-receiver-base proof endpoint with
   uniqueness, soundness, readiness, local-bounds-family helpers, and a runtime
-  bridge parameterized by the remaining provenance, preservation, synthetic-call
-  summary, and direct-receiver replay evidence. The bridge now has selected raw,
-  scoped-body-lift-ready, and scoped-expr-lift variants. It remains proof
-  infrastructure and is not the active or extracted authority.
+  bridge parameterized by the remaining provenance, preservation, and
+  synthetic-call summary evidence; direct-receiver replay is discharged by a
+  proven-provider variant. Selected raw, scoped-body-lift-ready, and
+  scoped-expr-lift variants remain available for lower-level replay work. It
+  remains proof infrastructure and is not the active or extracted authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -126,9 +127,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance, preservation, and synthetic-call summary readiness. The new
   direct-receiver-method-or-component endpoint consumes the narrow checker gate
   and now has a runtime bridge that avoids the captured-summary combined gate,
-  but the bridge still takes provenance, preservation, synthetic-call summary,
-  and a direct-receiver replay provider as premises. Temporary diagnostics still
-  show the full direct-ready env gate failing on `provenance=false`,
+  but the bridge still takes provenance, preservation, and synthetic-call
+  summary evidence as premises. Temporary diagnostics still show the full
+  direct-ready env gate failing on `provenance=false`,
   `preservation=false`, and `component=false`, so the public runtime theorem
   still needs those facts derived from the active endpoint or replaced by a
   behavior-preserving direct-receiver branch provider.

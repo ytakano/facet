@@ -1,0 +1,19 @@
+trait Provider {
+  type Item;
+}
+
+trait Holder {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted isize;
+}
+
+impl<'a> Holder for unrestricted bool {
+  type Item = <unrestricted isize as Provider<'a>>::Item;
+}
+
+fn main() -> unrestricted () {
+  ()
+}

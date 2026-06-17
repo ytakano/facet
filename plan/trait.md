@@ -48,9 +48,10 @@ validity checks must be represented in Rocq and the extracted checker.
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge for local body-summary evidence,
   proved-safe absent/synthetic/component mixed endpoints, explicit public
-  exact-body/package, package-at, component-summary branch package-at, and
-  component-check branch package-at corollaries for the active mixed endpoint,
-  and a provider-based runtime bridge for `assoc_direct_receiver_base_combined` that
+  exact-body/package, package-at, component-summary branch package-at,
+  component-check branch package-at, and no-capture scoped-package bridges for
+  the active mixed endpoint, and a provider-based runtime bridge for
+  `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
   stronger endpoints remain proof diagnostics because their gates rejected broad
@@ -58,12 +59,12 @@ validity checks must be represented in Rocq and the extracted checker.
   active authorities.
 - The remaining activation gap is proof-side: the public theorem can now be
   retargeted to the active mixed endpoint once the summary-evidence route is
-  available under its existing public premises. The current public prefix route
-  requires global direct-call evidence, while the active no-receiver branch
-  needs per-callee summary/evidence-at facts; deriving that bridge without a new
-  theorem premise is the next proof obligation. Receiver-method absence alone
-  does not imply the component gate or exact-body target/package callbacks, so
-  those paths remain diagnostic rather than activation bridges.
+  available under its existing public premises. The active no-capture component
+  branch now has a scoped-package bridge, but the public prefix route still
+  needs exact-body target plus per-callee summary/evidence-at facts derived
+  without a new theorem premise. Receiver-method absence alone does not imply
+  the component gate or exact-body target callbacks, so those paths remain
+  diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -111,12 +112,12 @@ validity checks must be represented in Rocq and the extracted checker.
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint now has explicit public exact-body/package,
-  package-at, component-summary branch package-at, and component-check branch
-  package-at corollaries with the same preservation/root premises as the
-  canonical public theorem. The canonical theorem still lacks a proof that the
-  required exact-body target, pointwise package-at evidence, and component
-  check or equivalent summary-evidence route follow from its existing public
-  premises.
+  package-at, component-summary branch package-at, component-check branch
+  package-at, and no-capture scoped-package bridges with the same
+  preservation/root premises as the canonical public theorem. The canonical
+  theorem still lacks a proof that the required exact-body target, component
+  check, and per-callee summary/evidence-at route follow from its existing
+  public premises.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

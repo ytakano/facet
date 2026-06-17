@@ -4434,6 +4434,24 @@ Proof.
   split; [exact Hunique | exact Hpayload].
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_exact_body_route_scoped_package_local_bounds_family_when_not_captured :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+      (fun env0 fdef =>
+        global_env_local_bounds_family env' env0 /\
+          In fdef (env_fns env0) /\
+          check_fn_root_shadow_captured_call_store_safe_summary
+            env' fdef = false /\
+          check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+            env' fdef = true).
+Proof.
+  intros env env' Hprog.
+  eapply infer_program_env_end2end_assoc_exact_body_route_scoped_package_local_bounds_family_when_not_captured.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_scoped_package_local_bounds_family_with_route_summary :
   forall env env',
     infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->

@@ -16902,6 +16902,16 @@ let check_env_end2end_direct_receiver_synthetic_mixed_ready env =
       (check_env_root_shadow_synthetic_direct_call_ready_summary env))
     (check_env_end2end_direct_receiver_ready env)
 
+(** val check_env_end2end_direct_receiver_component_mixed_ready :
+    global_env -> bool **)
+
+let check_env_end2end_direct_receiver_component_mixed_ready env =
+  (||)
+    ((&&) (negb (check_env_root_shadow_direct_receiver_method_present env))
+      (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env))
+    (check_env_end2end_direct_receiver_ready env)
+
 (** val infer_program_env_end2end_strict_exact_closure_direct_receiver :
     global_env -> global_env infer_result **)
 
@@ -17034,6 +17044,25 @@ let infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
 
 let check_program_env_end2end_assoc_direct_receiver_synthetic_mixed env =
   match infer_program_env_end2end_assoc_direct_receiver_synthetic_mixed env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_program_env_end2end_assoc_direct_receiver_component_mixed :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+  match infer_program_env_end2end_assoc env with
+  | Infer_ok env' ->
+    if check_env_end2end_direct_receiver_component_mixed_ready env'
+    then Infer_ok env'
+    else Infer_err ErrEndToEndSafetyGateFailed
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env_end2end_assoc_direct_receiver_component_mixed :
+    global_env -> bool **)
+
+let check_program_env_end2end_assoc_direct_receiver_component_mixed env =
+  match infer_program_env_end2end_assoc_direct_receiver_component_mixed env with
   | Infer_ok _ -> true
   | Infer_err _ -> false
 

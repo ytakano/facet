@@ -210,6 +210,8 @@ trait_def:
 trait_item:
   | kw_type; name = ID; SEMI
     { NTIAssocTypeDecl name }
+  | kw_type; name = ID; EQUAL; _t = surface_ty; SEMI
+    { failwith (Printf.sprintf "associated type defaults are deferred: %s" name) }
   | sig_ = method_sig; SEMI
     { NTIMethodSig sig_ }
 
@@ -262,6 +264,8 @@ opt_fn_where_clause:
 
 fn_where_item:
   | b = trait_bound { FnWhereTrait b }
+  | type_name = ID; DCOLON; assoc = ID; EQUAL; _t = ty
+    { failwith (Printf.sprintf "equality constraints are deferred: %s::%s" type_name assoc) }
   | c = outlives_constraint { FnWhereOutlives c }
 
 trait_bound:

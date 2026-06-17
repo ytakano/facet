@@ -44,8 +44,8 @@ validity checks must be represented in Rocq and the extracted checker.
   or strict exact readiness. Those stronger gates rejected broad existing valid
   coverage when tried as active authorities.
 - Associated type defaults, equality constraints, and `deriving` are reserved
-  for future surface forms. Provisional syntax for them remains explicitly
-  rejected.
+  for future surface forms. Provisional syntax for them is explicitly rejected
+  with parser diagnostics.
 
 ## Remaining Tasks
 

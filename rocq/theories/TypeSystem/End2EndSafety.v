@@ -23881,7 +23881,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks_store_static.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -23890,7 +23890,8 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - exact preservation_ready_expr_static_runtime_named_prefix_store_complete.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_store
+      preservation_ready_expr_static_runtime_named_prefix_store_complete).
 Qed.
 
 

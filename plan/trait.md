@@ -58,8 +58,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package-to-summary route conversions, public
   exact-body/package-to-store-safe summary route conversions, and a
   public-callback exact-body/package route that now consumes the
-  store-safe summary route instead of the store-static sidecar, and
+  store-safe summary route instead of the store-static sidecar,
   exact-body/component store-static wrappers factored through prefix routes,
+  and the canonical public runtime theorem narrowed through the prefix route,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -91,7 +92,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package facts now expose the public-form and store-safe summary
   routes directly, the public exact-body/package wrapper no longer depends on
   the broad store-static sidecar, exact-body/component store-static wrappers
-  now immediately narrow to prefix routes, and strict public routing can consume the no-receiver component summary
+  and the canonical public theorem now immediately narrow to prefix routes,
+  and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, component-body summary scoped provider

@@ -49,8 +49,8 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe summary, component-body summary, branch shadow summary, branch
   not-captured, branch absent-captured summary, package-at component-body, and
   package-at component-check branch, call-statement component-check, and
-  local-bounds component-check branch bridges through active mixed public
-  routes, public-form
+  local-bounds component-check branch, and scoped-package component-check
+  bridges through active mixed public routes, public-form
   exact-body/package-to-summary route
   conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
@@ -86,8 +86,8 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, branch shadow summary, branch not-captured,
   branch absent-captured summary, package-at component-body, package-at
-  component-check, call-statement component-check, and local-bounds component-check
-  branches through active mixed; the canonical public theorem
+  component-check, call-statement component-check, local-bounds component-check,
+  and scoped-package component-check branches through active mixed; the canonical public theorem
   still needs those facts derived from existing public premises.
   The
   active no-capture component branch now has scoped-package, public derived
@@ -159,7 +159,7 @@ validity checks must be represented in Rocq and the extracted checker.
   not-captured routes, branch absent-captured summary routes, and package-at
   component-body branch routes, package-at component-check branch routes,
   call-statement component-check routes, local-bounds component-check branch
-  routes, component-summary branch package-at, component-check branch
+  routes, scoped-package component-check routes, component-summary branch package-at, component-check branch
   package-at, no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch

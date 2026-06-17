@@ -2503,6 +2503,20 @@ Proof.
     eauto.
 Qed.
 
+Definition check_fn_root_shadow_receiver_method_strict_exact_closure_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_direct_receiver_method_present env fdef
+  then
+    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env fdef
+  else true.
+
+Definition check_env_root_shadow_receiver_method_strict_exact_closure_summary
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_receiver_method_strict_exact_closure_summary env)
+    (env_fns env).
+
 Definition check_env_end2end_direct_receiver_mixed_ready
     (env : global_env) : bool :=
   negb (check_env_root_shadow_direct_receiver_method_present env) ||
@@ -2639,6 +2653,25 @@ Definition infer_program_env_end2end_assoc_direct_receiver_mixed
 Definition check_program_env_end2end_assoc_direct_receiver_mixed
     (env : global_env) : bool :=
   match infer_program_env_end2end_assoc_direct_receiver_mixed env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+
+Definition infer_program_env_end2end_assoc_receiver_method_exact_mixed
+    (env : global_env) : infer_result global_env :=
+  match infer_program_env_end2end_assoc env with
+  | infer_err err => infer_err err
+  | infer_ok env' =>
+      if check_env_root_shadow_receiver_method_strict_exact_closure_summary
+           env' &&
+         check_env_end2end_direct_receiver_mixed_ready env'
+      then infer_ok env'
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Definition check_program_env_end2end_assoc_receiver_method_exact_mixed
+    (env : global_env) : bool :=
+  match infer_program_env_end2end_assoc_receiver_method_exact_mixed env with
   | infer_ok _ => true
   | infer_err _ => false
   end.

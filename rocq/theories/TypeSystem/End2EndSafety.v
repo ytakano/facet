@@ -387,6 +387,98 @@ Proof.
     eauto.
 Qed.
 
+Lemma check_env_root_shadow_receiver_method_strict_exact_closure_summary_of_absent :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_receiver_method_strict_exact_closure_summary env =
+      true.
+Proof.
+  intros env Habsent.
+  unfold check_env_root_shadow_receiver_method_strict_exact_closure_summary.
+  apply forallb_forall.
+  intros fdef Hin.
+  unfold check_fn_root_shadow_receiver_method_strict_exact_closure_summary.
+  rewrite
+    (check_env_root_shadow_direct_receiver_method_present_false_forall
+       env fdef Habsent Hin).
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_base :
+  forall env env',
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
+    env_checked); simpl in Hprog; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
+    try discriminate.
+  injection Hprog as ->.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_of_receiver_method_exact_mixed :
+  forall env env',
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed in Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
+    env_checked); simpl in Hprog; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
+    eqn:Hready; try discriminate.
+  injection Hprog as ->.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_of_no_receiver_method :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env'.
+Proof.
+  intros env env' Hmixed Habsent.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hmixed.
+  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
+    eqn:Hready; try discriminate.
+  injection Hmixed as ->.
+  rewrite (check_env_root_shadow_receiver_method_strict_exact_closure_summary_of_absent
+             env' Habsent).
+  reflexivity.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_receiver_method_exact_mixed_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_sound;
+    eauto.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_receiver_method_exact_mixed.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_mixed env =

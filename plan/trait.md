@@ -44,8 +44,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the active mixed endpoint once the summary-evidence route is supplied, a
   strict-public runtime bridge through that active mixed prefix/summary route,
   strict-public exact-body/package, package-at, and component summary
-  provider/check bridges through active mixed public routes, public-form
-  exact-body/package-to-summary route conversions, a runtime theorem for
+  provider/check and component-only same-result bridges through active mixed
+  public routes, public-form exact-body/package-to-summary route conversions,
+  a runtime theorem for
   `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -75,13 +76,14 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed public prefix/summary and exact-body/package routes, and
   exact-body/package facts now expose the public-form summary route directly,
   and strict public routing can consume the no-receiver component summary
-  provider/check branches through active mixed; the canonical public theorem
-  still needs those
-  facts derived from existing public premises. The
+  provider/check and component-only same-result branches through active mixed;
+  the canonical public theorem still needs those facts derived from existing
+  public premises. The
   active no-capture component branch now has scoped-package, public derived
   exact-body, package-at with-body-summary provider bridges from component
-  routes, and a public-callback boolean component body-summary branch bridge; it no longer needs a separate
-  exact-body premise. Active mixed success now implies the broader base checker,
+  routes, and a public-callback boolean component body-summary branch bridge;
+  it no longer needs a separate exact-body premise. Active mixed success now
+  implies the broader base checker,
   and the component-only diagnostic endpoint can be reconstructed from active
   mixed no-receiver plus the body-summary check. The no-receiver branch also
   has public-callback routes that consume membership-scoped component
@@ -138,11 +140,13 @@ validity checks must be represented in Rocq and the extracted checker.
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint now has strict-to-active checker agreement,
   explicit public exact-body/package, exact-body/package-to-summary route
-  conversions, strict-public exact-body/package, package-at, and component
-  summary provider/check routes, component-summary branch package-at, component-check
+  conversions, strict-public exact-body/package, package-at, component
+  summary provider/check routes, and component-only same-result routes,
+  component-summary branch package-at, component-check
   branch package-at, no-capture scoped-package, local-bounds derived
-  exact-body public bridges, a branch bridge that derives the exact-body route from the component
-  route instead of requiring a separate premise, branch bridges that consume
+  exact-body public bridges, a branch bridge that derives the exact-body route
+  from the component route instead of requiring a separate premise, branch
+  bridges that consume
   package or package-at with-body-summary providers directly, and static
   local-bounds plus public-callback no-receiver branch wrappers that consume
   membership-scoped component body-summary Prop or check providers without

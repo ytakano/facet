@@ -44,8 +44,9 @@ validity checks must be represented in Rocq and the extracted checker.
   package, package-at-all, local-bounds, derived local-bounds, scoped-package,
   and call-statement variants. Recent cleanup has routed the package
   component-check wrapper, package component-body-summary provider wrapper,
-  local-bounds exact-body static wrapper, local-bounds component body-summary
-  branch, uncaptured exact-body package branch, exact-non-captured and
+  local-bounds exact-body static wrapper, local-bounds route branch,
+  local-bounds component body-summary branch, uncaptured exact-body package branch,
+  exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
   component branch, and active/strict assoc-base branch callback routes through
   prefix evidence
@@ -111,8 +112,8 @@ validity checks must be represented in Rocq and the extracted checker.
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
-  exact-body/package, package-at, package-at-all, local-bounds, derived
-  local-bounds, scoped-package, local-bounds component body-summary branch,
+  exact-body/package, package-at, package-at-all, local-bounds, local-bounds
+  route branch, derived local-bounds, scoped-package, local-bounds component body-summary branch,
   uncaptured exact-body package branch, exact-non-captured and exact-local-bounds
   provider branches, component summary/check, component-body summary, branch
   shadow/not-captured/absent-captured, call-statement component-check,

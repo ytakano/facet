@@ -44,11 +44,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the active mixed endpoint once the summary-evidence route is supplied, a
   strict-public runtime bridge through that active mixed prefix/summary route,
   strict-public exact-body/package, package-at, and component summary
-  provider/check, component-only same-result, and assoc-base non-captured
-  provider bridges through active mixed public routes, public-form
-  exact-body/package-to-summary route conversions,
-  a runtime theorem for
-  `assoc_direct_receiver_base` under
+  provider/check, component-only same-result, assoc-base non-captured
+  provider, and store-safe summary-evidence bridges through active mixed
+  public routes, public-form exact-body/package-to-summary route conversions,
+  and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
   global-summary, per-component summary, and
@@ -77,10 +76,10 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed public prefix/summary and exact-body/package routes, and
   exact-body/package facts now expose the public-form summary route directly,
   and strict public routing can consume the no-receiver component summary
-  provider/check, component-only same-result, and assoc-base non-captured
-  provider branches through active mixed; the canonical public theorem still
-  needs those facts derived from existing
-  public premises. The
+  provider/check, component-only same-result, assoc-base non-captured provider,
+  and store-safe summary-evidence branches through active mixed; the canonical
+  public theorem still needs those facts derived from existing public premises.
+  The
   active no-capture component branch now has scoped-package, public derived
   exact-body, package-at with-body-summary provider bridges from component
   routes, and a public-callback boolean component body-summary branch bridge;
@@ -143,14 +142,14 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint now has strict-to-active checker agreement,
   explicit public exact-body/package, exact-body/package-to-summary route
   conversions, strict-public exact-body/package, package-at, component
-  summary provider/check routes, component-only same-result routes, and
-  assoc-base non-captured provider routes, component-summary branch package-at,
-  component-check
-  branch package-at, no-capture scoped-package, local-bounds derived
+  summary provider/check routes, component-only same-result routes, assoc-base
+  non-captured provider routes, and store-safe summary-evidence routes,
+  component-summary branch package-at, component-check branch package-at,
+  no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch
-  bridges that consume
-  package or package-at with-body-summary providers directly, and static
+  bridges that consume package or package-at with-body-summary providers
+  directly, and static
   local-bounds plus public-callback no-receiver branch wrappers that consume
   membership-scoped component body-summary Prop or check providers without
   treating them as unrestricted global Prop providers. The canonical theorem

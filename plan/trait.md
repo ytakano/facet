@@ -43,8 +43,9 @@ validity checks must be represented in Rocq and the extracted checker.
   global synthetic direct-call summary evidence, a full component-summary check,
   or strict exact readiness. Those stronger gates rejected broad existing valid
   coverage when tried as active authorities.
-- Associated type defaults and `deriving` are reserved for future surface
-  forms. Provisional syntax for both remains explicitly rejected.
+- Associated type defaults, equality constraints, and `deriving` are reserved
+  for future surface forms. Provisional syntax for them remains explicitly
+  rejected.
 
 ## Remaining Tasks
 

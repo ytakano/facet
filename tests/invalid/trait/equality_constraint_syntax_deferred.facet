@@ -1,0 +1,7 @@
+trait Provider {
+  type Item;
+}
+
+fn main<T>(x: unrestricted T) -> unrestricted T where T::Item = unrestricted isize {
+  x
+}

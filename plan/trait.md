@@ -9,13 +9,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Current State
 
-- Traits, impls, associated types, and trait methods are parsed, lowered into
-  Rocq/extracted environments, and checked by the extracted checker for
-  duplicate/missing/extra/mismatched associated items. Impl method bodies are
-  elaborated to hidden functions and checked even when the method is not called.
-- Method-local type parameters are supported for trait and impl methods,
-  including method-local bounds and generic-trait impl remapping. Method-local
-  lifetime generics remain deferred and are rejected by tests.
+- Traits, impls, associated types, trait methods, method-local type parameters,
+  generic-trait impl remapping, and associated type projections are parsed,
+  lowered, and checked through the extracted Rocq checker. Impl method bodies
+  are elaborated to hidden functions and checked even when uncalled.
 - Method calls use receiver-first prefix UFCS forms:
   `(<Ty as Trait>::method receiver args...)` and
   `(Trait::method receiver args...)`. Dot syntax remains rejected for this
@@ -24,78 +21,28 @@ validity checks must be represented in Rocq and the extracted checker.
   function parameters, typed literals, immutable pure local literals after
   receiver-let elimination, fieldless struct literals, and payloadless enum
   constructors whose store-safe argument evidence is checked in Rocq.
-  Field-bearing struct literals, payload-bearing enum constructors, direct-call
-  receivers, generic direct-call receivers, non-pure inferred locals, and
-  general annotated locals remain gated.
-- Associated type projections use `<Ty as Trait>::Assoc`; `Self::Assoc` is
-  accepted inside the current trait/impl context. Generic projections under
-  local trait bounds are preserved and regression-tested. Raw elaboration keeps
-  surface raw expressions and normalizes associated projections only at core
-  checker boundaries.
+- Still-gated receiver forms are field-bearing struct literals,
+  payload-bearing enum constructors, direct-call receivers, generic direct-call
+  receivers, non-pure inferred locals, and general annotated locals.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
   its only extracted checker authority, with no fallback acceptance path. Public
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Direct-call receiver proof work has established the active mixed endpoint,
-  branch splits for direct-ready/no-receiver cases, public wrappers for the main
-  route families, no-receiver receiver-method target absence/collapse facts,
-  exact-closure bridges for local-bounds routes, seen callees, direct-callee
-  component checks, exact-body targets, unconditional Prop-level combined
-  local-bounds summaries, no-receiver receiver-aware combined readiness,
-  component-body/component-with-body-summary providers, extracted absence and
-  synthetic proof endpoints, an assoc direct-receiver-base per-function gate,
-  literal narrow-summary support, and an assoc direct-receiver-base mixed proof
-  endpoint that combines the per-function gate with the existing mixed env gate.
-  The direct-receiver method sidecar now accepts the basic UFCS direct receiver
-  fixture, and the assoc direct-receiver-base endpoint accepts that fixture; the
-  new base-mixed endpoint is proof infrastructure and is not the active CLI
-  authority. Its proof facts now expose the no-receiver/direct-ready branch
-  split and constructors from the base endpoint plus either branch condition. A
-  separate assoc direct-receiver-base combined endpoint now records the base
-  per-function gate plus the combined direct-receiver summary gate, without
-  requiring the full env-level provenance, preservation, and component gates;
-  its proof helpers expose Prop-level combined readiness, local-bounds-family
-  providers, uniqueness, and a runtime bridge parameterized by separately
-  supplied provenance, preservation, and synthetic-call summary evidence. A
-  narrower direct-receiver-method-or-component summary now has checker and Prop
-  readiness facts plus an assoc direct-receiver-base proof endpoint with
-  uniqueness, soundness, readiness, local-bounds-family helpers, and runtime
-  bridges. A proof-only ready-check endpoint now packages provenance,
-  preservation, and no-capture component checker gates and exposes soundness plus
-  a zero-extra-premise runtime wrapper for that endpoint; direct-receiver replay
-  is discharged by a proven-provider variant. The active mixed endpoint now has
-  public-callback-shaped runtime bridges that can use either a no-receiver
-  summary-evidence provider or exact-body route target/package evidence, with
-  the route/package obligations available globally or confined to the
-  no-receiver branch. A further proof-only endpoint gates strict exact-closure
-  checks only on functions that
-  actually contain receiver-method targets, collapses back to the active mixed
-  endpoint for no-receiver programs, exposes per-function exact-closure plus
-  local-bounds route-package-at facts for receiver-method component functions,
-  and reuses the no-receiver-only public-callback bridge. A proof-only
-  component-mixed endpoint now records and exports the exact no-receiver
-  component-summary gate that is sufficient for a zero-extra-premise
-  public-callback runtime theorem. A temporary CLI swap to that endpoint rejected
-  broad existing valid coverage, so it remains proof/diagnostic infrastructure
-  and the active CLI authority stays on the assoc-base mixed endpoint.
-- The remaining activation gap is proof-side and specific to deriving the
-  no-receiver branch evidence needed by the active mixed runtime theorem. The
-  active and receiver-method-exact bridges now remove route/package obligations
-  from receiver-present programs by using the active mixed direct-ready branch,
-  and the active mixed bridge can alternatively consume a no-receiver
-  summary-evidence provider. The public active theorem still needs that provider
-  derived without a new public premise. The active endpoint exposes only a
-  combined captured-or-component summary on the no-receiver branch, and
-  receiver-method target absence alone does not imply captured-summary absence.
-  The existing local-bounds route wrappers can consume per-component synthetic
-  route evidence, but the no-receiver combined summary is disjunctive per
-  function: captured-summary functions do not yield the component synthetic
-  route evidence required by the component branch, and component-summary
-  evidence for all functions is behavior-incompatible with broad valid coverage.
-- Haskell-style `deriving` is reserved for a future surface form. Provisional
-  struct/enum deriving syntax is rejected explicitly, and `deriving` is
-  reserved as a keyword.
+- Proof infrastructure for direct-call receivers now includes active-mixed
+  branch splits, no-receiver/direct-ready bridges, receiver-method absence
+  facts, local-bounds route helpers, exact-body route/package bridges, and
+  proof-only endpoints for stronger gates. These endpoints are useful for proof
+  diagnostics but are not behavior-compatible replacements for the active CLI
+  authority.
+- The remaining activation gap is proof-side: the active mixed no-receiver
+  branch exposes only receiver-method absence plus a disjunctive
+  captured-or-component summary. Existing runtime paths still need either
+  global synthetic direct-call summary evidence, a full component-summary check,
+  or strict exact readiness. Those stronger gates rejected broad existing valid
+  coverage when tried as active authorities.
+- `deriving` is reserved for a future surface form. Provisional struct/enum
+  deriving syntax is explicitly rejected.
 
 ## Remaining Tasks
 
@@ -103,19 +50,16 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Derive the active mixed endpoint's no-receiver summary-evidence provider,
-     or an equivalent behavior-preserving provider, without adding a public
-     premise.
-   - Add positive direct-call receiver UFCS tests only after the active extracted
-     checker accepts them through the verified endpoint. Keep existing
+   - Derive a behavior-compatible no-receiver evidence provider, or an
+     equivalent public-premise-free lift, from the active mixed endpoint.
+   - Add positive direct-call receiver UFCS tests only after the active
+     extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
 
 2. Extend receiver coverage conservatively.
-   - Keep the canonical surface syntax as receiver-first prefix calls.
-   - Add field-bearing struct literal, payload-bearing enum constructor,
-     generic direct-call receiver, non-pure inferred local, and general
-     annotated-local receivers only when Rocq checker summaries and safety
-     proofs provide store/root-safe evidence for each shape.
+   - Keep receiver-first prefix calls as the canonical surface syntax.
+   - Add the remaining receiver forms only when Rocq checker summaries and
+     safety proofs provide store/root-safe evidence for each shape.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 
@@ -127,33 +71,18 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- A trial switch to the strict direct-receiver endpoint rejected existing valid
-  programs such as `tests/valid/assign/basic_assign.facet` with
-  `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
-  for programs without direct receiver-method bodies and is now the active OCaml
-  authority.
-- Direct-call receiver activation is now blocked on deriving no-receiver branch
-  evidence for the active mixed endpoint without changing the public theorem.
-  The active mixed bridge can consume no-receiver summary evidence or
-  no-receiver exact-body route/package evidence, and the exported
-  component-mixed endpoint shows that no-receiver component-summary evidence is
-  also sufficient for a zero-extra-premise runtime theorem. A temporary CLI swap
-  to component-mixed failed broad valid coverage with `ErrEndToEndSafetyGateFailed`,
-  so it is not behavior-compatible as the active authority. The active public
-  theorem still has not been retargeted because the active CLI authority exposes
-  only receiver-method absence on the no-receiver branch. Activation still needs
-  a behavior-compatible no-receiver provider or an equivalent public-premise-free
-  lift. A route-specific proof pass confirmed that the available non-strict
-  combined-summary runtime paths still require either global store-safe
-  synthetic direct-call summary evidence or a full component-summary check, and
-  the strict exact-closure captured-or-component paths require strict exact
-  readiness that the active no-receiver branch does not expose.
-- The strongest existing assoc-base paths remain proof endpoints, not behavior-
-  compatible authorities. Temporary CLI swaps to the absence-mixed and
-  synthetic-mixed endpoints rejected broad existing valid coverage with
-  `ErrEndToEndSafetyGateFailed`; the assoc direct-receiver-base endpoint now
-  accepts the basic direct-call receiver fixture but is not the active CLI
-  authority.
+- Strict direct-receiver, absence-mixed, synthetic-mixed, and component-mixed
+  endpoint trials rejected broad existing valid coverage with
+  `ErrEndToEndSafetyGateFailed`; they remain proof/diagnostic infrastructure,
+  not active authorities.
+- The active mixed no-receiver branch does not currently imply the evidence
+  required by available runtime paths. Receiver-method target absence does not
+  imply captured-summary absence, and disjunctive captured-or-component summary
+  evidence does not provide component synthetic route evidence for captured
+  functions.
+- The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
+  fixture, but it is not the active CLI authority and has not been connected to
+  the public runtime theorem without stronger gates.
 
 ## Key Decisions
 
@@ -183,6 +112,8 @@ git diff --check
 rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|TODO|DEBUG|idtac" rocq/theories
 ```
 
-The final search must not introduce new proof holes or debug leftovers. Existing
-legacy proof-script selector matches should be called out explicitly if they
-remain unrelated to the change.
+For docs-only roadmap maintenance, `git diff --check` is sufficient unless the
+edit changes stated behavior or proof obligations. The final marker search must
+not introduce new proof holes or debug leftovers when Rocq files are touched.
+Existing legacy proof-script selector matches should be called out explicitly if
+they remain unrelated to the change.

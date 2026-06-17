@@ -48,8 +48,8 @@ validity checks must be represented in Rocq and the extracted checker.
   provider, store-safe summary-evidence, component-check, component-body
   store-safe summary, component-body summary, branch shadow summary, branch
   not-captured, branch absent-captured summary, package-at component-body, and
-  package-at component-check branch bridges through
-  active mixed public routes, public-form
+  package-at component-check branch, and call-statement component-check bridges
+  through active mixed public routes, public-form
   exact-body/package-to-summary route
   conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
@@ -84,8 +84,8 @@ validity checks must be represented in Rocq and the extracted checker.
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, branch shadow summary, branch not-captured,
-  branch absent-captured summary, package-at component-body, and package-at
-  component-check branches through active
+  branch absent-captured summary, package-at component-body, package-at
+  component-check, and call-statement component-check branches through active
   mixed; the canonical
   public theorem still needs those facts derived from existing public premises.
   The
@@ -157,7 +157,8 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body summary routes, branch shadow summary routes, branch
   not-captured routes, branch absent-captured summary routes, and package-at
   component-body branch routes, package-at component-check branch routes,
-  component-summary branch package-at, component-check branch package-at,
+  call-statement component-check routes, component-summary branch package-at,
+  component-check branch package-at,
   no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route
   from the component route instead of requiring a separate premise, branch

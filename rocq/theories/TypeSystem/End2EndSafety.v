@@ -17689,6 +17689,87 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_derived_exact_body_prefix :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  (forall env fname,
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname) ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (forall env0 fname fdef fcall used used' fname_body args_body
+        synthetic_body,
+      In fdef (env_fns env0) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      global_env_local_bounds_family env' env0 /\
+        check_fn_root_shadow_captured_call_store_safe_summary
+          env' fdef = false /\
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env' fdef = true) ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic Hscope_synthetic Htyping_prefix Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic
+    Hsummary_of_evidence env env' f s s' v Hprog Hroute_ready
+    Hcomponent_check Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_prefix.
+  - exact Hsynthetic.
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hstatic.
+  - exact Hsummary_of_evidence.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body Hin0 Hname Hrename Htarget.
+    destruct (Hroute_ready env0 fname fdef fcall used used' fname_body
+      args_body synthetic_body Hin0 Hname Hrename Htarget)
+      as (Hfamily & Hcaptured & Hcomponent).
+    destruct
+      (infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_when_not_captured
+        env env' env' env0 fdef
+        (infer_program_env_end2end_assoc_direct_receiver_mixed_base env env' Hprog)
+        (global_env_local_bounds_family_base env') Hfamily Hin0 Hcaptured
+        Hcomponent) as [_ [_ Hexact]].
+    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any.
+    + destruct
+        (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+          env0 fdef Hexact) as [_ Hexact_target].
+      exact Hexact_target.
+    + exact Hrename.
+    + exact Htarget.
+  - exact Hprog.
+  - exact Hroute_ready.
+  - exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_local_bounds_package_and_component_check_store_static :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

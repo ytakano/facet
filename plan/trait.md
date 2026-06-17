@@ -46,8 +46,9 @@ validity checks must be represented in Rocq and the extracted checker.
   strict-public exact-body/package, package-at, and component summary
   provider/check, component-only same-result, assoc-base non-captured
   provider, store-safe summary-evidence, component-check, component-body
-  store-safe summary, component-body summary, component-body summary
-  boolean branch, branch shadow summary, branch not-captured, branch
+  store-safe summary, component-body summary, component-body summary scoped
+  provider branch, component-body summary boolean branch, branch shadow summary,
+  branch not-captured, branch
   absent-captured summary, package-at component-body, and
   package-at component-check branch, call-statement component-check, and
   local-bounds component-check branch, and scoped-package component-check
@@ -85,8 +86,9 @@ validity checks must be represented in Rocq and the extracted checker.
   and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
-  summary, component-body summary, component-body summary boolean branch,
-  branch shadow summary, branch not-captured,
+  summary, component-body summary, component-body summary scoped provider
+  branch, component-body summary boolean branch, branch shadow summary,
+  branch not-captured,
   branch absent-captured summary, package-at component-body, package-at
   component-check, call-statement component-check, local-bounds component-check,
   and scoped-package component-check branches through active mixed; the canonical public theorem
@@ -157,9 +159,9 @@ validity checks must be represented in Rocq and the extracted checker.
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
   component-check routes, component-body store-safe summary routes,
-  component-body summary routes, component-body summary boolean branch routes,
-  branch shadow summary routes, branch
-  not-captured routes, branch absent-captured summary routes, and package-at
+  component-body summary routes, component-body summary scoped provider branch
+  routes, component-body summary boolean branch routes, branch shadow summary
+  routes, branch not-captured routes, branch absent-captured summary routes, and package-at
   component-body branch routes, package-at component-check branch routes,
   call-statement component-check routes, local-bounds component-check branch
   routes, scoped-package component-check routes, component-summary branch package-at, component-check branch

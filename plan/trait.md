@@ -55,8 +55,8 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at component-check branch, call-statement component-check, and
   local-bounds component-check branch, and scoped-package component-check
   bridges through active mixed public routes, public-form
-  exact-body/package-to-summary route
-  conversions,
+  exact-body/package-to-summary route conversions, public
+  exact-body/package-to-store-safe summary route conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -85,8 +85,8 @@ validity checks must be represented in Rocq and the extracted checker.
   implies active mixed checker success and has runtime bridges through the
   active mixed public-form store-safe summary, strict-public store-safe
   summary, prefix/summary, and exact-body/package routes, and
-  exact-body/package facts now expose the public-form summary route directly,
-  and strict public routing can consume the no-receiver component summary
+  exact-body/package facts now expose the public-form and store-safe summary
+  routes directly, and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, component-body summary scoped provider

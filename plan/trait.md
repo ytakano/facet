@@ -46,8 +46,8 @@ validity checks must be represented in Rocq and the extracted checker.
   strict-public exact-body/package, package-at, and component summary
   provider/check, component-only same-result, assoc-base non-captured
   provider, store-safe summary-evidence, component-check, component-body
-  store-safe summary, component-body summary, and branch shadow summary
-  bridges through active mixed public routes, public-form
+  store-safe summary, component-body summary, branch shadow summary, and branch
+  not-captured bridges through active mixed public routes, public-form
   exact-body/package-to-summary route
   conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
@@ -81,8 +81,8 @@ validity checks must be represented in Rocq and the extracted checker.
   and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
-  summary, component-body summary, and branch shadow summary branches through
-  active mixed; the canonical
+  summary, component-body summary, branch shadow summary, and branch not-captured
+  branches through active mixed; the canonical
   public theorem still needs those facts derived from existing public premises.
   The
   active no-capture component branch now has scoped-package, public derived
@@ -150,8 +150,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
   component-check routes, component-body store-safe summary routes,
-  component-body summary routes, and branch shadow summary routes,
-  component-summary branch package-at,
+  component-body summary routes, branch shadow summary routes, and branch
+  not-captured routes, component-summary branch package-at,
   component-check branch package-at,
   no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route

@@ -42,7 +42,8 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at bridges, local-bounds/scoped-package/call-statement component
   routes, no-receiver component-summary provider/check routes, derived
   active-mixed branch-to-unconditional component check plus component-body
-  summary/provider-in-env/check bridges, and component-only boolean bridges.
+  store-safe-summary/summary/provider-in-env/check bridges, and component-only
+  boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
   `strict_mixed`, and

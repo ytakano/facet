@@ -40,18 +40,20 @@ validity checks must be represented in Rocq and the extracted checker.
   splits, no-receiver/direct-ready bridges, local-bounds route helpers,
   exact-body route/package bridges, public-callback wrappers for the active
   mixed endpoint, an active-mixed runtime theorem under the assoc-compatible
-  store-safe synthetic direct-call route, a runtime theorem for
-  `assoc_direct_receiver_base` under the existing global replay evidence, and
-  proved-safe absent/synthetic/component mixed endpoints. The stronger
-  endpoints remain proof diagnostics because their gates rejected broad existing
-  valid coverage when tried as active authorities.
-- The remaining activation gap is proof-side: the active mixed no-receiver
-  branch has callback-based runtime safety routes, but the public theorem still
-  needs either the assoc-compatible store-safe synthetic direct-call route to be
-  derivable from its current public premises, or a deliberate public theorem
-  retarget to expose that route. Receiver-method absence alone does not imply
-  the component gate or exact-body target/package callbacks, so those paths
-  remain diagnostic rather than activation bridges.
+  store-safe synthetic direct-call route, a public-prefix bridge that retargets
+  the active mixed endpoint once the summary-evidence route is supplied, a
+  runtime theorem for `assoc_direct_receiver_base` under the existing global
+  replay evidence, and proved-safe absent/synthetic/component mixed endpoints.
+  The stronger endpoints remain proof diagnostics because their gates rejected
+  broad existing valid coverage when tried as active authorities.
+- The remaining activation gap is proof-side: the public theorem can now be
+  retargeted to the active mixed endpoint once the summary-evidence route is
+  available under its existing public premises. The current public prefix route
+  requires global direct-call evidence, while the active no-receiver branch
+  needs per-callee summary/evidence-at facts; deriving that bridge without a new
+  theorem premise is the next proof obligation. Receiver-method absence alone
+  does not imply the component gate or exact-body target/package callbacks, so
+  those paths remain diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -62,9 +64,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Derive a behavior-compatible no-receiver provider for the existing
-     active-mixed public-callback safety route, or an equivalent
-     public-premise-free lift, from the active mixed endpoint.
+   - Derive the summary-evidence route from the public prefix-route premises,
+     or otherwise prove an equivalent public-premise-free lift for the active
+     mixed no-receiver branch.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -89,11 +91,12 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`; the component-mixed endpoint was rechecked
   against the current suite and still fails ordinary valid programs, so these
   remain proof/diagnostic infrastructure, not active authorities.
-- The active mixed no-receiver branch has runtime safety routes only when a
+- The active mixed no-receiver branch has runtime safety routes when a
   no-receiver callback supplies absent-captured, synthetic-summary,
   component-summary, exact-body/package, or equivalent evidence, or when the
-  theorem uses the assoc-compatible store-safe synthetic direct-call route.
-  Receiver-method target absence alone still does not imply those providers.
+  theorem uses the assoc-compatible store-safe synthetic direct-call route. The
+  current public theorem still lacks a proof that its prefix-route premises
+  provide the summary-evidence route needed by that bridge.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

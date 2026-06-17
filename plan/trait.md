@@ -26,8 +26,8 @@ validity checks must be represented in Rocq and the extracted checker.
   constructors whose store-safe argument evidence is checked in Rocq.
 - Still-gated receiver forms are field-bearing struct literals,
   payload-bearing enum constructors, direct-call receivers, generic direct-call
-  receivers, non-pure inferred locals, annotated locals initialized by calls,
-  and other general annotated locals.
+  receivers, non-pure inferred locals, mutable annotated locals, annotated
+  locals initialized by calls, and other general annotated locals.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
   its only extracted checker authority, with no fallback acceptance path. Public
   checker soundness aliases target this assoc-base mixed endpoint. The public

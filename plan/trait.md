@@ -55,10 +55,11 @@ validity checks must be represented in Rocq and the extracted checker.
   prefix evidence
   instead of broad store-static sidecars.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
-  `assoc_direct_receiver_base_combined`, and strict direct-receiver variants.
-  They are useful for proving route fragments and checking sampled fixtures, but
-  they are not active checker authorities because their gates reject either
-  broad valid coverage or the direct-call receiver safety-gate fixtures.
+  `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
+  variants. They are useful for proving route fragments and checking sampled
+  fixtures, but they are not active checker authorities because their gates
+  reject either broad valid coverage or the direct-call receiver safety-gate
+  fixtures.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint; retargeting it to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
@@ -106,10 +107,11 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- Strict direct-receiver endpoint trials reject broad valid coverage with
-  `ErrEndToEndSafetyGateFailed`. The rejected absence-mixed, synthetic-mixed,
-  and component-mixed diagnostics have been removed; the base direct-component
-  endpoint remains proof/diagnostic infrastructure, not an active authority.
+- Assoc strict direct-receiver endpoint trials reject broad valid coverage with
+  `ErrEndToEndSafetyGateFailed`. The rejected non-assoc strict direct-receiver,
+  absence-mixed, synthetic-mixed, and component-mixed diagnostics have been
+  removed; the base direct-component endpoint remains proof/diagnostic
+  infrastructure, not an active authority.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component

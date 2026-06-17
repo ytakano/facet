@@ -16949,25 +16949,6 @@ let check_env_end2end_direct_receiver_component_mixed_ready env =
         env))
     (check_env_end2end_direct_receiver_ready env)
 
-(** val infer_program_env_end2end_strict_exact_closure_direct_receiver :
-    global_env -> global_env infer_result **)
-
-let infer_program_env_end2end_strict_exact_closure_direct_receiver env =
-  match infer_program_env_end2end_strict_exact_closure env with
-  | Infer_ok env' ->
-    if check_env_end2end_direct_receiver_ready env'
-    then Infer_ok env'
-    else Infer_err ErrEndToEndSafetyGateFailed
-  | Infer_err err -> Infer_err err
-
-(** val check_program_env_end2end_strict_exact_closure_direct_receiver :
-    global_env -> bool **)
-
-let check_program_env_end2end_strict_exact_closure_direct_receiver env =
-  match infer_program_env_end2end_strict_exact_closure_direct_receiver env with
-  | Infer_ok _ -> true
-  | Infer_err _ -> false
-
 (** val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
     global_env -> global_env infer_result **)
 

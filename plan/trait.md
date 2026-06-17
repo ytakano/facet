@@ -54,10 +54,10 @@ validity checks must be represented in Rocq and the extracted checker.
   component-check branch package-at, no-capture scoped-package bridges,
   local-bounds derived exact-body public route bridges, branch bridges that
   remove the separate exact-body premise, accept package-at with-body-summary
-  providers, consume membership-scoped component body-summary checks, and expose
-  public-callback no-receiver branch routes through membership-scoped component
-  body-summary providers, unscoped provider wrappers, or booleans while
-  preserving the direct-ready branch, plus a provider-based runtime bridge for
+  providers, convert component body-summary booleans into membership-scoped
+  check providers, and expose public-callback no-receiver branch routes through
+  scoped Prop providers, scoped check providers, unscoped provider wrappers, or
+  booleans while preserving the direct-ready branch, plus a provider-based runtime bridge for
   `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
@@ -73,10 +73,10 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body premise. Active mixed success now implies the broader base checker,
   and the component-only diagnostic endpoint can be reconstructed from active
   mixed no-receiver plus the body-summary check. The no-receiver branch also
-  has a public-callback route that consumes a membership-scoped component
-  body-summary provider directly, with an unscoped provider wrapper for existing
-  diagnostics; the canonical theorem still needs that provider or body-summary
-  check derived without a new theorem premise. Receiver-method
+  has public-callback routes that consume membership-scoped component
+  body-summary Prop or check providers directly, with unscoped provider and
+  boolean wrappers for existing diagnostics; the canonical theorem still needs
+  one of those providers/checks derived without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved
@@ -132,10 +132,10 @@ validity checks must be represented in Rocq and the extracted checker.
   route instead of requiring a separate premise, branch bridges that consume
   package or package-at with-body-summary providers directly, and static
   local-bounds plus public-callback no-receiver branch wrappers that consume
-  membership-scoped component body-summary providers or checks without treating
-  them as unrestricted global Prop providers. The canonical theorem still lacks
-  a proof that the required provider/check and per-callee summary/evidence-at
-  facts follow from its existing public premises.
+  membership-scoped component body-summary Prop or check providers without
+  treating them as unrestricted global Prop providers. The canonical theorem
+  still lacks a proof that the required provider/check and per-callee
+  summary/evidence-at facts follow from its existing public premises.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

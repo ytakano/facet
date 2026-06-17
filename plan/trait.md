@@ -64,25 +64,24 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges. A proof-only ready-check endpoint now packages provenance,
   preservation, and no-capture component checker gates and exposes soundness plus
   a zero-extra-premise runtime wrapper for that endpoint; direct-receiver replay
-  is discharged by a proven-provider variant. The active mixed endpoint now also
-  has a public-callback-shaped runtime theorem whose only extra inputs are an
-  exact-body route target callback and an exact-body route package. A further
+  is discharged by a proven-provider variant. The active mixed endpoint now has
+  public-callback-shaped runtime bridges with exact-body route target/package
+  obligations either global or confined to the no-receiver branch. A further
   proof-only endpoint gates strict exact-closure checks only on functions that
   actually contain receiver-method targets, collapses back to the active mixed
   endpoint for no-receiver programs, exposes per-function exact-closure plus
   local-bounds route-package-at facts for receiver-method component functions,
-  and has a public-callback bridge whose exact-body route/package obligations
-  apply only to the no-receiver branch. These endpoints remain proof
-  infrastructure and are not the active public theorem.
+  and reuses the no-receiver-only public-callback bridge. These endpoints remain
+  proof infrastructure and are not the active public theorem.
 - The remaining activation gap is proof-side and specific to deriving the
-  exact-body route target/package evidence needed by that active mixed runtime
-  theorem. The receiver-method-exact bridge now removes those obligations from
-  receiver-present programs by using the active mixed direct-ready branch, but
-  the public active theorem still needs a no-receiver branch provider strong
-  enough to supply exact-body target/package evidence without a new premise. The
-  active endpoint exposes only a combined captured-or-component summary on the
-  no-receiver branch, and receiver-method target absence alone does not imply
-  captured-summary absence.
+  exact-body route target/package evidence needed by the no-receiver branch of
+  the active mixed runtime theorem. The active and receiver-method-exact bridges
+  now remove those obligations from receiver-present programs by using the
+  active mixed direct-ready branch, but the public active theorem still needs a
+  no-receiver provider strong enough to supply exact-body target/package
+  evidence without a new premise. The active endpoint exposes only a combined
+  captured-or-component summary on the no-receiver branch, and receiver-method
+  target absence alone does not imply captured-summary absence.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -124,10 +123,8 @@ validity checks must be represented in Rocq and the extracted checker.
   authority.
 - Direct-call receiver activation is now blocked on route-package evidence for
   the active mixed endpoint. The latest active mixed runtime theorem matches the
-  public callback shape but still requires an exact-body route target callback
-  and exact-body route package. The receiver-method-exact mixed endpoint now
-  supplies per-function route-package-at evidence for receiver-method component
-  functions and a bridge that confines remaining exact-body route/package
+  public callback shape but still requires exact-body route target/package
+  evidence. The active mixed and receiver-method-exact bridges now confine those
   obligations to the no-receiver branch, but the active public theorem still has
   not been retargeted. Temporary diagnostics still show the full direct-ready env
   gate failing on `provenance=false`, `preservation=false`, and

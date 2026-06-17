@@ -42,7 +42,9 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at bridges, local-bounds/scoped-package/call-statement component
   routes, no-receiver component-summary provider/check routes, and
   component-only boolean bridges. Recent cleanup removed broad diagnostic
-  sidecars and renamed legacy strict-endpoint wrappers with `strict_mixed`.
+  sidecars, renamed legacy strict-endpoint wrappers with `strict_mixed`, and
+  renamed derived component-only runtime wrappers around their public
+  no-receiver component-body-summary check premise.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

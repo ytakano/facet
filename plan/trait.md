@@ -61,8 +61,9 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe summary route instead of the store-static sidecar,
   exact-body/component store-static wrappers factored through prefix routes,
   the canonical public runtime theorem narrowed through the prefix route,
-  and the no-receiver component body-summary provider route exposed in
-  prefix-evidence form,
+  the no-receiver component body-summary provider route exposed in
+  prefix-evidence form, and the branch exact-body/package component-summary
+  provider route exposed in prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -93,10 +94,11 @@ validity checks must be represented in Rocq and the extracted checker.
   summary, prefix/summary, and exact-body/package routes, and
   exact-body/package facts now expose the public-form and store-safe summary
   routes directly, the public exact-body/package wrapper no longer depends on
-  the broad store-static sidecar, exact-body/component store-static wrappers
-  the canonical public theorem, and the no-receiver component body-summary
-  provider route now immediately narrow to prefix routes, and strict public
-  routing can consume the no-receiver component summary
+  the broad store-static sidecar, exact-body/component store-static wrappers,
+  the canonical public theorem, the no-receiver component body-summary
+  provider route, and the branch exact-body/package component-summary provider
+  route now immediately narrow to prefix routes, and strict public routing can
+  consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, component-body summary scoped provider
@@ -138,9 +140,9 @@ validity checks must be represented in Rocq and the extracted checker.
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
    - Continue replacing over-broad provenance/preservation and remaining
-     store-static sidecars with runtime routes that consume the component-only boolean evidence bridge plus static
-     prefix/exact-body package facts, without requiring Prop-to-bool
-     completeness for component summaries.
+     store-static sidecars with runtime routes that consume prefix evidence,
+     exact-body package facts, and the component-only boolean bridge, without
+     requiring Prop-to-bool completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.

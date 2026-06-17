@@ -109,9 +109,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Assoc strict direct-receiver endpoint trials reject broad valid coverage with
   `ErrEndToEndSafetyGateFailed`. The rejected non-assoc strict direct-receiver,
-  absence-mixed, synthetic-mixed, and component-mixed diagnostics have been
-  removed; the base direct-component endpoint remains proof/diagnostic
-  infrastructure, not an active authority.
+  absence-mixed, synthetic-mixed, and component-mixed diagnostics, plus their
+  now-unused mixed ready-check booleans, have been removed; the base
+  direct-component endpoint remains proof/diagnostic infrastructure, not an
+  active authority.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component

@@ -16921,34 +16921,6 @@ let check_env_end2end_direct_receiver_mixed_ready env =
   (||) (negb (check_env_root_shadow_direct_receiver_method_present env))
     (check_env_end2end_direct_receiver_ready env)
 
-(** val check_env_end2end_direct_receiver_absent_mixed_ready :
-    global_env -> bool **)
-
-let check_env_end2end_direct_receiver_absent_mixed_ready env =
-  (||)
-    ((&&) (negb (check_env_root_shadow_direct_receiver_method_present env))
-      (check_env_root_shadow_captured_call_store_safe_summary_absent env))
-    (check_env_end2end_direct_receiver_ready env)
-
-(** val check_env_end2end_direct_receiver_synthetic_mixed_ready :
-    global_env -> bool **)
-
-let check_env_end2end_direct_receiver_synthetic_mixed_ready env =
-  (||)
-    ((&&) (negb (check_env_root_shadow_direct_receiver_method_present env))
-      (check_env_root_shadow_synthetic_direct_call_ready_summary env))
-    (check_env_end2end_direct_receiver_ready env)
-
-(** val check_env_end2end_direct_receiver_component_mixed_ready :
-    global_env -> bool **)
-
-let check_env_end2end_direct_receiver_component_mixed_ready env =
-  (||)
-    ((&&) (negb (check_env_root_shadow_direct_receiver_method_present env))
-      (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env))
-    (check_env_end2end_direct_receiver_ready env)
-
 (** val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
     global_env -> global_env infer_result **)
 

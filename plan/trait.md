@@ -55,8 +55,8 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds derived exact-body public route bridges, branch bridges that
   remove the separate exact-body premise, accept package-at with-body-summary
   providers, consume membership-scoped component body-summary checks, and expose
-  a public-callback no-receiver branch route through a component body-summary
-  boolean while preserving the direct-ready branch, plus a provider-based runtime bridge for
+  public-callback no-receiver branch routes through component body-summary
+  providers or booleans while preserving the direct-ready branch, plus a provider-based runtime bridge for
   `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
@@ -71,9 +71,10 @@ validity checks must be represented in Rocq and the extracted checker.
   boolean component body-summary branch bridge; it no longer needs a separate
   exact-body premise. Active mixed success now implies the broader base checker,
   and the component-only diagnostic endpoint can be reconstructed from active
-  mixed no-receiver plus the body-summary check; the canonical theorem still
-  needs that body-summary check and per-callee summary/evidence-at facts derived
-  without a new theorem premise. Receiver-method
+  mixed no-receiver plus the body-summary check. The no-receiver branch also
+  has a public-callback route that consumes the component body-summary provider
+  directly; the canonical theorem still needs that provider or body-summary
+  check derived without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved

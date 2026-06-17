@@ -22630,10 +22630,9 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_b
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hexact_body Hpackage.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_public_store_safe_summary_route.
-  - exact Hsynthetic_route.
+  intros _Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys _Hframe_ready _Hparam_ready Hexact_body Hpackage.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
   - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height.
     + exact Hscope_synthetic.
     + exact eval_preserves_typing_ready_prefix_mutual.
@@ -22648,8 +22647,6 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
 Qed.
 
 
@@ -22871,10 +22868,9 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_activ
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+  intros _Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hexact_body Hpackage.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_public_store_safe_summary_route.
-  - exact Hsynthetic_route.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
   - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_public_exact_body_call_route_package.
     + exact Hscope_synthetic.
     + exact Hroots_ready.
@@ -22889,8 +22885,6 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_active_mixed_public_exact_body_call_route_package_at_all :

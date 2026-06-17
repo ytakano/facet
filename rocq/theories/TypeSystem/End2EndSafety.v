@@ -717,6 +717,197 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_base :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_direct_component
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct
+    (check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env_checked); try discriminate.
+  injection Hprog as <-.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_base_direct_component_base
+      env env' Hprog) as Hbase.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hbase.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
+              env_elab (env_fns env_elab)) as [[] | err]
+    eqn:Hfns; try discriminate.
+  injection Hbase as <-.
+  apply andb_true_iff in Hunique_global as [Hunique_top _].
+  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_direct_component_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_sound; eauto.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_base.
+  exact Hprog.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_base_direct_component_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_direct_component env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+        infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_base_direct_component
+    in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_direct_component
+    env) as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_direct_component_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_base_direct_component env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_sound;
+    eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_direct_component_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_direct_component env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+        infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_base_direct_component_infer_ok
+       env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_sound;
+    eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_direct_component
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct
+    (check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env_checked) eqn:Hready; try discriminate.
+  injection Hprog as <-.
+  exact Hready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_summary_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    env_fns_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_ready
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_check_env_ready.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_local_bounds_family_provider :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_base_direct_component_check_env_ready
+      env env' Hprog) as Hdirect.
+  destruct Hbase as (bounds_base & ->).
+  destruct Hfamily as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  unfold check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+    in Hdirect.
+  eapply forallb_forall; eauto.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_local_bounds_family_summary :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    callee_body_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
+      env' fdef.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Hfamily Hin.
+  apply check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_sound.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_local_bounds_family_provider;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_absent_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_absent_mixed env =

@@ -69,16 +69,20 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body route target callback and an exact-body route package. A further
   proof-only endpoint gates strict exact-closure checks only on functions that
   actually contain receiver-method targets, collapses back to the active mixed
-  endpoint for no-receiver programs, and exposes per-function exact-closure plus
-  local-bounds route-package-at facts for receiver-method component functions.
-  These endpoints remain proof infrastructure and are not the active public
-  theorem.
+  endpoint for no-receiver programs, exposes per-function exact-closure plus
+  local-bounds route-package-at facts for receiver-method component functions,
+  and has a public-callback bridge whose exact-body route/package obligations
+  apply only to the no-receiver branch. These endpoints remain proof
+  infrastructure and are not the active public theorem.
 - The remaining activation gap is proof-side and specific to deriving the
   exact-body route target/package evidence needed by that active mixed runtime
-  theorem. The active endpoint exposes only a combined captured-or-component
-  summary on the no-receiver branch. The current captured-summary checker can
-  succeed on whole function bodies, so receiver-method target absence alone does
-  not imply captured-summary absence.
+  theorem. The receiver-method-exact bridge now removes those obligations from
+  receiver-present programs by using the active mixed direct-ready branch, but
+  the public active theorem still needs a no-receiver branch provider strong
+  enough to supply exact-body target/package evidence without a new premise. The
+  active endpoint exposes only a combined captured-or-component summary on the
+  no-receiver branch, and receiver-method target absence alone does not imply
+  captured-summary absence.
 - Haskell-style `deriving` is reserved for a future surface form. Provisional
   struct/enum deriving syntax is rejected explicitly, and `deriving` is
   reserved as a keyword.
@@ -89,9 +93,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Derive the exact-body route target callback and exact-body route package
-     for the active mixed endpoint, or replace that requirement with an
-     equivalent behavior-preserving no-receiver branch provider.
+   - Derive exact-body target/package evidence for the active mixed endpoint's
+     no-receiver branch, or replace that requirement with an equivalent
+     behavior-preserving provider that does not add a public premise.
    - Add positive direct-call receiver UFCS tests only after the active extracted
      checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -123,12 +127,12 @@ validity checks must be represented in Rocq and the extracted checker.
   public callback shape but still requires an exact-body route target callback
   and exact-body route package. The receiver-method-exact mixed endpoint now
   supplies per-function route-package-at evidence for receiver-method component
-  functions and is behavior-preserving for no-receiver programs, but it has not
-  yet been lifted to the global package/callback shape needed to retarget the
-  public theorem. Temporary diagnostics still show the full direct-ready env gate
-  failing on `provenance=false`, `preservation=false`, and `component=false`, so
-  activation still needs that lift or an equivalent behavior-preserving branch
-  provider.
+  functions and a bridge that confines remaining exact-body route/package
+  obligations to the no-receiver branch, but the active public theorem still has
+  not been retargeted. Temporary diagnostics still show the full direct-ready env
+  gate failing on `provenance=false`, `preservation=false`, and
+  `component=false`, so activation still needs a no-receiver provider or an
+  equivalent public-premise-free lift.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

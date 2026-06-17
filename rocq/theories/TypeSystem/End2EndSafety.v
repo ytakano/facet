@@ -16311,12 +16311,11 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_prefix Hprefix_ready
-    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready
+  intros _Hsynthetic_route Hscope_synthetic _Htyping_prefix _Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys _Hframe_ready _Hparam_ready
     Hexact_body_target Hbody_package env env' f s s' v
     Hprog Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_case_split_routes.
-  - exact Hsynthetic_route.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
   - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height;
       eassumption.
   - exact Hscope_synthetic.
@@ -16324,8 +16323,6 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
   - exact Hprog.
   - exact Hinitial.
   - exact Hin.

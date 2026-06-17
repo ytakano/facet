@@ -16407,6 +16407,46 @@ Proof.
   - exact Hcomponent_check.
 Qed.
 
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_big_step_safe_checked_initial_ready_with_global_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env env_checked f s s_final v,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
+      env = infer_ok env_checked ->
+    env_fns_root_shadow_provenance_summary_evidence env_checked ->
+    env_fns_preservation_ready env_checked ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env_checked) ->
+    initial_store_for_fn env_checked f s ->
+    eval env_checked s (fn_body f) s_final v ->
+    value_has_type env_checked s_final v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env env_checked f s s_final v
+    Hprog Hprovenance Hpreservation Hinitial Hin Hstore Heval.
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_check_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_unique_by_name.
+    exact Hprog.
+  - exact Hprovenance.
+  - exact Hpreservation.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_check_env_ready.
+    eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_base.
+    exact Hprog.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider.
+    eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_check.
+    exact Hprog.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_big_step_safe_checked_initial_ready :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

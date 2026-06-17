@@ -46,7 +46,8 @@ validity checks must be represented in Rocq and the extracted checker.
   replay evidence, exported verified `assoc_direct_receiver_base` diagnostic
   endpoints with direct-component, global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
-  a component-only boolean evidence bridge for local body-summary evidence,
+  a component-only boolean evidence bridge and runtime theorem under explicit
+  provenance/preservation evidence,
   proved-safe absent/synthetic/component mixed endpoints, explicit public
   exact-body/package, package-at, component-summary branch package-at,
   component-check branch package-at, no-capture scoped-package bridges,
@@ -146,11 +147,11 @@ validity checks must be represented in Rocq and the extracted checker.
   `base_combined_preservation_ready_checks` reject the targeted direct-call
   receiver fixtures and representative valid programs, while
   `base_combined_component_only_summary_ready_checks` accepts all four sampled
-  cases. That component-only endpoint now exposes local body-summary evidence
-  for checked components in the environment, but a full runtime theorem still
-  needs a route from the public static prefix/exact-body package facts to the
-  active direct-receiver branch without the global provenance/preservation
-  booleans.
+  cases. That component-only endpoint now has a runtime theorem under explicit
+  provenance/preservation evidence and membership-scoped body-summary checks,
+  but it is still diagnostic: there is no proof route from that endpoint to the
+  active mixed CLI authority or from the canonical public premises to the needed
+  provenance/preservation evidence.
 
 ## Key Decisions
 

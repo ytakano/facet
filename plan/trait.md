@@ -48,7 +48,7 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds component body-summary branch and store-static wrapper,
   active/strict public no-receiver component-body-summary boolean check routes,
   active/strict public no-receiver component-body-summary provider/check routes,
-  active/strict component-only same-result wrappers, active component-only derived wrapper, uncaptured exact-body package branch,
+  active/strict component-only same-result and derived wrappers, uncaptured exact-body package branch,
   exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
   component branch, and active/strict assoc-base branch callback routes through

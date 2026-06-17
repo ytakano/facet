@@ -1101,6 +1101,145 @@ Proof.
     eauto.
 Qed.
 
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_base :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_provenance_summary env_checked) eqn:Hprov;
+    try discriminate.
+  destruct (check_env_preservation_ready env_checked) eqn:Hpres;
+    try discriminate.
+  destruct (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    env_checked) eqn:Hsummary; try discriminate.
+  injection Hprog as ->.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_checks :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env' ->
+    check_env_root_shadow_provenance_summary env' = true /\
+    check_env_preservation_ready env' = true /\
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_provenance_summary env_checked) eqn:Hprov;
+    try discriminate.
+  destruct (check_env_preservation_ready env_checked) eqn:Hpres;
+    try discriminate.
+  destruct (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    env_checked) eqn:Hsummary; try discriminate.
+  injection Hprog as ->.
+  repeat split; assumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_base.
+  exact Hprog.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_sound.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_base.
+    exact Hprog.
+  - exact Hin.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+        env = infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    env) as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+        infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_sound;
+    eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+        env = infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc_direct_receiver_base env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_infer_ok
+       env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_sound;
+    eauto.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
@@ -16045,6 +16184,71 @@ Proof.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
+Qed.
+
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env = true ->
+    forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+        (global_env_with_local_bounds env (fn_bounds f_component)).
+Proof.
+  intros env Hcheck f_component Hin Hcomponent_check.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    in Hcheck.
+  apply forallb_forall with (x := f_component) in Hcheck; [| exact Hin].
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    in Hcheck.
+  rewrite Hcomponent_check in Hcheck.
+  eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
+  exact Hcheck.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_big_step_safe_checked_initial_ready :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env env_checked f s s_final v,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+      env = infer_ok env_checked ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env_checked) ->
+    initial_store_for_fn env_checked f s ->
+    eval env_checked s (fn_body f) s_final v ->
+    value_has_type env_checked s_final v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env env_checked f s s_final v
+    Hprog Hinitial Hin Hstore Heval.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_checks
+       env env_checked Hprog) as (Hprov_check & Hpres_check & Hsummary_check).
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_check_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hpackage.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_unique_by_name.
+    exact Hprog.
+  - eapply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
+    eapply check_env_root_shadow_provenance_summary_ready.
+    exact Hprov_check.
+  - eapply check_env_preservation_ready_sound.
+    exact Hpres_check.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_check_env_ready.
+    eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks_base.
+    exact Hprog.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider.
+    exact Hsummary_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes :

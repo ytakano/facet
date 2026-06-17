@@ -1688,6 +1688,21 @@ Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_sum
     (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary env)
     (env_fns env).
 
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then check_env_root_shadow_synthetic_direct_call_ready_summary
+         (global_env_with_local_bounds env (fn_bounds fdef))
+  else true.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef ||
@@ -2763,6 +2778,27 @@ Definition infer_program_env_end2end_assoc_direct_receiver_base_combined_summary
 Definition check_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready_checks
     (env : global_env) : bool :=
   match infer_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready_checks
+          env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+
+Definition infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    (env : global_env) : infer_result global_env :=
+  match infer_program_env_end2end_assoc_direct_receiver_base_combined env with
+  | infer_err err => infer_err err
+  | infer_ok env' =>
+      if check_env_root_shadow_provenance_summary env' &&
+         check_env_preservation_ready env' &&
+         check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+           env'
+      then infer_ok env'
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Definition check_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
+    (env : global_env) : bool :=
+  match infer_program_env_end2end_assoc_direct_receiver_base_combined_component_summary_ready_checks
           env with
   | infer_ok _ => true
   | infer_err _ => false

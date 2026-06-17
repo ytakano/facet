@@ -25665,6 +25665,67 @@ Proof.
 Qed.
 
 
+
+Theorem check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_check_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env = true ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env f s s' v Hunique Hevidence
+    Hready Hcombined_check Hbody_summary Hinitial Hin Hstore Heval
+    Hlive_body Hconsumed_body.
+  unfold check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply forallb_forall with (x := f) in Hcombined_check; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    env f) eqn:Hdirect.
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+    + exact Hunique.
+    + exact Hevidence.
+    + exact Hready.
+    + eapply check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_sound.
+      exact Hdirect.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+    + exact Hlive_body.
+    + exact Hconsumed_body.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_body_summary_evidence.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hpackage.
+    + exact Hunique.
+    + eapply Hbody_summary.
+      * exact Hin.
+      * exact Hcombined_check.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcombined_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_evidence :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

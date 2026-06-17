@@ -16052,37 +16052,22 @@ Proof.
   intros Hsynthetic_route Hstore_safe_route Hscope_synthetic Htyping_ready
     Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f
     s s' v Hprog Hinitial Hin Hstore Heval.
-  destruct
-    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_ready_cases
-      env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_no_receiver_method.
-    + exact Hstore_safe_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hprog.
-    + exact Hno_receiver.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
-  - eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes.
+  - exact Hsynthetic_route.
+  - exact Hstore_safe_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed.
+    exact Hprog.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 

@@ -68,8 +68,9 @@ validity checks must be represented in Rocq and the extracted checker.
   that branch route exposed in prefix-evidence form, package-at-all
   component-summary branch routes exposed in prefix-evidence form, the
   branch exact-body/package component-check route exposed in prefix-evidence
-  form, and strict-public package-at-all and local-bounds/scoped-package
-  component-check branch routes exposed in prefix-evidence form,
+  form, and strict-public package-at-all component-check plus
+  local-bounds/scoped-package component-check branch routes exposed in
+  prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -107,8 +108,9 @@ validity checks must be represented in Rocq and the extracted checker.
   branch routes, the branch exact-body/package component-check route, the
   package-at-all component-check branch route, the local-bounds and
   scoped-package component-check branch routes, and strict-public
-  package-at-all plus local-bounds/scoped-package component-check branch routes
-  now immediately narrow to prefix routes, and strict public routing can
+  package-at-all component-check plus local-bounds/scoped-package
+  component-check branch routes now immediately narrow to prefix routes, and
+  strict public routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
@@ -202,7 +204,7 @@ validity checks must be represented in Rocq and the extracted checker.
   directly, prefix-evidence branch exact-body/package, package-at-all
   summary/component-check and local-bounds/scoped-package component-check
   wrappers, plus strict-public package-at-all and local-bounds/scoped-package
-  component-check provider wrappers, and static local-bounds plus
+  component-check prefix wrappers, and static local-bounds plus
   public-callback no-receiver branch
   wrappers that consume
   membership-scoped component body-summary Prop or check providers without

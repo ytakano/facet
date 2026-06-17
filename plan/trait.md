@@ -47,7 +47,7 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds exact-body static wrapper, local-bounds route branch,
   local-bounds component body-summary branch,
   active/strict public no-receiver component-body-summary boolean check routes,
-  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, legacy store-static cleanup, provenance/preservation diagnostic sidecar cleanup, and provider/check routes,
+  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, legacy store-static cleanup, summary/provenance/preservation diagnostic sidecar cleanup, and provider/check routes,
   active/strict component-only same-result and derived wrappers, uncaptured exact-body package branch,
   exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
@@ -138,11 +138,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid
-  flips. The exported `base_combined_summary_ready_checks` wrapper is proved
-  runtime-safe under the summary-exact package route, but rejects those fixtures
-  and representative valid programs because the global synthetic-summary check
-  is too broad. The rejected provenance-only and preservation-only diagnostic
-  endpoints have been removed; `base_combined_component_only_summary_ready_checks`
+  flips. The rejected summary-ready, provenance-only, and preservation-only
+  diagnostics have been removed. `base_combined_component_only_summary_ready_checks`
   remains because it accepts the sampled cases and has a runtime theorem under
   explicit provenance/preservation evidence. It is still diagnostic because the
   canonical public premises do not yet imply the body-summary check or the needed

@@ -58,7 +58,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package-to-summary route conversions, public
   exact-body/package-to-store-safe summary route conversions, and a
   public-callback exact-body/package route that now consumes the
-  store-safe summary route instead of the store-static sidecar,
+  store-safe summary route instead of the store-static sidecar, and
+  exact-body/component store-static wrappers factored through prefix routes,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -89,7 +90,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summary, prefix/summary, and exact-body/package routes, and
   exact-body/package facts now expose the public-form and store-safe summary
   routes directly, the public exact-body/package wrapper no longer depends on
-  the broad store-static sidecar, and strict public routing can consume the no-receiver component summary
+  the broad store-static sidecar, exact-body/component store-static wrappers
+  now immediately narrow to prefix routes, and strict public routing can consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, component-body summary scoped provider
@@ -129,8 +131,8 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
-   - Continue replacing over-broad provenance/preservation and store-static
-     sidecars with runtime routes that consume the component-only boolean evidence bridge plus static
+   - Continue replacing over-broad provenance/preservation and remaining
+     store-static sidecars with runtime routes that consume the component-only boolean evidence bridge plus static
      prefix/exact-body package facts, without requiring Prop-to-bool
      completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active

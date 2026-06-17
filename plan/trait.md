@@ -68,8 +68,8 @@ validity checks must be represented in Rocq and the extracted checker.
   that branch route exposed in prefix-evidence form, package-at-all
   component-summary branch routes exposed in prefix-evidence form, the
   branch exact-body/package component-check route exposed in prefix-evidence
-  form, and strict-public package-at-all branch routes exposed in prefix-evidence
-  form,
+  form, and strict-public package-at-all and local-bounds/scoped-package
+  component-check branch routes exposed in prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -106,8 +106,8 @@ validity checks must be represented in Rocq and the extracted checker.
   route, its with-body provider variant, the package-at-all component-summary
   branch routes, the branch exact-body/package component-check route, the
   package-at-all component-check branch route, the local-bounds and
-  scoped-package component-check branch routes, and strict-public package-at-all
-  and scoped-package component-check branch routes
+  scoped-package component-check branch routes, and strict-public
+  package-at-all plus local-bounds/scoped-package component-check branch routes
   now immediately narrow to prefix routes, and strict public routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
@@ -201,7 +201,7 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges that consume package or package-at with-body-summary providers
   directly, prefix-evidence branch exact-body/package, package-at-all
   summary/component-check and local-bounds/scoped-package component-check
-  wrappers, plus strict-public package-at-all and scoped-package
+  wrappers, plus strict-public package-at-all and local-bounds/scoped-package
   component-check provider wrappers, and static local-bounds plus
   public-callback no-receiver branch
   wrappers that consume

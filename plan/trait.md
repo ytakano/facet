@@ -70,8 +70,8 @@ validity checks must be represented in Rocq and the extracted checker.
   component-summary branch routes exposed in prefix-evidence form, the
   branch exact-body/package component-check route exposed in prefix-evidence
   form, and strict-public package-at-all component-check plus
-  local-bounds/scoped-package component-check branch routes exposed in
-  prefix-evidence form,
+  local-bounds/derived-local-bounds/scoped-package component-check branch
+  routes exposed in prefix-evidence form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -110,8 +110,9 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at-all component-check branch route, the local-bounds, derived
   local-bounds, and scoped-package component-check branch routes, and
   strict-public
-  package-at-all component-check plus local-bounds/scoped-package
-  component-check branch routes now immediately narrow to prefix routes, and
+  package-at-all component-check plus local-bounds/derived-local-bounds/
+  scoped-package component-check branch routes now immediately narrow to prefix
+  routes, and
   strict public routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
@@ -205,8 +206,8 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges that consume package or package-at with-body-summary providers
   directly, prefix-evidence branch exact-body/package, package-at-all
   summary/component-check and local-bounds/scoped-package component-check
-  wrappers, plus strict-public package-at-all and local-bounds/scoped-package
-  component-check prefix wrappers, and static local-bounds plus
+  wrappers, plus strict-public package-at-all and local-bounds/derived-local-bounds/
+  scoped-package component-check prefix wrappers, and static local-bounds plus
   public-callback no-receiver branch
   wrappers that consume
   membership-scoped component body-summary Prop or check providers without

@@ -16274,7 +16274,15 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes.
+  intros _Hsynthetic_route Hstore_safe_route Hscope_synthetic Htyping_ready
+    Hroots_ready Hroot_names Hroot_keys _Hframe_ready _Hparam_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
+  - exact Hstore_safe_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
 Qed.
 
 

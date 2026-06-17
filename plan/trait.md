@@ -46,6 +46,7 @@ validity checks must be represented in Rocq and the extracted checker.
   component-check wrapper, package component-body-summary provider wrapper,
   local-bounds exact-body static wrapper, local-bounds route branch,
   local-bounds component body-summary branch and store-static wrapper,
+  active public no-receiver component-body-summary boolean check route,
   active/strict public no-receiver component-body-summary provider/check routes,
   uncaptured exact-body package branch, exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
@@ -115,7 +116,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component
-  body-summary branch/store-static wrapper, active/strict public no-receiver
+  body-summary branch/store-static wrapper, active public no-receiver
+  component-body summary boolean check route, active/strict public no-receiver
   component-body summary provider/check routes, uncaptured exact-body package branch,
   exact-non-captured and exact-local-bounds
   provider branches, component summary/check, component-body summary, branch

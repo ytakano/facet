@@ -55,8 +55,9 @@ validity checks must be represented in Rocq and the extracted checker.
   separate assoc direct-receiver-base combined endpoint now records the base
   per-function gate plus the combined direct-receiver summary gate, without
   requiring the full env-level provenance, preservation, and component gates;
-  its proof helpers expose Prop-level combined readiness and local-bounds-family
-  providers.
+  its proof helpers expose Prop-level combined readiness, local-bounds-family
+  providers, uniqueness, and a runtime bridge parameterized by separately
+  supplied provenance, preservation, and synthetic-call summary evidence.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -114,7 +115,9 @@ validity checks must be represented in Rocq and the extracted checker.
   gate. The direct-receiver method sidecar is true for `main` in the basic
   direct-call receiver fixture, `infer_program_env_end2end_assoc_direct_receiver_base`
   accepts it, and the new base-combined endpoint isolates the combined summary
-  gate. Temporary diagnostics still show the full direct-ready env gate failing
+  gate. Its runtime bridge now identifies the remaining missing evidence as
+  provenance, preservation, and synthetic-call summary readiness. Temporary
+  diagnostics still show the full direct-ready env gate failing
   on `provenance=false`, `preservation=false`, and `component=false`, so the
   public runtime theorem still needs either a no-receiver-branch provider or a
   behavior-preserving direct-receiver branch that avoids requiring those global

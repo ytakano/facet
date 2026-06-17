@@ -544,6 +544,30 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_base_combined_base
+      env env' Hprog) as Hbase.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hbase.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
+              env_elab (env_fns env_elab)) as [[] | err]
+    eqn:Hfns; try discriminate.
+  injection Hbase as <-.
+  apply andb_true_iff in Hunique_global as [Hunique_top _].
+  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_sound :
   forall env env' f,
     infer_program_env_end2end_assoc_direct_receiver_base_combined env =
@@ -14719,6 +14743,56 @@ Proof.
   - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
 Qed.
 
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_big_step_safe_checked_initial_ready_with_global_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env_checked f s s_final v,
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env_checked ->
+    env_fns_root_shadow_provenance_summary_evidence env_checked ->
+    env_fns_preservation_ready env_checked ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env_checked ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env_checked) ->
+    initial_store_for_fn env_checked f s ->
+    eval env_checked s (fn_body f) s_final v ->
+    value_has_type env_checked s_final v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env_checked f s
+    s_final v Hprog Hprovenance Hpreservation Hsynthetic_summary
+    Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name.
+    exact Hprog.
+  - exact Hprovenance.
+  - exact Hpreservation.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_summary_ready.
+    exact Hprog.
+  - exact Hsynthetic_summary.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
+Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_case_split_routes :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->

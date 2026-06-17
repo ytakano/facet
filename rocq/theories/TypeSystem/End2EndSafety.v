@@ -14985,6 +14985,25 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_with_body_summary_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+        env') ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+      env'.
+Proof.
+  intros env env' Hprog Hsummary_provider_when_no_receiver.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - exact (Hsummary_provider_when_no_receiver Hno_receiver).
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider;
+      eassumption.
+Qed.
+
 Lemma check_fn_root_shadow_synthetic_direct_call_ready_summary_sound :
   forall env fdef,
     check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef = true ->

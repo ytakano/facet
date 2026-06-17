@@ -68,9 +68,11 @@ validity checks must be represented in Rocq and the extracted checker.
   has a public-callback-shaped runtime theorem whose only extra inputs are an
   exact-body route target callback and an exact-body route package. A further
   proof-only endpoint gates strict exact-closure checks only on functions that
-  actually contain receiver-method targets, and collapses back to the active
-  mixed endpoint for no-receiver programs. These endpoints remain proof
-  infrastructure and are not the active public theorem.
+  actually contain receiver-method targets, collapses back to the active mixed
+  endpoint for no-receiver programs, and exposes per-function exact-closure plus
+  local-bounds route-package-at facts for receiver-method component functions.
+  These endpoints remain proof infrastructure and are not the active public
+  theorem.
 - The remaining activation gap is proof-side and specific to deriving the
   exact-body route target/package evidence needed by that active mixed runtime
   theorem. The active endpoint exposes only a combined captured-or-component
@@ -119,14 +121,14 @@ validity checks must be represented in Rocq and the extracted checker.
 - Direct-call receiver activation is now blocked on route-package evidence for
   the active mixed endpoint. The latest active mixed runtime theorem matches the
   public callback shape but still requires an exact-body route target callback
-  and exact-body route package. The new receiver-method-exact mixed endpoint is
-  behavior-preserving for no-receiver programs and proves a path for requiring
-  exact closure only where receiver methods exist, but it is still proof
-  infrastructure and has not yet supplied the route-package evidence needed to
-  retarget the public theorem. Temporary diagnostics still show the full
-  direct-ready env gate failing on `provenance=false`, `preservation=false`, and
-  `component=false`, so activation still needs endpoint-derived route-package
-  evidence or an equivalent behavior-preserving branch provider.
+  and exact-body route package. The receiver-method-exact mixed endpoint now
+  supplies per-function route-package-at evidence for receiver-method component
+  functions and is behavior-preserving for no-receiver programs, but it has not
+  yet been lifted to the global package/callback shape needed to retarget the
+  public theorem. Temporary diagnostics still show the full direct-ready env gate
+  failing on `provenance=false`, `preservation=false`, and `component=false`, so
+  activation still needs that lift or an equivalent behavior-preserving branch
+  provider.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

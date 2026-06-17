@@ -479,6 +479,68 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_receiver_method_strict_exact_closure_summary env' =
+      true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
+    env_checked) eqn:Hready; simpl in Hprog; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
+    try discriminate.
+  injection Hprog as ->.
+  exact Hready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_strict_summary_for_receiver_method :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
+    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env' fdef = true.
+Proof.
+  intros env env' fdef Hprog Hin Hpresent.
+  pose proof
+    (infer_program_env_end2end_assoc_receiver_method_exact_mixed_check_env_ready
+       env env' Hprog) as Hready.
+  unfold check_env_root_shadow_receiver_method_strict_exact_closure_summary
+    in Hready.
+  apply forallb_forall with (x := fdef) in Hready; [| exact Hin].
+  unfold check_fn_root_shadow_receiver_method_strict_exact_closure_summary
+    in Hready.
+  rewrite Hpresent in Hready.
+  exact Hready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_closure_for_receiver_method_component :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    In fdef (env_fns env') ->
+    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' fdef = true.
+Proof.
+  intros env env' fdef Hprog Hin Hpresent Hcomponent.
+  pose proof
+    (infer_program_env_end2end_assoc_receiver_method_exact_mixed_strict_summary_for_receiver_method
+       env env' fdef Hprog Hin Hpresent) as Hstrict.
+  unfold check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+    in Hstrict.
+  rewrite Hcomponent in Hstrict.
+  exact Hstrict.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
@@ -3423,6 +3485,37 @@ Proof.
       env env' base env0 fdef Hprog Hbase Henv Hin Hexact)
     as [Hunique0 Hpayload].
   split; [exact Hunique0 | exact Hpayload].
+Qed.
+
+Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_body_route_package_at_for_receiver_method_in_local_bounds_family :
+  forall env env' base env0 fname fdef,
+    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    fn_name fdef = fname ->
+    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env0 fname.
+Proof.
+  intros env env' base env0 fname fdef Hprog Hbase Henv Hin Hname Hpresent
+    Hcomponent.
+  assert (Hin_env' : In fdef (env_fns env')).
+  { destruct Hbase as (bounds_base & ->).
+    destruct Henv as (bounds & ->).
+    exact Hin. }
+  eapply infer_program_env_end2end_assoc_exact_body_route_package_at_of_exact_closure_in_local_bounds_family.
+  - eapply infer_program_env_end2end_assoc_receiver_method_exact_mixed_base.
+    exact Hprog.
+  - exact Hbase.
+  - exact Henv.
+  - exact Hin.
+  - exact Hname.
+  - eapply infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_closure_for_receiver_method_component;
+      eassumption.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family :

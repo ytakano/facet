@@ -1,0 +1,17 @@
+enum Job<T> {
+  Ready(unrestricted T)
+}
+
+trait Runner {
+  fn run(self: Self) -> ();
+}
+
+impl Runner for unrestricted Job<unrestricted isize> {
+  fn run(self: Self) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  (<unrestricted Job<unrestricted isize> as Runner>::run Job<unrestricted isize>::Ready(1))
+}

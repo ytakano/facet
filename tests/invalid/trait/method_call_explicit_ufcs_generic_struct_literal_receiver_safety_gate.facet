@@ -1,0 +1,17 @@
+struct Token<T> {
+  value: unrestricted T
+}
+
+trait Runner {
+  fn run(self: Self) -> ();
+}
+
+impl Runner for unrestricted Token<unrestricted isize> {
+  fn run(self: Self) -> () {
+    ()
+  }
+}
+
+fn main() -> unrestricted () {
+  (<unrestricted Token<unrestricted isize> as Runner>::run Token<unrestricted isize> { value = 1 })
+}

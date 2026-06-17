@@ -47,9 +47,9 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoints with direct-component, global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge for local body-summary evidence,
-  proved-safe absent/synthetic/component mixed endpoints, an explicit public
-  exact-body/package corollary for the active mixed endpoint, and a
-  provider-based runtime bridge for `assoc_direct_receiver_base_combined` that
+  proved-safe absent/synthetic/component mixed endpoints, explicit public
+  exact-body/package and package-at corollaries for the active mixed endpoint,
+  and a provider-based runtime bridge for `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
   stronger endpoints remain proof diagnostics because their gates rejected broad
@@ -72,9 +72,9 @@ validity checks must be represented in Rocq and the extracted checker.
 1. Finish direct-call receiver activation.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` by discharging the
-     exact-body/package evidence currently required by the active-mixed public
-     corollary, without adding OCaml fallback logic or weakening the public
-     theorem with a new premise.
+     exact-body target and package-at evidence currently required by the
+     active-mixed public corollaries, without adding OCaml fallback logic or
+     weakening the public theorem with a new premise.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
@@ -108,11 +108,11 @@ validity checks must be represented in Rocq and the extracted checker.
   exported base direct-component ready-check endpoint is runtime-safe but still
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
-- The active mixed endpoint now has an explicit public exact-body/package
-  corollary with the same preservation/root premises as the canonical public
-  theorem, but the canonical theorem still lacks a proof that the required
-  exact-body/package or summary-evidence route follows from its existing public
-  premises.
+- The active mixed endpoint now has explicit public exact-body/package and
+  package-at corollaries with the same preservation/root premises as the
+  canonical public theorem, but the canonical theorem still lacks a proof that
+  the required exact-body target and package-at or summary-evidence route
+  follows from its existing public premises.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

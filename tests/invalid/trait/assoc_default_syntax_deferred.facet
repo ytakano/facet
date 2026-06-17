@@ -1,0 +1,9 @@
+trait Iterator {
+  type Item = unrestricted isize;
+}
+
+impl Iterator for unrestricted isize {}
+
+fn main() -> unrestricted () {
+  ()
+}

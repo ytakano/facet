@@ -37,23 +37,12 @@ validity checks must be represented in Rocq and the extracted checker.
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
-  active mixed endpoint. It now has no-receiver/direct-ready branch splits,
+  active mixed endpoint. It has no-receiver/direct-ready branch splits,
   strict-to-active agreement, public-callback wrappers, exact-body/package and
-  package-at bridges, active/strict public store-safe summary routes,
-  prefix-evidence bridges, and component-summary/component-check routes for
-  package, package-at-all, local-bounds, derived local-bounds, scoped-package,
-  and call-statement variants. Recent cleanup has routed the package
-  component-check wrapper, package component-body-summary provider wrapper,
-  local-bounds exact-body static wrapper, local-bounds route branch,
-  local-bounds component body-summary branch,
-  active/strict public no-receiver component-body-summary boolean check routes,
-  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, legacy store-static cleanup, broad diagnostic sidecar cleanup, and provider/check routes,
-  active/strict component-only same-result and derived wrappers, uncaptured exact-body package branch,
-  exact-non-captured and
-  exact-local-bounds provider branches, non-captured branch, non-captured
-  component branch, and active/strict assoc-base branch callback routes through
-  prefix evidence
-  instead of broad store-static sidecars.
+  package-at bridges, local-bounds/scoped-package/call-statement component
+  routes, no-receiver component-summary provider/check routes, and
+  component-only boolean bridges. Recent cleanup removed broad diagnostic
+  sidecars and renamed legacy strict-endpoint wrappers with `strict_mixed`.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -114,23 +103,14 @@ validity checks must be represented in Rocq and the extracted checker.
   now-unused mixed ready-check booleans, have been removed; the base
   direct-component endpoint remains proof/diagnostic infrastructure, not an
   active authority.
-- The active mixed endpoint has enough routed lemmas for summary evidence,
-  exact-body/package, package-at, package-at-all, local-bounds, local-bounds
-  route branch, derived local-bounds, scoped-package, local-bounds component
-  body-summary branch, active/strict public no-receiver
-  component-body summary boolean check routes, active/strict public no-receiver
-  component-body summary provider/check routes, uncaptured exact-body package branch,
-  exact-non-captured and exact-local-bounds
-  provider branches, component summary/check, component-body summary, branch
-  shadow/not-captured/absent-captured, call-statement component-check,
-  non-captured branch, non-captured component branch and active/strict
-  assoc-base branch callbacks, and public-callback no-receiver provider/check
-  variants. The canonical theorem
-  still lacks the bridge from its public premises to the required
-  provider/check and per-callee summary/evidence-at facts; legacy static
-  and component-check callback wrappers that still consume the strict endpoint
-  are now named `strict_mixed` to avoid confusing them with the active
-  endpoint.
+- The active mixed endpoint has routed lemmas for the known summary,
+  exact-body/package, local-bounds, scoped-package, call-statement, component
+  summary/check, component-body summary, non-captured, and assoc-base callback
+  paths. The canonical theorem still lacks the bridge from its public premises
+  to the no-receiver provider/check and per-callee summary/evidence-at facts;
+  legacy static and component-check callback wrappers that still consume the
+  strict endpoint are named `strict_mixed` to avoid confusing them with the
+  active endpoint.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

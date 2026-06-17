@@ -1376,13 +1376,11 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
     let lowered_ty = lower_named_ty ty_scope ty in
     let value_tys' = add_value_ty name lowered_ty value_tys in
     let inlined_method_receiver =
-      if m = MImmutable then
-        match pure_unrestricted_receiver_expr ty e1 with
-        | Some replacement ->
-          inline_pure_short_method_receiver env ty_scope value_tys' fn_names
-            name replacement e2
-        | None -> None
-      else None
+      match pure_unrestricted_receiver_expr ty e1 with
+      | Some replacement ->
+        inline_pure_short_method_receiver env ty_scope value_tys' fn_names
+          name replacement e2
+      | None -> None
     in
     begin match inlined_method_receiver with
     | Some e2_inline ->

@@ -42,10 +42,11 @@ validity checks must be represented in Rocq and the extracted checker.
   mixed endpoint, an active-mixed runtime theorem under the assoc-compatible
   store-safe synthetic direct-call route, a public-prefix bridge that retargets
   the active mixed endpoint once the summary-evidence route is supplied, a
-  strict-public runtime bridge through that active mixed prefix/summary route, a
-  runtime theorem for `assoc_direct_receiver_base` under the existing global
-  replay evidence, exported verified `assoc_direct_receiver_base` diagnostic
-  endpoints with direct-component, global-summary, per-component summary, and
+  strict-public runtime bridge through that active mixed prefix/summary route,
+  strict-public exact-body/package and package-at bridges through the active
+  mixed public route, a runtime theorem for `assoc_direct_receiver_base` under
+  the existing global replay evidence, exported verified
+  `assoc_direct_receiver_base` diagnostic endpoints with direct-component, global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge, runtime theorem under explicit
   provenance/preservation evidence, active-to-base and strict-to-active checker
@@ -67,11 +68,12 @@ validity checks must be represented in Rocq and the extracted checker.
   existing valid coverage or the direct-call receiver fixtures when tried as
   active authorities.
 - The remaining activation gap is proof-side: the strict public subset now
-  implies active mixed checker success and has a runtime bridge through the
-  active mixed public prefix/summary route, but the canonical public theorem can
-  only be retargeted once that summary-evidence route is derived from existing
-  public premises. The active no-capture component
-  branch now has scoped-package, public derived exact-body, package-at
+  implies active mixed checker success and has runtime bridges through the
+  active mixed public prefix/summary and exact-body/package routes, but the
+  canonical public theorem can only be retargeted once the summary-evidence or
+  exact-body/package route facts are derived from existing public premises. The
+  active no-capture component branch now has scoped-package, public derived
+  exact-body, package-at
   with-body-summary provider bridges from component routes, and a public-callback
   boolean component body-summary branch bridge; it no longer needs a separate
   exact-body premise. Active mixed success now implies the broader base checker,
@@ -130,9 +132,9 @@ validity checks must be represented in Rocq and the extracted checker.
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint now has strict-to-active checker agreement,
-  explicit public exact-body/package, package-at, component-summary branch
-  package-at, component-check branch package-at, no-capture scoped-package,
-  local-bounds derived exact-body public
+  explicit public exact-body/package, strict-public exact-body/package,
+  package-at, component-summary branch package-at, component-check branch
+  package-at, no-capture scoped-package, local-bounds derived exact-body public
   bridges, a branch bridge that derives the exact-body route from the component
   route instead of requiring a separate premise, branch bridges that consume
   package or package-at with-body-summary providers directly, and static

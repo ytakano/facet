@@ -52,9 +52,9 @@ validity checks must be represented in Rocq and the extracted checker.
   component-check branch package-at, no-capture scoped-package bridges,
   local-bounds derived exact-body public route bridges, branch bridges that
   remove the separate exact-body premise, accept package-at with-body-summary
-  providers, consume membership-scoped component body-summary checks, and route
-  no-receiver active-mixed branches through a component body-summary boolean
-  while preserving the direct-ready branch, plus a provider-based runtime bridge for
+  providers, consume membership-scoped component body-summary checks, and expose
+  a public-callback no-receiver branch route through a component body-summary
+  boolean while preserving the direct-ready branch, plus a provider-based runtime bridge for
   `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
@@ -65,10 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
   retargeted to the active mixed endpoint once the summary-evidence route is
   available under its existing public premises. The active no-capture component
   branch now has scoped-package, public derived exact-body, package-at
-  with-body-summary provider bridges from component routes, and a boolean
-  component body-summary branch bridge; it no longer needs a separate exact-body
-  premise. The public prefix route still needs that component/body-summary check
-  and per-callee summary/evidence-at facts derived without a new theorem premise. Receiver-method
+  with-body-summary provider bridges from component routes, and a public-callback
+  boolean component body-summary branch bridge; it no longer needs a separate
+  exact-body premise. The canonical theorem still needs that component/body-summary
+  check and per-callee summary/evidence-at facts derived without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved
@@ -123,7 +123,7 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges, a branch bridge that derives the exact-body route from the component
   route instead of requiring a separate premise, branch bridges that consume
   package or package-at with-body-summary providers directly, and a static
-  local-bounds route plus no-receiver branch wrapper that consumes
+  local-bounds route plus public-callback no-receiver branch wrapper that consumes
   membership-scoped component body-summary checks without treating them as
   unrestricted Prop providers. The canonical theorem still lacks a proof that
   the required component/body-summary check and per-callee summary/evidence-at

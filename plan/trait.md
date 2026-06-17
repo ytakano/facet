@@ -47,8 +47,9 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoints with direct-component, global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge, runtime theorem under explicit
-  provenance/preservation evidence, active-to-base checker agreement, and
-  reconstructed same-result bridge into the active mixed public-callback route,
+  provenance/preservation evidence, active-to-base and strict-to-active checker
+  agreement, and reconstructed same-result bridge into the active mixed
+  public-callback route,
   proved-safe absent/synthetic/component mixed endpoints, explicit public
   exact-body/package, package-at, component-summary branch package-at,
   component-check branch package-at, no-capture scoped-package bridges,
@@ -64,8 +65,9 @@ validity checks must be represented in Rocq and the extracted checker.
   stronger endpoints remain proof diagnostics because their gates rejected broad
   existing valid coverage or the direct-call receiver fixtures when tried as
   active authorities.
-- The remaining activation gap is proof-side: the public theorem can now be
-  retargeted to the active mixed endpoint once the summary-evidence route is
+- The remaining activation gap is proof-side: the strict public subset now
+  implies active mixed checker success, but the public runtime theorem can only
+  be retargeted to the active mixed endpoint once the summary-evidence route is
   available under its existing public premises. The active no-capture component
   branch now has scoped-package, public derived exact-body, package-at
   with-body-summary provider bridges from component routes, and a public-callback
@@ -125,9 +127,10 @@ validity checks must be represented in Rocq and the extracted checker.
   exported base direct-component ready-check endpoint is runtime-safe but still
   rejects both direct-call receiver safety-gate fixtures, so these remain
   proof/diagnostic infrastructure, not active authorities.
-- The active mixed endpoint now has explicit public exact-body/package,
-  package-at, component-summary branch package-at, component-check branch
-  package-at, no-capture scoped-package, local-bounds derived exact-body public
+- The active mixed endpoint now has strict-to-active checker agreement,
+  explicit public exact-body/package, package-at, component-summary branch
+  package-at, component-check branch package-at, no-capture scoped-package,
+  local-bounds derived exact-body public
   bridges, a branch bridge that derives the exact-body route from the component
   route instead of requiring a separate premise, branch bridges that consume
   package or package-at with-body-summary providers directly, and static

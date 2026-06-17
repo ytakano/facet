@@ -2807,6 +2807,103 @@ Proof.
     eauto.
 Qed.
 
+
+Lemma check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_of_strict_exact_closure :
+  forall env fdef,
+    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env fdef = true ->
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env fdef = true.
+Proof.
+  intros env fdef Hstrict.
+  unfold check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+    in Hstrict.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+              env fdef) eqn:Hcomponent.
+  - rewrite Hstrict. destruct (check_fn_root_shadow_captured_call_store_safe_summary env fdef); reflexivity.
+  - rewrite Hstrict. reflexivity.
+Qed.
+
+Lemma infer_fn_env_end2end_assoc_of_strict_exact_closure :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end_assoc_strict_exact_closure env f =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    infer_fn_env_end2end_assoc env f =
+      infer_ok (T, Gamma_out, R_out, roots).
+Proof.
+  intros env f T Gamma_out R_out roots Hstrict.
+  unfold infer_fn_env_end2end_assoc_strict_exact_closure in Hstrict.
+  unfold infer_fn_env_end2end_assoc.
+  destruct (infer_full_env_roots_checked_assoc env f
+              (initial_root_env_for_params (fn_params f ++ fn_captures f)))
+    as [[[[T' Gamma'] R'] roots'] | err] eqn:Hinfer; try discriminate.
+  destruct (check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+              env f) eqn:Hgate; try discriminate.
+  injection Hstrict as -> -> -> ->.
+  rewrite (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_of_strict_exact_closure
+    env f Hgate).
+  reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_of_strict_exact_closure :
+  forall env fns,
+    infer_fns_env_end2end_assoc_strict_exact_closure env fns = infer_ok tt ->
+    infer_fns_env_end2end_assoc env fns = infer_ok tt.
+Proof.
+  induction fns as [| f rest IH]; intros Hstrict.
+  - reflexivity.
+  - simpl in Hstrict. simpl.
+    destruct (infer_fn_env_end2end_assoc_strict_exact_closure env f)
+      as [[[[T Gamma_out] R_out] roots] | err] eqn:Hfn; try discriminate.
+    rewrite (infer_fn_env_end2end_assoc_of_strict_exact_closure
+      env f T Gamma_out R_out roots Hfn).
+    eapply IH. exact Hstrict.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_of_strict_exact_closure :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
+    infer_program_env_end2end_assoc env = infer_ok env'.
+Proof.
+  intros env env' Hstrict.
+  unfold infer_program_env_end2end_assoc_strict_exact_closure in Hstrict.
+  unfold infer_program_env_end2end_assoc.
+  destruct (global_names_unique_b (alpha_normalize_global_env env))
+    eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc_strict_exact_closure
+              env_elab (env_fns env_elab)) as [[] | err]
+    eqn:Hfns; try discriminate.
+  injection Hstrict as ->.
+  rewrite (infer_fns_env_end2end_assoc_of_strict_exact_closure
+    env' (env_fns env') Hfns).
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed :
+  forall env env',
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env'.
+Proof.
+  intros env env' Hstrict.
+  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+    in Hstrict.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed.
+  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
+    eqn:Hready; try discriminate.
+  injection Hstrict as ->.
+  rewrite (infer_program_env_end2end_assoc_of_strict_exact_closure
+    env env' Hbase).
+  rewrite Hready.
+  reflexivity.
+Qed.
+
+
 Theorem infer_program_env_end2end_sound :
   forall env env' f,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

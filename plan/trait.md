@@ -61,11 +61,12 @@ validity checks must be represented in Rocq and the extracted checker.
   narrower direct-receiver-method-or-component summary now has checker and Prop
   readiness facts plus an assoc direct-receiver-base proof endpoint with
   uniqueness, soundness, readiness, local-bounds-family helpers, and a runtime
-  bridge parameterized by the remaining provenance, preservation, and
-  synthetic-call summary evidence; direct-receiver replay is discharged by a
-  proven-provider variant. Selected raw, scoped-body-lift-ready, and
-  scoped-expr-lift variants remain available for lower-level replay work. It
-  remains proof infrastructure and is not the active or extracted authority.
+  bridge parameterized by the remaining provenance and preservation evidence;
+  direct-receiver replay is discharged by a proven-provider variant, and
+  synthetic-call evidence can be supplied through the existing component checker
+  gate. Selected raw, scoped-body-lift-ready, and scoped-expr-lift variants
+  remain available for lower-level replay work. It remains proof infrastructure
+  and is not the active or extracted authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -126,13 +127,13 @@ validity checks must be represented in Rocq and the extracted checker.
   gate. Its runtime bridge now identifies the remaining missing evidence as
   provenance, preservation, and synthetic-call summary readiness. The new
   direct-receiver-method-or-component endpoint consumes the narrow checker gate
-  and now has a runtime bridge that avoids the captured-summary combined gate,
-  but the bridge still takes provenance, preservation, and synthetic-call
-  summary evidence as premises. Temporary diagnostics still show the full
-  direct-ready env gate failing on `provenance=false`,
-  `preservation=false`, and `component=false`, so the public runtime theorem
-  still needs those facts derived from the active endpoint or replaced by a
-  behavior-preserving direct-receiver branch provider.
+  and now has a runtime bridge that avoids the captured-summary combined gate.
+  The bridge can take synthetic-call evidence from the component checker, but
+  still takes provenance and preservation evidence as premises. Temporary
+  diagnostics still show the full direct-ready env gate failing on
+  `provenance=false`, `preservation=false`, and `component=false`, so the public
+  runtime theorem still needs those facts derived from the active endpoint or
+  replaced by a behavior-preserving direct-receiver branch provider.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

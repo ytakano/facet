@@ -20548,7 +20548,7 @@ Proof.
       Hstatic).
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_component_check_provider_store_safe_at_target_callbacks :
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_component_check_provider_store_safe_at_target_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -20573,7 +20573,7 @@ Proof.
 Qed.
 
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_component_check_store_safe_at_target_callbacks :
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_component_check_store_safe_at_target_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -20594,7 +20594,7 @@ Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
     Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check
     Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_component_check_provider_store_safe_at_target_callbacks.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_component_check_provider_store_safe_at_target_callbacks.
   - exact Hscope_synthetic.
   - exact Htyping_prefix.
   - exact Hprefix_ready.

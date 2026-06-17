@@ -24,9 +24,9 @@ validity checks must be represented in Rocq and the extracted checker.
   function parameters, typed literals, annotated pure local literals after
   receiver-let elimination regardless of mutability, inferred pure local
   literal/unit receivers regardless of mutability, fieldless struct literals and
-  payloadless enum constructors, including generic instances, directly or after
-  local receiver-let elimination, with store-safe argument evidence checked in
-  Rocq.
+  payloadless enum constructors, including generic instances, as direct
+  receivers or after local receiver-let elimination, with store-safe argument
+  evidence checked in Rocq.
 - Still-gated receiver forms are field-bearing struct literals,
   payload-bearing enum constructors, direct-call receivers, generic direct-call
   receivers, non-pure inferred locals, annotated locals initialized by calls,

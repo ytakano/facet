@@ -60,12 +60,14 @@ validity checks must be represented in Rocq and the extracted checker.
   supplied provenance, preservation, and synthetic-call summary evidence. A
   narrower direct-receiver-method-or-component summary now has checker and Prop
   readiness facts plus an assoc direct-receiver-base proof endpoint with
-  uniqueness, soundness, readiness, local-bounds-family helpers, and a runtime
-  bridge whose remaining provenance, preservation, and synthetic-call premises
-  can now be supplied through checker gates; direct-receiver replay is discharged
-  by a proven-provider variant. Selected raw, scoped-body-lift-ready, and
-  scoped-expr-lift variants remain available for lower-level replay work. It
-  remains proof infrastructure and is not the active or extracted authority.
+  uniqueness, soundness, readiness, local-bounds-family helpers, and runtime
+  bridges. A proof-only ready-check endpoint now packages provenance,
+  preservation, and no-capture component checker gates and exposes soundness plus
+  a zero-extra-premise runtime wrapper for that endpoint; direct-receiver replay
+  is discharged by a proven-provider variant. Selected raw,
+  scoped-body-lift-ready, and scoped-expr-lift variants remain available for
+  lower-level replay work. These endpoints remain proof infrastructure and are
+  not the active or extracted authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -127,8 +129,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance, preservation, and synthetic-call summary readiness. The new
   direct-receiver-method-or-component endpoint consumes the narrow checker gate
   and now has a runtime bridge that avoids the captured-summary combined gate.
-  Its remaining evidence can be supplied by provenance, preservation, and
-  component checker gates, but those gates are still not derived from the active
+  Its remaining evidence can now be packaged by the proof-only ready-check
+  endpoint, but that endpoint is not a behavior-compatible active authority for
+  the existing suite and those gates are still not derived from the active
   endpoint for this shape. Temporary diagnostics still show the full
   direct-ready env gate failing on `provenance=false`, `preservation=false`, and
   `component=false`, so the public runtime theorem still needs those facts

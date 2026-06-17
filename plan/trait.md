@@ -42,10 +42,10 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at bridges, active/strict public store-safe summary routes,
   prefix-evidence bridges, and component-summary/component-check routes for
   package, package-at-all, local-bounds, derived local-bounds, scoped-package,
-  and call-statement variants. Recent cleanup has routed the package
-  component-check wrapper, package component-body-summary provider wrapper, and
-  local-bounds exact-body static wrapper through prefix evidence instead of
-  broad store-static sidecars.
+  and call-statement variants. Recent cleanup has routed the package component-check wrapper, package
+  component-body-summary provider wrapper, local-bounds exact-body static
+  wrapper, and assoc-base non-captured branch callback route through prefix
+  evidence instead of broad store-static sidecars.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, strict direct-receiver,
   absence-mixed, synthetic-mixed, and component-mixed variants. They are useful
@@ -110,7 +110,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package, package-at, package-at-all, local-bounds, derived
   local-bounds, scoped-package, component summary/check, component-body summary,
   branch shadow/not-captured/absent-captured, call-statement component-check,
-  and public-callback no-receiver provider/check variants. The canonical theorem
+  assoc-base non-captured branch callbacks, and public-callback no-receiver
+  provider/check variants. The canonical theorem
   still lacks the bridge from its public premises to the required
   provider/check and per-callee summary/evidence-at facts.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

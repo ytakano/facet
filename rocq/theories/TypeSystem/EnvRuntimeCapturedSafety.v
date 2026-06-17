@@ -24784,6 +24784,80 @@ Proof.
       eassumption.
 Qed.
 
+Theorem env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    env_fns_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_ready
+      env ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env f s s' v Hunique
+    Hevidence Hready Hdirect_component Hsynthetic_summary Hinitial Hin Hstore
+    Heval Hlive_body Hconsumed_body.
+  eapply env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay;
+    try eassumption.
+  - eapply direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_body_lift_ready;
+      eassumption.
+  - eapply direct_receiver_method_consumed_scoped_raw_body_replay_provider_of_scoped_body_lift_ready;
+      eassumption.
+Qed.
+
+Theorem env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_big_step_safe_checked_initial_ready_with_scoped_expr_lift :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    env_fns_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_ready
+      env ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_expr_lift_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env f s s' v Hunique
+    Hevidence Hready Hdirect_component Hsynthetic_summary Hinitial Hin Hstore
+    Heval Hlive_expr Hconsumed_expr.
+  eapply env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay;
+    try eassumption.
+  - eapply direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_expr_lift.
+    exact Hlive_expr.
+  - eapply direct_receiver_method_consumed_scoped_raw_body_replay_provider_of_scoped_expr_lift.
+    exact Hconsumed_expr.
+Qed.
+
 Theorem check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_selected_scoped_raw_body_replay :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

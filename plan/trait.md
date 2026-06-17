@@ -62,8 +62,9 @@ validity checks must be represented in Rocq and the extracted checker.
   readiness facts plus an assoc direct-receiver-base proof endpoint with
   uniqueness, soundness, readiness, local-bounds-family helpers, and a runtime
   bridge parameterized by the remaining provenance, preservation, synthetic-call
-  summary, and direct-receiver replay evidence. It remains proof infrastructure
-  and is not the active or extracted authority.
+  summary, and direct-receiver replay evidence. The bridge now has selected raw,
+  scoped-body-lift-ready, and scoped-expr-lift variants. It remains proof
+  infrastructure and is not the active or extracted authority.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -126,7 +127,7 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-receiver-method-or-component endpoint consumes the narrow checker gate
   and now has a runtime bridge that avoids the captured-summary combined gate,
   but the bridge still takes provenance, preservation, synthetic-call summary,
-  and direct-receiver replay evidence as premises. Temporary diagnostics still
+  and a direct-receiver replay provider as premises. Temporary diagnostics still
   show the full direct-ready env gate failing on `provenance=false`,
   `preservation=false`, and `component=false`, so the public runtime theorem
   still needs those facts derived from the active endpoint or replaced by a

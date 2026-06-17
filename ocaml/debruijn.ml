@@ -1392,9 +1392,7 @@ let rec convert_raw env (fn_names : string list) (ty_scope : ty_scope) (scope : 
   | NLet (m, name, None, e1, e2) ->
     let e1' = convert_raw env fn_names ty_scope scope value_tys rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let inferred_receiver =
-      if m = MImmutable then pure_unrestricted_receiver_inferred_expr e1 else None
-    in
+    let inferred_receiver = pure_unrestricted_receiver_inferred_expr e1 in
     let value_tys' =
       match inferred_receiver with
       | Some (inferred_ty, _) -> add_value_ty name inferred_ty value_tys

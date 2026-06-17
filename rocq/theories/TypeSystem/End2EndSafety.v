@@ -15718,39 +15718,21 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hstore_safe_route Hscope_synthetic Htyping_ready
-    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f
+  intros _Hsynthetic_route Hstore_safe_route Hscope_synthetic Htyping_ready
+    Hroots_ready Hroot_names Hroot_keys _Hframe_ready _Hparam_ready env env' f
     s s' v Hprog Hinitial Hin Hstore Heval.
-  destruct
-    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
-      env env' Hprog) as [_Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
-    + exact Hstore_safe_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hprog.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
+  - exact Hstore_safe_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 

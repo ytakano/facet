@@ -53,8 +53,8 @@ validity checks must be represented in Rocq and the extracted checker.
   branch not-captured, branch
   absent-captured summary, package-at component-body, and
   package-at component-check branch, package-at-all component-check branch,
-  local-bounds component-check branch, call-statement component-check, and
-  scoped-package component-check bridges through active mixed public routes,
+  local-bounds component-check branch, scoped-package component-check branch,
+  and call-statement component-check bridges through active mixed public routes,
   public-form
   exact-body/package-to-summary route conversions, public
   exact-body/package-to-store-safe summary route conversions, and a
@@ -105,9 +105,10 @@ validity checks must be represented in Rocq and the extracted checker.
   provider route, the branch exact-body/package component-summary provider
   route, its with-body provider variant, the package-at-all component-summary
   branch routes, the branch exact-body/package component-check route, the
-  package-at-all component-check branch route, the local-bounds component-check
-  branch route, and strict-public package-at-all branch routes now immediately
-  narrow to prefix routes, and strict public routing can
+  package-at-all component-check branch route, the local-bounds and
+  scoped-package component-check branch routes, and strict-public package-at-all
+  branch routes now immediately narrow to prefix routes, and strict public
+  routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
@@ -185,9 +186,9 @@ validity checks must be represented in Rocq and the extracted checker.
   conversions, strict-public exact-body/package, package-at, component
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
-  component-check routes including prefix-evidence branch, package-at-all
-  branch, and local-bounds branch wrappers, component-body store-safe summary
-  routes, component-body summary routes,
+  component-check routes including prefix-evidence branch, package-at-all,
+  local-bounds, and scoped-package branch wrappers, component-body store-safe
+  summary routes, component-body summary routes,
   component-body summary scoped provider branch
   routes, component-body summary boolean branch routes, branch shadow summary
   routes, branch not-captured routes, branch absent-captured summary routes, and package-at
@@ -199,8 +200,9 @@ validity checks must be represented in Rocq and the extracted checker.
   from the component route instead of requiring a separate premise, branch
   bridges that consume package or package-at with-body-summary providers
   directly, prefix-evidence branch exact-body/package, package-at-all
-  summary/component-check and local-bounds component-check wrappers, plus
-  strict-public package-at-all provider wrappers, and static local-bounds plus
+  summary/component-check and local-bounds/scoped-package component-check
+  wrappers, plus strict-public package-at-all provider wrappers, and static
+  local-bounds plus
   public-callback no-receiver branch
   wrappers that consume
   membership-scoped component body-summary Prop or check providers without

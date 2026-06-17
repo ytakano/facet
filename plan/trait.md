@@ -47,8 +47,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provider/check, component-only same-result, assoc-base non-captured
   provider, store-safe summary-evidence, component-check, component-body
   store-safe summary, component-body summary, branch shadow summary, branch
-  not-captured, and branch absent-captured summary bridges through active mixed
-  public routes, public-form
+  not-captured, branch absent-captured summary, and package-at component-body
+  branch bridges through
+  active mixed public routes, public-form
   exact-body/package-to-summary route
   conversions,
   and a runtime theorem for `assoc_direct_receiver_base` under
@@ -83,7 +84,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
   summary, component-body summary, branch shadow summary, branch not-captured,
-  and branch absent-captured summary branches through active mixed; the canonical
+  branch absent-captured summary, and package-at component-body branches through
+  active
+  mixed; the canonical
   public theorem still needs those facts derived from existing public premises.
   The
   active no-capture component branch now has scoped-package, public derived
@@ -152,8 +155,8 @@ validity checks must be represented in Rocq and the extracted checker.
   non-captured provider routes, store-safe summary-evidence routes,
   component-check routes, component-body store-safe summary routes,
   component-body summary routes, branch shadow summary routes, branch
-  not-captured routes, and branch absent-captured summary routes,
-  component-summary branch package-at,
+  not-captured routes, branch absent-captured summary routes, and package-at
+  component-body branch routes, component-summary branch package-at,
   component-check branch package-at,
   no-capture scoped-package, local-bounds derived
   exact-body public bridges, a branch bridge that derives the exact-body route

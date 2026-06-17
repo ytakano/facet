@@ -176,6 +176,79 @@ Proof.
 Qed.
 
 
+
+Lemma infer_fn_env_end2end_assoc_direct_receiver_base_of_assoc :
+  forall env f T Gamma_out R_out roots,
+    infer_fn_env_end2end_assoc env f =
+      infer_ok (T, Gamma_out, R_out, roots) ->
+    infer_fn_env_end2end_assoc_direct_receiver_base env f =
+      infer_ok (T, Gamma_out, R_out, roots).
+Proof.
+  intros env f T Gamma_out R_out roots Hassoc.
+  unfold infer_fn_env_end2end_assoc in Hassoc.
+  unfold infer_fn_env_end2end_assoc_direct_receiver_base.
+  destruct (infer_full_env_roots_checked_assoc env f
+              (initial_root_env_for_params (fn_params f ++ fn_captures f)))
+    as [[[[T' Gamma'] R'] roots'] | err] eqn:Hinfer; try discriminate.
+  destruct (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+              env f) eqn:Hsummary; try discriminate.
+  injection Hassoc as -> -> -> ->.
+  unfold check_fn_root_shadow_assoc_direct_receiver_base_summary.
+  rewrite Hsummary. reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_assoc_direct_receiver_base_of_assoc :
+  forall env fns,
+    infer_fns_env_end2end_assoc env fns = infer_ok tt ->
+    infer_fns_env_end2end_assoc_direct_receiver_base env fns = infer_ok tt.
+Proof.
+  induction fns as [| f rest IH]; intros Hassoc.
+  - reflexivity.
+  - simpl in Hassoc. simpl.
+    destruct (infer_fn_env_end2end_assoc env f)
+      as [[[[T Gamma_out] R_out] roots] | err] eqn:Hfn; try discriminate.
+    rewrite (infer_fn_env_end2end_assoc_direct_receiver_base_of_assoc
+      env f T Gamma_out R_out roots Hfn).
+    eapply IH. exact Hassoc.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_of_assoc :
+  forall env env',
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
+Proof.
+  intros env env' Hassoc.
+  unfold infer_program_env_end2end_assoc in Hassoc.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base.
+  destruct (global_names_unique_b (alpha_normalize_global_env env))
+    eqn:Hunique; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hassoc as ->.
+  rewrite (infer_fns_env_end2end_assoc_direct_receiver_base_of_assoc
+    env' (env_fns env') Hfns).
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_of_mixed :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
+Proof.
+  intros env env' Hmixed.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hmixed.
+  destruct (infer_program_env_end2end_assoc env) as [env_checked | err]
+    eqn:Hassoc; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
+    try discriminate.
+  injection Hmixed as ->.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_of_assoc.
+  exact Hassoc.
+Qed.
+
 Theorem infer_fn_env_end2end_assoc_direct_receiver_base_sound :
   forall env f T Gamma_out R_out roots,
     infer_fn_env_end2end_assoc_direct_receiver_base env f =
@@ -20303,6 +20376,28 @@ Proof.
 Qed.
 
 
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_of_mixed_no_receiver_component_body_summary_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env' = true ->
+    infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
+      env = infer_ok env'.
+Proof.
+  intros env env' Hmixed Hno_receiver Hcomponent_body_summary.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined.
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_base_of_mixed
+    env env' Hmixed).
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_direct_combined_check_ready
+    env env' Hmixed Hno_receiver).
+  rewrite Hcomponent_body_summary.
+  reflexivity.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_component_only_summary_ready_checks_same_result :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -20343,6 +20438,68 @@ Proof.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_component_only_summary_ready_checks_derived :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+        env' = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hcomponent_body_summary_when_no_receiver Hinitial Hin Hstore Heval.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_component_only_summary_ready_checks_same_result.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_of_mixed_no_receiver_component_body_summary_check.
+      * exact Hprog.
+      * exact Hno_receiver.
+      * exact (Hcomponent_body_summary_when_no_receiver Hno_receiver).
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_assoc_base_non_captured_provider_callbacks :

@@ -47,8 +47,8 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoints with direct-component, global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge, runtime theorem under explicit
-  provenance/preservation evidence, and same-result bridge into the active
-  mixed public-callback route,
+  provenance/preservation evidence, active-to-base checker agreement, and
+  reconstructed same-result bridge into the active mixed public-callback route,
   proved-safe absent/synthetic/component mixed endpoints, explicit public
   exact-body/package, package-at, component-summary branch package-at,
   component-check branch package-at, no-capture scoped-package bridges,
@@ -69,9 +69,10 @@ validity checks must be represented in Rocq and the extracted checker.
   branch now has scoped-package, public derived exact-body, package-at
   with-body-summary provider bridges from component routes, and a public-callback
   boolean component body-summary branch bridge; it no longer needs a separate
-  exact-body premise. A same-result bridge can feed component-only diagnostic
-  evidence into that active route, but the canonical theorem still needs the
-  component/body-summary check and per-callee summary/evidence-at facts derived
+  exact-body premise. Active mixed success now implies the broader base checker,
+  and the component-only diagnostic endpoint can be reconstructed from active
+  mixed no-receiver plus the body-summary check; the canonical theorem still
+  needs that body-summary check and per-callee summary/evidence-at facts derived
   without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.
@@ -151,10 +152,10 @@ validity checks must be represented in Rocq and the extracted checker.
   receiver fixtures and representative valid programs, while
   `base_combined_component_only_summary_ready_checks` accepts all four sampled
   cases. That component-only endpoint now has a runtime theorem under explicit
-  provenance/preservation evidence and can supply the active mixed branch premise
-  when both endpoints return the same checked environment, but it is still
-  diagnostic: there is no proof that the endpoint agrees with the active mixed
-  CLI authority or that the canonical public premises imply the needed evidence.
+  provenance/preservation evidence, and active mixed can reconstruct the endpoint
+  on the no-receiver branch once the component body-summary check is known. It is
+  still diagnostic because the canonical public premises do not yet imply that
+  body-summary check or the needed per-callee evidence.
 
 ## Key Decisions
 

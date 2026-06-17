@@ -43,11 +43,13 @@ validity checks must be represented in Rocq and the extracted checker.
   store-safe synthetic direct-call route, a public-prefix bridge that retargets
   the active mixed endpoint once the summary-evidence route is supplied, a
   strict-public runtime bridge through that active mixed prefix/summary route,
-  strict-public exact-body/package and package-at bridges through the active
-  mixed public route, public-form exact-body/package-to-summary route
-  conversions, a runtime theorem for `assoc_direct_receiver_base` under
+  strict-public exact-body/package, package-at, and component summary-check
+  bridges through active mixed public routes, public-form
+  exact-body/package-to-summary route conversions, a runtime theorem for
+  `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
-  `assoc_direct_receiver_base` diagnostic endpoints with direct-component, global-summary, per-component summary, and
+  `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
+  global-summary, per-component summary, and
   single-sidecar provenance/preservation/component-summary ready checks plus
   a component-only boolean evidence bridge, runtime theorem under explicit
   provenance/preservation evidence, active-to-base and strict-to-active checker
@@ -61,8 +63,8 @@ validity checks must be represented in Rocq and the extracted checker.
   providers, convert component body-summary booleans into membership-scoped
   check providers, and expose public-callback no-receiver branch routes through
   scoped Prop providers, scoped check providers, unscoped provider wrappers, or
-  booleans while preserving the direct-ready branch, plus a provider-based runtime bridge for
-  `assoc_direct_receiver_base_combined` that
+  booleans while preserving the direct-ready branch, plus a provider-based
+  runtime bridge for `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
   stronger endpoints remain proof diagnostics because their gates rejected broad
@@ -72,12 +74,12 @@ validity checks must be represented in Rocq and the extracted checker.
   implies active mixed checker success and has runtime bridges through the
   active mixed public prefix/summary and exact-body/package routes, and
   exact-body/package facts now expose the public-form summary route directly,
-  but the canonical public theorem still needs those facts derived from existing
-  public premises. The
+  and strict public routing can consume the no-receiver component summary-check
+  branch through active mixed; the canonical public theorem still needs those
+  facts derived from existing public premises. The
   active no-capture component branch now has scoped-package, public derived
-  exact-body, package-at
-  with-body-summary provider bridges from component routes, and a public-callback
-  boolean component body-summary branch bridge; it no longer needs a separate
+  exact-body, package-at with-body-summary provider bridges from component
+  routes, and a public-callback boolean component body-summary branch bridge; it no longer needs a separate
   exact-body premise. Active mixed success now implies the broader base checker,
   and the component-only diagnostic endpoint can be reconstructed from active
   mixed no-receiver plus the body-summary check. The no-receiver branch also
@@ -135,10 +137,10 @@ validity checks must be represented in Rocq and the extracted checker.
   proof/diagnostic infrastructure, not active authorities.
 - The active mixed endpoint now has strict-to-active checker agreement,
   explicit public exact-body/package, exact-body/package-to-summary route
-  conversions, strict-public exact-body/package, package-at,
-  component-summary branch package-at, component-check branch
-  package-at, no-capture scoped-package, local-bounds derived exact-body public
-  bridges, a branch bridge that derives the exact-body route from the component
+  conversions, strict-public exact-body/package, package-at, and component
+  summary-check routes, component-summary branch package-at, component-check
+  branch package-at, no-capture scoped-package, local-bounds derived
+  exact-body public bridges, a branch bridge that derives the exact-body route from the component
   route instead of requiring a separate premise, branch bridges that consume
   package or package-at with-body-summary providers directly, and static
   local-bounds plus public-callback no-receiver branch wrappers that consume

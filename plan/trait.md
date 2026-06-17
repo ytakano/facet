@@ -39,17 +39,19 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers includes active-mixed branch
   splits, no-receiver/direct-ready bridges, local-bounds route helpers,
   exact-body route/package bridges, public-callback wrappers for the active
-  mixed endpoint, a runtime theorem for `assoc_direct_receiver_base` under the
-  existing global replay evidence, and proved-safe absent/synthetic/component
-  mixed endpoints. The stronger endpoints remain proof diagnostics because
-  their gates rejected broad existing valid coverage when tried as active
-  authorities.
+  mixed endpoint, an active-mixed runtime theorem under the assoc-compatible
+  store-safe synthetic direct-call route, a runtime theorem for
+  `assoc_direct_receiver_base` under the existing global replay evidence, and
+  proved-safe absent/synthetic/component mixed endpoints. The stronger
+  endpoints remain proof diagnostics because their gates rejected broad existing
+  valid coverage when tried as active authorities.
 - The remaining activation gap is proof-side: the active mixed no-receiver
   branch has callback-based runtime safety routes, but the public theorem still
-  needs a behavior-compatible, public-premise-free provider for the no-receiver
-  branch. The available proven providers come from stronger absent, synthetic,
-  component, or strict exact gates that are not behavior-compatible with the
-  active CLI authority.
+  needs either the assoc-compatible store-safe synthetic direct-call route to be
+  derivable from its current public premises, or a deliberate public theorem
+  retarget to expose that route. Receiver-method absence alone does not imply
+  the component gate or exact-body target/package callbacks, so those paths
+  remain diagnostic rather than activation bridges.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -89,8 +91,9 @@ validity checks must be represented in Rocq and the extracted checker.
   remain proof/diagnostic infrastructure, not active authorities.
 - The active mixed no-receiver branch has runtime safety routes only when a
   no-receiver callback supplies absent-captured, synthetic-summary,
-  component-summary, or equivalent evidence. Receiver-method target absence
-  alone still does not imply those providers.
+  component-summary, exact-body/package, or equivalent evidence, or when the
+  theorem uses the assoc-compatible store-safe synthetic direct-call route.
+  Receiver-method target absence alone still does not imply those providers.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

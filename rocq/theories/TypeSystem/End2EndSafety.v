@@ -19959,7 +19959,7 @@ Proof.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_static_exact_local_bounds_provider_callbacks :
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_static_exact_local_bounds_provider_callbacks_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -19968,7 +19968,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -19991,7 +19991,7 @@ Proof.
   destruct
     (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_exact_local_bounds_provider_callbacks.
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_exact_local_bounds_provider_callbacks_prefix.
     + exact Hsynthetic_route.
     + exact Hscope_synthetic.
     + exact Htyping_ready.
@@ -20022,6 +20022,47 @@ Proof.
     + exact Hin.
     + exact Hstore.
     + exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_static_exact_local_bounds_provider_callbacks :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall base env0 fdef,
+        global_env_local_bounds_family env' base ->
+        global_env_local_bounds_family base env0 ->
+        In fdef (env_fns env0) ->
+        check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+          env' fdef = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_static_exact_local_bounds_provider_callbacks_prefix.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_static
+      Hstatic).
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_local_bounds_route_callbacks :

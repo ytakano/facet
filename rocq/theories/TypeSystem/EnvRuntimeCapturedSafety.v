@@ -25664,6 +25664,56 @@ Proof.
     + exact Heval.
 Qed.
 
+
+Theorem env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    env_fns_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
+      env ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval env f ->
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env f s s' v Hunique Hevidence
+    Hready Hcombined Hbody_summary Hinitial Hin Hstore Heval Hlive_body
+    Hconsumed_body.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hcombined (fn_name f) f Hlookup) as [Hcaptured | Hcomponent].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+    + exact Hunique.
+    + exact Hevidence.
+    + exact Hready.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+    + exact Hlive_body.
+    + exact Hconsumed_body.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_body_summary_evidence.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hpackage.
+    + exact Hunique.
+    + destruct (Hbody_summary f Hcomponent) as [_Hcomponent Hsummary].
+      exact Hsummary.
+    + exact Hcomponent.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

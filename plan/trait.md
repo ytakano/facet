@@ -45,9 +45,12 @@ validity checks must be represented in Rocq and the extracted checker.
   runtime theorem for `assoc_direct_receiver_base` under the existing global
   replay evidence, an exported verified
   `assoc_direct_receiver_base_direct_component_ready_checks` diagnostic endpoint,
-  and proved-safe absent/synthetic/component mixed endpoints. The stronger
-  endpoints remain proof diagnostics because their gates rejected broad existing
-  valid coverage or the direct-call receiver fixtures when tried as active
+  proved-safe absent/synthetic/component mixed endpoints, and a provider-based
+  runtime bridge for `assoc_direct_receiver_base_combined` that can route direct
+  receiver methods through scoped body-lift providers while routing no-capture
+  components through component-body summary providers. The stronger endpoints
+  remain proof diagnostics because their gates rejected broad existing valid
+  coverage or the direct-call receiver fixtures when tried as active
   authorities.
 - The remaining activation gap is proof-side: the public theorem can now be
   retargeted to the active mixed endpoint once the summary-evidence route is
@@ -70,6 +73,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
+   - Package the `assoc_direct_receiver_base_combined` runtime bridge behind a
+     concrete verified wrapper by deriving its provenance, preservation,
+     component-body summary-provider, and exact-package premises without
+     reintroducing the broad global component gate.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -109,6 +116,12 @@ validity checks must be represented in Rocq and the extracted checker.
   ordinary valid coverage but still rejects the direct-call receiver fixture
   because the direct-ready branch requires the global component gate; the
   exported direct-component ready-check wrapper also rejects those fixtures.
+- A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
+  short and explicit direct-call receiver UFCS safety-gate fixtures and
+  preserved the current regression suite except for those two expected-invalid
+  flips. It is not active yet: the new runtime bridge still requires a concrete
+  wrapper that supplies provenance, preservation, component-body summary, and
+  exact-package evidence from checker premises.
 
 ## Key Decisions
 

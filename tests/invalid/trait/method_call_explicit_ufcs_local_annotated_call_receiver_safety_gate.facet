@@ -1,0 +1,18 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted isize;
+}
+
+impl Runner for unrestricted isize {
+  fn run(self: Self) -> unrestricted isize {
+    self
+  }
+}
+
+fn seed() -> unrestricted isize {
+  1
+}
+
+fn main() -> unrestricted isize {
+  let x: unrestricted isize = (seed);
+  (<unrestricted isize as Runner>::run x)
+}

@@ -57,7 +57,10 @@ validity checks must be represented in Rocq and the extracted checker.
   requiring the full env-level provenance, preservation, and component gates;
   its proof helpers expose Prop-level combined readiness, local-bounds-family
   providers, uniqueness, and a runtime bridge parameterized by separately
-  supplied provenance, preservation, and synthetic-call summary evidence.
+  supplied provenance, preservation, and synthetic-call summary evidence. A
+  narrower direct-receiver-method-or-component summary now has checker and Prop
+  readiness facts, so the next proof step can target receiver-method bodies
+  without also accepting the plain captured-summary branch.
 - The remaining activation gap is proof-side and specific to the no-receiver
   branch. The active endpoint exposes only a combined captured-or-component
   summary there. Existing route wrappers need either plain synthetic summary
@@ -116,9 +119,11 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-call receiver fixture, `infer_program_env_end2end_assoc_direct_receiver_base`
   accepts it, and the new base-combined endpoint isolates the combined summary
   gate. Its runtime bridge now identifies the remaining missing evidence as
-  provenance, preservation, and synthetic-call summary readiness. Temporary
-  diagnostics still show the full direct-ready env gate failing
-  on `provenance=false`, `preservation=false`, and `component=false`, so the
+  provenance, preservation, and synthetic-call summary readiness. The new
+  direct-receiver-method-or-component facts isolate the direct branch needed
+  to avoid those global gates, but no runtime theorem or endpoint has consumed
+  them yet. Temporary diagnostics still show the full direct-ready env gate
+  failing on `provenance=false`, `preservation=false`, and `component=false`, so the
   public runtime theorem still needs either a no-receiver-branch provider or a
   behavior-preserving direct-receiver branch that avoids requiring those global
   gates for this shape.

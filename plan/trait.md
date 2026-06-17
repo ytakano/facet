@@ -55,8 +55,9 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds derived exact-body public route bridges, branch bridges that
   remove the separate exact-body premise, accept package-at with-body-summary
   providers, consume membership-scoped component body-summary checks, and expose
-  public-callback no-receiver branch routes through component body-summary
-  providers or booleans while preserving the direct-ready branch, plus a provider-based runtime bridge for
+  public-callback no-receiver branch routes through membership-scoped component
+  body-summary providers, unscoped provider wrappers, or booleans while
+  preserving the direct-ready branch, plus a provider-based runtime bridge for
   `assoc_direct_receiver_base_combined` that
   can route direct receiver methods through scoped body-lift providers while
   routing no-capture components through component-body summary providers. The
@@ -72,8 +73,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body premise. Active mixed success now implies the broader base checker,
   and the component-only diagnostic endpoint can be reconstructed from active
   mixed no-receiver plus the body-summary check. The no-receiver branch also
-  has a public-callback route that consumes the component body-summary provider
-  directly; the canonical theorem still needs that provider or body-summary
+  has a public-callback route that consumes a membership-scoped component
+  body-summary provider directly, with an unscoped provider wrapper for existing
+  diagnostics; the canonical theorem still needs that provider or body-summary
   check derived without a new theorem premise. Receiver-method
   absence alone does not imply that component route, so those paths remain
   diagnostic rather than activation bridges.
@@ -128,11 +130,11 @@ validity checks must be represented in Rocq and the extracted checker.
   package-at, no-capture scoped-package, local-bounds derived exact-body public
   bridges, a branch bridge that derives the exact-body route from the component
   route instead of requiring a separate premise, branch bridges that consume
-  package or package-at with-body-summary providers directly, and a static
-  local-bounds route plus public-callback no-receiver branch wrapper that consumes
-  membership-scoped component body-summary checks without treating them as
-  unrestricted Prop providers. The canonical theorem still lacks a proof that
-  the required component/body-summary check and per-callee summary/evidence-at
+  package or package-at with-body-summary providers directly, and static
+  local-bounds plus public-callback no-receiver branch wrappers that consume
+  membership-scoped component body-summary providers or checks without treating
+  them as unrestricted global Prop providers. The canonical theorem still lacks
+  a proof that the required provider/check and per-callee summary/evidence-at
   facts follow from its existing public premises.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay

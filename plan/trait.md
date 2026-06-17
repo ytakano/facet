@@ -81,9 +81,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - Strict direct-receiver, absence-mixed, synthetic-mixed, and component-mixed
-  endpoint trials rejected broad existing valid coverage with
-  `ErrEndToEndSafetyGateFailed`; they remain proof/diagnostic infrastructure,
-  not active authorities.
+  endpoint trials reject broad valid coverage with
+  `ErrEndToEndSafetyGateFailed`; the component-mixed endpoint was rechecked
+  against the current suite and still fails ordinary valid programs, so these
+  remain proof/diagnostic infrastructure, not active authorities.
 - The active mixed no-receiver branch has runtime safety routes only when a
   no-receiver callback supplies absent-captured, synthetic-summary,
   component-summary, or equivalent evidence. Receiver-method target absence

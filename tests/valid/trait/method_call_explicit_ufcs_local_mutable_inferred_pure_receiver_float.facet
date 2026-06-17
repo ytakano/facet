@@ -1,0 +1,14 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted f64;
+}
+
+impl Runner for unrestricted f64 {
+  fn run(self: Self) -> unrestricted f64 {
+    self
+  }
+}
+
+fn main() -> unrestricted f64 {
+  let mut x = 1.5;
+  (<unrestricted f64 as Runner>::run x)
+}

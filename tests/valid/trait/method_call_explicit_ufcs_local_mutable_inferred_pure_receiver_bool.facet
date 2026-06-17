@@ -1,0 +1,14 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted bool;
+}
+
+impl Runner for unrestricted bool {
+  fn run(self: Self) -> unrestricted bool {
+    self
+  }
+}
+
+fn main() -> unrestricted bool {
+  let mut x = true;
+  (<unrestricted bool as Runner>::run x)
+}

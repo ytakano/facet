@@ -44,14 +44,14 @@ validity checks must be represented in Rocq and the extracted checker.
   the active mixed endpoint once the summary-evidence route is supplied, a
   runtime theorem for `assoc_direct_receiver_base` under the existing global
   replay evidence, exported verified `assoc_direct_receiver_base` diagnostic
-  endpoints with direct-component, global-summary, and per-component summary
-  ready checks, proved-safe absent/synthetic/component mixed endpoints, and a
-  provider-based runtime bridge for `assoc_direct_receiver_base_combined` that
-  can route direct receiver methods through scoped body-lift providers while
-  routing no-capture components through component-body summary providers. The
-  stronger endpoints remain proof diagnostics because their gates rejected broad
-  existing valid coverage or the direct-call receiver fixtures when tried as
-  active authorities.
+  endpoints with direct-component, global-summary, per-component summary, and
+  single-sidecar provenance/preservation/component-summary ready checks,
+  proved-safe absent/synthetic/component mixed endpoints, and a provider-based
+  runtime bridge for `assoc_direct_receiver_base_combined` that can route direct
+  receiver methods through scoped body-lift providers while routing no-capture
+  components through component-body summary providers. The stronger endpoints
+  remain proof diagnostics because their gates rejected broad existing valid
+  coverage or the direct-call receiver fixtures when tried as active authorities.
 - The remaining activation gap is proof-side: the public theorem can now be
   retargeted to the active mixed endpoint once the summary-evidence route is
   available under its existing public premises. The current public prefix route
@@ -73,10 +73,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
-   - Isolate which sidecar premise still rejects the direct-call receiver
-     fixtures under the per-component summary wrapper, then replace that broad
-     diagnostic gate with the weakest checker evidence needed by the runtime
-     bridge.
+   - Replace the over-broad provenance/preservation sidecars with the weakest
+     checker evidence needed by the runtime bridge; the isolated component-body
+     summary sidecar accepts the targeted direct-call receiver fixtures and
+     representative valid programs.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -122,13 +122,13 @@ validity checks must be represented in Rocq and the extracted checker.
   flips. The exported `base_combined_summary_ready_checks` wrapper is proved
   runtime-safe under the summary-exact package route, but rejects those fixtures
   and representative valid programs because the global synthetic-summary check
-  is too broad. The exported `base_combined_component_summary_ready_checks`
-  wrapper preserves boolean branch evidence and proves the local component-body
-  summary route without Prop-to-bool completeness, but it still rejects the same
-  targeted fixtures when tried as the CLI authority. The next activation step is
-  to isolate whether that failure is from the local body-summary sidecar or the
-  remaining provenance/preservation sidecars, then remove only the over-broad
-  premise.
+  is too broad. Single-sidecar diagnostic retargets showed that both
+  `base_combined_provenance_ready_checks` and
+  `base_combined_preservation_ready_checks` reject the targeted direct-call
+  receiver fixtures and representative valid programs, while
+  `base_combined_component_only_summary_ready_checks` accepts all four sampled
+  cases. The next activation step is to remove or narrow the provenance and
+  preservation gates without reintroducing a broad global premise.
 
 ## Key Decisions
 

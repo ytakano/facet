@@ -1,0 +1,11 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted isize;
+}
+
+fn main<'a>() -> unrestricted <unrestricted isize as Provider<'a>>::Item {
+  1
+}

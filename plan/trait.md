@@ -11,8 +11,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Traits, impls, associated types, trait methods, method-local type parameters,
   generic-trait impl remapping, and associated type projections are parsed,
-  lowered, and checked through the extracted Rocq checker. Impl method bodies
-  are elaborated to hidden functions and checked even when uncalled.
+  lowered, and checked through the extracted Rocq checker. Associated
+  projections reject lifetime arguments in trait refs at checker boundaries.
+  Impl method bodies are elaborated to hidden functions and checked even when
+  uncalled.
 - Method calls use receiver-first prefix UFCS forms:
   `(<Ty as Trait>::method receiver args...)` and
   `(Trait::method receiver args...)`. Dot syntax remains rejected for this

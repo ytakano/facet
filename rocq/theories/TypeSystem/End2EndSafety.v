@@ -20683,7 +20683,7 @@ Proof.
   - exact Heval.
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks_prefix :
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -20705,7 +20705,7 @@ Proof.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_static_component_callbacks_prefix.
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks :
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -20726,7 +20726,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks_prefix.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -23069,7 +23069,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_component_callbacks_prefix.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.

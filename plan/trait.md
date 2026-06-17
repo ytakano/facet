@@ -61,7 +61,8 @@ validity checks must be represented in Rocq and the extracted checker.
   reject either broad valid coverage or the direct-call receiver safety-gate
   fixtures.
 - The remaining activation gap is proof-side. The canonical public runtime
-  theorem still targets the strict mixed endpoint; retargeting it to
+  theorem still targets the strict mixed endpoint through explicitly named
+  strict-mixed static callback wrappers; retargeting it to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
   from existing public premises, the no-receiver component summary/check
   provider and per-callee summary/evidence-at facts consumed by the active
@@ -126,7 +127,9 @@ validity checks must be represented in Rocq and the extracted checker.
   assoc-base branch callbacks, and public-callback no-receiver provider/check
   variants. The canonical theorem
   still lacks the bridge from its public premises to the required
-  provider/check and per-callee summary/evidence-at facts.
+  provider/check and per-callee summary/evidence-at facts; legacy static
+  callback wrappers that still consume the strict endpoint are now named
+  `strict_mixed` to avoid confusing them with the active endpoint.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

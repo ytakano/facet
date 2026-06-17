@@ -65,8 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
   prefix-evidence form, the branch exact-body/package component-summary
   provider route exposed in prefix-evidence form, the with-body variant of
   that branch route exposed in prefix-evidence form, package-at-all
-  component-summary branch routes exposed in prefix-evidence form, and
-  strict-public package-at-all branch routes exposed in prefix-evidence form,
+  component-summary branch routes exposed in prefix-evidence form, the
+  branch exact-body/package component-check route exposed in prefix-evidence
+  form, and strict-public package-at-all branch routes exposed in prefix-evidence
+  form,
   and a runtime theorem for `assoc_direct_receiver_base` under
   the existing global replay evidence, exported verified
   `assoc_direct_receiver_base` diagnostic endpoints with direct-component,
@@ -101,8 +103,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the canonical public theorem, the no-receiver component body-summary
   provider route, the branch exact-body/package component-summary provider
   route, its with-body provider variant, the package-at-all component-summary
-  branch routes, and strict-public package-at-all branch routes now immediately
-  narrow to prefix routes, and strict public routing can
+  branch routes, the branch exact-body/package component-check route, and
+  strict-public package-at-all branch routes now immediately narrow to prefix
+  routes, and strict public routing can
   consume the no-receiver component summary
   provider/check, component-only same-result, assoc-base non-captured provider,
   store-safe summary-evidence, component-check, component-body store-safe
@@ -180,8 +183,9 @@ validity checks must be represented in Rocq and the extracted checker.
   conversions, strict-public exact-body/package, package-at, component
   summary provider/check routes, component-only same-result routes, assoc-base
   non-captured provider routes, store-safe summary-evidence routes,
-  component-check routes, component-body store-safe summary routes,
-  component-body summary routes, component-body summary scoped provider branch
+  component-check routes including a prefix-evidence branch wrapper,
+  component-body store-safe summary routes, component-body summary routes,
+  component-body summary scoped provider branch
   routes, component-body summary boolean branch routes, branch shadow summary
   routes, branch not-captured routes, branch absent-captured summary routes, and package-at
   component-body branch routes, package-at component-check branch routes,

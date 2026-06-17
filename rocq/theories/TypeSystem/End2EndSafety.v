@@ -22960,20 +22960,24 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+  intros _Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hexact_body Hpackage
     env env' f s s' v Hprog Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_active_mixed_public_exact_body_call_route_package.
-  - exact Hsynthetic_route.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
+  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_public_exact_body_call_route_package.
+    + exact Hscope_synthetic.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hexact_body.
+    + exact Hpackage.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hexact_body.
-  - exact Hpackage.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed.
     exact Hprog.
   - exact Hinitial.
@@ -23011,20 +23015,31 @@ Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mix
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hexact_body Hpackage_at.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_active_public_exact_body_call_route_package.
-  - exact Hsynthetic_route.
+  intros _Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hexact_body Hpackage_at
+    env env' f s s' v Hprog Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready.
+  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_public_exact_body_call_route_package.
+    + exact Hscope_synthetic.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hexact_body.
+    + eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement_of_at_all.
+      exact Hpackage_at.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hexact_body.
-  - eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement_of_at_all.
-    exact Hpackage_at.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed.
+    exact Hprog.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_public_prefix_and_summary_route :

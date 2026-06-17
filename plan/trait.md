@@ -45,9 +45,9 @@ validity checks must be represented in Rocq and the extracted checker.
   and call-statement variants. Recent cleanup has routed the package
   component-check wrapper, package component-body-summary provider wrapper,
   local-bounds exact-body static wrapper, local-bounds route branch,
-  local-bounds component body-summary branch and store-static wrapper,
+  local-bounds component body-summary branch,
   active/strict public no-receiver component-body-summary boolean check routes,
-  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc component-summary/check and mixed component-summary/check/local-bounds store-static cleanup, and provider/check routes,
+  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, and provider/check routes,
   active/strict component-only same-result and derived wrappers, uncaptured exact-body package branch,
   exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
@@ -85,9 +85,9 @@ validity checks must be represented in Rocq and the extracted checker.
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
    - Continue replacing over-broad provenance/preservation and remaining
-     store-static sidecars with runtime routes that consume prefix evidence,
-     exact-body package facts, and the component-only boolean bridge, without
-     requiring Prop-to-bool completeness for component summaries.
+     legacy store-static sidecars with runtime routes that consume prefix
+     evidence, exact-body package facts, and the component-only boolean bridge,
+     without requiring Prop-to-bool completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -117,7 +117,7 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint has enough routed lemmas for summary evidence,
   exact-body/package, package-at, package-at-all, local-bounds, local-bounds
   route branch, derived local-bounds, scoped-package, local-bounds component
-  body-summary branch/store-static wrapper, active/strict public no-receiver
+  body-summary branch, active/strict public no-receiver
   component-body summary boolean check routes, active/strict public no-receiver
   component-body summary provider/check routes, uncaptured exact-body package branch,
   exact-non-captured and exact-local-bounds

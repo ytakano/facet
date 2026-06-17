@@ -73,8 +73,11 @@ validity checks must be represented in Rocq and the extracted checker.
   actually contain receiver-method targets, collapses back to the active mixed
   endpoint for no-receiver programs, exposes per-function exact-closure plus
   local-bounds route-package-at facts for receiver-method component functions,
-  and reuses the no-receiver-only public-callback bridge. These endpoints remain
-  proof infrastructure and are not the active public theorem.
+  and reuses the no-receiver-only public-callback bridge. A proof-only
+  component-mixed endpoint now records the exact no-receiver component-summary
+  gate that is sufficient for a zero-extra-premise public-callback runtime
+  theorem while leaving the active CLI authority unchanged. These endpoints
+  remain proof infrastructure and are not the active public theorem.
 - The remaining activation gap is proof-side and specific to deriving the
   no-receiver branch evidence needed by the active mixed runtime theorem. The
   active and receiver-method-exact bridges now remove route/package obligations
@@ -123,15 +126,18 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The assoc-base mixed endpoint avoids that gate
   for programs without direct receiver-method bodies and is now the active OCaml
   authority.
-- Direct-call receiver activation is now blocked on route-package evidence for
-  the active mixed endpoint. The latest active mixed runtime theorem matches the
-  public callback shape but still requires no-receiver branch evidence. The
-  active mixed bridge can consume either no-receiver summary evidence or
-  no-receiver exact-body route/package evidence, but the active public theorem
-  still has not been retargeted. Temporary diagnostics still show the full
-  direct-ready env gate failing on `provenance=false`, `preservation=false`, and
-  `component=false`, so activation still needs a no-receiver provider or an
-  equivalent public-premise-free lift.
+- Direct-call receiver activation is now blocked on deriving no-receiver branch
+  evidence for the active mixed endpoint without changing the public theorem.
+  The active mixed bridge can consume no-receiver summary evidence or
+  no-receiver exact-body route/package evidence, and the component-mixed
+  proof-only endpoint shows that no-receiver component-summary evidence is also
+  sufficient for a zero-extra-premise runtime theorem. The active public theorem
+  still has not been retargeted because the active CLI authority exposes only
+  receiver-method absence on the no-receiver branch. Temporary diagnostics still
+  show the full direct-ready env gate failing on `provenance=false`,
+  `preservation=false`, and `component=false`, so activation still needs a
+  behavior-compatible no-receiver provider or an equivalent public-premise-free
+  lift.
 - The strongest existing assoc-base paths remain proof endpoints, not behavior-
   compatible authorities. Temporary CLI swaps to the absence-mixed and
   synthetic-mixed endpoints rejected broad existing valid coverage with

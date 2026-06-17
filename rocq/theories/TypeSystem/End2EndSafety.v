@@ -1671,6 +1671,117 @@ Proof.
     eauto.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_component_mixed_base :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_component_mixed
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_component_mixed_ready
+    env_checked); try discriminate.
+  injection Hprog as <-.
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_of_component_mixed :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_component_mixed
+    in Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_component_mixed_ready
+    env_checked) eqn:Hcomponent_ready; try discriminate.
+  rewrite
+    (check_env_end2end_direct_receiver_mixed_ready_of_component_mixed_ready
+      env_checked Hcomponent_ready).
+  exact Hprog.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_component_mixed_sound :
+  forall env env' f,
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f Hprog Hin.
+  eapply infer_program_env_end2end_assoc_sound; eauto.
+  eapply infer_program_env_end2end_assoc_direct_receiver_component_mixed_base.
+  exact Hprog.
+Qed.
+
+Lemma check_program_env_end2end_assoc_direct_receiver_component_mixed_infer_ok :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_component_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+        infer_ok env'.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_end2end_assoc_direct_receiver_component_mixed
+    in Hcheck.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_component_mixed env)
+    as [env' | err] eqn:Hprog; try discriminate.
+  exists env'. reflexivity.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_component_mixed_sound :
+  forall env env' f,
+    check_program_env_end2end_assoc_direct_receiver_component_mixed env = true ->
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+      infer_ok env' ->
+    In f (env_fns env') ->
+    exists T Γ_out R_out roots,
+      infer_fn_env_end2end_assoc env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked_assoc_boundary env' f
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        R_out roots.
+Proof.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_component_mixed_sound;
+    eauto.
+Qed.
+
+Theorem check_program_env_end2end_assoc_direct_receiver_component_mixed_sound_exists :
+  forall env,
+    check_program_env_end2end_assoc_direct_receiver_component_mixed env = true ->
+    exists env',
+      infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+        infer_ok env' /\
+      forall f,
+        In f (env_fns env') ->
+        exists T Γ_out R_out roots,
+          infer_fn_env_end2end_assoc env' f =
+            infer_ok (T, Γ_out, R_out, roots) /\
+          checked_fn_env_roots_checked_assoc_boundary env' f
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            R_out roots.
+Proof.
+  intros env Hcheck.
+  destruct
+    (check_program_env_end2end_assoc_direct_receiver_component_mixed_infer_ok
+       env Hcheck) as [env' Hprog].
+  exists env'. split; [exact Hprog |].
+  intros f Hin.
+  eapply infer_program_env_end2end_assoc_direct_receiver_component_mixed_sound;
+    eauto.
+Qed.
+
 Lemma check_program_env_end2end_infer_ok :
   forall env,
     check_program_env_end2end env = true ->
@@ -15095,6 +15206,27 @@ Proof.
   exact Hmixed_ready.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_component_mixed_ready_cases :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false /\
+     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env' = true) \/
+    check_env_end2end_direct_receiver_ready env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_component_mixed
+    in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_component_mixed_ready env_checked)
+    eqn:Hmixed_ready; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_end2end_direct_receiver_component_mixed_ready_cases.
+  exact Hmixed_ready.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_no_receiver_method_facts :
   forall env env' fdef,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -20032,6 +20164,65 @@ Proof.
     + intros _Hno_receiver_branch.
       eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
       exact Hsynthetic.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hmixed.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_component_mixed_big_step_safe_checked_initial_ready :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_component_mixed
+      env = infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hinitial Hin Hstore Heval.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_of_component_mixed
+      env env' Hprog) as Hmixed.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_component_mixed_ready_cases
+      env env' Hprog) as [[_Hno_receiver Hcomponent] | Hdirect_ready].
+  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_public_callbacks_and_branch_component_check.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hmixed.
+    + intros _Hno_receiver_branch. exact Hcomponent.
     + exact Hinitial.
     + exact Hin.
     + exact Hstore.

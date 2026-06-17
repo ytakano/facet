@@ -20819,43 +20819,17 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s
-    s' v Hprog Hcomponent_body_summary_when_no_receiver Hinitial Hin
-    Hstore Heval.
-  destruct
-    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
-      env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_static_local_bounds_component_body_summary_check_prefix.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact (preservation_ready_expr_static_runtime_named_prefix_of_store Hstatic).
-    + exact Hprog.
-    + exact (Hcomponent_body_summary_when_no_receiver Hno_receiver).
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
-  - eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_direct_ready.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_static_local_bounds_component_body_summary_check_prefix.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact (preservation_ready_expr_static_runtime_named_prefix_of_store Hstatic).
 Qed.
 
 

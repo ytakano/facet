@@ -47,7 +47,7 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds exact-body static wrapper, local-bounds route branch,
   local-bounds component body-summary branch,
   active/strict public no-receiver component-body-summary boolean check routes,
-  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, legacy store-static cleanup, and provider/check routes,
+  active/strict public no-receiver component-body-summary provider wrappers, strict branch provider/check wrappers, canonical runtime prefix wrapper, branch/public package/package-at-all exact-body summary-evidence wrappers, active and receiver-method public no-receiver exact-body wrappers, assoc/mixed component-summary/check/local-bounds store-static cleanup, legacy store-static cleanup, provenance/preservation diagnostic sidecar cleanup, and provider/check routes,
   active/strict component-only same-result and derived wrappers, uncaptured exact-body package branch,
   exact-non-captured and
   exact-local-bounds provider branches, non-captured branch, non-captured
@@ -84,9 +84,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
-   - Continue replacing over-broad provenance/preservation sidecars with
-     runtime routes that consume prefix evidence, exact-body package facts, and
-     the component-only boolean bridge, without requiring Prop-to-bool
+   - Continue replacing any remaining broad provenance/preservation premises
+     with runtime routes that consume prefix evidence, exact-body package facts,
+     and the component-only boolean bridge, without requiring Prop-to-bool
      completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
@@ -141,16 +141,12 @@ validity checks must be represented in Rocq and the extracted checker.
   flips. The exported `base_combined_summary_ready_checks` wrapper is proved
   runtime-safe under the summary-exact package route, but rejects those fixtures
   and representative valid programs because the global synthetic-summary check
-  is too broad. Single-sidecar diagnostic retargets showed that both
-  `base_combined_provenance_ready_checks` and
-  `base_combined_preservation_ready_checks` reject the targeted direct-call
-  receiver fixtures and representative valid programs, while
-  `base_combined_component_only_summary_ready_checks` accepts all four sampled
-  cases. That component-only endpoint now has a runtime theorem under explicit
-  provenance/preservation evidence, and active mixed can reconstruct the endpoint
-  on the no-receiver branch once the component body-summary check is known. It is
-  still diagnostic because the canonical public premises do not yet imply that
-  body-summary check or the needed per-callee evidence.
+  is too broad. The rejected provenance-only and preservation-only diagnostic
+  endpoints have been removed; `base_combined_component_only_summary_ready_checks`
+  remains because it accepts the sampled cases and has a runtime theorem under
+  explicit provenance/preservation evidence. It is still diagnostic because the
+  canonical public premises do not yet imply the body-summary check or the needed
+  per-callee evidence.
 
 ## Key Decisions
 

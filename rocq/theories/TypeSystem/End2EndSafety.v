@@ -1176,40 +1176,6 @@ Qed.
 
 
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_base :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks
-      env = infer_ok env' ->
-    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
-      infer_ok env'.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_root_shadow_provenance_summary env_checked) eqn:Hprov;
-    try discriminate.
-  injection Hprog as ->. reflexivity.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks_base :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks
-      env = infer_ok env' ->
-    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
-      infer_ok env'.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_base_combined env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_preservation_ready env_checked) eqn:Hpres;
-    try discriminate.
-  injection Hprog as ->. reflexivity.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
@@ -1244,30 +1210,6 @@ Proof.
   injection Hprog as ->. exact Hsummary.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks
-      env = infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_base.
-  exact Hprog.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks
-      env = infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks_base.
-  exact Hprog.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_unique_by_name :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks
@@ -1278,44 +1220,6 @@ Proof.
   eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name.
   eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_base.
   exact Hprog.
-Qed.
-
-Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_sound :
-  forall env env' f,
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks
-      env = infer_ok env' ->
-    In f (env_fns env') ->
-    exists T Γ_out R_out roots,
-      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
-        infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots_checked_assoc_boundary env' f
-        (initial_root_env_for_params (fn_params f ++ fn_captures f))
-        R_out roots.
-Proof.
-  intros env env' f Hprog Hin.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_sound.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_provenance_ready_checks_base.
-    exact Hprog.
-  - exact Hin.
-Qed.
-
-Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks_sound :
-  forall env env' f,
-    infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks
-      env = infer_ok env' ->
-    In f (env_fns env') ->
-    exists T Γ_out R_out roots,
-      infer_fn_env_end2end_assoc_direct_receiver_base env' f =
-        infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots_checked_assoc_boundary env' f
-        (initial_root_env_for_params (fn_params f ++ fn_captures f))
-        R_out roots.
-Proof.
-  intros env env' f Hprog Hin.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_sound.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_base_combined_preservation_ready_checks_base.
-    exact Hprog.
-  - exact Hin.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks_sound :

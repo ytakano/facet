@@ -12617,6 +12617,22 @@ Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     check_env_root_shadow_synthetic_direct_call_ready_summary
       (global_env_with_local_bounds env (fn_bounds f_component)) = true.
 
+Definition env_fns_root_shadow_ready_body_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef \/
+    callee_body_root_shadow_summary env fdef.
+
+Definition component_body_local_bounds_ready_body_summary_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    env_fns_root_shadow_ready_body_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
 Lemma check_fn_root_shadow_synthetic_direct_call_ready_summary_sound :
   forall env fdef,
     check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef =
@@ -12684,6 +12700,34 @@ Proof.
     (env_fns env)) Hcheck); exact Hin.
 Qed.
 
+Lemma check_env_root_shadow_ready_body_summary_sound :
+  forall env,
+    forallb
+      (fun local_fdef =>
+         check_fn_root_shadow_synthetic_direct_call_ready_summary
+           env local_fdef ||
+         check_fn_root_shadow_summary env local_fdef)
+      (env_fns env) = true ->
+    env_fns_root_shadow_ready_body_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _Hname].
+  pose proof (proj1 (forallb_forall
+    (fun local_fdef =>
+       check_fn_root_shadow_synthetic_direct_call_ready_summary
+         env local_fdef ||
+       check_fn_root_shadow_summary env local_fdef)
+    (env_fns env)) Hcheck fdef Hin) as Hfn_check.
+  apply orb_true_iff in Hfn_check as [Hready | Hsummary].
+  - left.
+    eapply check_fn_root_shadow_synthetic_direct_call_ready_summary_sound.
+    exact Hready.
+  - right.
+    eapply check_fn_root_shadow_summary_sound.
+    exact Hsummary.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_local_bounds_synthetic_summary_provider_sound :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
@@ -12701,6 +12745,27 @@ Proof.
   unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
     in Hbody_check.
   rewrite Hcomponent_check in Hbody_check.
+  exact Hbody_check.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true ->
+    component_body_local_bounds_ready_body_summary_provider_in_env
+      env.
+Proof.
+  intros env Hcheck f_component Hin_component Hcomponent_check.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+    in Hcheck.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env)
+    (env_fns env)) Hcheck f_component Hin_component) as Hbody_check.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+    in Hbody_check.
+  rewrite Hcomponent_check in Hbody_check.
+  eapply check_env_root_shadow_ready_body_summary_sound.
   exact Hbody_check.
 Qed.
 

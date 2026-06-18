@@ -540,6 +540,24 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Lemma env_fns_root_shadow_ready_body_summary_evidence_of_summary :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_shadow_ready_body_summary_evidence env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  right. eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma fn_root_shadow_ready_body_summary_evidence_at_of_summary_at :
+  forall env fname,
+    fn_root_shadow_summary_evidence_at env fname ->
+    fn_root_shadow_ready_body_summary_evidence_at env fname.
+Proof.
+  intros env fname Hsummary fdef Hlookup.
+  right. eapply Hsummary. exact Hlookup.
+Qed.
+
 Definition env_fns_root_direct_call_ready_summary_evidence
     (env : global_env) : Prop :=
   forall fname fdef,
@@ -577,6 +595,24 @@ Lemma fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env :
 Proof.
   intros env fname Hsummary fdef Hlookup.
   eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma env_fns_root_shadow_ready_body_summary_evidence_of_synthetic :
+  forall env,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    env_fns_root_shadow_ready_body_summary_evidence env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  left. eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma fn_root_shadow_ready_body_summary_evidence_at_of_synthetic_at :
+  forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    fn_root_shadow_ready_body_summary_evidence_at env fname.
+Proof.
+  intros env fname Hsummary fdef Hlookup.
+  left. eapply Hsummary. exact Hlookup.
 Qed.
 
 Definition env_fns_root_provenance_summary_evidence

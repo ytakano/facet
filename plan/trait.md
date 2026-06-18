@@ -118,8 +118,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid
-  flips. The rejected broad, direct-component, and component-only summary
-  ready-check diagnostics have been removed.
+  flips; its unreferenced runtime wrappers and the rejected broad,
+  direct-component, and component-only summary ready-check diagnostics have
+  been removed.
 
 ## Key Decisions
 

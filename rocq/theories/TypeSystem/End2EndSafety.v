@@ -12617,13 +12617,6 @@ Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     check_env_root_shadow_synthetic_direct_call_ready_summary
       (global_env_with_local_bounds env (fn_bounds f_component)) = true.
 
-Definition env_fns_root_shadow_ready_body_summary_evidence
-    (env : global_env) : Prop :=
-  forall fname fdef,
-    lookup_fn fname (env_fns env) = Some fdef ->
-    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef \/
-    callee_body_root_shadow_summary env fdef.
-
 Definition component_body_local_bounds_ready_body_summary_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -12632,37 +12625,6 @@ Definition component_body_local_bounds_ready_body_summary_provider_in_env
       env f_component = true ->
     env_fns_root_shadow_ready_body_summary_evidence
       (global_env_with_local_bounds env (fn_bounds f_component)).
-
-Definition fn_root_shadow_summary_evidence_at
-    (env : global_env) (fname : ident) : Prop :=
-  forall fdef,
-    lookup_fn fname (env_fns env) = Some fdef ->
-    callee_body_root_shadow_summary env fdef.
-
-Definition fn_root_shadow_ready_body_summary_evidence_at
-    (env : global_env) (fname : ident) : Prop :=
-  forall fdef,
-    lookup_fn fname (env_fns env) = Some fdef ->
-    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef \/
-    callee_body_root_shadow_summary env fdef.
-
-Lemma fn_root_shadow_summary_evidence_at_of_env :
-  forall env fname,
-    env_fns_root_shadow_summary_evidence env ->
-    fn_root_shadow_summary_evidence_at env fname.
-Proof.
-  intros env fname Hsummary fdef Hlookup.
-  eapply Hsummary. exact Hlookup.
-Qed.
-
-Lemma fn_root_shadow_ready_body_summary_evidence_at_of_env :
-  forall env fname,
-    env_fns_root_shadow_ready_body_summary_evidence env ->
-    fn_root_shadow_ready_body_summary_evidence_at env fname.
-Proof.
-  intros env fname Hsummary fdef Hlookup.
-  eapply Hsummary. exact Hlookup.
-Qed.
 
 Lemma component_body_local_bounds_ready_body_summary_provider_at_in :
   forall env,

@@ -62,12 +62,13 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds synthetic direct-call-ready summary failures for
   `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`;
   the split reason is `no-direct-call-target` for all four. The ready-body
-  fallback sidecar is now sound into a local-bounds provider whose callees
+  fallback sidecar is sound into a local-bounds provider whose callees
   have either synthetic direct-call-ready summaries or ordinary root-shadow
-  summaries, with pointwise helpers for individual callees and a route-package
-  bridge that gives alpha-renamed direct-target callee evidence plus store-safe
-  target arguments. The next proof route must consume that
-  synthetic-or-ordinary callee evidence in the active mixed callback path
+  summaries. Shared ready-body evidence-at facts and ready-body
+  route-package projections now live below the direct-call route
+  layer, and the end-to-end sidecar provides alpha-renamed direct-target
+  callee evidence plus store-safe target arguments. The next proof route must
+  consume that synthetic-or-ordinary evidence in the active mixed callback path
   instead of requiring every local callee to have a synthetic direct-call
   target.
 - The remaining activation gap is proof-side. The canonical public runtime
@@ -109,9 +110,10 @@ validity checks must be represented in Rocq and the extracted checker.
      classified as `no-direct-call-target`) while
      preserving active checker authority; the component ready-body fallback
      diagnostic now passes all 100 frontier files and has sound local-bounds,
-     pointwise callee provider, and alpha-renamed direct-target route-package
-     bridges, so the remaining gap is proof routing from that
-     synthetic-or-ordinary evidence to the mixed no-receiver path.
+     pointwise callee provider, shared ready-body route-package, and
+     alpha-renamed direct-target bridges, so the remaining gap is proof
+     routing from that synthetic-or-ordinary evidence to the mixed
+     no-receiver path.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
      and the component-only boolean bridge, without requiring Prop-to-bool
@@ -145,7 +147,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, no-receiver
   local-bounds provider, ready-body local-bounds provider,
-  pointwise ready-body callee helpers, ready-body route-package bridge,
+  shared ready-body evidence-at and route-package projections, pointwise
+  ready-body callee helpers, end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the route from
   synthetic-or-ordinary local-bounds evidence into the mixed no-receiver proof

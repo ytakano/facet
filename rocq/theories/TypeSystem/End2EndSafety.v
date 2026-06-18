@@ -247,55 +247,6 @@ Proof.
     eassumption.
 Qed.
 
-Lemma check_fn_root_shadow_assoc_direct_receiver_base_summary_sound :
-  forall env fdef,
-    check_fn_root_shadow_assoc_direct_receiver_base_summary env fdef = true ->
-    callee_body_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
-      env fdef.
-Proof.
-  intros env fdef Hcheck.
-  unfold check_fn_root_shadow_assoc_direct_receiver_base_summary in Hcheck.
-  apply orb_true_iff in Hcheck as [Hbase | Hdirect].
-  - apply check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_sound
-      in Hbase.
-    unfold callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
-      in Hbase.
-    unfold callee_body_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary.
-    destruct Hbase as [Hcaptured | Hcomponent].
-    + left. left. exact Hcaptured.
-    + right. exact Hcomponent.
-  - unfold callee_body_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary.
-    left.
-    apply check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_sound.
-    exact Hdirect.
-Qed.
-
-Lemma infer_fns_env_end2end_assoc_direct_receiver_base_check_env_ready :
-  forall env fns,
-    infer_fns_env_end2end_assoc_direct_receiver_base env fns = infer_ok tt ->
-    forall f,
-      In f fns ->
-      check_fn_root_shadow_assoc_direct_receiver_base_summary env f = true.
-Proof.
-  induction fns as [| f_head rest IH]; intros Hinfer f Hin.
-  - contradiction.
-  - simpl in Hinfer. simpl in Hin.
-    destruct (infer_fn_env_end2end_assoc_direct_receiver_base env f_head)
-      as [[[[T_head Gamma_head] R_head] roots_head] | err] eqn:Hhead;
-      try discriminate.
-    destruct Hin as [-> | Hin].
-    + unfold infer_fn_env_end2end_assoc_direct_receiver_base in Hhead.
-      destruct (infer_full_env_roots_checked_assoc env f
-                  (initial_root_env_for_params
-                    (fn_params f ++ fn_captures f)))
-        as [[[[T' Gamma'] R'] roots'] | err] eqn:Hinfer_full;
-        try discriminate.
-      destruct (check_fn_root_shadow_assoc_direct_receiver_base_summary
-                  env f) eqn:Hsummary; try discriminate.
-      reflexivity.
-    + eapply IH; eauto.
-Qed.
-
 Lemma check_program_env_end2end_assoc_direct_receiver_base_infer_ok :
   forall env,
     check_program_env_end2end_assoc_direct_receiver_base env = true ->

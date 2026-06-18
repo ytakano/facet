@@ -55,7 +55,7 @@ validity checks must be represented in Rocq and the extracted checker.
   bridge and absence helper(s), obsolete assoc-base
   mixed ready-case helper lemmas, obsolete assoc-to-direct-receiver-base
   bridge helpers, obsolete assoc direct-receiver base/mixed bridge helper(s),
-  obsolete assoc direct-receiver base ready/unique helper lemmas,
+  obsolete assoc direct-receiver base ready/unique and summary helper chain,
   obsolete scoped-expr-lift runtime wrapper aliases,
   diagnostic wrapper chains, and obsolete diagnostic local-bounds/helper chains
   have been pruned.

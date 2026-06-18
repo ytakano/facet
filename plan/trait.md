@@ -40,15 +40,16 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, component-summary local-bounds route lemma,
   no-receiver component-body provider conversions,
-  provider/body-summary/store-safe public wrappers, public Prop-provider
-  wrapper, and
-  assoc-base check-provider helper path used by active public-path proofs.
+  public Prop-provider wrapper, core mixed no-receiver summary-provider
+  prefix route, and assoc-base check-provider helper path used by active
+  public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
   and diagnostic routes have been pruned; the remaining self-only
-  active-mixed compatibility/uniqueness helpers plus receiver-method
-  exact-closure, package-at route helpers, and the stale broad active-mixed
-  runtime wrapper were also removed.
+  active-mixed compatibility/uniqueness helpers, receiver-method
+  exact-closure and package-at route helpers, the stale broad active-mixed
+  runtime wrapper, and redundant mixed no-receiver public wrapper aliases were
+  also removed.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -120,8 +121,8 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider conversions,
-  provider/body-summary/store-safe public wrappers, plus the assoc-base
-  check-provider helper path, remain
+  public Prop-provider wrapper, core mixed no-receiver summary-provider
+  prefix route, plus the assoc-base check-provider helper path, remain
   on that late proof surface.
   Strengthening the active no-receiver gate with the body-summary check
   is known to reject existing valid programs, so the bridge must come from a more precise proof route or broader

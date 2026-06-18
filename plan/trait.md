@@ -48,7 +48,7 @@ validity checks must be represented in Rocq and the extracted checker.
   static, public, strict-public, call-statement, summary-call component leaves,
   component-body summary provider, mixed/active-public and no-receiver exact-route, absent-summary, and public evidence-at leaves,
   local-bounds, scoped-package, non-captured, component-provider,
-  branch-evidence, mixed-public branch aliases, store-safe/summary evidence leaves, prefix/summary runtime leaves, public-callback
+  branch-evidence, mixed-public helper aliases, store-safe/summary evidence leaves, prefix/summary runtime leaves, public-callback
   provider/check and strict-active evidence leaves, component-only derived leaves, and component-check provider wrappers, plus component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with

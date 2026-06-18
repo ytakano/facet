@@ -12617,6 +12617,96 @@ Definition component_body_summary_check_provider_in_env
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
       env f_component.
 
+Lemma check_fn_root_shadow_synthetic_direct_call_ready_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef =
+      true ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_synthetic_direct_call_ready_summary in Hcheck.
+  destruct (direct_call_target_expr (fn_body fdef))
+    as [[[fname args] synthetic_body] |] eqn:Htarget; try discriminate.
+  apply andb_true_iff in Hcheck as [Hready Hcheck].
+  destruct (infer_env_roots_shadow_safe env
+    (fn_with_body fdef synthetic_body)
+    (initial_root_env_for_fn fdef))
+    as [[[[T_body Gamma_body] R_body] roots_body] | err]
+    eqn:Hbody_env; try discriminate.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[Hcompat Hroots] Henv].
+  pose proof (infer_env_roots_shadow_safe_sound env
+    (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+    T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
+  unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+  destruct Htyped_fn as
+    (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_body & _).
+  split.
+  - change (NoDup
+      (ctx_names
+        (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+    eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env.
+  - unfold callee_body_root_shadow_synthetic_direct_call_ready_at.
+    exists fname, args, synthetic_body, T_body_actual, Gamma_out_actual,
+      R_body, roots_body.
+    repeat split; try exact Htarget; try exact Htyped_body;
+      try exact Hcompat_body; try exact Hcompat.
+    + unfold direct_call_target_expr in Htarget.
+      destruct (fn_body fdef); try discriminate.
+      * inversion Htarget. reflexivity.
+      * destruct e; try discriminate.
+        inversion Htarget. reflexivity.
+    + unfold direct_call_target_expr in Htarget.
+      destruct (fn_body fdef); try discriminate.
+      * inversion Htarget. subst. simpl in Hready.
+        apply PDCR_Call.
+        apply preservation_ready_args_b_sound. exact Hready.
+      * destruct e; try discriminate.
+        inversion Htarget. subst. simpl in Hready.
+        apply PDCR_Call.
+        apply preservation_ready_args_b_sound. exact Hready.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_env_root_shadow_synthetic_direct_call_ready_summary_sound :
+  forall env,
+    check_env_root_shadow_synthetic_direct_call_ready_summary env = true ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _Hname].
+  unfold check_env_root_shadow_synthetic_direct_call_ready_summary in Hcheck.
+  eapply check_fn_root_shadow_synthetic_direct_call_ready_summary_sound.
+  eapply (proj1 (forallb_forall
+    (check_fn_root_shadow_synthetic_direct_call_ready_summary env)
+    (env_fns env)) Hcheck); exact Hin.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_sound :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env = true ->
+    component_body_summary_check_provider_in_env env.
+Proof.
+  intros env Hcheck f_component Hin_component Hcomponent_check.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    in Hcheck.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env)
+    (env_fns env)) Hcheck f_component Hin_component) as Hbody_check.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    in Hbody_check.
+  rewrite Hcomponent_check in Hbody_check.
+  split.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+    exact Hcomponent_check.
+  - eapply check_env_root_shadow_synthetic_direct_call_ready_summary_sound.
+    exact Hbody_check.
+Qed.
+
 Lemma component_body_summary_check_provider_local_bounds_route :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_root_names_ready_mutual_statement ->

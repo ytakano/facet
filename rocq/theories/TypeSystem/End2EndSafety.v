@@ -443,68 +443,6 @@ Proof.
   exact Hprog.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_check_env_ready :
-  forall env env',
-    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
-      infer_ok env' ->
-    check_env_root_shadow_receiver_method_strict_exact_closure_summary env' =
-      true.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed in Hprog.
-  destruct (infer_program_env_end2end_assoc env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
-    env_checked) eqn:Hready; simpl in Hprog; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
-  injection Hprog as ->.
-  exact Hready.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_strict_summary_for_receiver_method :
-  forall env env' fdef,
-    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
-      infer_ok env' ->
-    In fdef (env_fns env') ->
-    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
-    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
-      env' fdef = true.
-Proof.
-  intros env env' fdef Hprog Hin Hpresent.
-  pose proof
-    (infer_program_env_end2end_assoc_receiver_method_exact_mixed_check_env_ready
-       env env' Hprog) as Hready.
-  unfold check_env_root_shadow_receiver_method_strict_exact_closure_summary
-    in Hready.
-  apply forallb_forall with (x := fdef) in Hready; [| exact Hin].
-  unfold check_fn_root_shadow_receiver_method_strict_exact_closure_summary
-    in Hready.
-  rewrite Hpresent in Hready.
-  exact Hready.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_closure_for_receiver_method_component :
-  forall env env' fdef,
-    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
-      infer_ok env' ->
-    In fdef (env_fns env') ->
-    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' fdef = true ->
-    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
-      env' fdef = true.
-Proof.
-  intros env env' fdef Hprog Hin Hpresent Hcomponent.
-  pose proof
-    (infer_program_env_end2end_assoc_receiver_method_exact_mixed_strict_summary_for_receiver_method
-       env env' fdef Hprog Hin Hpresent) as Hstrict.
-  unfold check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
-    in Hstrict.
-  rewrite Hcomponent in Hstrict.
-  exact Hstrict.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_direct_receiver_base_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_base_mixed env =

@@ -36,14 +36,12 @@ validity checks must be represented in Rocq and the extracted checker.
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Proof infrastructure for direct-call receivers is now concentrated around the
-  active mixed endpoint and a small retained strict-mixed public runtime path.
-  The old route/callback leaf-wrapper surface has been pruned; remaining
-  reusable active-mixed routes cover exact-body/package, local-bounds,
-  scoped-package, call-statement, component summary/check, component-body
-  summary, non-captured, and assoc-base callback paths. Legacy wrappers that
-  still consume the strict endpoint are explicitly named `strict_mixed`
-  where they remain on the public theorem path.
+- Proof infrastructure for direct-call receivers is concentrated around the
+  active mixed endpoint, two retained local-bounds route callbacks used by the
+  active public callback proofs, and a small strict-mixed public runtime path.
+  The obsolete active-mixed branch/static/component-summary wrapper chain has
+  been pruned. Legacy wrappers that still consume the strict endpoint are
+  explicitly named `strict_mixed` where they remain on the public theorem path.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -109,9 +107,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summary/check, component-body summary, non-captured, and assoc-base callback
   paths. The canonical theorem still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
-  legacy static and component-check callback wrappers that still consume the
-  strict endpoint are named `strict_mixed` to avoid confusing them with the
-  active endpoint.
+  only the retained local-bounds route callbacks and explicitly named
+  `strict_mixed` public-path wrappers remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

@@ -12765,6 +12765,30 @@ Definition component_body_summary_check_provider_in_env
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
       env f_component.
 
+Lemma component_body_summary_check_provider_in_env_of_body_summary_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+      env ->
+    component_body_summary_check_provider_in_env env.
+Proof.
+  intros env Hprovider f_component _Hin Hcomponent_check.
+  eapply Hprovider.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+  exact Hcomponent_check.
+Qed.
+
+Lemma component_body_summary_check_provider_in_env_of_store_safe_provider :
+  forall env,
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env ->
+    component_body_summary_check_provider_in_env env.
+Proof.
+  intros env Hprovider.
+  eapply component_body_summary_check_provider_in_env_of_body_summary_provider.
+  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
+  exact Hprovider.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_in_env :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
@@ -12796,11 +12820,11 @@ Proof.
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
   - exact ((Hcheck_provider_when_no_receiver Hno_receiver) f_component
       Hin_component Hcomponent_check).
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
-      exact Hcomponent_check.
+  - pose proof
+      (infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider
+        env env' Hprog Hdirect_ready) as Hprovider.
+    exact ((component_body_summary_check_provider_in_env_of_body_summary_provider
+      env' Hprovider) f_component Hin_component Hcomponent_check).
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_provider_prefix :

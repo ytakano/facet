@@ -232,23 +232,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_of_mixed :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env =
-      infer_ok env' ->
-    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
-Proof.
-  intros env env' Hmixed.
-  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hmixed.
-  destruct (infer_program_env_end2end_assoc env) as [env_checked | err]
-    eqn:Hassoc; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
-  injection Hmixed as ->.
-  eapply infer_program_env_end2end_assoc_direct_receiver_base_of_assoc.
-  exact Hassoc.
-Qed.
-
 Theorem infer_fn_env_end2end_assoc_direct_receiver_base_sound :
   forall env f T Gamma_out R_out roots,
     infer_fn_env_end2end_assoc_direct_receiver_base env f =

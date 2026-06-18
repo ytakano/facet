@@ -41,7 +41,8 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds route theorem, no-receiver component-body prefix theorem, and
   assoc-base check-provider helper path used by active public-path proofs.
   Obsolete active-mixed exact, scoped, branch, static, package-route,
-  package-component-check, local-bounds exact-body, component-summary,
+  package-component-check, scoped-package runtime, local-bounds exact-body,
+  component-summary,
   component-provider, and diagnostic wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver

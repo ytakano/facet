@@ -64,8 +64,9 @@ validity checks must be represented in Rocq and the extracted checker.
   broad valid coverage or the direct-call receiver safety-gate fixtures. The
   body-summary sidecar now has a Prop bridge, conditional and unconditional
   boolean wrappers, an extracted diagnostic check for the exact no-receiver
-  conditional premise, and a public-shaped active-mixed runtime theorem whose
-  remaining extra premise is that diagnostic condition,
+  conditional premise, a CLI diagnostic mode for measuring it, and a
+  public-shaped active-mixed runtime theorem whose remaining extra premise is
+  that diagnostic condition,
   but remains diagnostic only.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
@@ -96,9 +97,9 @@ validity checks must be represented in Rocq and the extracted checker.
      no-receiver prefix path, without adding OCaml fallback logic or weakening
      the public theorem with a new premise.
    - Derive or eliminate the public-shaped theorem's remaining extracted
-     no-receiver diagnostic check from public prefix-route premises, or prove
-     an equivalent public-premise-free lift for the active mixed no-receiver
-     branch.
+     no-receiver diagnostic check from public prefix-route premises, using
+     `--diagnose-trait-gates` to measure fixture coverage while preserving
+     active checker authority.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
      and the component-only boolean bridge, without requiring Prop-to-bool
@@ -137,7 +138,8 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
-  bridge, boolean wrappers, extracted no-receiver diagnostic check, public-shaped conditional sidecar theorem,
+  bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic mode,
+  public-shaped conditional sidecar theorem,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, plus the assoc-base check-provider helper path, remain
   on that late proof surface.

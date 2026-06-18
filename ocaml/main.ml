@@ -428,6 +428,7 @@ let () =
   let emit_fir_file = ref None in
   let core_dir_override = ref None in
   let package_root = ref None in
+  let diagnose_trait_gates = ref false in
   let i = ref 1 in
   while !i < Array.length args && String.length args.(!i) > 0
         && args.(!i).[0] = '-' do
@@ -452,13 +453,16 @@ let () =
       end;
       package_root := Some (normalize_path args.(!i + 1));
       i := !i + 2
+    end else if args.(!i) = "--diagnose-trait-gates" then begin
+      diagnose_trait_gates := true;
+      i := !i + 1
     end else begin
       Printf.eprintf "Error: unknown option: %s\n" args.(!i);
       exit 1
     end
   done;
   if !i >= Array.length args then begin
-    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--core-dir DIR] [--package-root DIR] [--generate-grammar] FILE\n" args.(0);
+    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--core-dir DIR] [--package-root DIR] [--diagnose-trait-gates] [--generate-grammar] FILE\n" args.(0);
     exit 1
   end;
   let filename = args.(!i) in
@@ -485,6 +489,14 @@ let () =
       Printf.eprintf "Type error: %s\n" (string_of_infer_error ~diagnostics e);
       exit 1
   in
+  if !diagnose_trait_gates then begin
+    let status =
+      if check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env
+      then "ok"
+      else "fail"
+    in
+    Printf.printf "trait-no-receiver-body-summary: %s\n" status
+  end;
   Option.iter (fun fname ->
     try Fir.emit_fir fname checked_env
     with Failure msg ->

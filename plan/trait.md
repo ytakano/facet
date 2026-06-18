@@ -47,7 +47,7 @@ validity checks must be represented in Rocq and the extracted checker.
   consolidated route/callback and leaf-wrapper cleanup across exact-body/package,
   static, public, strict-public, call-statement, summary-call,
   local-bounds, scoped-package, non-captured, component-provider,
-  branch-evidence, store-safe/summary evidence, and component-check
+  branch-evidence, store-safe/summary evidence leaves, and component-check
   provider wrappers, plus component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with

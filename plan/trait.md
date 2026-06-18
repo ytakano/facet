@@ -68,15 +68,15 @@ validity checks must be represented in Rocq and the extracted checker.
   now live below the direct-call route layer, with injections from
   synthetic and ordinary callee evidence. Ready-body route-package projections,
   synthetic route-package-to-callee evidence bridges, synthetic-to-ready-body
-  route-package subsumption facts, ready-body exact-route reachability/provider
-  helpers, package-at, reachable-provider, and reachable local-bounds-family
-  projections, ready-body all-components package-at,
-  checker-to-reachable-provider, and reachable exact-target-provider adapters, ready-body callback-at and
-  local-bounds-family bridges, and the end-to-end sidecar provide alpha-renamed
-  direct-target
-  callee evidence plus store-safe target arguments.
-  The next proof route must
-  consume that synthetic-or-ordinary evidence in the active mixed callback path
+  route-package subsumption facts, ready-body exact-route reachability/provider helpers, package-at,
+  reachable-provider, and reachable local-bounds-family projections,
+  ready-body all-components package-at, checker-to-reachable-provider,
+  reachable exact-target-provider adapters, a ready-body checker-to-package
+  and exact-target provider bridge, ready-body callback-at and
+  local-bounds-family bridges, and the end-to-end sidecar provide
+  alpha-renamed direct-target callee evidence plus store-safe target arguments.
+  The next proof route must consume that synthetic-or-ordinary evidence in
+  the active mixed callback path
   instead of requiring every local callee to have a synthetic direct-call
   target.
 - The remaining activation gap is proof-side. The canonical public runtime
@@ -121,14 +121,14 @@ validity checks must be represented in Rocq and the extracted checker.
      pointwise callee provider, shared ready-body route-package,
      pointwise ready-body callee-evidence injections, synthetic
      route-package-to-callee-evidence bridges, synthetic-to-ready-body
-     route-package subsumption, ready-body exact-route reachability/provider
-     helpers, package-at, reachable-provider, and reachable local-bounds-family
-     projections, ready-body all-components package-at,
-     checker-to-reachable-provider, and reachable exact-target-provider adapters, ready-body callback-at and
-     local-bounds-family bridges, and alpha-renamed
-     direct-target bridges, so the
-     remaining gap is proof
-     routing from that synthetic-or-ordinary evidence to the mixed
+     route-package subsumption, ready-body exact-route reachability/provider helpers, package-at,
+     reachable-provider, and reachable local-bounds-family projections,
+     ready-body all-components package-at, checker-to-reachable-provider,
+     reachable exact-target-provider adapters, a ready-body checker-to-package
+     and exact-target provider bridge, ready-body callback-at and
+     local-bounds-family bridges, and alpha-renamed direct-target bridges,
+     so the remaining gap is proof routing from that synthetic-or-ordinary
+     evidence to the mixed
      no-receiver path.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
@@ -168,10 +168,10 @@ validity checks must be represented in Rocq and the extracted checker.
   route-package-to-callee-evidence bridges, synthetic-to-ready-body
   route-package subsumption, ready-body exact-route reachability/provider
   helpers, package-at and reachable-provider projections, ready-body
-  all-components package-at, checker-to-reachable-provider, and reachable
-  exact-target-provider adapters, ready-body callee helpers, ready-body
-  callback-at and
-  local-bounds-family bridges,
+  all-components package-at, checker-to-reachable-provider, reachable
+  exact-target-provider adapters, a ready-body checker-to-package and
+  exact-target provider bridge, ready-body callee helpers, ready-body
+  callback-at and local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the route from

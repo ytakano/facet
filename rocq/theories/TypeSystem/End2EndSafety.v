@@ -552,23 +552,6 @@ Proof.
     eauto.
 Qed.
 
-Lemma check_env_root_shadow_receiver_method_strict_exact_closure_summary_of_absent :
-  forall env,
-    check_env_root_shadow_direct_receiver_method_present env = false ->
-    check_env_root_shadow_receiver_method_strict_exact_closure_summary env =
-      true.
-Proof.
-  intros env Habsent.
-  unfold check_env_root_shadow_receiver_method_strict_exact_closure_summary.
-  apply forallb_forall.
-  intros fdef Hin.
-  unfold check_fn_root_shadow_receiver_method_strict_exact_closure_summary.
-  rewrite
-    (check_env_root_shadow_direct_receiver_method_present_false_forall
-       env fdef Habsent Hin).
-  reflexivity.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_receiver_method_exact_mixed env =

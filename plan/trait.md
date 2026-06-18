@@ -62,7 +62,8 @@ validity checks must be represented in Rocq and the extracted checker.
   fixtures, but their unreferenced runtime wrapper aliases have been pruned and
   they are not active checker authorities because their gates reject either
   broad valid coverage or the direct-call receiver safety-gate fixtures. The
-  body-summary sidecar now has a Prop bridge, conditional and unconditional
+  body-summary sidecar now has a Prop bridge, a local-bounds
+  synthetic-summary provider bridge, conditional and unconditional
   boolean wrappers, an extracted diagnostic check for the exact no-receiver
   conditional premise, a CLI diagnostic regression over the current trait/direct valid
   fixture frontier (100 accepted files: 96 no-receiver diagnostic ok,
@@ -71,9 +72,9 @@ validity checks must be represented in Rocq and the extracted checker.
   only the local-bounds synthetic direct-call-ready summary check for that
   function (`main` except `hrt_direct_call_unchanged`'s `caller`); the
   inner failing local-bounds functions are `__facet_local_rec_0_id_local`,
-  `id`, `accept_item`, and `callee`), and a
-  public-shaped active-mixed runtime theorem whose remaining extra premise is
-  that diagnostic condition,
+  `id`, `accept_item`, and `callee`), and public-shaped active-mixed runtime theorems whose remaining extra
+  premise can now be stated either as the extracted diagnostic condition or
+  directly as the no-receiver local-bounds synthetic-summary provider,
   but remains diagnostic only.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
@@ -154,7 +155,7 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
-  bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
+  bridge, local-bounds synthetic-summary provider bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
   regression with four known local-bounds synthetic body-summary sidecar failures
   pinned to specific inner functions, public-shaped conditional
   sidecar theorem,

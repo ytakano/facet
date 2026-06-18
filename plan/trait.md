@@ -73,8 +73,9 @@ validity checks must be represented in Rocq and the extracted checker.
   function (`main` except `hrt_direct_call_unchanged`'s `caller`); the
   inner failing local-bounds functions are `__facet_local_rec_0_id_local`,
   `id`, `accept_item`, and `callee`), and public-shaped active-mixed runtime theorems whose remaining extra
-  premise can now be stated either as the extracted diagnostic condition or
-  directly as the no-receiver local-bounds synthetic-summary provider,
+  premise can now be stated either as the extracted diagnostic condition, the
+  body-summary sidecar, or directly as the no-receiver local-bounds
+  synthetic-summary provider,
   but remains diagnostic only.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix

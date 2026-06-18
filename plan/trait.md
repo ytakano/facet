@@ -39,7 +39,7 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, no-receiver component-body provider
-  conversions, provider/store-safe/check prefix theorems, and
+  conversions, provider/body-summary/store-safe/check prefix theorems, and
   assoc-base check-provider helper path used by active public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
@@ -115,7 +115,7 @@ validity checks must be represented in Rocq and the extracted checker.
   still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  no-receiver component-body provider conversions and provider/store-safe/check
+  no-receiver component-body provider conversions and provider/body-summary/store-safe/check
   prefix theorems, plus the assoc-base check-provider helper path, remain on
   that late proof surface.
   Strengthening the active no-receiver gate with the body-summary check

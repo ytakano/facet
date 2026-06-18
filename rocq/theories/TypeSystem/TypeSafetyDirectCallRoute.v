@@ -1148,6 +1148,66 @@ Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_package_
     store_safe_function_value_call_args
       (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
 
+Lemma store_safe_ready_body_call_route_package_statement_of_synthetic :
+  store_safe_synthetic_direct_call_ready_body_call_route_package_statement ->
+  store_safe_ready_body_call_route_package_statement.
+Proof.
+  intros Hpackage env fname fdef fcall used used' fname_body args_body
+    synthetic_body Hin Hname Hrename Htarget.
+  destruct (Hpackage env fname fdef fcall used used' fname_body
+    args_body synthetic_body Hin Hname Hrename Htarget) as [Hsummary Hsafe].
+  split.
+  - intros fcallee Hlookup. left. exact (Hsummary fcallee Hlookup).
+  - exact Hsafe.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_package_statement_of_synthetic :
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  store_safe_ready_body_exact_body_call_route_package_statement.
+Proof.
+  intros Hpackage env fname fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget.
+  destruct (Hpackage env fname fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget) as [Hsummary Hsafe].
+  split.
+  - intros fcallee Hlookup. left. exact (Hsummary fcallee Hlookup).
+  - exact Hsafe.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_package_at_of_synthetic :
+  forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname ->
+    store_safe_ready_body_exact_body_call_route_package_at env fname.
+Proof.
+  intros env fname Hpackage fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget.
+  destruct (Hpackage fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget) as [Hsummary Hsafe].
+  split.
+  - intros fcallee Hlookup. left. exact (Hsummary fcallee Hlookup).
+  - exact Hsafe.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_package_at_of_package :
+  store_safe_ready_body_exact_body_call_route_package_statement ->
+  forall env fname,
+    store_safe_ready_body_exact_body_call_route_package_at env fname.
+Proof.
+  intros Hpackage env fname fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget.
+  eapply Hpackage; eassumption.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_package_statement_of_at_all :
+  (forall env fname,
+    store_safe_ready_body_exact_body_call_route_package_at env fname) ->
+  store_safe_ready_body_exact_body_call_route_package_statement.
+Proof.
+  intros Hpackage env fname.
+  exact (Hpackage env fname).
+Qed.
+
 Inductive store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable :
     global_env -> ident -> global_env -> ident -> Prop :=
 | store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_here :

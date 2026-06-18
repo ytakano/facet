@@ -67,9 +67,10 @@ validity checks must be represented in Rocq and the extracted checker.
   summaries. Shared ready-body summary and callee evidence-at facts
   now live below the direct-call route layer, with injections from
   synthetic and ordinary callee evidence. Ready-body route-package projections,
-  synthetic route-package-to-callee evidence bridges, and the end-to-end
-  sidecar provide alpha-renamed direct-target callee evidence plus store-safe
-  target arguments. The next proof route must
+  synthetic route-package-to-callee evidence bridges, synthetic-to-ready-body
+  route-package subsumption facts, and the end-to-end sidecar provide
+  alpha-renamed direct-target callee evidence plus store-safe target arguments.
+  The next proof route must
   consume that synthetic-or-ordinary evidence in the active mixed callback path
   instead of requiring every local callee to have a synthetic direct-call
   target.
@@ -114,7 +115,8 @@ validity checks must be represented in Rocq and the extracted checker.
      diagnostic now passes all 100 frontier files and has sound local-bounds,
      pointwise callee provider, shared ready-body route-package,
      pointwise ready-body callee-evidence injections, synthetic
-     route-package-to-callee-evidence bridges, and alpha-renamed direct-target
+     route-package-to-callee-evidence bridges, synthetic-to-ready-body
+     route-package subsumption, and alpha-renamed direct-target
      bridges, so the remaining gap is proof
      routing from that synthetic-or-ordinary evidence to the mixed
      no-receiver path.
@@ -153,7 +155,8 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds provider, ready-body local-bounds provider,
   shared ready-body summary evidence-at, pointwise ready-body
   callee-evidence injections, route-package projections, synthetic
-  route-package-to-callee-evidence bridges, and ready-body callee helpers,
+  route-package-to-callee-evidence bridges, synthetic-to-ready-body
+  route-package subsumption, ready-body callee helpers,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the route from

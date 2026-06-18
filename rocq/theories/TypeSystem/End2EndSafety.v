@@ -13464,44 +13464,6 @@ Proof.
   exact Hcheck.
 Qed.
 
-Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider :
-  forall env base env0 fdef,
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env = true ->
-    global_env_local_bounds_family env base ->
-    global_env_local_bounds_family base env0 ->
-    In fdef (env_fns env0) ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env fdef = true.
-Proof.
-  intros env base env0 fdef Hcomponent Hbase Hfamily Hin.
-  destruct Hbase as (bounds_base & ->).
-  destruct Hfamily as (bounds & ->).
-  change (env_fns
-    (global_env_with_local_bounds
-      (global_env_with_local_bounds env bounds_base) bounds))
-    with (env_fns env) in Hin.
-  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-    in Hcomponent.
-  eapply forallb_forall; eauto.
-Qed.
-
-Lemma check_env_end2end_direct_receiver_ready_component_local_bounds_family_provider :
-  forall env base env0 fdef,
-    check_env_end2end_direct_receiver_ready env = true ->
-    global_env_local_bounds_family env base ->
-    global_env_local_bounds_family base env0 ->
-    In fdef (env_fns env0) ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env fdef = true.
-Proof.
-  intros env base env0 fdef Hdirect_ready Hbase Hfamily Hin.
-  destruct (check_env_end2end_direct_receiver_ready_facts env Hdirect_ready)
-    as (_Hprov & _Hpres & _Hdirect & Hcomponent).
-  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_local_bounds_family_provider;
-    eauto.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

@@ -38,8 +38,9 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route theorem, no-receiver component-body prefix theorem, and
-  assoc-base check-provider helper path used by active public-path proofs.
+  local-bounds route theorem, no-receiver component-body
+  provider/check prefix theorems, and assoc-base check-provider helper path
+  used by active public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
   and diagnostic routes have been pruned; the remaining self-only
@@ -109,12 +110,14 @@ validity checks must be represented in Rocq and the extracted checker.
   remains diagnostic proof infrastructure, not an active authority.
 - The active mixed endpoint has routed lemmas for the known summary,
   exact-body/package, local-bounds, scoped-package, call-statement, component
-  summary/check, component-body summary, non-captured, and assoc-base callback
-  paths. The canonical theorem still lacks the bridge from its public premises
+  summary/check, component-body summary, non-captured, no-receiver
+  Prop-provider prefix, and assoc-base callback paths. The canonical theorem
+  still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  no-receiver component-body prefix theorem, and assoc-base check-provider
-  helper path remain on that late proof surface. Strengthening the active
+  no-receiver component-body provider/check prefix theorems, and assoc-base
+  check-provider helper path remain on that late proof surface.
+  Strengthening the active
   no-receiver gate with the body-summary check is known to reject existing valid
   programs, so the bridge must come from a more precise proof route or broader
   checker summaries.

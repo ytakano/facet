@@ -49,7 +49,7 @@ validity checks must be represented in Rocq and the extracted checker.
   component-body summary provider leaves,
   local-bounds, scoped-package, non-captured, component-provider,
   branch-evidence, store-safe/summary evidence leaves, prefix/summary runtime leaves, public-callback
-  provider/check leaves, and component-check provider wrappers, plus component-only boolean bridges.
+  provider/check leaves, component-only derived leaves, and component-check provider wrappers, plus component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
   `strict_mixed`, and

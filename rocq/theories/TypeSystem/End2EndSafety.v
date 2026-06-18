@@ -708,30 +708,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
-      infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  pose proof
-    (infer_program_env_end2end_assoc_direct_receiver_base_direct_component_base
-      env env' Hprog) as Hbase.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hbase.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-    try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
-    eqn:Helab; try discriminate.
-  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
-              env_elab (env_fns env_elab)) as [[] | err]
-    eqn:Hfns; try discriminate.
-  injection Hbase as <-.
-  apply andb_true_iff in Hunique_global as [Hunique_top _].
-  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_direct_component_sound :
   forall env env' f,
     infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
@@ -806,59 +782,6 @@ Proof.
   intros f Hin.
   eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_sound;
     eauto.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_direct_component_check_env_ready :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
-      infer_ok env' ->
-    check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
-      env' = true.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base_direct_component
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_base env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct
-    (check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
-      env_checked) eqn:Hready; try discriminate.
-  injection Hprog as <-.
-  exact Hready.
-Qed.
-
-Theorem infer_program_env_end2end_assoc_direct_receiver_base_direct_component_big_step_safe_checked_initial_ready_with_ready_checks_component_check_and_proven_replay :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_direct_receiver_base_direct_component env =
-      infer_ok env' ->
-    check_env_root_shadow_provenance_summary env' = true ->
-    check_env_preservation_ready env' = true ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
-    Hprog Hprovenance_check Hpreservation_check Hcomponent_check Hinitial Hin
-    Hstore Heval.
-  eapply check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_checks_component_check_and_proven_replay;
-    try eassumption.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_unique_by_name.
-    exact Hprog.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_base_direct_component_check_env_ready.
-    exact Hprog.
 Qed.
 
 Lemma check_program_env_end2end_infer_ok :

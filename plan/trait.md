@@ -40,7 +40,7 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem and assoc-base check-provider helper path used by
   active public-path proofs. Obsolete active-mixed
-  exact, uncaptured, non-captured, case-split route, branch, static, and
+  exact, uncaptured, non-captured, case-split route/runtime, branch, static, and
   component-summary wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver

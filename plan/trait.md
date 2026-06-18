@@ -41,13 +41,14 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds route theorem and assoc-base check-provider helper path used by
   active public-path proofs. Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route/runtime, scoped
-  replay/lift, branch, static, and component-summary wrapper chains have been pruned.
+  replay/lift, branch, static, and component-summary wrapper chains have been
+  pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
-  fixtures, but they are not active checker authorities because their gates
-  reject either broad valid coverage or the direct-call receiver safety-gate
-  fixtures.
+  fixtures, but their unreferenced runtime wrapper aliases have been pruned and
+  they are not active checker authorities because their gates reject either
+  broad valid coverage or the direct-call receiver safety-gate fixtures.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
   theorem; retargeting it
@@ -98,10 +99,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Assoc strict direct-receiver endpoint trials reject broad valid coverage with
   `ErrEndToEndSafetyGateFailed`. The rejected non-assoc strict direct-receiver,
-  absence-mixed, synthetic-mixed, and component-mixed diagnostics, plus their
-  now-unused mixed ready-check booleans, have been removed; the base
-  direct-component endpoint remains proof/diagnostic infrastructure, not an
-  active authority.
+  absence-mixed, synthetic-mixed, component-mixed, and strict-branch runtime
+  diagnostics, plus their now-unused mixed ready-check booleans, have been
+  removed; the base direct-component endpoint remains proof/diagnostic infrastructure, not an active
+  authority.
 - The active mixed endpoint has routed lemmas for the known summary,
   exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, and assoc-base callback

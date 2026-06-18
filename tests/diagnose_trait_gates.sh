@@ -11,7 +11,11 @@ expected_component_fail=$(mktemp)
 actual_component_fail=$(mktemp)
 expected_component_reason=$(mktemp)
 actual_component_reason=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\"" EXIT
+expected_local_summary_count=$(mktemp)
+actual_local_summary_count=$(mktemp)
+expected_local_summary_detail=$(mktemp)
+actual_local_summary_detail=$(mktemp)
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -35,6 +39,20 @@ printf "%s\n" \
   "tests/valid/trait/assoc_projection_call_arg_compat.facet:main: local-bounds-synthetic-direct-call-ready-summary" \
   "tests/valid/type_safety_ready_gap/direct_call.facet:main: local-bounds-synthetic-direct-call-ready-summary" \
   >"$expected_component_reason"
+
+printf "%s\n" \
+  "tests/valid/function/local_let_rec_direct_call.facet:main: 1" \
+  "tests/valid/lifetime/hrt_direct_call_unchanged.facet:caller: 1" \
+  "tests/valid/trait/assoc_projection_call_arg_compat.facet:main: 1" \
+  "tests/valid/type_safety_ready_gap/direct_call.facet:main: 1" \
+  >"$expected_local_summary_count"
+
+printf "%s\n" \
+  "tests/valid/function/local_let_rec_direct_call.facet:main: __facet_local_rec_0_id_local" \
+  "tests/valid/lifetime/hrt_direct_call_unchanged.facet:caller: id" \
+  "tests/valid/trait/assoc_projection_call_arg_compat.facet:main: accept_item" \
+  "tests/valid/type_safety_ready_gap/direct_call.facet:main: callee" \
+  >"$expected_local_summary_detail"
 
 total=0
 ok_count=0
@@ -130,6 +148,27 @@ while IFS= read -r file; do
       status=1
     fi
 
+    local_reason_count=$(grep -c "^trait-component-body-summary-failure-reason: [^:][^:]*: local-bounds-synthetic-direct-call-ready-summary$" "$tmp" || true)
+    local_summary_count_line_count=$(grep -c "^trait-local-bounds-synthetic-summary-failures: " "$tmp" || true)
+    if [ "$local_reason_count" -ne "$local_summary_count_line_count" ]; then
+      printf "FAIL --diagnose-trait-gates %s: local synthetic summary count lines %s did not match local reason lines %s\n" \
+        "$file" "$local_summary_count_line_count" "$local_reason_count"
+      cat "$tmp"
+      status=1
+    fi
+    invalid_local_summary_count=$(grep -Ev "^trait-local-bounds-synthetic-summary-failures: [^:][^:]*: [0-9][0-9]*$" "$tmp" | grep -c "^trait-local-bounds-synthetic-summary-failures: " || true)
+    if [ "$invalid_local_summary_count" -ne 0 ]; then
+      printf "FAIL --diagnose-trait-gates %s: invalid local synthetic summary count line\n" "$file"
+      cat "$tmp"
+      status=1
+    fi
+    invalid_local_summary_detail=$(grep -Ev "^trait-local-bounds-synthetic-summary-failure: [^:][^:]*: [^:][^:]*$" "$tmp" | grep -c "^trait-local-bounds-synthetic-summary-failure: " || true)
+    if [ "$invalid_local_summary_detail" -ne 0 ]; then
+      printf "FAIL --diagnose-trait-gates %s: invalid local synthetic summary detail line\n" "$file"
+      cat "$tmp"
+      status=1
+    fi
+
     case "$component_line" in
       "trait-component-body-summary: ok")
         if [ "$component_failures" -ne 0 ]; then
@@ -147,6 +186,8 @@ while IFS= read -r file; do
         fi
         sed -n "s^trait-component-body-summary-failure: ^$file:^p" "$tmp" >>"$actual_component_fail"
         sed -n "s^trait-component-body-summary-failure-reason: ^$file:^p" "$tmp" >>"$actual_component_reason"
+        sed -n "s^trait-local-bounds-synthetic-summary-failures: ^$file:^p" "$tmp" >>"$actual_local_summary_count"
+        sed -n "s^trait-local-bounds-synthetic-summary-failure: ^$file:^p" "$tmp" >>"$actual_local_summary_detail"
         ;;
     esac
 
@@ -187,6 +228,18 @@ fi
 if ! diff -u "$expected_component_reason" "$actual_component_reason" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: component body-summary failure reasons changed\n"
   diff -u "$expected_component_reason" "$actual_component_reason" || true
+  status=1
+fi
+
+if ! diff -u "$expected_local_summary_count" "$actual_local_summary_count" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: local synthetic summary failure counts changed\n"
+  diff -u "$expected_local_summary_count" "$actual_local_summary_count" || true
+  status=1
+fi
+
+if ! diff -u "$expected_local_summary_detail" "$actual_local_summary_detail" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: local synthetic summary failure details changed\n"
+  diff -u "$expected_local_summary_detail" "$actual_local_summary_detail" || true
   status=1
 fi
 

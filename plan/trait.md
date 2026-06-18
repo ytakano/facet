@@ -69,7 +69,9 @@ validity checks must be represented in Rocq and the extracted checker.
   4 diagnostic fail; 0 report direct-receiver-method-present; the same 96
   report component-body-summary ok; each failing fixture has one base component-store-safe function and fails
   only the local-bounds synthetic direct-call-ready summary check for that
-  function (`main` except `hrt_direct_call_unchanged`'s `caller`)), and a
+  function (`main` except `hrt_direct_call_unchanged`'s `caller`); the
+  inner failing local-bounds functions are `__facet_local_rec_0_id_local`,
+  `id`, `accept_item`, and `callee`), and a
   public-shaped active-mixed runtime theorem whose remaining extra premise is
   that diagnostic condition,
   but remains diagnostic only.
@@ -109,8 +111,10 @@ validity checks must be represented in Rocq and the extracted checker.
      `tests/valid/type_safety_ready_gap/direct_call.facet` still report
      no-receiver diagnostic `fail`; the split diagnostics show these are local-bounds synthetic
      direct-call-ready summary failures for a base component-store-safe
-     function, not direct-receiver-method or base component-summary failures:
-     `main`, `caller`, `main`, and `main`, respectively) while
+     function, not direct-receiver-method or base component-summary failures;
+     the failing component functions are `main`, `caller`, `main`, and
+     `main`, and the inner local-bounds failures are
+     `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`) while
      preserving active checker authority.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
@@ -151,7 +155,8 @@ validity checks must be represented in Rocq and the extracted checker.
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
   bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
-  regression with four known local-bounds synthetic body-summary sidecar failures, public-shaped conditional
+  regression with four known local-bounds synthetic body-summary sidecar failures
+  pinned to specific inner functions, public-shaped conditional
   sidecar theorem,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, plus the assoc-base check-provider helper path, remain

@@ -527,7 +527,28 @@ let () =
           else "component-store-safe-summary"
         in
         Printf.printf "trait-component-body-summary-failure-reason: %s: %s\n"
-          fname reason)
+          fname reason;
+        if reason = "local-bounds-synthetic-direct-call-ready-summary" then begin
+          let local_env = global_env_with_local_bounds checked_env f.fn_bounds in
+          let local_summary_failures =
+            List.filter
+              (fun local_fn ->
+                not
+                  (check_fn_root_shadow_synthetic_direct_call_ready_summary
+                     local_env local_fn))
+              local_env.env_fns
+          in
+          Printf.printf
+            "trait-local-bounds-synthetic-summary-failures: %s: %d\n"
+            fname (List.length local_summary_failures);
+          List.iter
+            (fun local_fn ->
+              let (local_fname, _) = local_fn.fn_name in
+              Printf.printf
+                "trait-local-bounds-synthetic-summary-failure: %s: %s\n"
+                fname local_fname)
+            local_summary_failures
+        end)
       component_body_summary_failures;
     print_gate "trait-no-receiver-body-summary"
       (check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env)

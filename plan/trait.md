@@ -40,25 +40,9 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, no-receiver component-body prefix theorem, and
   assoc-base check-provider helper path used by active public-path proofs.
-  Obsolete active-mixed exact, scoped, branch, static, package-route,
-  direct-ready wrapper, call-statement component-check provider wrapper,
-  package-component-check, package-body-summary, scoped-package runtime,
-  summary-provider, local-bounds exact-body, component-summary,
-  component-provider, active-mixed branch-merge provider/evidence wrappers,
-  obsolete direct-ready summary/provider helper lemmas,
-  obsolete local-bounds component-check provider lemmas,
-  obsolete active-mixed direct-callee/local-bounds helper lemmas,
-  obsolete active-mixed no-receiver combined-summary diagnostic helpers,
-  obsolete active-mixed combined/local-bounds and non-captured evidence helper
-  chains, obsolete assoc-strict mixed diagnostic helpers, obsolete assoc-strict
-  non-captured component-ready helper, obsolete receiver-method no-receiver
-  bridge and absence helper(s), obsolete assoc-base
-  mixed ready-case helper lemmas, obsolete assoc-to-direct-receiver-base
-  bridge helpers, obsolete assoc direct-receiver base/mixed bridge helper(s),
-  obsolete assoc direct-receiver base ready/unique and summary helper chain,
-  obsolete scoped-expr-lift runtime wrapper aliases,
-  diagnostic wrapper chains, and obsolete diagnostic local-bounds/helper chains
-  have been pruned.
+  Obsolete helper chains and wrapper aliases around active-mixed,
+  assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
+  and diagnostic routes have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

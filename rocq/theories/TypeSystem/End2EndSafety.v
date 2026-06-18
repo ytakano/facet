@@ -16820,7 +16820,7 @@ Proof.
       exact Hcomponent_check.
 Qed.
 
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_check_provider_in_env_prefix :
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_check_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -16834,7 +16834,8 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_b
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
     (check_env_root_shadow_direct_receiver_method_present env' = false ->
-      component_body_summary_check_provider_in_env env') ->
+      check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+        env' = true) ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
@@ -16843,7 +16844,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_b
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
-    Hprog Hcheck_provider_when_no_receiver Hinitial Hin Hstore Heval.
+    Hprog Hcomponent_body_summary_when_no_receiver Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_local_bounds_route_callbacks.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -16858,8 +16859,11 @@ Proof.
       _Hevidence_at.
     pose proof
       (infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_summary_check_provider_in_env
-        env env' Hprog Hcheck_provider_when_no_receiver f_component
-        Hin_component Hcomponent_check) as [_ Hsummary_base].
+        env env' Hprog
+        (fun Hno_receiver =>
+          check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_in_env
+            env' (Hcomponent_body_summary_when_no_receiver Hno_receiver))
+        f_component Hin_component Hcomponent_check) as [_ Hsummary_base].
     destruct Hfamily as [bounds ->].
     eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all.
     + eapply eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement.
@@ -16886,54 +16890,6 @@ Proof.
         eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
         exact Hsummary_base.
       * exact Hunique.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
-
-
-
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_check_prefix :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_prefix_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env =
-      infer_ok env' ->
-    (check_env_root_shadow_direct_receiver_method_present env' = false ->
-      check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-        env' = true) ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
-    Hprog Hcomponent_body_summary_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_check_provider_in_env_prefix.
-  - exact Hsynthetic_route.
-  - exact Hscope_synthetic.
-  - exact Htyping_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hstatic.
-  - exact Hprog.
-  - intros Hno_receiver.
-    eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_in_env.
-    exact (Hcomponent_body_summary_when_no_receiver Hno_receiver).
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

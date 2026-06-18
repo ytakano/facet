@@ -13674,66 +13674,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base.
-  exact Hprog.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_check_env_ready :
-  forall env env',
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
-      env' = true.
-Proof.
-  intros env env' Hprog.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base.
-  exact Hprog.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_ready_cases :
-  forall env env',
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    check_env_root_shadow_direct_receiver_method_present env' = false \/
-    check_env_end2end_direct_receiver_ready env' = true.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-    in Hprog.
-  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
-    eqn:Hmixed_ready; try discriminate.
-  injection Hprog as <-.
-  eapply check_env_end2end_direct_receiver_mixed_ready_cases.
-  exact Hmixed_ready.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_direct_ready_endpoint :
-  forall env env',
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver
-      env = infer_ok env'.
-Proof.
-  intros env env' Hprog Hdirect_ready.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver.
-  rewrite (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
-    env env' Hprog).
-  rewrite Hdirect_ready.
-  reflexivity.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_static_component_callbacks_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

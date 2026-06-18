@@ -501,6 +501,14 @@ let () =
                checked_env f))
         checked_env.env_fns
     in
+    let component_ready_body_summary_failures =
+      List.filter
+        (fun f ->
+          not
+            (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+               checked_env f))
+        checked_env.env_fns
+    in
     let component_store_safe_summary_functions =
       List.filter
         (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
@@ -512,10 +520,20 @@ let () =
     print_gate "trait-component-body-summary"
       (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
          checked_env);
+    print_gate "trait-component-ready-body-summary"
+      (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+         checked_env);
     Printf.printf "trait-component-store-safe-summary-functions: %d\n"
       (List.length component_store_safe_summary_functions);
     Printf.printf "trait-component-body-summary-failures: %d\n"
       (List.length component_body_summary_failures);
+    Printf.printf "trait-component-ready-body-summary-failures: %d\n"
+      (List.length component_ready_body_summary_failures);
+    List.iter
+      (fun f ->
+        let (fname, _) = f.fn_name in
+        Printf.printf "trait-component-ready-body-summary-failure: %s\n" fname)
+      component_ready_body_summary_failures;
     List.iter
       (fun f ->
         let (fname, _) = f.fn_name in

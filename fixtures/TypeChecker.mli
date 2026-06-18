@@ -1502,6 +1502,12 @@ val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_wit
 val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary :
   global_env -> bool
 
+val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary :
+  global_env -> fn_def -> bool
+
+val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary :
+  global_env -> bool
+
 val check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
   global_env -> fn_def -> bool
 

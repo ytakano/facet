@@ -54,13 +54,16 @@ validity checks must be represented in Rocq and the extracted checker.
   reject either broad valid coverage or the direct-call receiver safety-gate
   fixtures. The no-receiver diagnostic sidecar now feeds the active-mixed
   runtime theorem through the direct local-bounds provider. Current trait/direct
-  valid frontier: 100 accepted files, 96 no-receiver diagnostic ok, 4 diagnostic
-  fail, and 0 direct-receiver-method-present. The four failures are local-bounds
-  synthetic direct-call-ready summary failures for
+  valid frontier: 100 accepted files, 96 no-receiver synthetic diagnostic ok,
+  4 diagnostic fail, 100 component ready-body fallback diagnostic ok, and
+  0 direct-receiver-method-present. The four synthetic failures are
+  local-bounds synthetic direct-call-ready summary failures for
   `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`;
-  the split reason is `no-direct-call-target` for all four, so the next proof
-  route must handle preservation-ready ordinary local callees instead of
-  requiring every local callee to have a synthetic direct-call target.
+  the split reason is `no-direct-call-target` for all four. The ready-body
+  fallback sidecar shows those local-bounds environments are covered by
+  ordinary root-shadow summaries, so the next proof route must bridge the
+  active mixed path to ready-body local-bounds evidence instead of requiring
+  every local callee to have a synthetic direct-call target.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
   theorem. Retargeting it to
@@ -96,7 +99,9 @@ validity checks must be represented in Rocq and the extracted checker.
      `main`, and the inner local-bounds failures are
      `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`, all
      classified as `no-direct-call-target`) while
-     preserving active checker authority.
+     preserving active checker authority; the component ready-body fallback
+     diagnostic now passes all 100 frontier files, so the remaining gap is
+     proof routing from ready-body evidence to the mixed no-receiver path.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
      and the component-only boolean bridge, without requiring Prop-to-bool
@@ -131,11 +136,14 @@ validity checks must be represented in Rocq and the extracted checker.
   summary/check, component-body summary, non-captured, no-receiver
   local-bounds provider, and assoc-base callback paths. The canonical theorem
   still lacks the bridge from its public premises to the no-receiver provider/check
-  and per-callee summary/evidence-at facts. The remaining late proof surface is
+  and per-callee summary/evidence-at facts; after the ready-body sidecar,
+  the remaining gap is routing that ready-body local-bounds evidence into the
+  mixed no-receiver proof path, not broad valid coverage. The remaining late proof surface is
   the direct-ready branch helper, local-bounds route theorem, direct
   body-summary-to-local-bounds boolean bridge, extracted diagnostic check, CLI
   regression with four known local-bounds synthetic failures classified as
-  `no-direct-call-target`, public-shaped
+  `no-direct-call-target` and a ready-body fallback diagnostic passing all
+  100 frontier files, public-shaped
   conditional sidecar theorem, core mixed no-receiver summary-provider prefix
   route, and assoc-base check-provider helper path.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

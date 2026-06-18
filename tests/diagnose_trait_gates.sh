@@ -68,6 +68,7 @@ ok_count=0
 fail_count=0
 direct_present_count=0
 component_body_summary_count=0
+component_ready_body_summary_count=0
 status=0
 
 while IFS= read -r file; do
@@ -78,6 +79,7 @@ while IFS= read -r file; do
     for gate in \
       trait-direct-receiver-method-present \
       trait-component-body-summary \
+      trait-component-ready-body-summary \
       trait-no-receiver-body-summary
     do
       gate_line=$(grep -E "^${gate}: (ok|fail)$" "$tmp" || true)
@@ -94,6 +96,7 @@ while IFS= read -r file; do
 
     direct_line=$(grep -E "^trait-direct-receiver-method-present: (ok|fail)$" "$tmp" || true)
     component_line=$(grep -E "^trait-component-body-summary: (ok|fail)$" "$tmp" || true)
+    component_ready_line=$(grep -E "^trait-component-ready-body-summary: (ok|fail)$" "$tmp" || true)
     case "$direct_line" in
       "trait-direct-receiver-method-present: ok")
         direct_present_count=$((direct_present_count + 1))
@@ -102,6 +105,11 @@ while IFS= read -r file; do
     case "$component_line" in
       "trait-component-body-summary: ok")
         component_body_summary_count=$((component_body_summary_count + 1))
+        ;;
+    esac
+    case "$component_ready_line" in
+      "trait-component-ready-body-summary: ok")
+        component_ready_body_summary_count=$((component_ready_body_summary_count + 1))
         ;;
     esac
 
@@ -136,6 +144,50 @@ while IFS= read -r file; do
       cat "$tmp"
       status=1
     fi
+
+    component_ready_failures_line=$(grep -E "^trait-component-ready-body-summary-failures: [0-9][0-9]*$" "$tmp" || true)
+    case "$component_ready_failures_line" in
+      "trait-component-ready-body-summary-failures: "*)
+        component_ready_failures=${component_ready_failures_line##*: }
+        ;;
+      *)
+        printf "FAIL --diagnose-trait-gates %s: missing or invalid trait-component-ready-body-summary-failures line\n" "$file"
+        cat "$tmp"
+        status=1
+        component_ready_failures=0
+        ;;
+    esac
+    component_ready_failure_detail_count=$(grep -c "^trait-component-ready-body-summary-failure: " "$tmp" || true)
+    if [ "$component_ready_failures" -ne "$component_ready_failure_detail_count" ]; then
+      printf "FAIL --diagnose-trait-gates %s: component ready-body failure count %s did not match %s detail lines\n" \
+        "$file" "$component_ready_failures" "$component_ready_failure_detail_count"
+      cat "$tmp"
+      status=1
+    fi
+    invalid_component_ready_failure_detail=$(grep -Ev "^trait-component-ready-body-summary-failure: [^:][^:]*$" "$tmp" | grep -c "^trait-component-ready-body-summary-failure: " || true)
+    if [ "$invalid_component_ready_failure_detail" -ne 0 ]; then
+      printf "FAIL --diagnose-trait-gates %s: invalid component ready-body failure detail line\n" "$file"
+      cat "$tmp"
+      status=1
+    fi
+    case "$component_ready_line" in
+      "trait-component-ready-body-summary: ok")
+        if [ "$component_ready_failures" -ne 0 ]; then
+          printf "FAIL --diagnose-trait-gates %s: component ready-body gate ok with %s failures\n" \
+            "$file" "$component_ready_failures"
+          cat "$tmp"
+          status=1
+        fi
+        ;;
+      "trait-component-ready-body-summary: fail")
+        if [ "$component_ready_failures" -eq 0 ]; then
+          printf "FAIL --diagnose-trait-gates %s: component ready-body gate failed without function details\n" "$file"
+          cat "$tmp"
+          status=1
+        fi
+        ;;
+    esac
+
     component_failure_detail_count=$(grep -c "^trait-component-body-summary-failure: " "$tmp" || true)
     component_failure_reason_count=$(grep -c "^trait-component-body-summary-failure-reason: " "$tmp" || true)
     if [ "$component_failures" -ne "$component_failure_detail_count" ]; then
@@ -279,6 +331,12 @@ if [ "$total" -ne 100 ] || [ "$ok_count" -ne 96 ] || [ "$fail_count" -ne 4 ]; th
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s\n" \
-  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count"
+if [ "$component_ready_body_summary_count" -ne 100 ]; then
+  printf "FAIL --diagnose-trait-gates: expected component-ready-body-summary=100, got %s\n" \
+    "$component_ready_body_summary_count"
+  status=1
+fi
+
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s component-ready-body-summary=%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count" "$component_ready_body_summary_count"
 exit "$status"

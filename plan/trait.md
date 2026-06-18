@@ -75,9 +75,10 @@ validity checks must be represented in Rocq and the extracted checker.
   body-step adapters, ready-body prefix-family hooks,
   synthetic-hook conversions, provider bridges, active-mixed
   ready-body route-provider wrappers, ready-body checker-to-route-provider
-  wrappers under the remaining summary-to-route premise, a ready-body
-  checker-to-package and exact-target provider bridge, ready-body callback-at
-  and local-bounds-family bridges,
+  wrappers under the remaining summary-to-route premise, pointwise ordinary
+  ready-body callee-evidence bridges, ready-body route-package callee-evidence
+  bridges, a ready-body checker-to-package and exact-target provider bridge,
+  ready-body callback-at and local-bounds-family bridges,
   and the end-to-end sidecar provide
   alpha-renamed direct-target callee evidence plus store-safe target arguments.
   The next proof route must consume that synthetic-or-ordinary evidence in
@@ -133,9 +134,10 @@ validity checks must be represented in Rocq and the extracted checker.
      body-step adapters, ready-body prefix-family hooks,
      synthetic-hook conversions, provider bridges, active-mixed
      ready-body route-provider wrappers, ready-body checker-to-route-provider
-     wrappers under the remaining summary-to-route premise, a ready-body
-     checker-to-package and exact-target provider bridge, ready-body callback-at
-     and local-bounds-family bridges,
+     wrappers under the remaining summary-to-route premise, pointwise ordinary
+     ready-body callee-evidence bridges, ready-body route-package callee-evidence
+     bridges, a ready-body checker-to-package and exact-target provider bridge,
+     ready-body callback-at and local-bounds-family bridges,
      and alpha-renamed direct-target bridges,
      so the remaining gap is proof routing from that synthetic-or-ordinary
      evidence to the mixed
@@ -183,8 +185,10 @@ validity checks must be represented in Rocq and the extracted checker.
   adapters, ready-body prefix-family hooks, synthetic-hook conversions,
   provider bridges, active-mixed ready-body route-provider wrappers,
   ready-body checker-to-route-provider wrappers under the remaining
-  summary-to-route premise, a ready-body checker-to-package and exact-target
-  provider bridge, ready-body callee helpers, ready-body callback-at and
+  summary-to-route premise, pointwise ordinary ready-body callee-evidence
+  bridges, ready-body route-package callee-evidence bridges, a ready-body
+  checker-to-package and exact-target provider bridge, ready-body callee helpers,
+  ready-body callback-at and
   local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The

@@ -1259,6 +1259,107 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma direct_call_callee_body_root_evidence_at_of_shadow_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    fn_root_shadow_summary_evidence_at env fname ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary_at Hunique Ω n R Σ
+    Σ_args R_args arg_roots args fdef fcall σ s s_args vs used' Hin Hfname
+    Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hrename.
+  pose proof (lookup_fn_in_unique_by_name env fname fdef Hin Hfname Hunique)
+    as Hlookup.
+  destruct (Hsummary_at fdef Hlookup) as [Hnodup Hready_initial].
+  assert (Hready_initial_body : preservation_ready_expr (fn_body fdef)).
+  { unfold callee_body_root_shadow_ready_at in Hready_initial.
+    destruct Hready_initial as
+      (_T_body & _Γ_out & _R_body & _roots_body & _Hprov & Hready & _).
+    exact Hready. }
+  assert (Hprov_summary : callee_body_root_shadow_provenance_summary env fdef).
+  { split.
+    - exact Hnodup.
+    - eapply callee_body_root_shadow_provenance_ready_at_of_ready_at.
+      exact Hready_initial. }
+  assert (Hprov_call :
+    callee_body_root_shadow_provenance_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args)).
+  { eapply direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_preservation_core;
+      eassumption. }
+  assert (Hready_call : preservation_ready_expr (fn_body fcall)).
+  { eapply alpha_rename_fn_def_preservation_ready_body.
+    - exact Hrename.
+    - exact Hready_initial_body. }
+  eapply callee_body_root_ready_at_of_shadow_ready_at.
+  eapply callee_body_root_shadow_ready_at_of_provenance_and_preservation.
+  - exact Hprov_call.
+  - exact Hready_call.
+Qed.
+
+Lemma direct_call_callee_body_root_ready_body_evidence_at_of_shadow_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    fn_root_shadow_summary_evidence_at env fname ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_ready_body_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary_at Hunique.
+  eapply direct_call_callee_body_root_ready_body_evidence_at_of_ordinary.
+  eapply direct_call_callee_body_root_evidence_at_of_shadow_summary_at;
+    eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_ready_body_evidence_at_of_ready_body_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    fn_root_shadow_ready_body_summary_evidence_at env fname ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_ready_body_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary_at Hunique Ω n R Σ
+    Σ_args R_args arg_roots args fdef fcall σ s s_args vs used' Hin Hfname
+    Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hrename.
+  pose proof (lookup_fn_in_unique_by_name env fname fdef Hin Hfname Hunique)
+    as Hlookup.
+  destruct (Hsummary_at fdef Hlookup) as [Hsynth | Hordinary].
+  - left.
+    eapply callee_body_root_synthetic_direct_call_ready_at_of_shadow.
+    eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_preservation_core;
+      eassumption.
+  - right.
+    destruct Hordinary as [Hnodup Hready_initial].
+    assert (Hready_initial_body : preservation_ready_expr (fn_body fdef)).
+    { unfold callee_body_root_shadow_ready_at in Hready_initial.
+      destruct Hready_initial as
+        (_T_body & _Γ_out & _R_body & _roots_body & _Hprov & Hready & _).
+      exact Hready. }
+    assert (Hprov_summary :
+      callee_body_root_shadow_provenance_summary env fdef).
+    { split.
+      + exact Hnodup.
+      + eapply callee_body_root_shadow_provenance_ready_at_of_ready_at.
+        exact Hready_initial. }
+    assert (Hprov_call :
+      callee_body_root_shadow_provenance_ready_at env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R_args)).
+    { eapply direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_preservation_core;
+        eassumption. }
+    assert (Hready_call : preservation_ready_expr (fn_body fcall)).
+    { eapply alpha_rename_fn_def_preservation_ready_body.
+      + exact Hrename.
+      + exact Hready_initial_body. }
+    eapply callee_body_root_ready_at_of_shadow_ready_at.
+    eapply callee_body_root_shadow_ready_at_of_provenance_and_preservation.
+    + exact Hprov_call.
+    + exact Hready_call.
+Qed.
+
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique_with_preservation_core :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

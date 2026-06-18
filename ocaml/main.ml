@@ -490,12 +490,16 @@ let () =
       exit 1
   in
   if !diagnose_trait_gates then begin
-    let status =
-      if check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env
-      then "ok"
-      else "fail"
+    let print_gate name ok =
+      Printf.printf "%s: %s\n" name (if ok then "ok" else "fail")
     in
-    Printf.printf "trait-no-receiver-body-summary: %s\n" status
+    print_gate "trait-direct-receiver-method-present"
+      (check_env_root_shadow_direct_receiver_method_present checked_env);
+    print_gate "trait-component-body-summary"
+      (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+         checked_env);
+    print_gate "trait-no-receiver-body-summary"
+      (check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env)
   end;
   Option.iter (fun fname ->
     try Fir.emit_fir fname checked_env

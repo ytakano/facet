@@ -21,6 +21,8 @@ printf "%s\n" \
 total=0
 ok_count=0
 fail_count=0
+direct_present_count=0
+component_body_summary_count=0
 status=0
 
 while IFS= read -r file; do
@@ -28,6 +30,36 @@ while IFS= read -r file; do
   total=$((total + 1))
 
   if dune exec ocaml/main.exe -- --diagnose-trait-gates "$file" >"$tmp" 2>&1; then
+    for gate in \
+      trait-direct-receiver-method-present \
+      trait-component-body-summary \
+      trait-no-receiver-body-summary
+    do
+      gate_line=$(grep -E "^${gate}: (ok|fail)$" "$tmp" || true)
+      case "$gate_line" in
+        "$gate: ok"|"$gate: fail")
+          ;;
+        *)
+          printf "FAIL --diagnose-trait-gates %s: missing or invalid %s line\n" "$file" "$gate"
+          cat "$tmp"
+          status=1
+          ;;
+      esac
+    done
+
+    direct_line=$(grep -E "^trait-direct-receiver-method-present: (ok|fail)$" "$tmp" || true)
+    component_line=$(grep -E "^trait-component-body-summary: (ok|fail)$" "$tmp" || true)
+    case "$direct_line" in
+      "trait-direct-receiver-method-present: ok")
+        direct_present_count=$((direct_present_count + 1))
+        ;;
+    esac
+    case "$component_line" in
+      "trait-component-body-summary: ok")
+        component_body_summary_count=$((component_body_summary_count + 1))
+        ;;
+    esac
+
     line=$(grep -E "^trait-no-receiver-body-summary: (ok|fail)$" "$tmp" || true)
     case "$line" in
       "trait-no-receiver-body-summary: ok")
@@ -38,9 +70,7 @@ while IFS= read -r file; do
         printf "%s\n" "$file" >>"$actual_fail"
         ;;
       *)
-        printf "FAIL --diagnose-trait-gates %s: missing diagnostic line\n" "$file"
-        cat "$tmp"
-        status=1
+        :
         ;;
     esac
   else
@@ -58,5 +88,6 @@ if ! diff -u "$expected_fail" "$actual_fail" >/dev/null; then
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s\n" "$total" "$ok_count" "$fail_count"
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count"
 exit "$status"

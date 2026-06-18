@@ -12672,6 +12672,41 @@ Proof.
       eassumption.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_summary_provider_exact_route_package_at_all :
+  forall env bounds,
+    component_body_local_bounds_ready_body_summary_provider_in_env env ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    forall fname,
+      store_safe_ready_body_exact_body_call_route_package_at
+        (global_env_with_local_bounds env bounds) fname.
+Proof.
+  intros env bounds Hprovider Hcomponent_check fname fdef fcall used used'
+    fname_body args_body Hin Hname Hrename Htarget.
+  change (env_fns (global_env_with_local_bounds env bounds)) with
+    (env_fns env) in Hin.
+  destruct (alpha_rename_fn_def_static_fields used fdef fcall used' Hrename)
+    as (_ & _ & _ & _ & _ & _ & Hbounds).
+  split.
+  - rewrite Hbounds.
+    change (fn_root_shadow_ready_body_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fdef)) fname_body).
+    eapply component_body_local_bounds_ready_body_summary_provider_at_in.
+    + exact Hprovider.
+    + exact Hin.
+    + eapply Hcomponent_check. exact Hin.
+  - change (store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body).
+    eapply
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      eapply Hcomponent_check. exact Hin.
+    + exact Hrename.
+    + exact Htarget.
+Qed.
+
 Lemma check_fn_root_shadow_synthetic_direct_call_ready_summary_sound :
   forall env fdef,
     check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef =

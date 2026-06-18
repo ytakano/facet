@@ -69,8 +69,8 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic and ordinary callee evidence. Ready-body route-package projections,
   synthetic route-package-to-callee evidence bridges, synthetic-to-ready-body
   route-package subsumption facts, ready-body exact-route reachability/provider
-  helpers, package-at and reachable-provider projections, ready-body
-  callback-at and local-bounds-family bridges, and the end-to-end sidecar provide alpha-renamed
+  helpers, package-at and reachable-provider projections, a ready-body all-components
+  package-at adapter, ready-body callback-at and local-bounds-family bridges, and the end-to-end sidecar provide alpha-renamed
   direct-target
   callee evidence plus store-safe target arguments.
   The next proof route must
@@ -120,8 +120,8 @@ validity checks must be represented in Rocq and the extracted checker.
      pointwise ready-body callee-evidence injections, synthetic
      route-package-to-callee-evidence bridges, synthetic-to-ready-body
      route-package subsumption, ready-body exact-route reachability/provider
-     helpers, package-at and reachable-provider projections, ready-body
-     callback-at and local-bounds-family bridges, and alpha-renamed
+     helpers, package-at and reachable-provider projections, a ready-body all-components
+     package-at adapter, ready-body callback-at and local-bounds-family bridges, and alpha-renamed
      direct-target bridges, so the
      remaining gap is proof
      routing from that synthetic-or-ordinary evidence to the mixed
@@ -163,8 +163,9 @@ validity checks must be represented in Rocq and the extracted checker.
   callee-evidence injections, route-package projections, synthetic
   route-package-to-callee-evidence bridges, synthetic-to-ready-body
   route-package subsumption, ready-body exact-route reachability/provider
-  helpers, package-at and reachable-provider projections, ready-body callee
-  helpers, ready-body callback-at and local-bounds-family bridges,
+  helpers, package-at and reachable-provider projections, a ready-body all-components
+  package-at adapter, ready-body callee helpers, ready-body callback-at and
+  local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the route from

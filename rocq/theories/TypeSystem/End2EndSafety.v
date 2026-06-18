@@ -176,62 +176,6 @@ Proof.
 Qed.
 
 
-
-Lemma infer_fn_env_end2end_assoc_direct_receiver_base_of_assoc :
-  forall env f T Gamma_out R_out roots,
-    infer_fn_env_end2end_assoc env f =
-      infer_ok (T, Gamma_out, R_out, roots) ->
-    infer_fn_env_end2end_assoc_direct_receiver_base env f =
-      infer_ok (T, Gamma_out, R_out, roots).
-Proof.
-  intros env f T Gamma_out R_out roots Hassoc.
-  unfold infer_fn_env_end2end_assoc in Hassoc.
-  unfold infer_fn_env_end2end_assoc_direct_receiver_base.
-  destruct (infer_full_env_roots_checked_assoc env f
-              (initial_root_env_for_params (fn_params f ++ fn_captures f)))
-    as [[[[T' Gamma'] R'] roots'] | err] eqn:Hinfer; try discriminate.
-  destruct (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
-              env f) eqn:Hsummary; try discriminate.
-  injection Hassoc as -> -> -> ->.
-  unfold check_fn_root_shadow_assoc_direct_receiver_base_summary.
-  rewrite Hsummary. reflexivity.
-Qed.
-
-Lemma infer_fns_env_end2end_assoc_direct_receiver_base_of_assoc :
-  forall env fns,
-    infer_fns_env_end2end_assoc env fns = infer_ok tt ->
-    infer_fns_env_end2end_assoc_direct_receiver_base env fns = infer_ok tt.
-Proof.
-  induction fns as [| f rest IH]; intros Hassoc.
-  - reflexivity.
-  - simpl in Hassoc. simpl.
-    destruct (infer_fn_env_end2end_assoc env f)
-      as [[[[T Gamma_out] R_out] roots] | err] eqn:Hfn; try discriminate.
-    rewrite (infer_fn_env_end2end_assoc_direct_receiver_base_of_assoc
-      env f T Gamma_out R_out roots Hfn).
-    eapply IH. exact Hassoc.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_of_assoc :
-  forall env env',
-    infer_program_env_end2end_assoc env = infer_ok env' ->
-    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env'.
-Proof.
-  intros env env' Hassoc.
-  unfold infer_program_env_end2end_assoc in Hassoc.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base.
-  destruct (global_names_unique_b (alpha_normalize_global_env env))
-    eqn:Hunique; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
-    eqn:Helab; try discriminate.
-  destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hassoc as ->.
-  rewrite (infer_fns_env_end2end_assoc_direct_receiver_base_of_assoc
-    env' (env_fns env') Hfns).
-  reflexivity.
-Qed.
-
 Theorem infer_fn_env_end2end_assoc_direct_receiver_base_sound :
   forall env f T Gamma_out R_out roots,
     infer_fn_env_end2end_assoc_direct_receiver_base env f =

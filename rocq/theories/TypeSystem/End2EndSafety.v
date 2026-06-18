@@ -12395,34 +12395,6 @@ Proof.
 Qed.
 
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    component_body_store_safe_synthetic_direct_call_ready_summary_provider
-      env'.
-Proof.
-  intros env env' Hprog Hdirect_ready.
-  destruct (check_env_end2end_direct_receiver_ready_facts
-    env' Hdirect_ready) as
-    (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_check).
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
-    eassumption.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
-      env'.
-Proof.
-  intros env env' Hprog Hdirect_ready.
-  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
-    eassumption.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -12645,18 +12617,6 @@ Definition component_body_summary_check_provider_in_env
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
       env f_component.
 
-Lemma component_body_summary_check_provider_in_env_of_body_summary_provider :
-  forall env,
-    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
-      env ->
-    component_body_summary_check_provider_in_env env.
-Proof.
-  intros env Hprovider f_component _Hin Hcomponent_check.
-  eapply Hprovider.
-  eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
-  exact Hcomponent_check.
-Qed.
-
 Lemma component_body_summary_check_provider_local_bounds_route :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
@@ -12720,11 +12680,14 @@ Proof.
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
   - exact ((Hcheck_provider_when_no_receiver Hno_receiver) f_component
       Hin_component Hcomponent_check).
-  - pose proof
-      (infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider
-        env env' Hprog Hdirect_ready) as Hprovider.
-    exact ((component_body_summary_check_provider_in_env_of_body_summary_provider
-      env' Hprovider) f_component Hin_component Hcomponent_check).
+  - destruct (check_env_end2end_direct_receiver_ready_facts
+      env' Hdirect_ready) as
+      (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_env_check).
+    eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
+        eassumption.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcomponent_check.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_summary_provider_prefix :

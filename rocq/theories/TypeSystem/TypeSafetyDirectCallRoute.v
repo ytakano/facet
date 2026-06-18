@@ -1563,6 +1563,26 @@ Proof.
   exact (Hexact_body_target env fname).
 Qed.
 
+Lemma store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider_of_family :
+  forall base_env base_fname,
+    (forall env fname,
+      store_safe_ready_body_exact_body_call_route_reachable
+        base_env base_fname env fname ->
+      forall fdef fcall used used' fname_body args_body synthetic_body,
+        In fdef (env_fns env) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, fn_body fcall)) ->
+    store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
+      base_env base_fname.
+Proof.
+  intros base_env base_fname Htarget env fname Hreachable.
+  exact (Htarget env fname Hreachable).
+Qed.
+
 Lemma store_safe_ready_body_exact_body_call_route_reachable_package_provider_of_at_all :
   (forall env fname,
     store_safe_ready_body_exact_body_call_route_package_at env fname) ->
@@ -1638,6 +1658,29 @@ Proof.
   - apply global_env_local_bounds_family_base.
   - eapply global_env_local_bounds_family_with_local_bounds.
     exact IHHreachable.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider_of_local_bounds_family :
+  forall base_env base_fname,
+    (forall env fname,
+      global_env_local_bounds_family base_env env ->
+      forall fdef fcall used used' fname_body args_body synthetic_body,
+        In fdef (env_fns env) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, fn_body fcall)) ->
+    store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
+      base_env base_fname.
+Proof.
+  intros base_env base_fname Htarget.
+  eapply store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider_of_family.
+  intros env fname Hreachable.
+  eapply Htarget.
+  eapply store_safe_ready_body_exact_body_call_route_reachable_local_bounds_family.
+  exact Hreachable.
 Qed.
 
 Lemma store_safe_ready_body_exact_body_call_route_package_at_of_synthetic_reachable_package_provider :

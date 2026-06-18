@@ -70,8 +70,8 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic route-package-to-callee evidence bridges, synthetic-to-ready-body
   route-package subsumption facts, ready-body exact-route reachability/provider
   helpers, package-at, reachable-provider, and reachable local-bounds-family
-  projections, ready-body all-components package-at and
-  checker-to-reachable-provider adapters, ready-body callback-at and
+  projections, ready-body all-components package-at,
+  checker-to-reachable-provider, and reachable exact-target-provider adapters, ready-body callback-at and
   local-bounds-family bridges, and the end-to-end sidecar provide alpha-renamed
   direct-target
   callee evidence plus store-safe target arguments.
@@ -123,8 +123,8 @@ validity checks must be represented in Rocq and the extracted checker.
      route-package-to-callee-evidence bridges, synthetic-to-ready-body
      route-package subsumption, ready-body exact-route reachability/provider
      helpers, package-at, reachable-provider, and reachable local-bounds-family
-     projections, ready-body all-components package-at and
-     checker-to-reachable-provider adapters, ready-body callback-at and
+     projections, ready-body all-components package-at,
+     checker-to-reachable-provider, and reachable exact-target-provider adapters, ready-body callback-at and
      local-bounds-family bridges, and alpha-renamed
      direct-target bridges, so the
      remaining gap is proof
@@ -168,8 +168,9 @@ validity checks must be represented in Rocq and the extracted checker.
   route-package-to-callee-evidence bridges, synthetic-to-ready-body
   route-package subsumption, ready-body exact-route reachability/provider
   helpers, package-at and reachable-provider projections, ready-body
-  all-components package-at and checker-to-reachable-provider adapters,
-  ready-body callee helpers, ready-body callback-at and
+  all-components package-at, checker-to-reachable-provider, and reachable
+  exact-target-provider adapters, ready-body callee helpers, ready-body
+  callback-at and
   local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The

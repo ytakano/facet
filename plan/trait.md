@@ -38,9 +38,9 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds and assoc-base provider callbacks used by active public-path
-  proofs, and the single strict-mixed public runtime wrapper. Obsolete
-  active-mixed
+  local-bounds route callbacks and assoc-base check-provider path used by
+  active public-path proofs, and the single strict-mixed public runtime
+  wrapper. Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route, branch, static, and
   component-summary wrapper chains have been pruned.
   The remaining legacy wrapper that still consumes the strict endpoint is

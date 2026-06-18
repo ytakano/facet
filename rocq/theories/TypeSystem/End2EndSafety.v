@@ -2206,19 +2206,6 @@ Proof.
   - exact Hcaptured.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_exact_closure_when_not_captured :
-  forall env env' f_component,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    In f_component (env_fns env') ->
-    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
-    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
-      env' f_component = true.
-Proof.
-  intros env env' f_component Hprog Hin Hcaptured.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_when_not_captured
-              env env' f_component Hprog Hin Hcaptured) as [_ Hexact].
-  exact Hexact.
-Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_summary_evidence_when_not_captured :
   forall env env',
@@ -3076,33 +3063,6 @@ Proof.
       exact Hexact.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_ready_payload_in_local_bounds_family_when_not_captured :
-  forall env env' base env0 fdef,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    global_env_local_bounds_family env' base ->
-    global_env_local_bounds_family base env0 ->
-    In fdef (env_fns env0) ->
-    check_fn_root_shadow_captured_call_store_safe_summary
-      env' fdef = false ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' fdef = true ->
-    fn_env_unique_by_name env0 /\
-    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env0 fdef /\
-    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
-      env0 fdef = true.
-Proof.
-  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcaptured
-    Hcomponent_check.
-  eapply infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_when_not_captured.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
-    exact Hprog.
-  - exact Hbase.
-  - exact Henv.
-  - exact Hin.
-  - exact Hcaptured.
-  - exact Hcomponent_check.
-Qed.
 
 Lemma infer_program_env_end2end_assoc_component_ready_payload_in_local_bounds_family_of_exact_closure :
   forall env env' base env0 fdef,
@@ -6482,38 +6442,6 @@ Proof.
     eassumption.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_local_bounds_route_of_exact_closure_provider :
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_prefix_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  forall env env' base,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    global_env_local_bounds_family env' base ->
-    (forall env0 fdef,
-      global_env_local_bounds_family base env0 ->
-      In fdef (env_fns env0) ->
-      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
-        env' fdef = true) ->
-    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
-      base.
-Proof.
-  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys env env' base Hprog Hbase Hexact_provider.
-  eapply infer_program_env_end2end_assoc_component_local_bounds_route_of_exact_closure_provider.
-  - exact Hscope_synthetic.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
-    exact Hprog.
-  - exact Hbase.
-  - exact Hexact_provider.
-Qed.
 
 Lemma infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider_package_at :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -7034,32 +6962,7 @@ Proof.
   exact Hcomponent_check.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_provider_of_component_check :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    component_body_synthetic_direct_call_ready_summary_provider env'.
-Proof.
-  intros env env' Hprog Hcomponent_check.
-  eapply component_body_synthetic_direct_call_ready_summary_provider_of_store_safe.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
-    eassumption.
-Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_with_body_summary_provider_of_component_check :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
-      env'.
-Proof.
-  intros env env' Hprog Hcomponent_check.
-  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_store_safe_provider_of_component_check;
-    eassumption.
-Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_store_safe_summary_evidence :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->

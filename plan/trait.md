@@ -38,7 +38,7 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route callbacks and assoc-base check-provider path used by
+  local-bounds route theorem and assoc-base check-provider path used by
   active public-path proofs, and the single strict-mixed public runtime
   wrapper. Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route, branch, static, and
@@ -110,8 +110,8 @@ validity checks must be represented in Rocq and the extracted checker.
   summary/check, component-body summary, non-captured, and assoc-base callback
   paths. The canonical theorem still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
-  only the retained direct-ready branch helper, local-bounds route callbacks,
-  assoc-base check-provider callback path, and the explicitly named
+  only the retained direct-ready branch helper, local-bounds route theorem,
+  assoc-base check-provider path, and the explicitly named
   `strict_mixed` public-path wrapper remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay

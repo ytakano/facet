@@ -940,6 +940,36 @@ Proof.
   eapply lookup_fn_in_unique_by_name; eassumption.
 Qed.
 
+Lemma direct_call_callee_body_root_ready_body_evidence_at_of_shadow_synthetic_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_ready_body_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary_at Hunique.
+  eapply direct_call_callee_body_root_ready_body_evidence_at_of_synthetic.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at;
+    eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_ready_body_evidence_at_of_shadow_summary :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    env_fns_root_shadow_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_ready_body_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary Hunique.
+  eapply direct_call_callee_body_root_ready_body_evidence_at_of_evidence.
+  eapply direct_call_callee_body_root_evidence_of_shadow_summary_bridge.
+  - exact Hsummary.
+  - eapply direct_call_callee_body_root_shadow_summary_bridge_of_unique_with_preservation_core;
+      eassumption.
+Qed.
+
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

@@ -64,10 +64,11 @@ validity checks must be represented in Rocq and the extracted checker.
   the split reason is `no-direct-call-target` for all four. The ready-body
   fallback sidecar is sound into a local-bounds provider whose callees
   have either synthetic direct-call-ready summaries or ordinary root-shadow
-  summaries. Shared ready-body evidence-at facts and ready-body
-  route-package projections now live below the direct-call route
-  layer, and the end-to-end sidecar provides alpha-renamed direct-target
-  callee evidence plus store-safe target arguments. The next proof route must
+  summaries. Shared ready-body summary and callee evidence-at facts
+  now live below the direct-call route layer, with injections from synthetic and ordinary
+  callee evidence. Ready-body route-package projections and the end-to-end
+  sidecar provide alpha-renamed direct-target callee evidence plus
+  store-safe target arguments. The next proof route must
   consume that synthetic-or-ordinary evidence in the active mixed callback path
   instead of requiring every local callee to have a synthetic direct-call
   target.
@@ -110,8 +111,9 @@ validity checks must be represented in Rocq and the extracted checker.
      classified as `no-direct-call-target`) while
      preserving active checker authority; the component ready-body fallback
      diagnostic now passes all 100 frontier files and has sound local-bounds,
-     pointwise callee provider, shared ready-body route-package, and
-     alpha-renamed direct-target bridges, so the remaining gap is proof
+     pointwise callee provider, shared ready-body route-package,
+     pointwise ready-body callee-evidence injections, and alpha-renamed
+     direct-target bridges, so the remaining gap is proof
      routing from that synthetic-or-ordinary evidence to the mixed
      no-receiver path.
    - Continue replacing any remaining broad provenance/preservation premises
@@ -147,8 +149,9 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, no-receiver
   local-bounds provider, ready-body local-bounds provider,
-  shared ready-body evidence-at and route-package projections, pointwise
-  ready-body callee helpers, end-to-end ready-body route-package bridge,
+  shared ready-body summary evidence-at, pointwise ready-body
+  callee-evidence injections, route-package projections, and ready-body
+  callee helpers, end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the route from
   synthetic-or-ordinary local-bounds evidence into the mixed no-receiver proof

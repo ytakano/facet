@@ -1625,6 +1625,43 @@ Proof.
     eassumption.
 Qed.
 
+Lemma store_safe_ready_body_exact_body_call_route_reachable_body_call_step_of_exact_target_provider :
+  forall base_env base_fname env fname fdef fcall used used'
+      fname_body args_body synthetic_body,
+    store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros base_env base_fname env fname fdef fcall used used'
+    fname_body args_body synthetic_body Htarget_provider Hreachable Hin Hname
+    Hrename Htarget.
+  pose proof (Htarget_provider env fname Hreachable fdef fcall used used'
+    fname_body args_body synthetic_body Hin Hname Hrename Htarget)
+    as Htarget_exact.
+  assert (Htarget_call :
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body)).
+  { unfold direct_call_target_expr in Htarget_exact |- *.
+    destruct (fn_body fcall); try discriminate.
+    - inversion Htarget_exact. reflexivity.
+    - destruct e; try discriminate. }
+  eapply store_safe_ready_body_exact_body_call_route_reachable_body_call_step.
+  - exact Hreachable.
+  - exact Hin.
+  - exact Hname.
+  - exact Hrename.
+  - exact Htarget_call.
+Qed.
+
 Lemma store_safe_ready_body_exact_body_call_route_reachable_package_provider_body_call :
   forall base_env base_fname env fname fdef fcall used used'
       fname_body args_body,

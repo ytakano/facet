@@ -111,7 +111,7 @@ validity checks must be represented in Rocq and the extracted checker.
   paths. The canonical theorem still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route callbacks,
-  assoc-base non-captured provider callback, and the explicitly named
+  assoc-base check-provider callback path, and the explicitly named
   `strict_mixed` public-path wrapper remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay

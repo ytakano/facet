@@ -14208,43 +14208,6 @@ Proof.
   - exact Heval.
 Qed.
 
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check_provider :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
-  forall env env_out f s s_out v,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env =
-      infer_ok env_out ->
-    (forall env0 fdef,
-      global_env_local_bounds_family env_out env0 ->
-      In fdef (env_fns env0) ->
-      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env_out fdef = true) ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env_out) ->
-    initial_store_for_fn env_out f s ->
-    eval env_out s (fn_body f) s_out v ->
-    value_has_type env_out s_out v (fn_ret f).
-Proof.
-  intros Hsynthetic_call_route Hscope_call env env_out f s s_out v Hprog
-    Hcomponent_check_provider Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check.
-  - exact Hsynthetic_call_route.
-  - exact Hscope_call.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
-    exact Hprog.
-  - unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary.
-    apply forallb_forall. intros fdef Hin_fdef.
-    eapply Hcomponent_check_provider.
-    + apply global_env_local_bounds_family_base.
-    + exact Hin_fdef.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
-
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_of_base_route :
   (forall env env' f s s' v,
     infer_program_env_end2end_assoc env = infer_ok env' ->

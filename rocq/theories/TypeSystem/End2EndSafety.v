@@ -13369,46 +13369,6 @@ Proof.
     eassumption.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_store_safe_summary_evidence :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
-      env'.
-Proof.
-  intros env env' _Hprog Hdirect_ready.
-  destruct (check_env_end2end_direct_receiver_ready_facts
-    env' Hdirect_ready) as
-    (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_check).
-  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary_evidence.
-  exact Hcomponent_check.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_shadow_summary_evidence :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
-      env'.
-Proof.
-  intros env env' Hprog Hdirect_ready.
-  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_store_safe_summary_evidence;
-    eassumption.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_provider :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_end2end_direct_receiver_ready env' = true ->
-    component_body_synthetic_direct_call_ready_summary_provider env'.
-Proof.
-  intros env env' Hprog Hdirect_ready.
-  eapply component_body_synthetic_direct_call_ready_summary_provider_of_store_safe.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_body_store_safe_provider;
-    eassumption.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_direct_ready_component_with_body_summary_provider :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->

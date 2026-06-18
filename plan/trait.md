@@ -45,6 +45,7 @@ validity checks must be represented in Rocq and the extracted checker.
   package-component-check, package-body-summary, scoped-package runtime,
   summary-provider, local-bounds exact-body, component-summary,
   component-provider, active-mixed branch-merge provider/evidence wrappers,
+  obsolete direct-ready summary/provider helper lemmas,
   obsolete active-mixed no-receiver combined-summary diagnostic helpers,
   obsolete assoc-strict mixed diagnostic helpers, and diagnostic wrapper chains
   have been pruned.

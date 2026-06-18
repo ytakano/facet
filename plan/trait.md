@@ -38,8 +38,9 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route theorem, no-receiver component-body provider
-  conversions, provider/body-summary/store-safe/check prefix theorems, and
+  local-bounds route theorem, component-summary local-bounds route lemma,
+  no-receiver component-body provider conversions,
+  provider/body-summary/store-safe/check prefix theorems, and
   assoc-base check-provider helper path used by active public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
@@ -109,7 +110,8 @@ validity checks must be represented in Rocq and the extracted checker.
   helper booleans, have been removed; the base direct-component endpoint
   remains diagnostic proof infrastructure, not an active authority.
 - The active mixed endpoint has routed lemmas for the known summary,
-  exact-body/package, local-bounds, scoped-package, call-statement, component
+  exact-body/package, local-bounds, component-summary local-bounds,
+  scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, no-receiver
   Prop-provider prefix, and assoc-base callback paths. The canonical theorem
   still lacks the bridge from its public premises

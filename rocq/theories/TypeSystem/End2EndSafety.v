@@ -12805,6 +12805,54 @@ Proof.
     + exact Hcomponent_check.
 Qed.
 
+Lemma component_body_summary_check_provider_local_bounds_route :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f_component,
+    component_body_summary_check_provider_in_env env ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+Proof.
+  intros Hsynthetic_route Hroot_names Hroot_keys env f_component Hprovider
+    Hin_component Hcomponent_check.
+  intros env0 Hfamily s0 fname args s1 v1 n_call Heval_call
+    _Hheight_call Ω n R Σ T Σ' R' roots Hsafe_args Hstore_prefix
+    Hroots_within Hshadow Hrn Hnamed Hkeys Htyped Hunique _Hsummary_at
+    _Hevidence_at.
+  pose proof (Hprovider f_component Hin_component Hcomponent_check)
+    as [_ Hsummary_base].
+  destruct Hfamily as [bounds ->].
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement.
+    exact Hsynthetic_route.
+  - exact Heval_call.
+  - eapply store_safe_function_value_call_args_preservation_ready.
+    exact Hsafe_args.
+  - exact Hstore_prefix.
+  - exact Hroots_within.
+  - exact Hshadow.
+  - exact Hrn.
+  - exact Hnamed.
+  - exact Hkeys.
+  - exact Htyped.
+  - exact Hunique.
+  - eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+    eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary_base.
+  - intros fname_top.
+    eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+      eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+      exact Hsummary_base.
+    + exact Hunique.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_summary_check_provider_in_env :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -12859,41 +12907,15 @@ Proof.
   - exact Hroot_keys.
   - exact Hprog.
   - intros f_component Hin_component Hcomponent_check.
-    intros env0 Hfamily s0 fname args s1 v1 n_call Heval_call
-      _Hheight_call Ω n R Σ T Σ' R' roots Hsafe_args Hstore_prefix
-      Hroots_within Hshadow Hrn Hnamed Hkeys Htyped Hunique _Hsummary_at
-      _Hevidence_at.
-    pose proof
-      (infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_summary_check_provider_in_env
-        env env' Hprog
-        Hcomponent_body_provider_when_no_receiver
-        f_component Hin_component Hcomponent_check) as [_ Hsummary_base].
-    destruct Hfamily as [bounds ->].
-    eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all.
-    + eapply eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_prefix_statement.
-      exact Hsynthetic_route.
-    + exact Heval_call.
-    + eapply store_safe_function_value_call_args_preservation_ready.
-      exact Hsafe_args.
-    + exact Hstore_prefix.
-    + exact Hroots_within.
-    + exact Hshadow.
-    + exact Hrn.
-    + exact Hnamed.
-    + exact Hkeys.
-    + exact Htyped.
-    + exact Hunique.
-    + eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
-      eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary_base.
-    + intros fname_top.
-      eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at.
-      * exact Hroot_names.
-      * exact Hroot_keys.
-      * eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
-        eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-        exact Hsummary_base.
-      * exact Hunique.
+    eapply component_body_summary_check_provider_local_bounds_route.
+    + exact Hsynthetic_route.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_body_summary_check_provider_in_env.
+      * exact Hprog.
+      * exact Hcomponent_body_provider_when_no_receiver.
+    + exact Hin_component.
+    + exact Hcomponent_check.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

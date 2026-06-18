@@ -39,8 +39,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, direct local-bounds sidecar bridge,
-  ready-body local-bounds evidence bridge, conditional and
-  unconditional boolean wrappers, extracted no-receiver diagnostic check,
+  ready-body local-bounds evidence and pointwise callee bridges,
+  conditional and unconditional boolean wrappers, extracted no-receiver
+  diagnostic check,
   public-shaped active-mixed conditional sidecar theorem,
   core mixed no-receiver summary-provider prefix route, and assoc-base
   check-provider helper path used by active public-path proofs. Obsolete
@@ -63,9 +64,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the split reason is `no-direct-call-target` for all four. The ready-body
   fallback sidecar is now sound into a local-bounds provider whose callees
   have either synthetic direct-call-ready summaries or ordinary root-shadow
-  summaries, so the next proof route must consume that provider in the
-  active mixed path instead of requiring every local callee to have a
-  synthetic direct-call target.
+  summaries, with pointwise helpers for individual callees. The next proof
+  route must consume that provider in the active mixed path instead of
+  requiring every local callee to have a synthetic direct-call target.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
   theorem. Retargeting it to
@@ -104,9 +105,10 @@ validity checks must be represented in Rocq and the extracted checker.
      `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`, all
      classified as `no-direct-call-target`) while
      preserving active checker authority; the component ready-body fallback
-     diagnostic now passes all 100 frontier files and has a sound local-bounds
-     provider bridge, so the remaining gap is proof routing from that
-     synthetic-or-ordinary evidence to the mixed no-receiver path.
+     diagnostic now passes all 100 frontier files and has sound local-bounds
+     and pointwise callee provider bridges, so the remaining gap is proof
+     routing from that synthetic-or-ordinary evidence to the mixed
+     no-receiver path.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
      and the component-only boolean bridge, without requiring Prop-to-bool
@@ -139,8 +141,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint has routed lemmas for the known summary,
   exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, no-receiver
-  local-bounds provider, ready-body local-bounds provider, and assoc-base
-  callback paths. The canonical theorem still lacks the route from
+  local-bounds provider, ready-body local-bounds provider,
+  pointwise ready-body callee helpers, and assoc-base callback paths. The
+  canonical theorem still lacks the route from
   synthetic-or-ordinary local-bounds evidence into the mixed no-receiver proof
   path and the bridge from public premises to the needed provider/check and
   per-callee summary/evidence-at facts.

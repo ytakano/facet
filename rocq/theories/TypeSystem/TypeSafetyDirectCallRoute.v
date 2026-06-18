@@ -1478,6 +1478,19 @@ Proof.
     eassumption.
 Qed.
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_local_bounds_family :
+  forall base_env base_fname env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    global_env_local_bounds_family base_env env.
+Proof.
+  intros base_env base_fname env fname Hreachable.
+  induction Hreachable.
+  - apply global_env_local_bounds_family_base.
+  - eapply global_env_local_bounds_family_with_local_bounds.
+    exact IHHreachable.
+Qed.
+
 Inductive store_safe_ready_body_exact_body_call_route_reachable :
     global_env -> ident -> global_env -> ident -> Prop :=
 | store_safe_ready_body_exact_body_call_route_reachable_here :
@@ -1612,6 +1625,19 @@ Proof.
   eapply Hprovider.
   eapply store_safe_ready_body_exact_body_call_route_reachable_body_call;
     eassumption.
+Qed.
+
+Lemma store_safe_ready_body_exact_body_call_route_reachable_local_bounds_family :
+  forall base_env base_fname env fname,
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    global_env_local_bounds_family base_env env.
+Proof.
+  intros base_env base_fname env fname Hreachable.
+  induction Hreachable.
+  - apply global_env_local_bounds_family_base.
+  - eapply global_env_local_bounds_family_with_local_bounds.
+    exact IHHreachable.
 Qed.
 
 Lemma store_safe_ready_body_exact_body_call_route_package_at_of_synthetic_reachable_package_provider :

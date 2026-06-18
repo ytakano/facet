@@ -67,7 +67,8 @@ validity checks must be represented in Rocq and the extracted checker.
   conditional premise, a CLI diagnostic regression over the current trait/direct valid
   fixture frontier (100 accepted files: 96 no-receiver diagnostic ok,
   4 diagnostic fail; 0 report direct-receiver-method-present; the same 96
-  report component-body-summary ok), and a
+  report component-body-summary ok; each failing fixture has one failing
+  component function: `main` except `hrt_direct_call_unchanged`'s `caller`), and a
   public-shaped active-mixed runtime theorem whose remaining extra premise is
   that diagnostic condition,
   but remains diagnostic only.
@@ -106,7 +107,8 @@ validity checks must be represented in Rocq and the extracted checker.
      `tests/valid/trait/assoc_projection_call_arg_compat.facet`, and
      `tests/valid/type_safety_ready_gap/direct_call.facet` still report
      no-receiver diagnostic `fail`; the split diagnostics show these are exactly
-     the component-body-summary failures, not direct-receiver-method cases) while
+     per-function component-body-summary failures, not direct-receiver-method
+     cases: `main`, `caller`, `main`, and `main`, respectively) while
      preserving active checker authority.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
@@ -147,7 +149,7 @@ validity checks must be represented in Rocq and the extracted checker.
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
   bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
-  regression with four known component-body sidecar failures, public-shaped conditional
+  regression with four known per-function component-body sidecar failures, public-shaped conditional
   sidecar theorem,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, plus the assoc-base check-provider helper path, remain

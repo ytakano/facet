@@ -7,7 +7,9 @@ cd "$root_dir"
 target_files=$(mktemp)
 expected_fail=$(mktemp)
 actual_fail=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\"" EXIT
+expected_component_fail=$(mktemp)
+actual_component_fail=$(mktemp)
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -17,6 +19,13 @@ printf "%s\n" \
   tests/valid/trait/assoc_projection_call_arg_compat.facet \
   tests/valid/type_safety_ready_gap/direct_call.facet \
   >"$expected_fail"
+
+printf "%s\n" \
+  tests/valid/function/local_let_rec_direct_call.facet:main \
+  tests/valid/lifetime/hrt_direct_call_unchanged.facet:caller \
+  tests/valid/trait/assoc_projection_call_arg_compat.facet:main \
+  tests/valid/type_safety_ready_gap/direct_call.facet:main \
+  >"$expected_component_fail"
 
 total=0
 ok_count=0
@@ -60,6 +69,44 @@ while IFS= read -r file; do
         ;;
     esac
 
+    component_failures_line=$(grep -E "^trait-component-body-summary-failures: [0-9][0-9]*$" "$tmp" || true)
+    case "$component_failures_line" in
+      "trait-component-body-summary-failures: "*)
+        component_failures=${component_failures_line##*: }
+        ;;
+      *)
+        printf "FAIL --diagnose-trait-gates %s: missing or invalid trait-component-body-summary-failures line\n" "$file"
+        cat "$tmp"
+        status=1
+        component_failures=0
+        ;;
+    esac
+    component_failure_detail_count=$(grep -c "^trait-component-body-summary-failure: " "$tmp" || true)
+    if [ "$component_failures" -ne "$component_failure_detail_count" ]; then
+      printf "FAIL --diagnose-trait-gates %s: component failure count %s did not match %s detail lines\n" \
+        "$file" "$component_failures" "$component_failure_detail_count"
+      cat "$tmp"
+      status=1
+    fi
+    case "$component_line" in
+      "trait-component-body-summary: ok")
+        if [ "$component_failures" -ne 0 ]; then
+          printf "FAIL --diagnose-trait-gates %s: component gate ok with %s failures\n" \
+            "$file" "$component_failures"
+          cat "$tmp"
+          status=1
+        fi
+        ;;
+      "trait-component-body-summary: fail")
+        if [ "$component_failures" -eq 0 ]; then
+          printf "FAIL --diagnose-trait-gates %s: component gate failed without function details\n" "$file"
+          cat "$tmp"
+          status=1
+        fi
+        sed -n "s^trait-component-body-summary-failure: ^$file:^p" "$tmp" >>"$actual_component_fail"
+        ;;
+    esac
+
     line=$(grep -E "^trait-no-receiver-body-summary: (ok|fail)$" "$tmp" || true)
     case "$line" in
       "trait-no-receiver-body-summary: ok")
@@ -85,6 +132,18 @@ done <"$target_files"
 if ! diff -u "$expected_fail" "$actual_fail" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: diagnostic frontier changed\n"
   diff -u "$expected_fail" "$actual_fail" || true
+  status=1
+fi
+
+if ! diff -u "$expected_component_fail" "$actual_component_fail" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: component body-summary failure details changed\n"
+  diff -u "$expected_component_fail" "$actual_component_fail" || true
+  status=1
+fi
+
+if [ "$total" -ne 100 ] || [ "$ok_count" -ne 96 ] || [ "$fail_count" -ne 4 ]; then
+  printf "FAIL --diagnose-trait-gates: expected total=100 ok=96 fail=4, got total=%s ok=%s fail=%s\n" \
+    "$total" "$ok_count" "$fail_count"
   status=1
 fi
 

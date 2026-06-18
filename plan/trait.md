@@ -44,7 +44,7 @@ validity checks must be represented in Rocq and the extracted checker.
   active-mixed branch-to-unconditional component check, store-safe/shadow
   evidence, component-body store-safe-summary/summary/with-body/provider-in-env
   bridges, check-provider routes, active/strict redundant case-split theorem/alias,
-  consolidated route/callback and leaf-wrapper cleanup across exact-body/package,
+  consolidated route/callback, runtime-wrapper, and leaf-wrapper cleanup across exact-body/package,
   static, public, strict-public, call-statement, summary-call,
   local-bounds, scoped-package, non-captured, component-provider,
   branch-evidence, store-safe/summary evidence leaves, and component-check

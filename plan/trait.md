@@ -54,8 +54,8 @@ validity checks must be represented in Rocq and the extracted checker.
   to `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
   from existing public premises, the no-receiver component summary/check
   provider and per-callee summary/evidence-at facts consumed by the retained
-  mixed no-receiver prefix path. Receiver-method absence alone does not imply those
-  component routes, so the summary-check path remains diagnostic until that
+  mixed no-receiver prefix path. Receiver-method absence alone does not imply
+  those component routes, so the summary-check path remains diagnostic until that
   derivation is proved without a new public theorem premise.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
@@ -69,8 +69,7 @@ validity checks must be represented in Rocq and the extracted checker.
      exact-body target, pointwise package-at evidence, and component-check
      or component-summary provider required by the retained active-mixed
      no-receiver prefix path, without adding OCaml fallback logic or weakening
-     the public
-     theorem with a new premise.
+     the public theorem with a new premise.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active
      mixed no-receiver branch.
@@ -101,15 +100,16 @@ validity checks must be represented in Rocq and the extracted checker.
   `ErrEndToEndSafetyGateFailed`. The rejected non-assoc strict direct-receiver,
   absence-mixed, synthetic-mixed, component-mixed, and strict-branch runtime
   diagnostics, plus their now-unused mixed ready-check booleans, have been
-  removed; the base direct-component endpoint remains proof/diagnostic infrastructure, not an active
-  authority.
+  removed; the base direct-component endpoint remains diagnostic proof
+  infrastructure, not an active authority.
 - The active mixed endpoint has routed lemmas for the known summary,
   exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, and assoc-base callback
   paths. The canonical theorem still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  assoc-base check-provider helper path remain on that late proof surface.
+  no-receiver component-body prefix theorem, and assoc-base check-provider
+  helper path remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and keeps one ready-check diagnostic runtime theorem, but it is not
   the active CLI authority and is not connected to the

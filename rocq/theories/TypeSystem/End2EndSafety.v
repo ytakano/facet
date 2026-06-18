@@ -14244,37 +14244,6 @@ Proof.
 Qed.
 
 
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
-  forall env env_out f s s_out v,
-    infer_program_env_end2end_assoc_direct_receiver_mixed env =
-      infer_ok env_out ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env_out = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env_out) ->
-    initial_store_for_fn env_out f s ->
-    eval env_out s (fn_body f) s_out v ->
-    value_has_type env_out s_out v (fn_ret f).
-Proof.
-  intros Hsynthetic_call_route Hscope_call env env_out f s s_out v Hprog
-    Hcomponent_check Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check_provider.
-  - exact Hsynthetic_call_route.
-  - exact Hscope_call.
-  - exact Hprog.
-  - intros env0 fdef Hfamily Hin0.
-    destruct Hfamily as [bounds ->].
-    simpl in Hin0.
-    unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary in Hcomponent_check.
-    eapply forallb_forall in Hcomponent_check; eauto.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_of_base_route :
   (forall env env' f s s' v,

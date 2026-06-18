@@ -63,8 +63,10 @@ validity checks must be represented in Rocq and the extracted checker.
   from existing public premises, the no-receiver component summary/check
   provider and per-callee summary/evidence-at facts consumed by the retained
   mixed no-receiver prefix path. Receiver-method absence alone does not imply
-  those component routes, so the summary-check path remains diagnostic until that
-  derivation is proved without a new public theorem premise.
+  those component routes. A trial that strengthened the active no-receiver gate
+  with the component body-summary check compiled and retargeted the theorem, but
+  rejected broad existing valid coverage with `ErrEndToEndSafetyGateFailed`, so
+  that gate strengthening was not adopted.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -117,7 +119,10 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body prefix theorem, and assoc-base check-provider
-  helper path remain on that late proof surface.
+  helper path remain on that late proof surface. Strengthening the active
+  no-receiver gate with the body-summary check is known to reject existing valid
+  programs, so the bridge must come from a more precise proof route or broader
+  checker summaries.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and keeps one ready-check diagnostic runtime theorem, but it is not
   the active CLI authority and is not connected to the

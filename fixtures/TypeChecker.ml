@@ -15894,6 +15894,35 @@ let check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef =
        | None -> false)
   | None -> false
 
+(** val check_fn_root_shadow_synthetic_direct_call_ready_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef =
+  match direct_call_target_expr fdef.fn_body with
+  | Some p ->
+    let (_, synthetic_body) = p in
+    (&&) (direct_call_ready_expr_b synthetic_body)
+      (match infer_env_roots_shadow_safe env
+               (fn_with_body fdef synthetic_body)
+               (initial_root_env_for_fn fdef) with
+       | Infer_ok p0 ->
+         let (p1, roots) = p0 in
+         let (p2, r_out) = p1 in
+         let (t_body, _) = p2 in
+         (&&)
+           ((&&) (ty_compatible_b fdef.fn_outlives t_body fdef.fn_ret)
+             (fn_params_roots_exclude_b fdef.fn_params roots))
+           (fn_params_root_env_excludes_b fdef.fn_params r_out)
+       | Infer_err _ -> false)
+  | None -> false
+
+(** val check_env_root_shadow_synthetic_direct_call_ready_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_synthetic_direct_call_ready_summary env =
+  forallb (check_fn_root_shadow_synthetic_direct_call_ready_summary env)
+    env.env_fns
+
 (** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary :
     global_env -> fn_def -> bool **)
 
@@ -15976,6 +16005,25 @@ let check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef
 let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary env =
   forallb
     (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env)
+    env.env_fns
+
+(** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary env fdef =
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then check_env_root_shadow_synthetic_direct_call_ready_summary
+         (global_env_with_local_bounds env fdef.fn_bounds)
+  else true
+
+(** val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary env =
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
       env)
     env.env_fns
 

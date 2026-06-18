@@ -52,7 +52,8 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver provider-conversion helpers, plus stale synthetic-summary
   soundness helpers, and single-use direct-ready provider bridge lemmas were
   also removed.
-- Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
+- Diagnostic endpoints remain available for the extracted no-receiver body-summary
+  gate, `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
   fixtures, but their unreferenced runtime wrapper aliases have been pruned and
@@ -68,7 +69,8 @@ validity checks must be represented in Rocq and the extracted checker.
   those component routes. A trial that strengthened the active no-receiver gate
   with the component body-summary check compiled and retargeted the theorem, but
   rejected broad existing valid coverage with `ErrEndToEndSafetyGateFailed`, so
-  that gate strengthening was not adopted.
+  that gate strengthening was not adopted. The body-summary gate is now
+  extracted as a diagnostic sidecar only; it is not a checker authority.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.

@@ -48,12 +48,12 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds synthetic direct-call-ready summary is missing for an ordinary
   callee with `no-direct-call-target`.
 - Ready-body fallback proof infrastructure now supplies local-bounds providers,
-  route-package/reachability helpers, exact-target adapters, pointwise callee
-  evidence, callback-at/local-bounds callback bridges, ready-body-to-synthetic
-  component callback providers, and checker-to-callback-at provider bridges.
-  This gives
-  synthetic-or-ordinary callee evidence plus store-safe target arguments for
-  alpha-renamed direct targets.
+  a named summary-family route bridge, route-package/reachability helpers,
+  exact-target adapters, pointwise callee evidence, callback-at/local-bounds
+  callback bridges, ready-body-to-synthetic component callback providers, and
+  checker-to-callback-at provider bridges. This gives synthetic-or-ordinary
+  callee evidence plus store-safe target arguments for alpha-renamed direct
+  targets.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -104,10 +104,10 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-component endpoint remains diagnostic proof infrastructure only.
 - The active mixed endpoint has the needed direct-ready branch, assoc-base
   callback paths, component-body summary/check routes, and ready-body fallback
-  bridges up through component callback-at providers. It still lacks the
-  theorem route that lets the mixed no-receiver proof consume ready-body
-  synthetic-or-ordinary evidence instead of requiring every local callee to have
-  a synthetic direct-call target.
+  bridges up through named summary-family and callback-at providers. It still
+  lacks the lower preservation theorem route that lets the mixed no-receiver
+  proof consume ready-body synthetic-or-ordinary evidence instead of requiring
+  every local callee to have a synthetic direct-call target.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

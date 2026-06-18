@@ -12635,6 +12635,23 @@ Definition component_body_local_bounds_ready_body_route_provider_in_env
     eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition ready_body_summary_local_bounds_family_route_bridge : Prop :=
+  forall base,
+    env_fns_root_shadow_ready_body_summary_evidence base ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+
+Lemma component_body_local_bounds_ready_body_route_provider_of_summary_provider :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env,
+    component_body_local_bounds_ready_body_summary_provider_in_env env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env.
+Proof.
+  intros Hbridge env Hprovider f_component Hin_component Hcomponent_check.
+  eapply Hbridge.
+  eapply Hprovider; eassumption.
+Qed.
+
 Definition component_body_local_bounds_ready_body_callback_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -13397,9 +13414,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_b
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   preservation_ready_expr_static_runtime_named_prefix_statement ->
-  (forall env0,
-    component_body_local_bounds_ready_body_summary_provider_in_env env0 ->
-    component_body_local_bounds_ready_body_route_provider_in_env env0) ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -13429,7 +13444,8 @@ Proof.
   - exact Hprog.
   - intros Hno_receiver.
     eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_route_provider_sound.
-    + exact (Hsummary_to_route env').
+    + eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+      exact Hsummary_to_route.
     + exact (Hready_body_check_when_no_receiver Hno_receiver).
   - exact Hinitial.
   - exact Hin.
@@ -13446,9 +13462,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  (forall env0,
-    component_body_local_bounds_ready_body_summary_provider_in_env env0 ->
-    component_body_local_bounds_ready_body_route_provider_in_env env0) ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->

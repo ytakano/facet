@@ -49,7 +49,8 @@ validity checks must be represented in Rocq and the extracted checker.
   active-mixed compatibility/uniqueness helpers, receiver-method
   exact-closure and package-at route helpers, the stale broad active-mixed
   runtime wrapper, redundant mixed no-receiver public wrapper aliases, and dead
-  no-receiver provider-conversion helpers were also removed.
+  no-receiver provider-conversion helpers, plus stale synthetic-summary
+  soundness helpers were also removed.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

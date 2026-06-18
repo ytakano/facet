@@ -16957,34 +16957,6 @@ Proof.
     + exact Hstore.
     + exact Heval.
 Qed.
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks_prefix :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_prefix_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_static_component_callbacks_prefix.
-Qed.
-
-
-
-
-
-
-
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -17006,7 +16978,7 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_static_component_callbacks_prefix.
+  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_static_component_callbacks_prefix.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.

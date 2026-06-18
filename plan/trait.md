@@ -39,12 +39,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem and assoc-base check-provider helper path used by
-  active public-path proofs, and the single strict-mixed public runtime
-  wrapper. Obsolete active-mixed
+  active public-path proofs. Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route, branch, static, and
   component-summary wrapper chains have been pruned.
-  The remaining legacy wrapper that still consumes the strict endpoint is
-  explicitly named `strict_mixed` on the public theorem path.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -52,8 +49,8 @@ validity checks must be represented in Rocq and the extracted checker.
   reject either broad valid coverage or the direct-call receiver safety-gate
   fixtures.
 - The remaining activation gap is proof-side. The canonical public runtime
-  theorem still targets the strict mixed endpoint through explicitly named
-  strict-mixed static and component-check callback wrappers; retargeting it
+  theorem still targets the strict mixed endpoint through the public prefix
+  theorem; retargeting it
   to `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
   from existing public premises, the no-receiver component summary/check
   provider and per-callee summary/evidence-at facts consumed by the active
@@ -111,8 +108,7 @@ validity checks must be represented in Rocq and the extracted checker.
   paths. The canonical theorem still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  assoc-base check-provider helper path, and the explicitly named
-  `strict_mixed` public-path wrapper remain on that late proof surface.
+  assoc-base check-provider helper path remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture and now has a runtime theorem under the existing global replay
   evidence, but it is not the active CLI authority and is not connected to the

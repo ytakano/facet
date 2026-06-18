@@ -990,6 +990,70 @@ Proof.
     exact Hevidence.
 Qed.
 
+Definition eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family
+    (env_family : global_env -> Prop) : Prop :=
+  forall env,
+    env_family env ->
+  forall fdef,
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at
+      env fdef.
+
+Definition eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+    (base : global_env) : Prop :=
+  eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family
+    (global_env_local_bounds_family base).
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family_of_ready_body_in_env_family :
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family
+      env_family.
+Proof.
+  intros env_family Hready.
+  unfold
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family
+    in *.
+  intros env Henv fname fdef fcall used used' s_args s_body vs ret R_args
+    arg_roots fname_body args_body T_body Gamma_out R_body roots_body
+    Hin Hname Hrename Htarget Hsafe Hready_args Htyped Hunique
+    Hsummary Hevidence Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval
+    n_body_call Hheight.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_ready_body_at.
+  - eapply Hready. exact Henv.
+  - exact Hin.
+  - exact Hname.
+  - exact Hrename.
+  - exact Htarget.
+  - exact Hsafe.
+  - exact Hready_args.
+  - exact Htyped.
+  - exact Hunique.
+  - exact Hsummary.
+  - exact Hevidence.
+  - exact Hstore.
+  - exact Hroots.
+  - exact Hshadow.
+  - exact Hrn.
+  - exact Hnamed.
+  - exact Hkeys.
+  - exact Heval.
+  - exact Hheight.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family_of_ready_body_in_local_bounds_family :
+  forall base,
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros base Hready.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family_of_ready_body_in_env_family.
+  exact Hready.
+Qed.
+
 
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family_of_summary_at_prefix_call_statement_evidence_at_height :
   forall env_family,

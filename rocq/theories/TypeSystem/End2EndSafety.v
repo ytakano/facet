@@ -296,49 +296,6 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_check_env_ready :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
-    env_fns_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_ready
-      env'.
-Proof.
-  intros env env' Hprog fname fdef Hlookup.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hprog.
-  destruct (global_names_unique_b (alpha_normalize_global_env env));
-    try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
-    eqn:Helab; try discriminate.
-  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
-              env_elab (env_fns env_elab)) as [[] | err]
-    eqn:Hfns; try discriminate.
-  injection Hprog as <-.
-  destruct (lookup_fn_in_name fname (env_fns env_elab) fdef Hlookup)
-    as [Hin _].
-  apply check_fn_root_shadow_assoc_direct_receiver_base_summary_sound.
-  eapply infer_fns_env_end2end_assoc_direct_receiver_base_check_env_ready;
-    eassumption.
-Qed.
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-    try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
-    eqn:Helab; try discriminate.
-  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
-              env_elab (env_fns env_elab)) as [[] | err]
-    eqn:Hfns; try discriminate.
-  injection Hprog as <-.
-  apply andb_true_iff in Hunique_global as [Hunique_top _].
-  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-Qed.
-
 Lemma check_program_env_end2end_assoc_direct_receiver_base_infer_ok :
   forall env,
     check_program_env_end2end_assoc_direct_receiver_base env = true ->

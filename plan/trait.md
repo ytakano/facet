@@ -40,7 +40,8 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, component-summary local-bounds route lemma,
   no-receiver component-body provider conversions,
-  provider/body-summary/store-safe/check prefix theorems, and
+  provider/body-summary/store-safe prefix theorems, the public
+  body-summary check wrapper, and
   assoc-base check-provider helper path used by active public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
@@ -117,9 +118,10 @@ validity checks must be represented in Rocq and the extracted checker.
   still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  no-receiver component-body provider conversions and provider/body-summary/store-safe/check
-  prefix theorems, plus the assoc-base check-provider helper path, remain on
-  that late proof surface.
+  no-receiver component-body provider conversions,
+  provider/body-summary/store-safe prefix theorems, and the public
+  body-summary check wrapper, plus the assoc-base check-provider helper path, remain
+  on that late proof surface.
   Strengthening the active no-receiver gate with the body-summary check
   is known to reject existing valid programs, so the bridge must come from a more precise proof route or broader
   checker summaries.

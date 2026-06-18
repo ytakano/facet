@@ -43,8 +43,8 @@ validity checks must be represented in Rocq and the extracted checker.
   Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route/runtime, scoped
   replay/lift, branch, static, derived local-bounds component-check, exact-route local-bounds helper,
-  derived public-callback, summary package/call-route, nested/alpha component-summary, and
-  component-summary wrapper chains have been pruned.
+  derived public-callback, summary package/call-route, nested/alpha
+  component-summary, closure/branch, and component-summary wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

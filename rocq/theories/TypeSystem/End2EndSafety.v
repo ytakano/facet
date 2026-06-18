@@ -12701,6 +12701,23 @@ Proof.
   exact Hprovider.
 Qed.
 
+Lemma strict_exact_closure_component_body_store_safe_callback_at_provider_of_synthetic_ready_body_callback_provider :
+  forall env f_component,
+    component_body_local_bounds_synthetic_ready_body_callback_provider_in_env
+      env ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    strict_exact_closure_component_body_store_safe_callback_at_provider
+      env f_component.
+Proof.
+  intros env f_component Hprovider Hin_component Hcomponent_check fname args
+    synthetic_body fdef _Htarget _Hlookup.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_in_local_bounds_family.
+  - eapply Hprovider; eassumption.
+  - apply global_env_local_bounds_family_base.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_summary_provider_at_in :
   forall env,
     component_body_local_bounds_ready_body_summary_provider_in_env env ->
@@ -12961,6 +12978,27 @@ Proof.
   eapply component_body_local_bounds_synthetic_ready_body_callback_provider_of_ready_body_callback_provider.
   eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_callback_provider_sound;
     eassumption.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_store_safe_callback_at_provider_sound :
+  forall env f_component,
+    (component_body_local_bounds_ready_body_summary_provider_in_env env ->
+     component_body_local_bounds_ready_body_route_provider_in_env env) ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    strict_exact_closure_component_body_store_safe_callback_at_provider
+      env f_component.
+Proof.
+  intros env f_component Hsummary_to_route Hcheck Hin_component
+    Hcomponent_check.
+  eapply strict_exact_closure_component_body_store_safe_callback_at_provider_of_synthetic_ready_body_callback_provider.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_synthetic_ready_body_callback_provider_sound;
+      eassumption.
+  - exact Hin_component.
+  - exact Hcomponent_check.
 Qed.
 
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_exact_route_package_at_all_sound :

@@ -39,7 +39,7 @@ validity checks must be represented in Rocq and the extracted checker.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, component-summary local-bounds route lemma,
-  no-receiver component-body provider conversions,
+  no-receiver component-body provider conversion,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, and assoc-base check-provider helper path used by active
   public-path proofs.
@@ -48,8 +48,8 @@ validity checks must be represented in Rocq and the extracted checker.
   and diagnostic routes have been pruned; the remaining self-only
   active-mixed compatibility/uniqueness helpers, receiver-method
   exact-closure and package-at route helpers, the stale broad active-mixed
-  runtime wrapper, and redundant mixed no-receiver public wrapper aliases were
-  also removed.
+  runtime wrapper, redundant mixed no-receiver public wrapper aliases, and dead
+  no-receiver provider-conversion helpers were also removed.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -120,7 +120,7 @@ validity checks must be represented in Rocq and the extracted checker.
   still lacks the bridge from its public premises
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
-  no-receiver component-body provider conversions,
+  no-receiver component-body provider conversion,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, plus the assoc-base check-provider helper path, remain
   on that late proof surface.

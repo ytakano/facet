@@ -12560,28 +12560,6 @@ Proof.
 Qed.
 
 
-Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider :
-  forall env,
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-      env = true ->
-    forall f_component,
-      In f_component (env_fns env) ->
-      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env f_component = true ->
-      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
-        (global_env_with_local_bounds env (fn_bounds f_component)).
-Proof.
-  intros env Hcheck f_component Hin Hcomponent_check.
-  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-    in Hcheck.
-  apply forallb_forall with (x := f_component) in Hcheck; [| exact Hin].
-  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-    in Hcheck.
-  rewrite Hcomponent_check in Hcheck.
-  eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
-  exact Hcheck.
-Qed.
-
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base :
   forall env env',
     infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
@@ -12741,34 +12719,6 @@ Proof.
   eapply Hprovider.
   eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
   exact Hcomponent_check.
-Qed.
-
-Lemma component_body_summary_check_provider_in_env_of_store_safe_provider :
-  forall env,
-    component_body_store_safe_synthetic_direct_call_ready_summary_provider
-      env ->
-    component_body_summary_check_provider_in_env env.
-Proof.
-  intros env Hprovider.
-  eapply component_body_summary_check_provider_in_env_of_body_summary_provider.
-  eapply component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider.
-  exact Hprovider.
-Qed.
-
-Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_in_env :
-  forall env,
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
-      env = true ->
-    component_body_summary_check_provider_in_env env.
-Proof.
-  intros env Hcheck f_component Hin Hcomponent_check.
-  split.
-  - eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
-    exact Hcomponent_check.
-  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider.
-    + exact Hcheck.
-    + exact Hin.
-    + exact Hcomponent_check.
 Qed.
 
 Lemma component_body_summary_check_provider_local_bounds_route :

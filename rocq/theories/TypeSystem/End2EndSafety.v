@@ -12883,6 +12883,30 @@ Proof.
     (env_fns env)) Hcheck); exact Hin.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_summary_provider_of_synthetic_summary_check_provider :
+  forall env,
+    component_body_local_bounds_synthetic_summary_check_provider_in_env env ->
+    component_body_local_bounds_ready_body_summary_provider_in_env env.
+Proof.
+  intros env Hprovider f_component Hin_component Hcomponent_check.
+  eapply env_fns_root_shadow_ready_body_summary_evidence_of_synthetic.
+  eapply check_env_root_shadow_synthetic_direct_call_ready_summary_sound.
+  eapply Hprovider; eassumption.
+Qed.
+
+Lemma component_body_local_bounds_ready_body_route_provider_of_synthetic_summary_check_provider :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env,
+    component_body_local_bounds_synthetic_summary_check_provider_in_env env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env.
+Proof.
+  intros Hbridge env Hprovider.
+  eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+  - exact Hbridge.
+  - eapply component_body_local_bounds_ready_body_summary_provider_of_synthetic_summary_check_provider.
+    exact Hprovider.
+Qed.
+
 Lemma check_env_root_shadow_ready_body_summary_sound :
   forall env,
     forallb

@@ -1133,6 +1133,56 @@ Proof.
 Qed.
 
 
+Theorem eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family_of_summary_at_prefix_call_statement_evidence_at_height :
+  forall env_family,
+  (forall env bounds,
+    env_family env ->
+    env_family (global_env_with_local_bounds env bounds)) ->
+  eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    env_family ->
+  eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family
+    env_family.
+Proof.
+  intros env_family Henv_family_step Hsummary.
+  unfold
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family.
+  intros env Henv fdef fname fcall used used' s_args s_body vs ret R_args
+    arg_roots fname_body args_body T_body Gamma_out R_body roots_body Hin
+    Hname Hrename Htarget Hsafe_args Hready_body Htyped_body Hunique_body
+    Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
+    Hrn_bind Hnamed_bind Hkeys_bind Heval_nested n_body_call
+    Hheight_nested.
+  eapply Hsummary.
+  - eapply Henv_family_step. exact Henv.
+  - exact Heval_nested.
+  - exact Hheight_nested.
+  - exact Hsafe_args.
+  - exact Hstore_bind.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_bind.
+  - exact Hnamed_bind.
+  - exact Hkeys_bind.
+  - exact Htyped_body.
+  - exact Hunique_body.
+  - exact Hsummary_body.
+  - exact Hevidence_body.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family_of_summary_at_prefix_call_statement_evidence_at_height :
+  forall base,
+  eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+    base ->
+  eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+    base.
+Proof.
+  intros base Hsummary.
+  eapply eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family_of_summary_at_prefix_call_statement_evidence_at_height.
+  - intros env bounds Henv.
+    eapply global_env_local_bounds_family_with_local_bounds. exact Henv.
+  - exact Hsummary.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family_of_summary_at_prefix_call_statement_evidence_at_height :
   forall env_family,
   (forall env bounds,

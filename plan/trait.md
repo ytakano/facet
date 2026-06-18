@@ -191,12 +191,12 @@ validity checks must be represented in Rocq and the extracted checker.
   bridges, ready-body route-package callee-evidence bridges, ready-body
   reachable-provider-to-callee-evidence bridges, a ready-body checker-to-package
   and exact-target provider bridge, ready-body callee helpers, ready-body
-  callback-at and
+  prefix-to-callback family bridges, ready-body callback-at and
   local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the ready-body cleanup/prefix route that
-  consumes synthetic-or-ordinary local-bounds evidence in the mixed no-receiver
+  produces the ready-body local-bounds family consumed by the mixed no-receiver
   proof path, plus the final bridge from public premises to the needed
   provider/check facts.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

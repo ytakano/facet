@@ -36,25 +36,14 @@ validity checks must be represented in Rocq and the extracted checker.
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Proof infrastructure for direct-call receivers is concentrated around the
-  active mixed endpoint. It has no-receiver/direct-ready branch splits,
-  strict-to-active agreement, public-callback wrappers, exact-body/package and
-  package-at bridges, local-bounds/scoped-package/call-statement component
-  routes, no-receiver component-summary provider/check routes, derived
-  active-mixed branch-to-unconditional component check, store-safe/shadow
-  evidence, component-body store-safe-summary/summary/with-body/provider-in-env
-  bridges, check-provider routes, active/strict redundant case-split theorem/alias,
-  consolidated route/callback, runtime-wrapper, and leaf-wrapper cleanup across exact-body/package,
-  static, public, strict-public, call-statement, summary-call component leaves,
-  component-body summary provider, mixed/active-public and no-receiver exact-route, absent-summary, and public evidence-at leaves,
-  local-bounds, scoped-package, non-captured, component-provider,
-  branch-evidence, mixed-public helper aliases, store-safe/summary evidence leaves, prefix/summary runtime leaves, public-callback
-  provider/check and strict-active evidence leaves, component-only derived leaves, and component-check provider wrappers, plus component-only boolean bridges.
-  Recent cleanup removed
-  broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
-  `strict_mixed`, and
-  renamed derived component-only runtime wrappers around their public
-  no-receiver component-body-summary check premise.
+- Proof infrastructure for direct-call receivers is now concentrated around the
+  active mixed endpoint and a small retained strict-mixed public runtime path.
+  The old route/callback leaf-wrapper surface has been pruned; remaining
+  reusable active-mixed routes cover exact-body/package, local-bounds,
+  scoped-package, call-statement, component summary/check, component-body
+  summary, non-captured, and assoc-base callback paths. Legacy wrappers that
+  still consume the strict endpoint are explicitly named `strict_mixed`
+  where they remain on the public theorem path.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

@@ -51,8 +51,8 @@ validity checks must be represented in Rocq and the extracted checker.
   obsolete active-mixed no-receiver combined-summary diagnostic helpers,
   obsolete active-mixed combined/local-bounds and non-captured evidence helper
   chains, obsolete assoc-strict mixed diagnostic helpers, obsolete
-  scoped-expr-lift runtime wrapper aliases, and diagnostic wrapper chains have
-  been pruned.
+  scoped-expr-lift runtime wrapper aliases, diagnostic wrapper chains, and
+  obsolete diagnostic local-bounds/helper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

@@ -110,8 +110,8 @@ validity checks must be represented in Rocq and the extracted checker.
   only the retained direct-ready branch helper, local-bounds route theorem,
   assoc-base check-provider helper path remain on that late proof surface.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
-  fixture and now has a runtime theorem under the existing global replay
-  evidence, but it is not the active CLI authority and is not connected to the
+  fixture and keeps one ready-check diagnostic runtime theorem, but it is not
+  the active CLI authority and is not connected to the
   public runtime theorem without extra evidence. Its mixed wrapper preserves
   ordinary valid coverage but still rejects the direct-call receiver fixture
   because the direct-ready branch requires the global component gate.

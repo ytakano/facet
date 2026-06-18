@@ -606,25 +606,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_of_no_receiver_method :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    check_env_root_shadow_direct_receiver_method_present env' = false ->
-    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
-      infer_ok env'.
-Proof.
-  intros env env' Hmixed Habsent.
-  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hmixed.
-  unfold infer_program_env_end2end_assoc_receiver_method_exact_mixed.
-  destruct (infer_program_env_end2end_assoc env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
-    eqn:Hready; try discriminate.
-  injection Hmixed as ->.
-  rewrite (check_env_root_shadow_receiver_method_strict_exact_closure_summary_of_absent
-             env' Habsent).
-  reflexivity.
-Qed.
 
 Theorem infer_program_env_end2end_assoc_receiver_method_exact_mixed_sound :
   forall env env' f,

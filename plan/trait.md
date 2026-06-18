@@ -79,7 +79,8 @@ validity checks must be represented in Rocq and the extracted checker.
   ready-body callee-evidence bridges, ready-body route-package callee-evidence
   bridges, ready-body reachable-provider-to-callee-evidence bridges, a
   ready-body checker-to-package and exact-target provider bridge, ready-body
-  callback-at and local-bounds-family bridges,
+  prefix-to-callback family bridges, ready-body callback-at and
+  local-bounds-family bridges, component callback-provider bridge,
   and the end-to-end sidecar provide
   alpha-renamed direct-target callee evidence plus store-safe target arguments.
   The next proof route must consume that synthetic-or-ordinary evidence in
@@ -139,7 +140,8 @@ validity checks must be represented in Rocq and the extracted checker.
      ready-body callee-evidence bridges, ready-body route-package callee-evidence
      bridges, ready-body reachable-provider-to-callee-evidence bridges, a
      ready-body checker-to-package and exact-target provider bridge, ready-body
-     callback-at and local-bounds-family bridges,
+     prefix-to-callback family bridges, ready-body callback-at and
+     local-bounds-family bridges, component callback-provider bridge,
      and alpha-renamed direct-target bridges,
      so the remaining gap is proof routing from that synthetic-or-ordinary
      evidence to the mixed
@@ -192,7 +194,7 @@ validity checks must be represented in Rocq and the extracted checker.
   reachable-provider-to-callee-evidence bridges, a ready-body checker-to-package
   and exact-target provider bridge, ready-body callee helpers, ready-body
   prefix-to-callback family bridges, ready-body callback-at and
-  local-bounds-family bridges,
+  local-bounds-family bridges, component callback-provider bridge,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
   canonical theorem still lacks the ready-body cleanup/prefix route that

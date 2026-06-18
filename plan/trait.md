@@ -42,7 +42,9 @@ validity checks must be represented in Rocq and the extracted checker.
   assoc-base check-provider helper path used by active public-path proofs.
   Obsolete helper chains and wrapper aliases around active-mixed,
   assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
-  and diagnostic routes have been pruned.
+  and diagnostic routes have been pruned; the remaining self-only
+  active-mixed compatibility/uniqueness helpers and receiver-method
+  package-at route helper were also removed.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

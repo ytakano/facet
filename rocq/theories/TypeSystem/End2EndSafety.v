@@ -1357,27 +1357,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_of_strict_exact_closure_direct_receiver_mixed :
-  forall env env',
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env'.
-Proof.
-  intros env env' Hstrict.
-  unfold infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-    in Hstrict.
-  unfold infer_program_env_end2end_assoc_direct_receiver_mixed.
-  destruct (infer_program_env_end2end_assoc_strict_exact_closure env)
-    as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
-    eqn:Hready; try discriminate.
-  injection Hstrict as ->.
-  rewrite (infer_program_env_end2end_assoc_of_strict_exact_closure
-    env env' Hbase).
-  rewrite Hready.
-  reflexivity.
-Qed.
-
 
 Theorem infer_program_env_end2end_sound :
   forall env env' f,
@@ -1710,17 +1689,6 @@ Proof.
   - exact Hcheck.
 Qed.
 
-
-Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_mixed env = infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  eapply infer_program_env_end2end_assoc_unique_by_name.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
-  exact Hprog.
-Qed.
 
 
 Lemma infer_fn_env_end2end_gate :
@@ -2599,37 +2567,6 @@ Proof.
       env env' base env0 fdef Hprog Hbase Henv Hin Hexact)
     as [Hunique0 Hpayload].
   split; [exact Hunique0 | exact Hpayload].
-Qed.
-
-Lemma infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_body_route_package_at_for_receiver_method_in_local_bounds_family :
-  forall env env' base env0 fname fdef,
-    infer_program_env_end2end_assoc_receiver_method_exact_mixed env =
-      infer_ok env' ->
-    global_env_local_bounds_family env' base ->
-    global_env_local_bounds_family base env0 ->
-    In fdef (env_fns env0) ->
-    fn_name fdef = fname ->
-    check_fn_root_shadow_direct_receiver_method_present env' fdef = true ->
-    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' fdef = true ->
-    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
-      env0 fname.
-Proof.
-  intros env env' base env0 fname fdef Hprog Hbase Henv Hin Hname Hpresent
-    Hcomponent.
-  assert (Hin_env' : In fdef (env_fns env')).
-  { destruct Hbase as (bounds_base & ->).
-    destruct Henv as (bounds & ->).
-    exact Hin. }
-  eapply infer_program_env_end2end_assoc_exact_body_route_package_at_of_exact_closure_in_local_bounds_family.
-  - eapply infer_program_env_end2end_assoc_receiver_method_exact_mixed_base.
-    exact Hprog.
-  - exact Hbase.
-  - exact Henv.
-  - exact Hin.
-  - exact Hname.
-  - eapply infer_program_env_end2end_assoc_receiver_method_exact_mixed_exact_closure_for_receiver_method_component;
-      eassumption.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family :

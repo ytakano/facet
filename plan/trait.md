@@ -36,66 +36,30 @@ validity checks must be represented in Rocq and the extracted checker.
   checker soundness aliases target this assoc-base mixed endpoint. The public
   runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
   still targets the strict mixed endpoint.
-- Proof infrastructure for direct-call receivers is concentrated around the
-  active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route theorem, direct local-bounds sidecar bridge,
-  ready-body local-bounds evidence and pointwise callee bridges,
-  conditional and unconditional boolean wrappers, extracted no-receiver
-  diagnostic check,
-  public-shaped active-mixed conditional sidecar theorem,
-  core mixed no-receiver summary-provider prefix route, and assoc-base
-  check-provider helper path used by active public-path proofs. Obsolete
-  active-mixed, assoc-strict, receiver-method, diagnostic, broad
-  body-summary-provider, and single-use direct-ready helper detours have been
-  pruned.
-- Diagnostic endpoints remain available for the extracted no-receiver
-  body-summary gate, `assoc_direct_receiver_base`,
-  `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
-  variants. They are useful for proving route fragments and checking sampled
-  fixtures, but they are not active checker authorities because their gates
-  reject either broad valid coverage or the direct-call receiver safety-gate
-  fixtures. The no-receiver diagnostic sidecar now feeds the active-mixed
-  runtime theorem through the direct local-bounds provider. Current trait/direct
-  valid frontier: 100 accepted files, 96 no-receiver synthetic diagnostic ok,
-  4 diagnostic fail, 100 component ready-body fallback diagnostic ok, and
+- Diagnostic endpoints remain for proof routing and fixture sampling, not as
+  active authorities. Current trait/direct valid frontier: 100 accepted files,
+  96 no-receiver synthetic diagnostic ok, 4 no-receiver diagnostic fail,
+  100 component ready-body fallback diagnostic ok, and
   0 direct-receiver-method-present. The four synthetic failures are
-  local-bounds synthetic direct-call-ready summary failures for
-  `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`;
-  the split reason is `no-direct-call-target` for all four. The ready-body
-  fallback sidecar is sound into a local-bounds provider whose callees
-  have either synthetic direct-call-ready summaries or ordinary root-shadow
-  summaries. Shared ready-body summary and callee evidence-at facts
-  now live below the direct-call route layer, with injections from
-  synthetic and ordinary callee evidence. Ready-body route-package projections,
-  synthetic route-package-to-callee evidence bridges, synthetic-to-ready-body
-  route-package subsumption facts, ready-body exact-route reachability/provider helpers, package-at,
-  reachable-provider, and reachable local-bounds-family projections,
-  ready-body all-components package-at, checker-to-reachable-provider,
-  reachable exact-target-provider adapters, ready-body exact-target
-  body-step adapters, ready-body prefix-family hooks,
-  synthetic-hook conversions, provider bridges, active-mixed
-  ready-body route-provider wrappers, ready-body checker-to-route-provider
-  wrappers under the remaining summary-to-route premise, pointwise ordinary
-  ready-body callee-evidence bridges, ready-body route-package callee-evidence
-  bridges, ready-body reachable-provider-to-callee-evidence bridges, a
-  ready-body checker-to-package and exact-target provider bridge, ready-body
-  prefix-to-callback family bridges, ready-body callback-at and
-  local-bounds-family bridges, ready-body-to-synthetic component callback-provider bridge,
-  and the end-to-end sidecar provide
-  alpha-renamed direct-target callee evidence plus store-safe target arguments.
-  The next proof route must consume that synthetic-or-ordinary evidence in
-  the active mixed callback path
-  instead of requiring every local callee to have a synthetic direct-call
-  target.
-- The remaining activation gap is proof-side. The canonical public runtime
-  theorem still targets the strict mixed endpoint through the public prefix
-  theorem. Retargeting it to
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
-  from existing public premises, the no-receiver local-bounds provider and
-  per-callee summary/evidence-at facts consumed by the retained mixed
-  no-receiver prefix path. Receiver-method absence alone does not imply those
-  component routes, and strengthening the active no-receiver gate with the
-  body-summary check is known to reject broad valid coverage.
+  `tests/valid/function/local_let_rec_direct_call.facet`,
+  `tests/valid/lifetime/hrt_direct_call_unchanged.facet`,
+  `tests/valid/trait/assoc_projection_call_arg_compat.facet`, and
+  `tests/valid/type_safety_ready_gap/direct_call.facet`; each fails because a
+  local-bounds synthetic direct-call-ready summary is missing for an ordinary
+  callee with `no-direct-call-target`.
+- Ready-body fallback proof infrastructure now supplies local-bounds providers,
+  route-package/reachability helpers, exact-target adapters, pointwise callee
+  evidence, callback-at/local-bounds callback bridges, and
+  ready-body-to-synthetic component callback providers. This gives
+  synthetic-or-ordinary callee evidence plus store-safe target arguments for
+  alpha-renamed direct targets.
+- The remaining activation gap is proof-side. The retained mixed no-receiver
+  path still consumes synthetic summary-route/local-bounds evidence, while the
+  broad body-summary gate that would provide it rejects valid coverage.
+  Retargeting the canonical public theorem to
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` requires routing the
+  ready-body fallback evidence into that mixed no-receiver callback path, then
+  deriving the needed provider/check facts from the existing public premises.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -104,52 +68,16 @@ validity checks must be represented in Rocq and the extracted checker.
 
 1. Finish direct-call receiver activation.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` by deriving the
-     exact-body target, pointwise package-at evidence, and component-check
-     or component-summary provider required by the retained active-mixed
-     no-receiver prefix path, without adding OCaml fallback logic or weakening
-     the public theorem with a new premise.
-   - Derive or eliminate the public-shaped theorem's remaining extracted
-     no-receiver diagnostic check from public prefix-route premises, using the
-     current `--diagnose-trait-gates`
-     frontier (`tests/valid/function/local_let_rec_direct_call.facet`,
-     `tests/valid/lifetime/hrt_direct_call_unchanged.facet`,
-     `tests/valid/trait/assoc_projection_call_arg_compat.facet`, and
-     `tests/valid/type_safety_ready_gap/direct_call.facet` still report
-     no-receiver diagnostic `fail`; the split diagnostics show these are
-     local-bounds synthetic direct-call-ready summary failures for a
-     base component-store-safe function, not direct-receiver-method or base
-     component-summary failures;
-     the failing component functions are `main`, `caller`, `main`, and
-     `main`, and the inner local-bounds failures are
-     `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`, all
-     classified as `no-direct-call-target`) while
-     preserving active checker authority; the component ready-body fallback
-     diagnostic now passes all 100 frontier files and has sound local-bounds,
-     pointwise callee provider, shared ready-body route-package,
-     pointwise ready-body callee-evidence injections, synthetic
-     route-package-to-callee-evidence bridges, synthetic-to-ready-body
-     route-package subsumption, ready-body exact-route reachability/provider helpers, package-at,
-     reachable-provider, and reachable local-bounds-family projections,
-     ready-body all-components package-at, checker-to-reachable-provider,
-     reachable exact-target-provider adapters, ready-body exact-target
-     body-step adapters, ready-body prefix-family hooks,
-     synthetic-hook conversions, provider bridges, active-mixed
-     ready-body route-provider wrappers, ready-body checker-to-route-provider
-     wrappers under the remaining summary-to-route premise, pointwise ordinary
-     ready-body callee-evidence bridges, ready-body route-package callee-evidence
-     bridges, ready-body reachable-provider-to-callee-evidence bridges, a
-     ready-body checker-to-package and exact-target provider bridge, ready-body
-     prefix-to-callback family bridges, ready-body callback-at and
-     local-bounds-family bridges, ready-body-to-synthetic component callback-provider bridge,
-     and alpha-renamed direct-target bridges,
-     so the remaining gap is proof routing from that synthetic-or-ordinary
-     evidence to the mixed
-     no-receiver path.
-   - Continue replacing any remaining broad provenance/preservation premises
-     with runtime routes that consume prefix evidence, exact-body package facts,
-     and the component-only boolean bridge, without requiring Prop-to-bool
-     completeness for component summaries.
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
+     OCaml fallback logic or weakening the public theorem with a new premise.
+   - Replace the remaining synthetic no-receiver diagnostic dependency with a
+     ready-body route that consumes synthetic-or-ordinary callee evidence,
+     exact-body package facts, store-safe target arguments, and the
+     component-only boolean bridge.
+   - Prove the final bridge from public prefix-route premises to the
+     no-receiver local-bounds provider and per-callee evidence required by the
+     active mixed proof path, without requiring Prop-to-bool completeness for
+     component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -170,48 +98,25 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - Assoc strict direct-receiver endpoint trials reject broad valid coverage with
-  `ErrEndToEndSafetyGateFailed`. The rejected non-assoc strict direct-receiver,
-  absence-mixed, synthetic-mixed, component-mixed, strict-branch, and
-  direct-component runtime diagnostics, plus their now-unused ready-check
-  helper booleans, have been removed; the base direct-component endpoint
-  remains diagnostic proof infrastructure, not an active authority.
-- The active mixed endpoint has routed lemmas for the known summary,
-  exact-body/package, local-bounds, scoped-package, call-statement, component
-  summary/check, component-body summary, non-captured, no-receiver
-  local-bounds provider, ready-body local-bounds provider,
-  shared ready-body summary evidence-at, pointwise ready-body
-  callee-evidence injections, route-package projections, synthetic
-  route-package-to-callee-evidence bridges, synthetic-to-ready-body
-  route-package subsumption, ready-body exact-route reachability/provider
-  helpers, package-at and reachable-provider projections, ready-body
-  all-components package-at, checker-to-reachable-provider, reachable
-  exact-target-provider adapters, ready-body exact-target body-step
-  adapters, ready-body prefix-family hooks, synthetic-hook conversions,
-  provider bridges, active-mixed ready-body route-provider wrappers,
-  ready-body checker-to-route-provider wrappers under the remaining
-  summary-to-route premise, pointwise ordinary ready-body callee-evidence
-  bridges, ready-body route-package callee-evidence bridges, ready-body
-  reachable-provider-to-callee-evidence bridges, a ready-body checker-to-package
-  and exact-target provider bridge, ready-body callee helpers, ready-body
-  prefix-to-callback family bridges, ready-body callback-at and
-  local-bounds-family bridges, ready-body-to-synthetic component callback-provider bridge,
-  end-to-end ready-body route-package bridge,
-  and assoc-base callback paths. The
-  canonical theorem still lacks the ready-body cleanup/prefix route that
-  produces the ready-body local-bounds family consumed by the mixed no-receiver
-  proof path, plus the final bridge from public premises to the needed
-  provider/check facts.
+  `ErrEndToEndSafetyGateFailed`. Related rejected diagnostic endpoints and
+  unused ready-check helper booleans have been removed; the base
+  direct-component endpoint remains diagnostic proof infrastructure only.
+- The active mixed endpoint has the needed direct-ready branch, assoc-base
+  callback paths, component-body summary/check routes, and ready-body fallback
+  bridges up through component callback providers. It still lacks the theorem
+  route that lets the mixed no-receiver proof consume ready-body
+  synthetic-or-ordinary evidence instead of requiring every local callee to have
+  a synthetic direct-call target.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
-  fixture, but it is not the active CLI authority and no longer has a
-  retained runtime wrapper theorem. Its mixed wrapper preserves ordinary
-  valid coverage but still rejects the direct-call receiver fixture because
-  the direct-ready branch requires the global component gate.
+  fixture, but it is not the active CLI authority and no longer has a retained
+  runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage
+  but still rejects the direct-call receiver fixture because the direct-ready
+  branch requires the global component gate.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid
-  flips; its unreferenced runtime wrappers and the rejected broad,
-  direct-component, and component-only summary ready-check diagnostics have
-  been removed.
+  flips; its unreferenced runtime wrappers and rejected broad/component-only
+  ready-check diagnostics have been removed.
 
 ## Key Decisions
 
@@ -227,22 +132,3 @@ validity checks must be represented in Rocq and the extracted checker.
   same receiver-first prefix form before Rocq checking.
 - Future deriving must expand to ordinary impl declarations validated by the
   extracted checker; no parser-only generated acceptance path is allowed.
-
-## Required Checks
-
-For type-system or checker-facing implementation tasks, run:
-
-```sh
-cd rocq && make
-dune build
-sh tests/run.sh
-sh tests/fir/run.sh
-git diff --check
-rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|TODO|DEBUG|idtac" rocq/theories
-```
-
-For docs-only roadmap maintenance, `git diff --check` is sufficient unless the
-edit changes stated behavior or proof obligations. The final marker search must
-not introduce new proof holes or debug leftovers when Rocq files are touched.
-Existing legacy proof-script selector matches should be called out explicitly if
-they remain unrelated to the change.

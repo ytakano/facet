@@ -19982,47 +19982,6 @@ Proof.
   - exact Heval.
 Qed.
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_strict_mixed_component_check_store_safe_at_target_callbacks :
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_prefix_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check
-    Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_component_check_provider_store_safe_at_target_callbacks.
-  - exact Hscope_synthetic.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hprog.
-  - intros env0 fdef Hfamily Hin0.
-    destruct Hfamily as [bounds ->].
-    simpl in Hin0.
-    unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary in Hcomponent_check.
-    eapply forallb_forall in Hcomponent_check; eauto.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_public_store_safe_summary_route :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->

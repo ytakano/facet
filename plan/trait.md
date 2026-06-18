@@ -119,11 +119,10 @@ validity checks must be represented in Rocq and the extracted checker.
   programs, so the bridge must come from a more precise proof route or broader
   checker summaries.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
-  fixture and keeps one ready-check diagnostic runtime theorem, but it is not
-  the active CLI authority and is not connected to the
-  public runtime theorem without extra evidence. Its mixed wrapper preserves
-  ordinary valid coverage but still rejects the direct-call receiver fixture
-  because the direct-ready branch requires the global component gate.
+  fixture, but it is not the active CLI authority and no longer has a
+  retained runtime wrapper theorem. Its mixed wrapper preserves ordinary
+  valid coverage but still rejects the direct-call receiver fixture because
+  the direct-ready branch requires the global component gate.
 - A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
   short and explicit direct-call receiver UFCS safety-gate fixtures and
   preserved the current regression suite except for those two expected-invalid

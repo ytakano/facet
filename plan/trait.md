@@ -38,11 +38,12 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route theorem and assoc-base check-provider helper path used by
-  active public-path proofs. Obsolete active-mixed
+  local-bounds route theorem, no-receiver component-body prefix theorem, and
+  assoc-base check-provider helper path used by active public-path proofs.
+  Obsolete active-mixed
   exact, uncaptured, non-captured, case-split route/runtime, scoped
-  replay/lift, branch, static, derived local-bounds component-check, exact-route local-bounds
-  helper, and component-summary wrapper chains have been pruned.
+  replay/lift, branch, static, derived local-bounds component-check, exact-route local-bounds helper,
+  derived public-callback, and component-summary wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
@@ -54,8 +55,8 @@ validity checks must be represented in Rocq and the extracted checker.
   theorem; retargeting it
   to `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
   from existing public premises, the no-receiver component summary/check
-  provider and per-callee summary/evidence-at facts consumed by the active
-  mixed public corollaries. Receiver-method absence alone does not imply those
+  provider and per-callee summary/evidence-at facts consumed by the retained
+  mixed no-receiver prefix path. Receiver-method absence alone does not imply those
   component routes, so the summary-check path remains diagnostic until that
   derivation is proved without a new public theorem premise.
 - Associated type defaults, equality constraints, and `deriving` are reserved
@@ -68,8 +69,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` by deriving the
      exact-body target, pointwise package-at evidence, and component-check
-     or component-summary provider required by the active-mixed public
-     corollaries, without adding OCaml fallback logic or weakening the public
+     or component-summary provider required by the retained active-mixed
+     no-receiver prefix path, without adding OCaml fallback logic or weakening
+     the public
      theorem with a new premise.
    - Derive the summary-evidence route from the public prefix-route premises,
      or otherwise prove an equivalent public-premise-free lift for the active

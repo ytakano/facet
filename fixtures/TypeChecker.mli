@@ -1475,12 +1475,6 @@ val check_fn_root_shadow_generic_direct_store_safe_summary :
 val check_fn_root_shadow_direct_receiver_method_store_safe_summary :
   global_env -> fn_def -> bool
 
-val check_fn_root_shadow_synthetic_direct_call_ready_summary :
-  global_env -> fn_def -> bool
-
-val check_env_root_shadow_synthetic_direct_call_ready_summary :
-  global_env -> bool
-
 val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary :
   global_env -> fn_def -> bool
 
@@ -1494,12 +1488,6 @@ val check_fn_root_shadow_no_capture_direct_call_component_exact_closure :
   global_env -> fn_def -> bool
 
 val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary :
-  global_env -> bool
-
-val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary :
-  global_env -> fn_def -> bool
-
-val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary :
   global_env -> bool
 
 val check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
@@ -1657,12 +1645,6 @@ val infer_program_env_end2end_assoc_direct_receiver_base_combined :
   global_env -> global_env infer_result
 
 val check_program_env_end2end_assoc_direct_receiver_base_combined :
-  global_env -> bool
-
-val infer_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks :
-  global_env -> global_env infer_result
-
-val check_program_env_end2end_assoc_direct_receiver_base_combined_component_only_summary_ready_checks :
   global_env -> bool
 
 val infer_program_env_end2end_assoc_direct_receiver_base_direct_component :

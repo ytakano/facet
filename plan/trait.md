@@ -40,7 +40,8 @@ validity checks must be represented in Rocq and the extracted checker.
   active mixed endpoint, its retained direct-ready branch helper, the
   local-bounds route theorem, component-summary local-bounds route lemma,
   no-receiver component-body provider bridge,
-  body-summary sidecar-to-Prop bridge, conditional and unconditional
+  body-summary sidecar-to-Prop bridge, direct local-bounds sidecar bridge,
+  conditional and unconditional
   boolean wrappers, extracted no-receiver diagnostic check, and
   public-shaped active-mixed conditional sidecar theorem,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
@@ -156,7 +157,8 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
-  bridge, local-bounds synthetic-summary provider bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
+  bridge, local-bounds synthetic-summary provider bridge, direct
+  body-summary-to-local-bounds boolean bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
   regression with four known local-bounds synthetic body-summary sidecar failures
   pinned to specific inner functions, public-shaped conditional
   sidecar theorem,

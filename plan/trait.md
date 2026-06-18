@@ -77,8 +77,9 @@ validity checks must be represented in Rocq and the extracted checker.
   ready-body route-provider wrappers, ready-body checker-to-route-provider
   wrappers under the remaining summary-to-route premise, pointwise ordinary
   ready-body callee-evidence bridges, ready-body route-package callee-evidence
-  bridges, a ready-body checker-to-package and exact-target provider bridge,
-  ready-body callback-at and local-bounds-family bridges,
+  bridges, ready-body reachable-provider-to-callee-evidence bridges, a
+  ready-body checker-to-package and exact-target provider bridge, ready-body
+  callback-at and local-bounds-family bridges,
   and the end-to-end sidecar provide
   alpha-renamed direct-target callee evidence plus store-safe target arguments.
   The next proof route must consume that synthetic-or-ordinary evidence in
@@ -136,8 +137,9 @@ validity checks must be represented in Rocq and the extracted checker.
      ready-body route-provider wrappers, ready-body checker-to-route-provider
      wrappers under the remaining summary-to-route premise, pointwise ordinary
      ready-body callee-evidence bridges, ready-body route-package callee-evidence
-     bridges, a ready-body checker-to-package and exact-target provider bridge,
-     ready-body callback-at and local-bounds-family bridges,
+     bridges, ready-body reachable-provider-to-callee-evidence bridges, a
+     ready-body checker-to-package and exact-target provider bridge, ready-body
+     callback-at and local-bounds-family bridges,
      and alpha-renamed direct-target bridges,
      so the remaining gap is proof routing from that synthetic-or-ordinary
      evidence to the mixed
@@ -186,16 +188,17 @@ validity checks must be represented in Rocq and the extracted checker.
   provider bridges, active-mixed ready-body route-provider wrappers,
   ready-body checker-to-route-provider wrappers under the remaining
   summary-to-route premise, pointwise ordinary ready-body callee-evidence
-  bridges, ready-body route-package callee-evidence bridges, a ready-body
-  checker-to-package and exact-target provider bridge, ready-body callee helpers,
-  ready-body callback-at and
+  bridges, ready-body route-package callee-evidence bridges, ready-body
+  reachable-provider-to-callee-evidence bridges, a ready-body checker-to-package
+  and exact-target provider bridge, ready-body callee helpers, ready-body
+  callback-at and
   local-bounds-family bridges,
   end-to-end ready-body route-package bridge,
   and assoc-base callback paths. The
-  canonical theorem still lacks the route from
-  synthetic-or-ordinary local-bounds evidence into the mixed no-receiver proof
-  path and the bridge from public premises to the needed provider/check and
-  per-callee summary/evidence-at facts.
+  canonical theorem still lacks the ready-body cleanup/prefix route that
+  consumes synthetic-or-ordinary local-bounds evidence in the mixed no-receiver
+  proof path, plus the final bridge from public premises to the needed
+  provider/check facts.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a
   retained runtime wrapper theorem. Its mixed wrapper preserves ordinary

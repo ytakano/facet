@@ -2537,6 +2537,12 @@ Definition check_env_end2end_direct_receiver_mixed_ready
   negb (check_env_root_shadow_direct_receiver_method_present env) ||
   check_env_end2end_direct_receiver_ready env.
 
+Definition check_env_root_shadow_no_receiver_component_body_summary_provider_check
+    (env : global_env) : bool :=
+  check_env_root_shadow_direct_receiver_method_present env ||
+  check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    env.
+
 Lemma check_env_end2end_direct_receiver_mixed_ready_cases :
   forall env,
     check_env_end2end_direct_receiver_mixed_ready env = true ->

@@ -50,8 +50,8 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds/scoped-package, static non-captured, component-provider/
   local-bounds static, static route, assoc-base static, strict static, and
   branch-evidence non-prefix alias cleanup, strict component-check provider/
-  non-prefix alias cleanup, store-safe evidence provider alias cleanup, and
-  component-only boolean bridges.
+  non-prefix alias cleanup, store-safe evidence provider and branch summary
+  evidence wrapper cleanup, and component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with
   `strict_mixed`, and

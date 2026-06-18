@@ -13066,42 +13066,6 @@ Proof.
 Qed.
 
 
-Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_direct_receiver_method_component_check_scoped_expr_lift :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
-    env_fns_root_shadow_provenance_summary_evidence env' ->
-    env_fns_preservation_ready env' ->
-    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
-      env' = true ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    direct_receiver_method_live_scoped_expr_lift_provider_for_eval env' f ->
-    direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval env' f ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
-    Hprog Hevidence Hready Hdirect_check Hcomponent_check Hinitial Hin Hstore
-    Heval Hlive_expr Hconsumed_expr.
-  assert (Hunique : fn_env_unique_by_name env').
-  { eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
-    exact Hprog. }
-  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_expr_lift;
-    eassumption.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
@@ -13540,43 +13504,6 @@ Proof.
   eapply check_env_root_shadow_synthetic_direct_call_ready_summary_evidence.
   exact Hcheck.
 Qed.
-
-Theorem infer_program_env_end2end_assoc_strict_exact_closure_big_step_safe_checked_initial_ready_with_direct_receiver_method_component_check_scoped_expr_lift :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure env = infer_ok env' ->
-    env_fns_root_shadow_provenance_summary_evidence env' ->
-    env_fns_preservation_ready env' ->
-    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
-      env' = true ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    direct_receiver_method_live_scoped_expr_lift_provider_for_eval env' f ->
-    direct_receiver_method_consumed_scoped_expr_lift_provider_for_eval env' f ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
-    Hprog Hevidence Hready Hdirect_check Hcomponent_check Hinitial Hin Hstore
-    Heval Hlive_expr Hconsumed_expr.
-  assert (Hunique : fn_env_unique_by_name env').
-  { eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
-    exact Hprog. }
-  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_expr_lift;
-    eassumption.
-Qed.
-
 
 Lemma infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base :
   forall env env',

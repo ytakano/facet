@@ -48,8 +48,8 @@ validity checks must be represented in Rocq and the extracted checker.
   obsolete direct-ready summary/provider helper lemmas,
   obsolete local-bounds component-check provider lemmas,
   obsolete active-mixed no-receiver combined-summary diagnostic helpers,
-  obsolete assoc-strict mixed diagnostic helpers, and diagnostic wrapper chains
-  have been pruned.
+  obsolete assoc-strict mixed diagnostic helpers, obsolete scoped-expr-lift
+  runtime wrapper aliases, and diagnostic wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled

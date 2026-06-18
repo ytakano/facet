@@ -41,7 +41,7 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds route theorem, component-summary local-bounds route lemma,
   no-receiver component-body provider bridge,
   body-summary sidecar-to-Prop bridge, conditional and unconditional
-  boolean wrappers, and public-shaped active-mixed sidecar theorem,
+  boolean wrappers, and public-shaped active-mixed conditional sidecar theorem,
   public Prop-provider wrapper, core mixed no-receiver summary-provider
   prefix route, and assoc-base check-provider helper path used by active
   public-path proofs.
@@ -62,8 +62,8 @@ validity checks must be represented in Rocq and the extracted checker.
   they are not active checker authorities because their gates reject either
   broad valid coverage or the direct-call receiver safety-gate fixtures. The
   body-summary sidecar now has a Prop bridge, conditional and unconditional
-  boolean wrappers, and a public-shaped active-mixed runtime theorem with the
-  sidecar as its remaining extra premise,
+  boolean wrappers, and a public-shaped active-mixed runtime theorem whose remaining
+  extra premise is the sidecar check only on the no-receiver branch,
   but remains diagnostic only.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
@@ -78,7 +78,8 @@ validity checks must be represented in Rocq and the extracted checker.
   that gate strengthening was not adopted. The extracted body-summary sidecar
   can now supply the same provider premise for proofs, and the public-shaped
   active-mixed runtime theorem now differs from the canonical theorem only by
-  that sidecar premise. The sidecar is not a checker authority.
+  that conditional no-receiver sidecar premise. The sidecar is not a
+  checker authority.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -92,9 +93,10 @@ validity checks must be represented in Rocq and the extracted checker.
      or component-summary provider required by the retained active-mixed
      no-receiver prefix path, without adding OCaml fallback logic or weakening
      the public theorem with a new premise.
-   - Derive or eliminate the public-shaped theorem's remaining body-summary
-     sidecar premise from public prefix-route premises, or prove an equivalent
-     public-premise-free lift for the active mixed no-receiver branch.
+   - Derive or eliminate the public-shaped theorem's remaining conditional
+     no-receiver body-summary sidecar premise from public prefix-route
+     premises, or prove an equivalent public-premise-free lift for the
+     active mixed no-receiver branch.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
      and the component-only boolean bridge, without requiring Prop-to-bool
@@ -133,8 +135,9 @@ validity checks must be represented in Rocq and the extracted checker.
   to the no-receiver provider/check and per-callee summary/evidence-at facts;
   only the retained direct-ready branch helper, local-bounds route theorem,
   no-receiver component-body provider bridge, body-summary sidecar-to-Prop
-  bridge, boolean wrappers, public-shaped sidecar theorem, public
-  Prop-provider wrapper, core mixed no-receiver summary-provider prefix route, plus the assoc-base check-provider helper path, remain
+  bridge, boolean wrappers, public-shaped conditional sidecar theorem,
+  public Prop-provider wrapper, core mixed no-receiver summary-provider
+  prefix route, plus the assoc-base check-provider helper path, remain
   on that late proof surface.
   Strengthening the active no-receiver gate with the body-summary check
   is known to reject existing valid programs, so the bridge must come from a more precise proof route or broader

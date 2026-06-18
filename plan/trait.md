@@ -38,61 +38,35 @@ validity checks must be represented in Rocq and the extracted checker.
   still targets the strict mixed endpoint.
 - Proof infrastructure for direct-call receivers is concentrated around the
   active mixed endpoint, its retained direct-ready branch helper, the
-  local-bounds route theorem, component-summary local-bounds route lemma,
-  no-receiver component-body provider bridge,
-  body-summary sidecar-to-Prop bridge, direct local-bounds sidecar bridge,
-  conditional and unconditional
-  boolean wrappers, extracted no-receiver diagnostic check, and
-  public-shaped active-mixed conditional sidecar theorem,
-  public Prop-provider wrapper, core mixed no-receiver summary-provider
-  prefix route, and assoc-base check-provider helper path used by active
-  public-path proofs.
-  Obsolete helper chains and wrapper aliases around active-mixed,
-  assoc-strict, receiver-method, assoc-base/direct-receiver-base, scoped-lift,
-  and diagnostic routes have been pruned; the remaining self-only
-  active-mixed compatibility/uniqueness helpers, receiver-method
-  exact-closure and package-at route helpers, the stale broad active-mixed
-  runtime wrapper, redundant mixed no-receiver public wrapper aliases, and dead
-  no-receiver provider-conversion helpers, plus stale synthetic-summary
-  soundness helpers, and single-use direct-ready provider bridge lemmas were
-  also removed.
-- Diagnostic endpoints remain available for the extracted no-receiver body-summary
-  gate, `assoc_direct_receiver_base`,
+  local-bounds route theorem, direct local-bounds sidecar bridge,
+  conditional and unconditional boolean wrappers, extracted no-receiver
+  diagnostic check, public-shaped active-mixed conditional sidecar theorem,
+  core mixed no-receiver summary-provider prefix route, and assoc-base
+  check-provider helper path used by active public-path proofs. Obsolete
+  active-mixed, assoc-strict, receiver-method, diagnostic, broad
+  body-summary-provider, and single-use direct-ready helper detours have been
+  pruned.
+- Diagnostic endpoints remain available for the extracted no-receiver
+  body-summary gate, `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver
   variants. They are useful for proving route fragments and checking sampled
-  fixtures, but their unreferenced runtime wrapper aliases have been pruned and
-  they are not active checker authorities because their gates reject either
-  broad valid coverage or the direct-call receiver safety-gate fixtures. The
-  body-summary sidecar now has a Prop bridge, a local-bounds
-  synthetic-summary provider bridge, conditional and unconditional
-  boolean wrappers, an extracted diagnostic check for the exact no-receiver
-  conditional premise, a CLI diagnostic regression over the current trait/direct valid
-  fixture frontier (100 accepted files: 96 no-receiver diagnostic ok,
-  4 diagnostic fail; 0 report direct-receiver-method-present; the same 96
-  report component-body-summary ok; each failing fixture has one base component-store-safe function and fails
-  only the local-bounds synthetic direct-call-ready summary check for that
-  function (`main` except `hrt_direct_call_unchanged`'s `caller`); the
-  inner failing local-bounds functions are `__facet_local_rec_0_id_local`,
-  `id`, `accept_item`, and `callee`), and public-shaped active-mixed runtime theorems whose remaining extra
-  premise can now be stated either as the extracted diagnostic condition, the
-  body-summary sidecar, or directly as the no-receiver local-bounds
-  synthetic-summary provider,
-  but remains diagnostic only.
+  fixtures, but they are not active checker authorities because their gates
+  reject either broad valid coverage or the direct-call receiver safety-gate
+  fixtures. The no-receiver diagnostic sidecar now feeds the active-mixed
+  runtime theorem through the direct local-bounds provider. Current trait/direct
+  valid frontier: 100 accepted files, 96 no-receiver diagnostic ok, 4 diagnostic
+  fail, and 0 direct-receiver-method-present. The four failures are local-bounds
+  synthetic direct-call-ready summary failures for
+  `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
-  theorem; retargeting it
-  to `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
-  from existing public premises, the no-receiver component summary/check
-  provider and per-callee summary/evidence-at facts consumed by the retained
-  mixed no-receiver prefix path. Receiver-method absence alone does not imply
-  those component routes. A trial that strengthened the active no-receiver gate
-  with the component body-summary check compiled and retargeted the theorem, but
-  rejected broad existing valid coverage with `ErrEndToEndSafetyGateFailed`, so
-  that gate strengthening was not adopted. The extracted body-summary sidecar
-  can now supply the same provider premise for proofs, and the public-shaped
-  active-mixed runtime theorem now differs from the canonical theorem only by
-  that conditional no-receiver sidecar premise. The sidecar is not a
-  checker authority.
+  theorem. Retargeting it to
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` requires deriving,
+  from existing public premises, the no-receiver local-bounds provider and
+  per-callee summary/evidence-at facts consumed by the retained mixed
+  no-receiver prefix path. Receiver-method absence alone does not imply those
+  component routes, and strengthening the active no-receiver gate with the
+  body-summary check is known to reject broad valid coverage.
 - Associated type defaults, equality constraints, and `deriving` are reserved
   for future surface forms. Provisional syntax for them is explicitly rejected
   with parser diagnostics.
@@ -149,25 +123,16 @@ validity checks must be represented in Rocq and the extracted checker.
   helper booleans, have been removed; the base direct-component endpoint
   remains diagnostic proof infrastructure, not an active authority.
 - The active mixed endpoint has routed lemmas for the known summary,
-  exact-body/package, local-bounds, component-summary local-bounds,
-  scoped-package, call-statement, component
+  exact-body/package, local-bounds, scoped-package, call-statement, component
   summary/check, component-body summary, non-captured, no-receiver
-  public Prop-provider wrapper, and assoc-base callback paths. The canonical theorem
-  still lacks the bridge from its public premises
-  to the no-receiver provider/check and per-callee summary/evidence-at facts;
-  only the retained direct-ready branch helper, local-bounds route theorem,
-  no-receiver component-body provider bridge, body-summary sidecar-to-Prop
-  bridge, local-bounds synthetic-summary provider bridge, direct
-  body-summary-to-local-bounds boolean bridge, boolean wrappers, extracted no-receiver diagnostic check, CLI diagnostic
-  regression with four known local-bounds synthetic body-summary sidecar failures
-  pinned to specific inner functions, public-shaped conditional
-  sidecar theorem,
-  public Prop-provider wrapper, core mixed no-receiver summary-provider
-  prefix route, plus the assoc-base check-provider helper path, remain
-  on that late proof surface.
-  Strengthening the active no-receiver gate with the body-summary check
-  is known to reject existing valid programs, so the bridge must come from a more precise proof route or broader
-  checker summaries.
+  local-bounds provider, and assoc-base callback paths. The canonical theorem
+  still lacks the bridge from its public premises to the no-receiver provider/check
+  and per-callee summary/evidence-at facts. The remaining late proof surface is
+  the direct-ready branch helper, local-bounds route theorem, direct
+  body-summary-to-local-bounds boolean bridge, extracted diagnostic check, CLI
+  regression with four known local-bounds synthetic failures, public-shaped
+  conditional sidecar theorem, core mixed no-receiver summary-provider prefix
+  route, and assoc-base check-provider helper path.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a
   retained runtime wrapper theorem. Its mixed wrapper preserves ordinary

@@ -5225,6 +5225,94 @@ Proof.
   exact Hsafe.
 Qed.
 
+Lemma fn_root_shadow_ready_body_summary_evidence_at_of_exact_body_call_route_package_at :
+  forall env fname,
+    store_safe_ready_body_exact_body_call_route_package_at env fname ->
+  forall fdef fcall used used' fname_body args_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    fn_root_shadow_ready_body_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros env fname Hpackage_at fdef fcall used used' fname_body
+    args_body Hin Hname Hrename Htarget.
+  destruct (Hpackage_at fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget) as [Hsummary _].
+  exact Hsummary.
+Qed.
+
+Lemma store_safe_function_value_call_args_of_ready_body_exact_body_call_route_package_at :
+  forall env fname,
+    store_safe_ready_body_exact_body_call_route_package_at env fname ->
+  forall fdef fcall used used' fname_body args_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+Proof.
+  intros env fname Hpackage_at fdef fcall used used' fname_body
+    args_body Hin Hname Hrename Htarget.
+  destruct (Hpackage_at fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget) as [_ Hsafe].
+  exact Hsafe.
+Qed.
+
+Lemma fn_root_shadow_ready_body_summary_evidence_at_of_ready_body_reachable_package_provider_body_call :
+  forall base_env base_fname env fname fdef fcall used used'
+      fname_body args_body,
+    store_safe_ready_body_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    fn_root_shadow_ready_body_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros base_env base_fname env fname fdef fcall used used' fname_body
+    args_body Hprovider Hreachable Hin Hname Hrename Htarget.
+  eapply fn_root_shadow_ready_body_summary_evidence_at_of_exact_body_call_route_package_at.
+  - exact (Hprovider env fname Hreachable).
+  - exact Hin.
+  - exact Hname.
+  - exact Hrename.
+  - exact Htarget.
+Qed.
+
+Lemma store_safe_function_value_call_args_of_ready_body_reachable_package_provider_body_call :
+  forall base_env base_fname env fname fdef fcall used used'
+      fname_body args_body,
+    store_safe_ready_body_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+Proof.
+  intros base_env base_fname env fname fdef fcall used used' fname_body
+    args_body Hprovider Hreachable Hin Hname Hrename Htarget.
+  eapply store_safe_function_value_call_args_of_ready_body_exact_body_call_route_package_at.
+  - exact (Hprovider env fname Hreachable).
+  - exact Hin.
+  - exact Hname.
+  - exact Hrename.
+  - exact Htarget.
+Qed.
+
 Lemma direct_call_callee_body_root_ready_body_evidence_at_of_synthetic_body_call_route_package :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

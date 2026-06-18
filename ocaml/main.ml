@@ -544,9 +544,17 @@ let () =
           List.iter
             (fun local_fn ->
               let (local_fname, _) = local_fn.fn_name in
+              let reason =
+                match direct_call_target_expr local_fn.fn_body with
+                | None -> "no-direct-call-target"
+                | Some _ -> "direct-call-ready-summary-check"
+              in
               Printf.printf
                 "trait-local-bounds-synthetic-summary-failure: %s: %s\n"
-                fname local_fname)
+                fname local_fname;
+              Printf.printf
+                "trait-local-bounds-synthetic-summary-failure-reason: %s: %s: %s\n"
+                fname local_fname reason)
             local_summary_failures
         end)
       component_body_summary_failures;

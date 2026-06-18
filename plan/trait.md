@@ -57,7 +57,10 @@ validity checks must be represented in Rocq and the extracted checker.
   valid frontier: 100 accepted files, 96 no-receiver diagnostic ok, 4 diagnostic
   fail, and 0 direct-receiver-method-present. The four failures are local-bounds
   synthetic direct-call-ready summary failures for
-  `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`.
+  `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`;
+  the split reason is `no-direct-call-target` for all four, so the next proof
+  route must handle preservation-ready ordinary local callees instead of
+  requiring every local callee to have a synthetic direct-call target.
 - The remaining activation gap is proof-side. The canonical public runtime
   theorem still targets the strict mixed endpoint through the public prefix
   theorem. Retargeting it to
@@ -91,7 +94,8 @@ validity checks must be represented in Rocq and the extracted checker.
      function, not direct-receiver-method or base component-summary failures;
      the failing component functions are `main`, `caller`, `main`, and
      `main`, and the inner local-bounds failures are
-     `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`) while
+     `__facet_local_rec_0_id_local`, `id`, `accept_item`, and `callee`, all
+     classified as `no-direct-call-target`) while
      preserving active checker authority.
    - Continue replacing any remaining broad provenance/preservation premises
      with runtime routes that consume prefix evidence, exact-body package facts,
@@ -130,7 +134,8 @@ validity checks must be represented in Rocq and the extracted checker.
   and per-callee summary/evidence-at facts. The remaining late proof surface is
   the direct-ready branch helper, local-bounds route theorem, direct
   body-summary-to-local-bounds boolean bridge, extracted diagnostic check, CLI
-  regression with four known local-bounds synthetic failures, public-shaped
+  regression with four known local-bounds synthetic failures classified as
+  `no-direct-call-target`, public-shaped
   conditional sidecar theorem, core mixed no-receiver summary-provider prefix
   route, and assoc-base check-provider helper path.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver

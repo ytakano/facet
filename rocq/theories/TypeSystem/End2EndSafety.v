@@ -21325,70 +21325,6 @@ Proof.
 Qed.
 
 
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_exact_body_call_route_package_summary_evidence_at_callbacks_prefix :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
-  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
-  eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
-  eval_preserves_root_names_ready_mutual_statement ->
-  eval_preserves_root_keys_named_ready_mutual_statement ->
-  eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_param_scope_roots_ready_mutual_statement ->
-  preservation_ready_expr_static_runtime_named_prefix_statement ->
-  forall env env' f s s' v,
-    infer_program_env_end2end_assoc_direct_receiver_mixed
-      env = infer_ok env' ->
-    (check_env_root_shadow_direct_receiver_method_present env' = false ->
-      forall env0 fname fdef fcall used used' fname_body args_body
-          synthetic_body,
-        In fdef (env_fns env0) ->
-        fn_name fdef = fname ->
-        alpha_rename_fn_def used fdef = (fcall, used') ->
-        direct_call_target_expr (fn_body fcall) =
-          Some (fname_body, args_body, synthetic_body) ->
-        direct_call_target_expr (fn_body fcall) =
-          Some (fname_body, args_body, fn_body fcall)) ->
-    (check_env_root_shadow_direct_receiver_method_present env' = false ->
-      store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement) ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-Proof.
-  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
-    Hprog Hexact_body_when_no_receiver Hbody_package_when_no_receiver
-    Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_store_safe_evidence_at_callbacks.
-  - exact Hsynthetic_route.
-  - exact Hscope_synthetic.
-  - exact Htyping_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hprog.
-  - intros Hno_receiver.
-    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_summary_at_prefix_call_statement_evidence_at.
-    eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_no_scope_prefix.
-    * exact eval_preserves_typing_ready_prefix_mutual.
-    * exact eval_preserves_typing_roots_ready_prefix_mutual.
-    * exact Hroots_ready.
-    * exact Hroot_names.
-    * exact Hroot_keys.
-    * exact Hstatic.
-    * exact Hframe_ready.
-    * exact Hparam_ready.
-    * exact (Hexact_body_when_no_receiver Hno_receiver).
-    * exact (Hbody_package_when_no_receiver Hno_receiver).
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_summary_evidence :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -21467,7 +21403,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
     Hprog Hexact_body_when_no_receiver Hpackage_when_no_receiver Hinitial
     Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_exact_body_call_route_package_summary_evidence_at_callbacks_prefix.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_store_safe_evidence_at_callbacks.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -21476,10 +21412,20 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - exact Hstatic.
   - exact Hprog.
-  - exact Hexact_body_when_no_receiver.
-  - exact Hpackage_when_no_receiver.
+  - intros Hno_receiver.
+    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_summary_at_prefix_call_statement_evidence_at.
+    eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_no_scope_prefix.
+    * exact eval_preserves_typing_ready_prefix_mutual.
+    * exact eval_preserves_typing_roots_ready_prefix_mutual.
+    * exact Hroots_ready.
+    * exact Hroot_names.
+    * exact Hroot_keys.
+    * exact Hstatic.
+    * exact Hframe_ready.
+    * exact Hparam_ready.
+    * exact (Hexact_body_when_no_receiver Hno_receiver).
+    * exact (Hpackage_when_no_receiver Hno_receiver).
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.
@@ -21567,7 +21513,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
     Hprog Hexact_body_when_no_receiver Hpackage_when_no_receiver Hinitial
     Hin Hstore Heval.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_exact_body_call_route_package_summary_evidence_at_callbacks_prefix.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_mixed_branch_store_safe_evidence_at_callbacks.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -21576,11 +21522,21 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - exact Hstatic.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_of_receiver_method_exact_mixed.
     exact Hprog.
-  - exact Hexact_body_when_no_receiver.
-  - exact Hpackage_when_no_receiver.
+  - intros Hno_receiver.
+    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_summary_at_prefix_call_statement_evidence_at.
+    eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_no_scope_prefix.
+    * exact eval_preserves_typing_ready_prefix_mutual.
+    * exact eval_preserves_typing_roots_ready_prefix_mutual.
+    * exact Hroots_ready.
+    * exact Hroot_names.
+    * exact Hroot_keys.
+    * exact Hstatic.
+    * exact Hframe_ready.
+    * exact Hparam_ready.
+    * exact (Hexact_body_when_no_receiver Hno_receiver).
+    * exact (Hpackage_when_no_receiver Hno_receiver).
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

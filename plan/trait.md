@@ -44,7 +44,8 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-ready wrapper, call-statement component-check provider wrapper,
   package-component-check, package-body-summary, scoped-package runtime,
   summary-provider, local-bounds exact-body, component-summary,
-  component-provider, active-mixed branch-merge provider/evidence wrappers, and
+  component-provider, active-mixed branch-merge provider/evidence wrappers,
+  obsolete active-mixed no-receiver combined-summary diagnostic helpers, and
   diagnostic wrapper chains have been pruned.
 - Diagnostic endpoints remain available for `assoc_direct_receiver_base`,
   `assoc_direct_receiver_base_combined`, and assoc strict direct-receiver

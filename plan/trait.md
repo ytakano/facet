@@ -48,7 +48,8 @@ validity checks must be represented in Rocq and the extracted checker.
   cleanup, summary-route cleanup, strict public-route/call-statement wrapper
   cleanup, call-statement, summary-call, exact-body package,
   local-bounds/scoped-package, static non-captured, component-provider/
-  local-bounds static, static route, and assoc-base static non-prefix alias cleanup, and
+  local-bounds static, static route, assoc-base static, and strict static
+  non-prefix alias cleanup, and
   component-only boolean bridges.
   Recent cleanup removed
   broad diagnostic sidecars, renamed legacy strict-endpoint wrappers with

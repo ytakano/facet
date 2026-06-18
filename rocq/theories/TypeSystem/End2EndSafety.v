@@ -12843,6 +12843,49 @@ Proof.
   exact Hbody_check.
 Qed.
 
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_exact_route_package_at_all_sound :
+  forall env bounds,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    forall fname,
+      store_safe_ready_body_exact_body_call_route_package_at
+        (global_env_with_local_bounds env bounds) fname.
+Proof.
+  intros env bounds Hready_check Hcomponent_check fname.
+  eapply component_body_local_bounds_ready_body_summary_provider_exact_route_package_at_all.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
+    exact Hready_check.
+  - exact Hcomponent_check.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_reachable_package_provider_sound :
+  forall env bounds base_fname,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    store_safe_ready_body_exact_body_call_route_reachable_package_provider
+      (global_env_with_local_bounds env bounds) base_fname.
+Proof.
+  intros env bounds base_fname Hready_check Hcomponent_check env0 fname
+    Hreachable.
+  pose proof
+    (store_safe_ready_body_exact_body_call_route_reachable_local_bounds_family
+      (global_env_with_local_bounds env bounds) base_fname env0 fname
+      Hreachable) as Hfamily.
+  destruct Hfamily as [bounds0 ->].
+  change (store_safe_ready_body_exact_body_call_route_package_at
+    (global_env_with_local_bounds env bounds0) fname).
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_exact_route_package_at_all_sound;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_synthetic_summary_check_provider_route :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_root_names_ready_mutual_statement ->

@@ -124,11 +124,9 @@ validity checks must be represented in Rocq and the extracted checker.
   preserved the current regression suite except for those two expected-invalid
   flips. The rejected broad and direct-component ready-check diagnostics have
   been removed.
-  `base_combined_component_only_summary_ready_checks` remains because it accepts
-  the sampled cases and has a runtime theorem under explicit
-  provenance/preservation evidence. It is still diagnostic because the canonical
-  public premises do not yet imply the body-summary check or the needed
-  per-callee evidence.
+  `base_combined_component_only_summary_ready_checks` remains only as diagnostic
+  runtime evidence under explicit provenance/preservation premises; it is no
+  longer on the active public-path proof surface.
 
 ## Key Decisions
 

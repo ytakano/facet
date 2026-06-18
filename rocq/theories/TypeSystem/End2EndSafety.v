@@ -614,30 +614,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma infer_program_env_end2end_assoc_direct_receiver_base_combined_unique_by_name :
-  forall env env',
-    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
-      infer_ok env' ->
-    fn_env_unique_by_name env'.
-Proof.
-  intros env env' Hprog.
-  pose proof
-    (infer_program_env_end2end_assoc_direct_receiver_base_combined_base
-      env env' Hprog) as Hbase.
-  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hbase.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-    try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
-    eqn:Helab; try discriminate.
-  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
-              env_elab (env_fns env_elab)) as [[] | err]
-    eqn:Hfns; try discriminate.
-  injection Hbase as <-.
-  apply andb_true_iff in Hunique_global as [Hunique_top _].
-  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-Qed.
-
 Theorem infer_program_env_end2end_assoc_direct_receiver_base_combined_sound :
   forall env env' f,
     infer_program_env_end2end_assoc_direct_receiver_base_combined env =

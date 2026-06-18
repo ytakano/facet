@@ -501,17 +501,33 @@ let () =
                checked_env f))
         checked_env.env_fns
     in
+    let component_store_safe_summary_functions =
+      List.filter
+        (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+           checked_env)
+        checked_env.env_fns
+    in
     print_gate "trait-direct-receiver-method-present"
       (check_env_root_shadow_direct_receiver_method_present checked_env);
     print_gate "trait-component-body-summary"
       (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
          checked_env);
+    Printf.printf "trait-component-store-safe-summary-functions: %d\n"
+      (List.length component_store_safe_summary_functions);
     Printf.printf "trait-component-body-summary-failures: %d\n"
       (List.length component_body_summary_failures);
     List.iter
       (fun f ->
         let (fname, _) = f.fn_name in
-        Printf.printf "trait-component-body-summary-failure: %s\n" fname)
+        Printf.printf "trait-component-body-summary-failure: %s\n" fname;
+        let reason =
+          if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+               checked_env f
+          then "local-bounds-synthetic-direct-call-ready-summary"
+          else "component-store-safe-summary"
+        in
+        Printf.printf "trait-component-body-summary-failure-reason: %s: %s\n"
+          fname reason)
       component_body_summary_failures;
     print_gate "trait-no-receiver-body-summary"
       (check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env)

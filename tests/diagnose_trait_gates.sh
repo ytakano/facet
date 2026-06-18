@@ -9,7 +9,9 @@ expected_fail=$(mktemp)
 actual_fail=$(mktemp)
 expected_component_fail=$(mktemp)
 actual_component_fail=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\"" EXIT
+expected_component_reason=$(mktemp)
+actual_component_reason=$(mktemp)
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -26,6 +28,13 @@ printf "%s\n" \
   tests/valid/trait/assoc_projection_call_arg_compat.facet:main \
   tests/valid/type_safety_ready_gap/direct_call.facet:main \
   >"$expected_component_fail"
+
+printf "%s\n" \
+  "tests/valid/function/local_let_rec_direct_call.facet:main: local-bounds-synthetic-direct-call-ready-summary" \
+  "tests/valid/lifetime/hrt_direct_call_unchanged.facet:caller: local-bounds-synthetic-direct-call-ready-summary" \
+  "tests/valid/trait/assoc_projection_call_arg_compat.facet:main: local-bounds-synthetic-direct-call-ready-summary" \
+  "tests/valid/type_safety_ready_gap/direct_call.facet:main: local-bounds-synthetic-direct-call-ready-summary" \
+  >"$expected_component_reason"
 
 total=0
 ok_count=0
@@ -69,6 +78,19 @@ while IFS= read -r file; do
         ;;
     esac
 
+    component_store_safe_line=$(grep -E "^trait-component-store-safe-summary-functions: [0-9][0-9]*$" "$tmp" || true)
+    case "$component_store_safe_line" in
+      "trait-component-store-safe-summary-functions: "*)
+        component_store_safe_functions=${component_store_safe_line##*: }
+        ;;
+      *)
+        printf "FAIL --diagnose-trait-gates %s: missing or invalid trait-component-store-safe-summary-functions line\n" "$file"
+        cat "$tmp"
+        status=1
+        component_store_safe_functions=0
+        ;;
+    esac
+
     component_failures_line=$(grep -E "^trait-component-body-summary-failures: [0-9][0-9]*$" "$tmp" || true)
     case "$component_failures_line" in
       "trait-component-body-summary-failures: "*)
@@ -81,13 +103,33 @@ while IFS= read -r file; do
         component_failures=0
         ;;
     esac
+    if [ "$component_failures" -gt "$component_store_safe_functions" ]; then
+      printf "FAIL --diagnose-trait-gates %s: component failures %s exceeded base component-summary functions %s\n" \
+        "$file" "$component_failures" "$component_store_safe_functions"
+      cat "$tmp"
+      status=1
+    fi
     component_failure_detail_count=$(grep -c "^trait-component-body-summary-failure: " "$tmp" || true)
+    component_failure_reason_count=$(grep -c "^trait-component-body-summary-failure-reason: " "$tmp" || true)
     if [ "$component_failures" -ne "$component_failure_detail_count" ]; then
       printf "FAIL --diagnose-trait-gates %s: component failure count %s did not match %s detail lines\n" \
         "$file" "$component_failures" "$component_failure_detail_count"
       cat "$tmp"
       status=1
     fi
+    if [ "$component_failures" -ne "$component_failure_reason_count" ]; then
+      printf "FAIL --diagnose-trait-gates %s: component failure count %s did not match %s reason lines\n" \
+        "$file" "$component_failures" "$component_failure_reason_count"
+      cat "$tmp"
+      status=1
+    fi
+    invalid_component_reason_count=$(grep -Ev "^trait-component-body-summary-failure-reason: [^:][^:]*: (local-bounds-synthetic-direct-call-ready-summary|component-store-safe-summary)$" "$tmp" | grep -c "^trait-component-body-summary-failure-reason: " || true)
+    if [ "$invalid_component_reason_count" -ne 0 ]; then
+      printf "FAIL --diagnose-trait-gates %s: invalid component failure reason line\n" "$file"
+      cat "$tmp"
+      status=1
+    fi
+
     case "$component_line" in
       "trait-component-body-summary: ok")
         if [ "$component_failures" -ne 0 ]; then
@@ -104,6 +146,7 @@ while IFS= read -r file; do
           status=1
         fi
         sed -n "s^trait-component-body-summary-failure: ^$file:^p" "$tmp" >>"$actual_component_fail"
+        sed -n "s^trait-component-body-summary-failure-reason: ^$file:^p" "$tmp" >>"$actual_component_reason"
         ;;
     esac
 
@@ -138,6 +181,12 @@ fi
 if ! diff -u "$expected_component_fail" "$actual_component_fail" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: component body-summary failure details changed\n"
   diff -u "$expected_component_fail" "$actual_component_fail" || true
+  status=1
+fi
+
+if ! diff -u "$expected_component_reason" "$actual_component_reason" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: component body-summary failure reasons changed\n"
+  diff -u "$expected_component_reason" "$actual_component_reason" || true
   status=1
 fi
 

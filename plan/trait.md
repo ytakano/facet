@@ -72,8 +72,9 @@ validity checks must be represented in Rocq and the extracted checker.
   reachable-provider, and reachable local-bounds-family projections,
   ready-body all-components package-at, checker-to-reachable-provider,
   reachable exact-target-provider adapters, ready-body exact-target
-  body-step adapters, a ready-body checker-to-package and exact-target
-  provider bridge, ready-body callback-at and local-bounds-family bridges,
+  body-step adapters, ready-body prefix-family hooks and synthetic-hook
+  conversions, a ready-body checker-to-package and exact-target provider
+  bridge, ready-body callback-at and local-bounds-family bridges,
   and the end-to-end sidecar provide
   alpha-renamed direct-target callee evidence plus store-safe target arguments.
   The next proof route must consume that synthetic-or-ordinary evidence in
@@ -126,8 +127,9 @@ validity checks must be represented in Rocq and the extracted checker.
      reachable-provider, and reachable local-bounds-family projections,
      ready-body all-components package-at, checker-to-reachable-provider,
      reachable exact-target-provider adapters, ready-body exact-target
-     body-step adapters, a ready-body checker-to-package and exact-target
-     provider bridge, ready-body callback-at and local-bounds-family bridges,
+     body-step adapters, ready-body prefix-family hooks and synthetic-hook
+     conversions, a ready-body checker-to-package and exact-target provider
+     bridge, ready-body callback-at and local-bounds-family bridges,
      and alpha-renamed direct-target bridges,
      so the remaining gap is proof routing from that synthetic-or-ordinary
      evidence to the mixed
@@ -172,7 +174,8 @@ validity checks must be represented in Rocq and the extracted checker.
   helpers, package-at and reachable-provider projections, ready-body
   all-components package-at, checker-to-reachable-provider, reachable
   exact-target-provider adapters, ready-body exact-target body-step
-  adapters, a ready-body checker-to-package and exact-target provider bridge,
+  adapters, ready-body prefix-family hooks and synthetic-hook conversions,
+  a ready-body checker-to-package and exact-target provider bridge,
   ready-body callee helpers, ready-body callback-at and
   local-bounds-family bridges,
   end-to-end ready-body route-package bridge,

@@ -47,6 +47,7 @@ validity checks must be represented in Rocq and the extracted checker.
   component-provider, active-mixed branch-merge provider/evidence wrappers,
   obsolete direct-ready summary/provider helper lemmas,
   obsolete local-bounds component-check provider lemmas,
+  obsolete active-mixed direct-callee/local-bounds helper lemmas,
   obsolete active-mixed no-receiver combined-summary diagnostic helpers,
   obsolete active-mixed combined/local-bounds and non-captured evidence helper
   chains, obsolete assoc-strict mixed diagnostic helpers, obsolete

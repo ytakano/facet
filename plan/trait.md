@@ -46,20 +46,23 @@ validity checks must be represented in Rocq and the extracted checker.
   cleanup provider path, there is an active-endpoint constructor from the
   exact-body-call route package, and the summary-to-route conversion is named as
   `mixed_ready_body_or_narrow_summary_provider_route_bridge`. That bridge now has
-  a constructor from the existing synthetic and ordinary-shadow route packages.
+  a constructor from the existing synthetic and ordinary-shadow route packages,
+  and there is a compiled active-endpoint public prefix theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge`.
 
 ## Remaining Tasks
 
-1. Retarget the public runtime theorem.
+1. Retarget the required public runtime theorem.
    - Discharge the synthetic-ready branch route required by the
      summary-to-route bridge without relying on recursive synthetic-only
      evidence.
-   - Replace the remaining public theorem target
+   - Move the required theorem name
+     `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
-     with `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+     to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Keep the theorem premises no stronger than the current public preservation
-     packages; do not add public proof obligations merely to make the retarget
-     compile.
+     packages; the additive summary-bridge prefix theorem is only an intermediate
+     route until the bridge dependency is closed.
 
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
@@ -85,13 +88,14 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- The public runtime theorem still has not been retargeted to the active
+- The required public runtime theorem still has not been retargeted to the active
   endpoint. The cleanup side is wired through the active wrapper, an
-  exact-body-call package constructor exists for the active endpoint, and the
-  summary-to-route bridge has a constructor from existing route packages. The
-  remaining proof target is discharging the synthetic-ready route package without
-  assuming recursive synthetic-only evidence where the active certificate is
-  mixed per callee.
+  exact-body-call package constructor exists for the active endpoint, the
+  summary-to-route bridge has a constructor from existing route packages, and an
+  additive active-endpoint prefix theorem compiles with that bridge as an
+  explicit premise. The remaining proof target is discharging the synthetic-ready
+  route package without assuming recursive synthetic-only evidence where the
+  active certificate is mixed per callee.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

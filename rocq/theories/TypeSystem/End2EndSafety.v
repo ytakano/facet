@@ -12933,6 +12933,21 @@ Proof.
     eassumption.
 Qed.
 
+Lemma shadow_summary_local_bounds_family_route_bridge_of_ready_body_route_bridge :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_route_bridge ->
+  shadow_summary_local_bounds_family_route_bridge.
+Proof.
+  intros Hroot_names Hroot_keys Hready_bridge base Hsummary.
+  eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_ready_body_in_local_bounds_family.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply Hready_bridge.
+    eapply env_fns_root_shadow_ready_body_summary_evidence_of_summary.
+    exact Hsummary.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_route_provider_of_summary_provider :
   ready_body_summary_local_bounds_family_route_bridge ->
   forall env,
@@ -15432,7 +15447,9 @@ Proof.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
-  shadow_summary_local_bounds_family_route_bridge ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -15440,9 +15457,11 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route
       env' = true ->
     component_body_local_bounds_shadow_summary_route_provider_in_env env'.
 Proof.
-  intros Hshadow_bridge env env' Hprog Hcombined_check.
+  intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
+    Hcombined_check.
   eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
-  - exact Hshadow_bridge.
+  - eapply shadow_summary_local_bounds_family_route_bridge_of_ready_body_route_bridge;
+      eassumption.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
       eassumption.
 Qed.
@@ -15982,7 +16001,7 @@ Qed.
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_synthetic_route_provider :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
-  shadow_summary_local_bounds_family_route_bridge ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -16007,7 +16026,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
       strict_exact_closure_component_body_store_safe_callback_at_provider
         env' f_component).
 Proof.
-  intros Hroot_names Hroot_keys Hshadow_bridge env env' Hprog
+  intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
     Hcombined_check Hno_receiver Hsynthetic_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_mixed_routes.
   - exact Hroot_names.
@@ -16124,7 +16143,6 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   ready_body_summary_local_bounds_family_route_bridge ->
-  shadow_summary_local_bounds_family_route_bridge ->
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -16143,8 +16161,8 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
       strict_exact_closure_component_body_store_safe_callback_at_provider
         env' f_component).
 Proof.
-  intros Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env'
-    Hprog Hcombined_check Hno_receiver.
+  intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
+    Hcombined_check Hno_receiver.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_mixed_routes.
   - exact Hroot_names.
   - exact Hroot_keys.
@@ -16161,7 +16179,6 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   ready_body_summary_local_bounds_family_route_bridge ->
-  shadow_summary_local_bounds_family_route_bridge ->
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -16181,8 +16198,8 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
       strict_exact_closure_component_body_store_safe_callback_at_provider
         env' f_component).
 Proof.
-  intros Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env'
-    Hprog Hready_body_check Hno_receiver Hshadow_summary.
+  intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
+    Hready_body_check Hno_receiver Hshadow_summary.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes.
   - exact Hroot_names.
   - exact Hroot_keys.
@@ -16191,8 +16208,10 @@ Proof.
   - exact Hno_receiver.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
       eassumption.
-  - eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary;
-      eassumption.
+  - eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
+    + eapply shadow_summary_local_bounds_family_route_bridge_of_ready_body_route_bridge;
+        eassumption.
+    + exact Hshadow_summary.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_exact_route_package_at_all_of_no_receiver_component_ready_body_summary_provider_check :
@@ -16717,7 +16736,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  shadow_summary_local_bounds_family_route_bridge ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -16737,7 +16756,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hshadow_bridge env env'
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env env'
     f s s' v Hprog Hlocal_shadow_check
     Hsynthetic_provider_when_no_receiver Hinitial Hin Hstore Heval.
   destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
@@ -16754,8 +16773,10 @@ Proof.
       - eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
           eassumption.
       - exact (Hsynthetic_provider_when_no_receiver Hno_receiver).
-      - eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary;
-          eassumption. }
+      - eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
+        + eapply shadow_summary_local_bounds_family_route_bridge_of_ready_body_route_bridge;
+            eassumption.
+        + exact Hshadow_summary. }
     assert (Hcombined_check :
       check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
         env' = true).
@@ -16908,7 +16929,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  shadow_summary_local_bounds_family_route_bridge ->
+  ready_body_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -16928,7 +16949,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hshadow_bridge env env'
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env env'
     f s s' v Hprog Hcombined_check Hsynthetic_provider_when_no_receiver
     Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider.
@@ -16944,7 +16965,7 @@ Proof.
   - intros Hno_receiver.
     pose proof
       (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_synthetic_route_provider
-        Hroot_names Hroot_keys Hshadow_bridge env env' Hprog Hcombined_check
+        Hroot_names Hroot_keys Hsummary_to_route env env' Hprog Hcombined_check
         Hno_receiver (Hsynthetic_provider_when_no_receiver Hno_receiver)) as
         (_Hsummary_provider & Hroute_provider & _Hcallback_provider).
     exact Hroute_provider.
@@ -17015,7 +17036,6 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   ready_body_summary_local_bounds_family_route_bridge ->
-  shadow_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -17029,9 +17049,9 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
-    Hshadow_bridge env env' f s s' v Hprog Hready_body_provider_check
-    Hshadow_summary Hinitial Hin Hstore Heval.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env
+    env' f s s' v Hprog Hready_body_provider_check Hshadow_summary Hinitial
+    Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -17045,7 +17065,7 @@ Proof.
   - intros Hno_receiver.
     pose proof
       (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_and_shadow_summary_bridge
-        Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env' Hprog
+        Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
         Hready_body_provider_check Hno_receiver Hshadow_summary) as
         (_Hsummary_provider & Hroute_provider & _Hcallback_provider).
     exact Hroute_provider.
@@ -17065,7 +17085,6 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   ready_body_summary_local_bounds_family_route_bridge ->
-  shadow_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -17078,9 +17097,8 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
-    Hshadow_bridge env env' f s s' v Hprog Hcombined_check Hinitial Hin
-    Hstore Heval.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env
+    env' f s s' v Hprog Hcombined_check Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -17094,7 +17112,7 @@ Proof.
   - intros Hno_receiver.
     pose proof
       (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
-        Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env' Hprog
+        Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
         Hcombined_check Hno_receiver) as
         (_Hsummary_provider & Hroute_provider & _Hcallback_provider).
     exact Hroute_provider.
@@ -17114,7 +17132,6 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   ready_body_summary_local_bounds_family_route_bridge ->
-  shadow_summary_local_bounds_family_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -17129,9 +17146,9 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
-    Hshadow_bridge env env' f s s' v Hprog Hready_body_provider_check
-    Hprov_check Hpres_check Hinitial Hin Hstore Heval.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env
+    env' f s s' v Hprog Hready_body_provider_check Hprov_check Hpres_check
+    Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_diagnostic.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -17142,7 +17159,6 @@ Proof.
   - exact Hframe_ready.
   - exact Hparam_ready.
   - exact Hsummary_to_route.
-  - exact Hshadow_bridge.
   - exact Hprog.
   - eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_of_checks;
       eassumption.

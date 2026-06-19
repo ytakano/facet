@@ -666,6 +666,25 @@ Proof.
     exact Hevidence.
 Qed.
 
+Lemma eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_ready_body_in_env :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros Hroot_names Hroot_keys env Hready s fname args s' v n_call Heval
+    Hheight Ω n R Σ T Σ' R' roots Hsafe_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Htyped Hunique Hsummary Hevidence.
+  eapply Hready; try eassumption.
+  - eapply fn_root_shadow_ready_body_summary_evidence_at_of_summary_at.
+    exact Hsummary.
+  - eapply direct_call_callee_body_root_ready_body_evidence_at_of_shadow_summary_at;
+      eassumption.
+Qed.
+
 Definition global_env_local_bounds_family
     (base env : global_env) : Prop :=
   exists bounds, env = global_env_with_local_bounds base bounds.
@@ -815,6 +834,21 @@ Proof.
   intros base Hready.
   eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_ready_body_in_env_family.
   exact Hready.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_ready_body_in_local_bounds_family :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base,
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Hroot_names Hroot_keys base Hready env Henv.
+  eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_ready_body_in_env;
+    try eassumption.
+  eapply Hready. exact Henv.
 Qed.
 
 

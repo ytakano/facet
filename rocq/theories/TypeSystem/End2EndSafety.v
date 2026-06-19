@@ -18120,6 +18120,32 @@ Proof.
 Qed.
 
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_cleanup_callback_provider_of_statement_when_no_receiver :
+  forall env,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_in_env
+      env.
+Proof.
+  intros env Hcleanup _Hno_receiver.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_of_statement.
+  exact Hcleanup.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_value_callback_provider_of_cleanup_callback_provider_when_no_receiver :
+  forall env,
+    (check_env_root_shadow_direct_receiver_method_present env = false ->
+      component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_in_env
+        env) ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env.
+Proof.
+  intros env Hcleanup_provider Hno_receiver.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_cleanup_callback_provider.
+  exact (Hcleanup_provider Hno_receiver).
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_value_cleanup_bridge :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

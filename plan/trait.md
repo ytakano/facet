@@ -68,8 +68,8 @@ validity checks must be represented in Rocq and the extracted checker.
   lemmas for the synthetic and ordinary halves, instead of separate route
   callbacks. A reusable constructor derives the ordinary half from the existing
   provenance-ready route package. The target height-indexed mixed route shape is
-  now named in Rocq with statement/family adapters and the closure-target summary
-  premise needed by the narrow branch. The active provider bridges to its
+  now named in Rocq as a value-safety route, with statement/family adapters and
+  the closure-target summary premise needed by the narrow branch. The active provider bridges to its
   lookup-indexed mixed evidence-at predicate, and a direct-call `typed_env_roots` inversion lemma exposes the
   callee needed for dispatch. Component-local, env/root, and endpoint-local safety now have helpers
   that consume this mixed route interface directly, and a provider constructor
@@ -125,7 +125,7 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic half of that bundle derived from the active mixed certificate.
   The existing synthetic route theorem requires all-recursive synthetic evidence,
   which is stronger than the active mixed certificate. The replacement
-  height-indexed mixed route interface, statement/family adapters,
+  height-indexed mixed value-safety route interface, statement/family adapters,
   provider-to-evidence bridge, direct call typing inversion lemma,
   component/env-root/endpoint consumer helpers, and route-provider constructor
   are now defined; the interface includes closure-target summary because the

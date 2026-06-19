@@ -12737,13 +12737,7 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_sum
         roots ->
       fn_env_unique_by_name env ->
       fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname ->
-      store_typed_prefix env s' Sigma' /\
-      value_has_type env s' v T /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      value_roots_within roots v /\
-      store_no_shadow s' /\
-      root_env_no_shadow R'.
+      value_has_type env s' v T.
 
 Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
     (env_family : global_env -> Prop) : Prop :=
@@ -13522,7 +13516,7 @@ Proof.
       eassumption. }
   destruct (direct_call_eval_height_exists body_env s (ECall fname args)
     s' v Heval_call) as [n_call Hheight_call].
-  destruct (Hmixed_route body_env
+  pose proof (Hmixed_route body_env
               (global_env_local_bounds_family_base body_env)
               s fname args s' v n_call Heval_call Hheight_call
               (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
@@ -13530,8 +13524,7 @@ Proof.
               (sctx_of_ctx Gamma_out) R_body roots_body Hsafe_args_body
               Hstore_body_prefix Hroots Hshadow Hrn Hnamed Hkeys
               Hsummary_store_body_env Htyped_call Hunique_body Hmixed_at)
-    as [_Hstore_body_prefix' [Hv_body [_Hpres_body [_Hroots_body
-        [_Hvroots_body [_Hshadow_body _Hrn_body]]]]]].
+    as Hv_body.
   eapply VHT_Compatible.
   - subst body_env.
     eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.

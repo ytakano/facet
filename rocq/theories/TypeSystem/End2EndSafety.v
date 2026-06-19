@@ -13087,6 +13087,21 @@ Proof.
       eassumption.
 Qed.
 
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_of_synthetic_and_shadow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_of_route.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_and_shadow_routes;
+    eassumption.
+Qed.
+
 Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

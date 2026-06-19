@@ -37,10 +37,11 @@ validity checks must be represented in Rocq and the extracted checker.
   route-package/exact-target and callback adapters, synthetic exact-body route
   package adapters from component-local synthetic summaries, no-receiver
   synthetic route-package wrappers from the body-summary diagnostic check,
-  active-mixed bridges exposing the pointwise component-check provider for
-  direct-ready/direct-receiver-present branches plus an explicit no-receiver-or
-  component-provider case split, a bundled ready-body summary+route adapter from
-  the ready-body check plus synthetic and shadow routes, and combined no-receiver
+  active-mixed bridges exposing the pointwise component-check provider and
+  provenance/preservation checks for direct-ready/direct-receiver-present
+  branches plus explicit no-receiver-or-provider case splits, a bundled
+  ready-body summary+route adapter from the ready-body check plus synthetic and
+  shadow routes, and combined no-receiver
   diagnostic adapters for ready-body, ready-body summary+route, synthetic,
   callback, store-callback, and ready-body route-package providers, with
   route-package providers available from both the plain ready-body and stricter
@@ -65,10 +66,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Promote the ready-body no-receiver diagnostic route from diagnostic-only
      proof plumbing to the public runtime theorem by deriving its synthetic and
      ordinary route providers from public premises.
-   - Prove the ordinary shadow-summary local-bounds route bridge itself, expose
-     the needed provenance/preservation checks from the active checker premises,
-     then remove the remaining abstract ready-body route bridge from the public
-     wiring without requiring Prop-to-bool completeness for component summaries.
+   - Prove the ordinary shadow-summary local-bounds route bridge itself, then
+     connect the active checker's exposed direct-branch checks and no-receiver
+     provider facts so the public theorem no longer needs the abstract ready-body
+     route bridge or Prop-to-bool completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -90,9 +91,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` still needs proof-side
-  evidence for the mixed no-receiver callback path. The active endpoint accepts
-  broad valid coverage, but it does not expose enough provenance/preservation
-  facts to derive the combined shadow-check diagnostic beyond 17/100 files.
+  evidence for the mixed no-receiver callback path. The active endpoint now
+  exposes provenance/preservation checks on direct-ready/direct-receiver-present
+  branches, but the no-receiver branch still needs route providers derived from
+  public premises rather than diagnostic-only shadow checks.
 - The ordinary shadow-summary local-bounds route bridge is still unproved.
   Existing lower-level route lemmas can consume shadow-route evidence or combine
   already-provided synthetic and shadow routes, but they do not construct the

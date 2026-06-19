@@ -14265,6 +14265,20 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_checks_when_direct_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    check_env_root_shadow_provenance_summary env' = true /\
+    check_env_preservation_ready env' = true.
+Proof.
+  intros env env' _Hprog Hdirect_ready.
+  destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
+    as (Hprov_check & Hpres_check & _Hdirect_check & _Hcomponent_env_check).
+  split; assumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_receiver_present :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -14280,6 +14294,22 @@ Proof.
               env env' Hprog) as [Hno_receiver | Hdirect_ready].
   - rewrite Hpresent in Hno_receiver. discriminate.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_ready;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_checks_when_direct_receiver_present :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = true ->
+    check_env_root_shadow_provenance_summary env' = true /\
+    check_env_preservation_ready env' = true.
+Proof.
+  intros env env' Hprog Hpresent.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+              env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - rewrite Hpresent in Hno_receiver. discriminate.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_checks_when_direct_ready;
       eassumption.
 Qed.
 
@@ -14299,6 +14329,23 @@ Proof.
   - left. exact Hno_receiver.
   - right.
     eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_ready;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_checks_cases :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false \/
+    (check_env_root_shadow_provenance_summary env' = true /\
+     check_env_preservation_ready env' = true).
+Proof.
+  intros env env' Hprog.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+              env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - left. exact Hno_receiver.
+  - right.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_checks_when_direct_ready;
       eassumption.
 Qed.
 

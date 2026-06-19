@@ -19581,6 +19581,80 @@ Proof.
     eassumption.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_synthetic_shadow_summary_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      env fname) ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_at_all.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_prefix_statement_and_synthetic_shadow_summary_at_all.
+    + exact Hsynthetic_route.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hsummary_at_all.
+    + intros env0.
+      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact eval_preserves_typing_roots_ready_prefix_mutual.
+      * exact Hparam_ready.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_shadow_summary_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      env fname) ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_at_all.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_synthetic_shadow_summary_at_all;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

@@ -41,16 +41,19 @@ validity checks must be represented in Rocq and the extracted checker.
   consumed by compiled runtime helpers at the exact component-local callee lookup,
   by a boolean-preserving captured/component env safety theorem, and by the active
   direct-receiver mixed diagnostic theorem. The certificate is now enforced by
-  the active extracted endpoint without changing the accepted regression frontier.
-  The remaining proof work is to retarget the public theorem.
+  the active extracted endpoint without changing the accepted regression frontier,
+  and an active-endpoint safety wrapper obtains that certificate directly from
+  the endpoint. The remaining proof work is to close the route-provider bridge
+  needed by the public theorem.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
+   - Prove or reuse a no-receiver route-provider bridge that supplies the
+     synthetic and ordinary shadow local-bounds routes required by the
+     active-endpoint mixed safety wrapper without adding public theorem premises.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed`, using the endpoint's
-     promoted per-local certificate check and existing mixed diagnostic/runtime
-     helpers.
+     `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active
      endpoint accepts them. Keep existing direct-call receiver safety-gate tests
      invalid until that switch lands.
@@ -72,9 +75,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  active endpoint now exposes the per-local certificate check, but the public
-  theorem still needs to connect that accepted endpoint to the compiled mixed
-  diagnostic/runtime route without adding handwritten OCaml fallback logic.
+  active endpoint now exposes the per-local certificate check and has a wrapper
+  safety theorem, but the public theorem still needs a derivation of the required
+  no-receiver local-bounds route providers from existing public preservation
+  assumptions.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

@@ -21,6 +21,12 @@ Definition callee_body_root_shadow_store_safe_narrow_summary
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition env_fns_root_shadow_store_safe_narrow_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef.
+
 Lemma store_safe_function_value_call_arg_global_env_with_local_bounds :
   forall env bounds arg,
     store_safe_function_value_call_arg env arg ->
@@ -904,6 +910,20 @@ Proof.
   apply expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
   - exact Hunique.
   - exact Hexpr.
+Qed.
+
+Lemma env_fns_root_shadow_store_safe_narrow_summary_evidence_global_env_with_local_bounds :
+  forall env bounds,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_store_safe_narrow_summary_evidence env ->
+    env_fns_root_shadow_store_safe_narrow_summary_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hunique Hsummary fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  eapply callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
+  - exact Hunique.
+  - eapply Hsummary. exact Hlookup.
 Qed.
 
 

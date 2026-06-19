@@ -12662,6 +12662,26 @@ Definition component_body_local_bounds_shadow_summary_route_provider_in_env
     eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_narrow_summary_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    env_fns_root_shadow_store_safe_narrow_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
+Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_store_safe_narrow_summary_evidence env ->
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hunique Hsummary f_component _Hin_component _Hcomponent_check.
+  eapply env_fns_root_shadow_store_safe_narrow_summary_evidence_global_env_with_local_bounds;
+    eassumption.
+Qed.
+
 Definition shadow_summary_local_bounds_family_route_bridge : Prop :=
   forall base,
     env_fns_root_shadow_summary_evidence base ->

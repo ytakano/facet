@@ -59,7 +59,9 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint runtime theorems now expose either the store-safe or plain per-target
   synthetic prefix route as the only extra proof premise. The named
   summary-provider route bridge also has constructors from the store-safe and
-  plain per-target synthetic routes plus the ordinary-shadow route family.
+  plain per-target synthetic routes plus the ordinary-shadow route family, and a
+  compiled constructor from the public synthetic prefix theorem when all-target
+  synthetic summary evidence is available.
 
 ## Remaining Tasks
 
@@ -114,8 +116,12 @@ validity checks must be represented in Rocq and the extracted checker.
   intermediate mixed-disjunction bridge, named summary-provider bridge,
   value/cleanup bridge constructor, and active-endpoint runtime theorems now only
   require the plain per-target synthetic prefix route for the synthetic branch.
-  The remaining proof target is deriving that route from the active mixed
-  certificate without assuming recursive synthetic-only evidence.
+  A compiled bridge from the public synthetic prefix theorem confirms the
+  remaining gap precisely: the existing lift still needs all-target synthetic
+  summary evidence, while the active mixed certificate only gives evidence for
+  the actual callee branch. The remaining proof target is deriving a branch-local
+  synthetic route, or changing the route shape to consume branch-local evidence
+  directly, without assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

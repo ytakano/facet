@@ -13975,6 +13975,27 @@ Proof.
   - exact Hshadow_route.
 Qed.
 
+Lemma mixed_ready_body_or_narrow_summary_provider_route_bridge_of_prefix_statement_and_synthetic_shadow_summary_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      env fname) ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  mixed_ready_body_or_narrow_summary_provider_route_bridge.
+Proof.
+  intros Hprefix Hroot_names Hroot_keys Hsummary_at_all Hshadow_route.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_evidence_at_and_shadow_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_shadow_summary_at_all;
+      eassumption.
+  - exact Hshadow_route.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at :
   forall env,
     component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env

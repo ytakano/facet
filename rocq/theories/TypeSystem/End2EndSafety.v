@@ -12689,6 +12689,28 @@ Proof.
   - exact Heval.
 Qed.
 
+Lemma typed_env_roots_direct_call_inv :
+  forall env Omega n R Sigma fname args T Sigma' R' roots,
+    typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+      roots ->
+    exists fdef sigma arg_roots,
+      In fdef (env_fns env) /\
+      fn_name fdef = fname /\
+      fn_captures fdef = [] /\
+      fn_type_params fdef = 0 /\
+      typed_args_roots env Omega n R Sigma args
+        (apply_lt_params sigma (fn_params fdef)) Sigma' R' arg_roots /\
+      Forall (fun '(a, b) => outlives Omega a b)
+        (apply_lt_outlives sigma (fn_outlives fdef)) /\
+      T = apply_lt_ty sigma (fn_ret fdef) /\
+      roots = root_sets_union arg_roots.
+Proof.
+  intros env Omega n R Sigma fname args T Sigma' R' roots Htyped.
+  dependent destruction Htyped.
+  exists fdef, σ, arg_roots.
+  repeat split; try eassumption; reflexivity.
+Qed.
+
 Definition fn_root_shadow_ready_body_or_narrow_summary_evidence_at
     (env : global_env) (fname : ident) : Prop :=
   forall fdef,

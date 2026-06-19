@@ -64,8 +64,13 @@ validity checks must be represented in Rocq and the extracted checker.
   and narrow locals stay on the narrow safety branch. That helper is now lifted
   through a check-based env/root safety theorem and the active endpoint-local
   certificate wrapper, so ordinary-shadow routing is derived internally. The
-  remaining proof gap is replacing the synthetic-route callback and then
-  retargeting the public runtime theorem without adding public premises.
+  remaining proof gap is replacing the synthetic-route callback. Existing
+  synthetic preservation still requires recursive synthetic evidence for all
+  top-level callees, but the active certificate may classify recursive callees as
+  ordinary-shadow or narrow. The next proof must therefore be a height-indexed
+  mixed route theorem, not another adapter around the blanket synthetic route
+  provider. After that theorem exists, retarget the public runtime theorem
+  without adding public premises.
 
 ## Remaining Tasks
 
@@ -104,8 +109,12 @@ validity checks must be represented in Rocq and the extracted checker.
   route bridge from the ready-body route bridge, but it is too restrictive as an
   active gate. The component-level mixed callee helper is proved and lifted through
   the active endpoint-local certificate wrapper; the public theorem still needs
-  the remaining synthetic-route callback removed without adding public premises
-  or shrinking the accepted language.
+  the remaining synthetic-route callback removed. The existing synthetic route
+  theorem requires all-recursive synthetic evidence, which is stronger than the
+  active mixed certificate. Removing the callback requires a new height-indexed
+  mixed route theorem that dispatches recursive calls through synthetic,
+  ordinary-shadow, or narrow evidence according to the active certificate,
+  without adding public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

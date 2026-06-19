@@ -51,9 +51,9 @@ validity checks must be represented in Rocq and the extracted checker.
   families to the mixed ready-body-or-narrow route family, an active endpoint
   wrapper now consumes a combined component mixed-route provider directly, the
   older separate synthetic/shadow route-provider endpoint factors through that
-  combined path, and there are compiled active-endpoint public prefix theorems
-  for both the combined component mixed-route provider and the named
-  summary-route bridge.
+  combined path, and there are compiled active-endpoint public theorems for the
+  combined component mixed-route provider route, including both prefix and
+  non-prefix runtime forms.
 
 ## Remaining Tasks
 
@@ -67,9 +67,9 @@ validity checks must be represented in Rocq and the extracted checker.
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Keep the theorem premises no stronger than the current public preservation
-     packages; the additive component-mixed-provider and summary-bridge prefix
-     theorems are only intermediate routes until the active certificate is
-     connected without extra public obligations.
+     packages; the additive component-mixed-provider runtime theorem is only an
+     intermediate route until the active certificate is connected without extra
+     public obligations.
 
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
@@ -102,10 +102,10 @@ validity checks must be represented in Rocq and the extracted checker.
   additive active-endpoint prefix theorem compiles with that bridge as an
   explicit premise, a local mixed-route adapter now compiles, an endpoint
   wrapper now consumes the combined component mixed-route provider directly, the
-  older separate route-provider endpoint factors through it, and a public prefix
-  theorem exposes that combined-provider route. The remaining proof target is
-  connecting the active mixed per-callee certificate to that provider without
-  assuming recursive synthetic-only evidence.
+  older separate route-provider endpoint factors through it, and public prefix
+  and non-prefix runtime theorems expose that combined-provider route. The
+  remaining proof target is connecting the active mixed per-callee certificate to
+  that provider without assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

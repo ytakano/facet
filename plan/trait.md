@@ -44,13 +44,12 @@ validity checks must be represented in Rocq and the extracted checker.
   diagnostic adapters for ready-body, ready-body summary+route, synthetic,
   callback, store-callback, and ready-body route-package providers, with
   route-package providers available from both the plain ready-body and stricter
-  shadow-check diagnostics. The ready-body route, callback, synthetic-callback,
-  store-callback, and combined
-  shadow-check diagnostic adapters now have concrete mixed-route variants that
-  avoid the abstract ready-body route bridge once synthetic and shadow route
-  providers are supplied. The remaining gap is deriving those providers from the
-  active mixed checker's public no-receiver premises rather than diagnostic-only
-  checks.
+  shadow-check diagnostics. Plain and shadow-check ready-body route, callback,
+  synthetic-callback, store-callback, and combined diagnostic adapters now have
+  concrete mixed-route variants that avoid the abstract ready-body route bridge
+  once synthetic and shadow route providers are supplied. The remaining gap is
+  deriving those providers from the active mixed checker's public no-receiver
+  premises rather than diagnostic-only checks.
 
 ## Remaining Tasks
 

@@ -75,9 +75,11 @@ validity checks must be represented in Rocq and the extracted checker.
   that consume this mixed route interface directly, and a provider constructor
   lifts any proved global mixed route theorem into the component local-bounds
   provider expected by the endpoint wrapper. The global mixed value route theorem is now proved from the existing synthetic
-  and ordinary-shadow route packages plus the narrow direct-call value lemma. The
-  remaining implementation work is deriving its branch-route premises in the
-  active endpoint path and then retargeting the public theorem.
+  and ordinary-shadow route packages plus the narrow direct-call value lemma, and
+  a constructor lifts those branch-route packages into the endpoint's mixed
+  local-bounds provider. The remaining implementation work is deriving the
+  synthetic branch-route package inside the active endpoint path and then
+  retargeting the public theorem.
   Existing synthetic preservation
   still requires recursive synthetic evidence for all top-level callees, but the
   active certificate may classify recursive callees as ordinary-shadow or narrow.
@@ -131,10 +133,10 @@ validity checks must be represented in Rocq and the extracted checker.
   provider-to-evidence bridge, direct call typing inversion lemma,
   component/env-root/endpoint consumer helpers, and route-provider constructor
   are now defined; the interface includes closure-target summary because the
-  narrow branch needs it. The global mixed value route theorem is proved. Remaining endpoint work is to
-  supply its synthetic and ordinary-shadow branch-route premises internally, then
-  retarget the public runtime theorem without adding public premises or shrinking
-  the accepted language.
+  narrow branch needs it. The global mixed value route theorem and branch-package provider constructor are
+  proved. Remaining endpoint work is to derive the synthetic branch-route package
+  internally, then retarget the public runtime theorem without adding public
+  premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

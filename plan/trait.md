@@ -52,11 +52,11 @@ validity checks must be represented in Rocq and the extracted checker.
   provenance bridges, synthetic-check-to-ready provider bridges, a named
   summary-family route bridge, route-package/reachability helpers, exact-target
   adapters, pointwise callee evidence, callback-at/local-bounds callback bridges,
-  checker-to-callback-at provider bridges, and a named ordinary shadow-summary
-  prefix route contract that lifts ordinary local-bounds families into the
-  ready-body route. This gives synthetic-or-ordinary callee evidence plus
-  store-safe target arguments for alpha-renamed direct targets, while isolating
-  the ordinary prefix preservation obligation from the mixed route.
+  checker-to-callback-at provider bridges, an ordinary shadow-summary prefix
+  route contract, and a per-callee mixed route adapter that dispatches ready-body
+  summaries to synthetic or ordinary routes. This gives synthetic-or-ordinary
+  callee evidence plus store-safe target arguments for alpha-renamed direct
+  targets, while isolating the remaining lower-provider retarget.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -108,10 +108,10 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint has the needed direct-ready branch, assoc-base
   callback paths, component-body summary/check routes, and ready-body fallback
   bridges up through named evidence/provenance, synthetic-check, summary-family,
-  callback-at providers, and an ordinary-only shadow-summary prefix route
-  adapter. It still lacks the lower mixed preservation theorem route that
-  combines synthetic and ordinary ready-body branches for one local-bounds family
-  instead of requiring every local callee to have a synthetic direct-call target.
+  callback-at providers, ordinary shadow-summary prefix routes, and a mixed
+  ready-body route adapter. It still lacks the lower mixed preservation theorem
+  retarget that lets the no-receiver path consume the ready-body route provider
+  instead of converting it back to a synthetic-only local-bounds route.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

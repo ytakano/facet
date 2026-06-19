@@ -12635,11 +12635,39 @@ Definition component_body_local_bounds_ready_body_route_provider_in_env
     eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_shadow_summary_route_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
 Definition ready_body_summary_local_bounds_family_route_bridge : Prop :=
   forall base,
     env_fns_root_shadow_ready_body_summary_evidence base ->
     eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       base.
+
+Definition ready_body_summary_local_bounds_family_mixed_route_bridge : Prop :=
+  forall base,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+
+Lemma ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_mixed_route_bridge.
+Proof.
+  intros Hroot_names Hroot_keys base Hsynthetic Hordinary.
+  eapply eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_synthetic_or_shadow_summary;
+    eassumption.
+Qed.
 
 Lemma component_body_local_bounds_ready_body_route_provider_of_summary_provider :
   ready_body_summary_local_bounds_family_route_bridge ->
@@ -12650,6 +12678,25 @@ Proof.
   intros Hbridge env Hprovider f_component Hin_component Hcomponent_check.
   eapply Hbridge.
   eapply Hprovider; eassumption.
+Qed.
+
+Lemma component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers :
+  ready_body_summary_local_bounds_family_mixed_route_bridge ->
+  forall env,
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    component_body_local_bounds_shadow_summary_route_provider_in_env env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env.
+Proof.
+  intros Hbridge env Hsynthetic_provider Hshadow_provider f_component
+    Hin_component Hcomponent_check.
+  eapply Hbridge.
+  - eapply Hsynthetic_provider; eassumption.
+  - eapply Hshadow_provider; eassumption.
 Qed.
 
 Definition component_body_local_bounds_ready_body_callback_provider_in_env

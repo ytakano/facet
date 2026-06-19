@@ -594,6 +594,62 @@ Proof.
     exact Hsummary_env.
 Qed.
 
+Lemma eval_ecall_lookup_fn :
+  forall env s fname args s' v,
+    eval env s (ECall fname args) s' v ->
+    exists fdef, lookup_fn fname (env_fns env) = Some fdef.
+Proof.
+  intros env s fname args s' v Heval.
+  inversion Heval; subst.
+  eexists. eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_synthetic_or_shadow_summary_in_env :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros Hroot_names Hroot_keys env Hsynthetic Hordinary s fname args s'
+    v n_call Heval Hheight Ω n R Σ T Σ' R' roots Hsafe_args Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hready_summary
+    _Hready_evidence.
+  destruct (eval_ecall_lookup_fn env s fname args s' v Heval)
+    as [fdef Hlookup].
+  destruct (Hready_summary fdef Hlookup) as [Hsynth | Hordinary_summary].
+  - eapply Hsynthetic; try eassumption.
+    + intros fdef' Hlookup'.
+      assert (fdef' = fdef) as -> by
+        (eapply lookup_fn_deterministic; eassumption).
+      exact Hsynth.
+    + eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * intros fdef' Hlookup'.
+        assert (fdef' = fdef) as -> by
+          (eapply lookup_fn_deterministic; eassumption).
+        exact Hsynth.
+      * exact Hunique.
+  - eapply Hordinary; try eassumption.
+    + intros fdef' Hlookup'.
+      assert (fdef' = fdef) as -> by
+        (eapply lookup_fn_deterministic; eassumption).
+      exact Hordinary_summary.
+    + eapply direct_call_callee_body_root_evidence_at_of_shadow_summary_at.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * intros fdef' Hlookup'.
+        assert (fdef' = fdef) as -> by
+          (eapply lookup_fn_deterministic; eassumption).
+        exact Hordinary_summary.
+      * exact Hunique.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_ready_body_in_env :
   forall env,
     eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
@@ -712,6 +768,41 @@ Proof.
     eapply env_fns_root_shadow_summary_evidence_global_env_with_local_bounds_for_route.
     exact Hsummary_base.
   - eapply Hordinary. exact Henv_ordinary.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_synthetic_or_shadow_summary_in_env_family :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family.
+Proof.
+  intros Hroot_names Hroot_keys env_family Hsynthetic Hordinary env Henv.
+  eapply eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_synthetic_or_shadow_summary_in_env.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply Hsynthetic. exact Henv.
+  - eapply Hordinary. exact Henv.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_synthetic_or_shadow_summary :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Hroot_names Hroot_keys base Hsynthetic Hordinary.
+  eapply eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_synthetic_or_shadow_summary_in_env_family;
+    eassumption.
 Qed.
 
 Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_ready_body_in_local_bounds_family :

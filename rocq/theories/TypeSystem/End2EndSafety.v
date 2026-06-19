@@ -13902,6 +13902,20 @@ Proof.
     exact Hv.
 Qed.
 
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_ready_body_route_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    component_body_local_bounds_ready_body_route_provider_in_env env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env.
+Proof.
+  intros Hroot_names Hroot_keys env Hready_route.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_route_provider.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_ready_body_route_provider;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_mixed_route_provider_synthetic :
   forall env,
     component_body_local_bounds_mixed_route_provider_in_env env ->
@@ -19176,6 +19190,55 @@ Qed.
 
 
 
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_ready_body_route_callback_provider :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      component_body_local_bounds_ready_body_route_provider_in_env env') ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hready_route_provider_when_no_receiver Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_callback_providers.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver.
+    eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_ready_body_route_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact (Hready_route_provider_when_no_receiver Hno_receiver).
+  - intros Hno_receiver.
+    eapply component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_ready_body_route_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact (Hready_route_provider_when_no_receiver Hno_receiver).
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_cleanup_callback_providers :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->

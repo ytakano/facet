@@ -12863,6 +12863,17 @@ Definition component_body_local_bounds_mixed_ready_body_or_narrow_route_provider
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_statement :
+  forall env,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env.
+Proof.
+  intros env Hroute f_component _Hin_component _Hcomponent_check.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_statement.
+  exact Hroute.
+Qed.
+
 Lemma component_body_local_bounds_mixed_route_provider_synthetic :
   forall env,
     component_body_local_bounds_mixed_route_provider_in_env env ->

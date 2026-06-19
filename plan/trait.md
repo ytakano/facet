@@ -33,9 +33,10 @@ validity checks must be represented in Rocq and the extracted checker.
   `component_body_local_bounds_narrow_summary_provider_in_env` for the active
   mixed endpoint. That checker is now extracted and regression-tracked in the
   CLI diagnostics (`no-receiver-narrow-summary=11/100` on the targeted
-  trait/direct frontier). The remaining proof work is to bridge that narrow
-  provider to the callback/package evidence needed by the public runtime
-  theorem.
+  trait/direct frontier). The provider also has a local-bounds lookup helper
+  that exposes callee-level narrow evidence for a component's direct-call
+  target. The remaining proof work is to bridge that narrow callee evidence to
+  the callback/package evidence needed by the public runtime theorem.
 
 ## Remaining Tasks
 

@@ -12905,6 +12905,23 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Lemma component_body_local_bounds_narrow_summary_provider_at_lookup :
+  forall env,
+    component_body_local_bounds_narrow_summary_provider_in_env env ->
+    forall f_component fname fdef,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_store_safe_narrow_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
+Proof.
+  intros env Hprovider f_component fname fdef Hin Hcheck Hlookup.
+  eapply Hprovider; eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

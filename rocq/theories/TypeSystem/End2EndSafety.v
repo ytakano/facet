@@ -12786,6 +12786,71 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_sum
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
       env.
 
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement
+    : Prop :=
+  forall env fname fdef fcall used used' s_args s_body vs ret R_args
+      arg_roots fname_body args_body T_body Gamma_out R_body roots_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_function_closure_targets_summary
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args) ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body ret T_body.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_of_route :
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement.
+Proof.
+  intros Hroute.
+  unfold
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement
+    in *.
+  intros env fname fdef fcall used used' s_args s_body vs ret R_args
+    arg_roots fname_body args_body T_body Gamma_out R_body roots_body Hin
+    Hname Hrename Htarget Hsafe_args Htyped Hunique Hmixed_at Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval n_body_call Hheight.
+  eapply Hroute; eassumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_statement :
   forall env,
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->

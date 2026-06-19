@@ -13560,26 +13560,41 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic
     Hsummary_to_route env env' f s s' v Hprog
     Hready_body_check_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider_prefix.
-  - exact Hsynthetic_route.
-  - exact Hscope_synthetic.
-  - exact Htyping_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hstatic.
-  - exact Hprog.
-  - intros Hno_receiver.
-    eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_route_provider_sound.
-    + eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
-      exact Hsummary_to_route.
-    + exact (Hready_body_check_when_no_receiver Hno_receiver).
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - pose proof (Hready_body_check_when_no_receiver Hno_receiver)
+      as Hready_check.
+    eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+      exact Hprog.
+    + eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_route_provider_sound.
+      * eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+        exact Hsummary_to_route.
+      * exact Hready_check.
+    + eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
+      exact Hready_check.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_route_provider_check :

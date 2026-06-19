@@ -53,11 +53,12 @@ validity checks must be represented in Rocq and the extracted checker.
   summary-family route bridge, route-package/reachability helpers, exact-target
   adapters, pointwise callee evidence, callback-at/local-bounds callback bridges,
   checker-to-callback-at provider bridges, an ordinary shadow-summary prefix
-  route contract, a per-callee mixed route adapter, and a component/end-to-end
-  ready-body route wrapper for no-capture direct-call component bodies. This
-  gives synthetic-or-ordinary callee evidence plus store-safe target arguments
-  for alpha-renamed direct targets, while isolating the remaining public
-  provider wiring.
+  route contract, a per-callee mixed route adapter, a component/end-to-end
+  ready-body route wrapper for no-capture direct-call component bodies, and a
+  mixed ready-body-check wrapper whose no-receiver branch now consumes the
+  ready-body route directly. This gives synthetic-or-ordinary callee evidence
+  plus store-safe target arguments for alpha-renamed direct targets, while
+  isolating the remaining public provider wiring.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -75,12 +76,11 @@ validity checks must be represented in Rocq and the extracted checker.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
      OCaml fallback logic or weakening the public theorem with a new premise.
-   - Replace the remaining synthetic no-receiver diagnostic dependency with a
-     ready-body route that consumes synthetic-or-ordinary callee evidence,
-     exact-body package facts, store-safe target arguments, and the
-     component-only boolean bridge.
+   - Finish replacing the synthetic no-receiver diagnostic dependency by
+     deriving the ready-body summary/check provider from public premises and
+     routing the public theorem through the ready-body-check wrapper.
    - Prove the final bridge from public prefix-route premises to the
-     ready-body route and ready-body summary providers required by the new
+     ready-body route and ready-body summary providers required by the active
      no-receiver wrapper, without requiring Prop-to-bool completeness for
      component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
@@ -110,10 +110,11 @@ validity checks must be represented in Rocq and the extracted checker.
   callback paths, component-body summary/check routes, and ready-body fallback
   bridges up through named evidence/provenance, synthetic-check, summary-family,
   callback-at providers, ordinary shadow-summary prefix routes, a mixed
-  ready-body route adapter, and a component/end-to-end wrapper that consumes
-  ready-body route plus ready-body summary providers. It still needs the public
-  provider derivation and mixed-path wiring that makes this wrapper active
-  without converting back to a synthetic-only local-bounds route.
+  ready-body route adapter, a component/end-to-end wrapper that consumes
+  ready-body route plus ready-body summary providers, and a mixed ready-body-
+  check wrapper that uses that path in the no-receiver case. It still needs the
+  public provider derivation and final public-theorem wiring that make this path
+  active without relying on the synthetic diagnostic provider.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

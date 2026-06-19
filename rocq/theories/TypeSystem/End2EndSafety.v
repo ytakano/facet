@@ -15310,7 +15310,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hready_body_provider_check Hsynthetic_provider_when_no_receiver
     Hshadow_provider_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_and_mixed_route_providers.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -15321,10 +15321,14 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound;
-      eassumption.
-  - exact Hsynthetic_provider_when_no_receiver.
-  - exact Hshadow_provider_when_no_receiver.
+    pose proof
+      (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes
+        Hroot_names Hroot_keys env env' Hprog Hready_body_provider_check
+        Hno_receiver
+        (Hsynthetic_provider_when_no_receiver Hno_receiver)
+        (Hshadow_provider_when_no_receiver Hno_receiver)) as
+        (_Hsummary_provider & Hroute_provider & _Hcallback_provider).
+    exact Hroute_provider.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

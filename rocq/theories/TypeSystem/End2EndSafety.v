@@ -12757,6 +12757,56 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_sum
   eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
     (global_env_local_bounds_family base).
 
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement
+    : Prop :=
+  forall env,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_statement :
+  forall env,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros env Hroute.
+  eapply Hroute.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_statement :
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family.
+Proof.
+  intros env_family Hroute env _Henv.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_statement.
+  exact Hroute.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_statement :
+  forall base,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros base Hroute.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_statement.
+  exact Hroute.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_family :
+  forall env_family env,
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros env_family env Henv Hroute.
+  eapply Hroute. exact Henv.
+Qed.
+
 Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

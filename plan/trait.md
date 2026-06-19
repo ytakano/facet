@@ -43,7 +43,8 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic-ready full route, the ordinary-shadow full route family, and the
   proved narrow cleanup route. The active endpoint wrapper that assumes a global
   synthetic branch route now consumes both the mixed route provider and this
-  cleanup provider path.
+  cleanup provider path, and there is an active-endpoint constructor from the
+  exact-body-call route package.
 
 ## Remaining Tasks
 
@@ -82,10 +83,11 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The public runtime theorem still has not been retargeted to the active
-  endpoint. The cleanup side is wired through the active wrapper; the remaining
-  risk is the synthetic branch-route dependency, whose older proof shape asks for
-  recursive synthetic-only evidence while the active certificate is mixed per
-  callee.
+  endpoint. The cleanup side is wired through the active wrapper, and an
+  exact-body-call package constructor exists for the active endpoint; the
+  remaining risk is deriving or replacing the synthetic branch-route package
+  without relying on recursive synthetic-only evidence where the active
+  certificate is mixed per callee.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

@@ -13082,6 +13082,43 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_bod
   eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family
     (global_env_local_bounds_family base).
 
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family_of_cleanup_callback_family :
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family
+      env_family.
+Proof.
+  intros env_family Hcleanup.
+  unfold
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_env_family,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family
+    in *.
+  intros env Henv fname fdef fcall used used' s_args s_body vs ret R_args
+    arg_roots fname_body args_body T_body Gamma_out R_body roots_body Hin
+    Hname Hrename Htarget Hsafe_args Htyped Hunique Hmixed_at Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval n_body_call Hheight.
+  destruct (Hcleanup env Henv fname fdef fcall used used' s_args s_body vs
+    ret R_args arg_roots fname_body args_body T_body Gamma_out R_body
+    roots_body Hin Hname Hrename Htarget Hsafe_args Htyped Hunique Hmixed_at
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval n_body_call
+    Hheight) as [_ [Hv _]].
+  exact Hv.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family_of_cleanup_callback_family :
+  forall base,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros base Hcleanup.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family_of_cleanup_callback_family.
+  exact Hcleanup.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_env_family_of_statement :
   forall env_family,
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement ->
@@ -13390,6 +13427,27 @@ Definition component_body_local_bounds_mixed_ready_body_or_narrow_value_callback
       env f_component = true ->
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
+
+Definition component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_cleanup_callback_provider :
+  forall env,
+    component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env.
+Proof.
+  intros env Hprovider f_component Hin Hcheck.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family_of_cleanup_callback_family.
+  eapply Hprovider; eassumption.
+Qed.
 
 Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_route_provider :
   forall env,

@@ -52,15 +52,18 @@ validity checks must be represented in Rocq and the extracted checker.
   shadow summaries now lift through local-bounds families to ready-body callee
   evidence, and the ordinary shadow route bridge is derivable from the
   ready-body local-bounds route bridge plus root name/key preservation. The
-  remaining proof work is to connect the accepted endpoint's existing evidence
-  to that ready-body route bridge without adding a stricter public checker gate.
+  next proof gap is now sharper: existing ordinary-shadow preservation cores work
+  from exact `store_typed`, while the route provider needed by nested calls is
+  prefix-store based (`store_typed_prefix`). The remaining proof work is to bridge
+  that prefix route without adding a stricter public checker gate.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Prove or reuse the remaining call-route wrapper that obtains the ready-body
-     local-bounds route bridge from evidence accepted by the active endpoint,
-     without depending on the stricter diagnostic shadow-check gate.
+   - Prove or reuse the remaining prefix-store call-route wrapper for the
+     ordinary-shadow branch, then use it with the existing synthetic route to
+     obtain the ready-body local-bounds route bridge from active-endpoint
+     evidence, without depending on the stricter diagnostic shadow-check gate.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active
@@ -88,9 +91,10 @@ validity checks must be represented in Rocq and the extracted checker.
   safety theorem. A stricter shadow-check certificate proves the extra ordinary
   shadow evidence and has diagnostic runtime theorems that derive the shadow
   route bridge from the ready-body route bridge, but it is too restrictive as an
-  active gate. The public theorem still needs a ready-body route bridge from the
-  accepted endpoint's existing evidence without adding public premises or
-  shrinking the accepted language.
+  active gate. The public theorem still needs a prefix-store ordinary-shadow
+  route wrapper so the ready-body route bridge can be built from the accepted
+  endpoint's existing evidence without adding public premises or shrinking the
+  accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

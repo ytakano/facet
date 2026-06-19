@@ -76,6 +76,11 @@ validity checks must be represented in Rocq and the extracted checker.
   `component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env`,
   with a soundness wrapper from the active no-receiver certificate and an
   endpoint lift from `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+  The active endpoint now also has a named bundle,
+  `infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate`,
+  that carries both the component-local mixed summary provider and the
+  alpha-body callback provider from the same no-receiver certificate; the active
+  mixed-route endpoint proof consumes that bundle in its no-receiver branch.
 
 ## Remaining Tasks
 
@@ -132,7 +137,8 @@ validity checks must be represented in Rocq and the extracted checker.
   require the plain per-target synthetic prefix route for the synthetic branch; the active certificate-to-route
   adapter is now named and used at the endpoint summary-bridge boundary, and
   the component-local mixed summary evidence now has a named alpha-renamed body
-  callback provider with a certificate-soundness wrapper and active endpoint lift.
+  callback provider with a certificate-soundness wrapper, active endpoint lift,
+  and active endpoint provider bundle used by the mixed-route proof.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

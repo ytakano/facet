@@ -87,8 +87,9 @@ validity checks must be represented in Rocq and the extracted checker.
   active summary-bridge endpoint plus its public prefix/non-prefix wrappers now
   factor through that bridge. A companion value-callback bridge,
   `mixed_ready_body_or_narrow_alpha_summary_provider_value_callback_bridge`,
-  and endpoint theorem now expose the same branch-local mixed evidence plus
-  alpha callback at the recursive callback boundary.
+  endpoint theorem, and public prefix/non-prefix wrappers now expose the same
+  branch-local mixed evidence plus alpha callback at the recursive callback
+  boundary.
 
 ## Remaining Tasks
 
@@ -149,7 +150,8 @@ validity checks must be represented in Rocq and the extracted checker.
   active endpoint provider bundle used by the mixed-route proof, a
   route-plus-callback package used by the summary-bridge proof, an
   alpha-aware route bridge factored into that endpoint and its public wrappers,
-  and a matching alpha-aware value-callback bridge plus endpoint theorem.
+  and a matching alpha-aware value-callback bridge with endpoint and public
+  wrappers.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

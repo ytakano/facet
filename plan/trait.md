@@ -71,10 +71,10 @@ validity checks must be represented in Rocq and the extracted checker.
   now named in Rocq with the closure-target summary premise needed by the narrow
   branch, the active provider bridges to its lookup-indexed mixed evidence-at
   predicate, and a direct-call `typed_env_roots` inversion lemma exposes the
-  callee needed for dispatch. Component-local and env/root safety now have helpers that
-  consume this mixed route interface directly. The remaining implementation work
-  is proving the local-bounds mixed route provider and wiring it into the active
-  endpoint theorem. Existing synthetic preservation
+  callee needed for dispatch. Component-local, env/root, and endpoint-local safety now have helpers
+  that consume this mixed route interface directly. The remaining implementation
+  work is proving the local-bounds mixed route provider and then retargeting the
+  public theorem to that endpoint wrapper. Existing synthetic preservation
   still requires recursive synthetic evidence for all top-level callees, but the
   active certificate may classify recursive callees as ordinary-shadow or narrow.
   The next proof must therefore be a height-indexed mixed route theorem, not
@@ -124,8 +124,8 @@ validity checks must be represented in Rocq and the extracted checker.
   The existing synthetic route theorem requires all-recursive synthetic evidence,
   which is stronger than the active mixed certificate. The replacement
   height-indexed mixed route interface, provider-to-evidence bridge, direct call
-  typing inversion lemma, and component/env-root consumer helpers are now
-  defined; the interface includes closure-target summary because the narrow
+  typing inversion lemma, and component/env-root/endpoint consumer helpers are
+  now defined; the interface includes closure-target summary because the narrow
   branch needs it. The route-provider theorem itself is still pending: it must dispatch recursive
   calls through synthetic, ordinary-shadow, or narrow evidence according to the
   active certificate, without adding public premises or shrinking the accepted

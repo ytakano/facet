@@ -58,11 +58,12 @@ validity checks must be represented in Rocq and the extracted checker.
   ordinary-shadow preservation path now has prefix-store route theorems for
   single environments and local-bounds families. The active endpoint path now
   discharges the ordinary shadow route provider from the global prefix route
-  package. The remaining proof gap is a per-callee ready-body route for mixed
-  local evidence: synthetic locals can use the existing synthetic route,
-  ordinary-shadow locals can use the new ordinary route, and narrow locals must
-  continue through the narrow safety branch without requiring a blanket synthetic
-  provider.
+  package. A component-level mixed callee helper now consumes the active
+  per-local certificate at the selected callee: synthetic-ready locals use the
+  synthetic route family, ordinary-shadow locals use the prefix ordinary route,
+  and narrow locals stay on the narrow safety branch. The remaining proof gap is
+  lifting that helper through the env/root safety theorem and then retargeting
+  the public runtime theorem without requiring a blanket synthetic provider.
 
 ## Remaining Tasks
 
@@ -99,10 +100,10 @@ validity checks must be represented in Rocq and the extracted checker.
   safety theorem. A stricter shadow-check certificate proves the extra ordinary
   shadow evidence and has diagnostic runtime theorems that derive the shadow
   route bridge from the ready-body route bridge, but it is too restrictive as an
-  active gate. The public theorem still needs the remaining blanket
-  synthetic-route callback to be replaced by a mixed-evidence route theorem,
-  without adding public
-  premises or shrinking the accepted language.
+  active gate. The component-level mixed callee helper is proved; the public
+  theorem still needs that helper lifted into the env/root safety theorem so the
+  remaining blanket synthetic-route callback can be removed without adding
+  public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

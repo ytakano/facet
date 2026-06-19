@@ -15584,6 +15584,21 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_alpha_body_callback_provider_of_local_certificate :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_alpha_body_callback_provider_check_sound.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
+    exact Hprog.
+  - exact Hno_receiver.
+Qed.
+
 Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_sound :
   forall env,
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks

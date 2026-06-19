@@ -74,7 +74,8 @@ validity checks must be represented in Rocq and the extracted checker.
   which preserves the component-local evidence across `alpha_rename_fn_def` bounds.
   That callback is now exposed as
   `component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env`,
-  with a soundness wrapper from the active no-receiver certificate.
+  with a soundness wrapper from the active no-receiver certificate and an
+  endpoint lift from `infer_program_env_end2end_assoc_direct_receiver_mixed`.
 
 ## Remaining Tasks
 
@@ -131,7 +132,7 @@ validity checks must be represented in Rocq and the extracted checker.
   require the plain per-target synthetic prefix route for the synthetic branch; the active certificate-to-route
   adapter is now named and used at the endpoint summary-bridge boundary, and
   the component-local mixed summary evidence now has a named alpha-renamed body
-  callback provider with a certificate-soundness wrapper.
+  callback provider with a certificate-soundness wrapper and active endpoint lift.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

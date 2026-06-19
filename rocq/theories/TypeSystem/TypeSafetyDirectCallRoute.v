@@ -546,6 +546,31 @@ Definition eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Definition eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env
+    (env : global_env) : Prop :=
+  forall s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_summary_evidence_at env fname ->
+      direct_call_callee_body_root_evidence_at env fname ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
 Definition eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
     (env : global_env) : Prop :=
   forall s fname args s' v n_call,
@@ -23414,4 +23439,41 @@ Proof.
   - rewrite Hremoved_exact. exact Hroots_args.
   - eapply direct_call_value_roots_within_store_subset; eassumption.
   - rewrite Hremoved_exact. exact Hshadow_args.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Htyping_prefix Hparam_ready env s fname args s' v n_call Heval _Hheight
+    Ω n R Σ T Σ' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Htyped Hunique Hsummary_at _Hevidence_at.
+  destruct (eval_ecall_lookup_fn env s fname args s' v Heval)
+    as [fdef Hlookup].
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin Hname].
+  destruct
+    (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core
+      Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        Htyping_prefix)
+      Hparam_ready env s s' v fname args Heval Ω n R Σ T Σ' R' roots
+      fdef
+      (store_safe_function_value_call_args_preservation_ready env args
+        Hsafe_args)
+      Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hin Hname
+      (callee_body_root_shadow_provenance_summary_of_summary_at
+        env fname fdef Hsummary_at Hlookup))
+    as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+  repeat split; try assumption.
+  eapply store_typed_prefix_exact. exact Hstore'.
 Qed.

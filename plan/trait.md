@@ -60,9 +60,9 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic prefix route as the only extra proof premise, and a short public
   active-endpoint wrapper exposes the exact-body-call route package path. The named
   summary-provider route bridge also has constructors from the store-safe and
-  plain per-target synthetic routes plus the ordinary-shadow route family, a
-  compiled constructor from the public synthetic prefix theorem when all-target
-  synthetic summary evidence is available, and active-endpoint runtime wrappers
+  plain per-target synthetic routes plus the ordinary-shadow route family, the
+  exact-body-call route package, a compiled constructor from the public synthetic
+  prefix theorem when all-target synthetic summary evidence is available, and active-endpoint runtime wrappers
   that target `infer_program_env_end2end_assoc_direct_receiver_mixed` under that
   explicit all-target evidence premise.
 
@@ -110,7 +110,7 @@ validity checks must be represented in Rocq and the extracted checker.
 - The required public runtime theorem still has not been retargeted to the active
   endpoint. The cleanup side is wired through the active wrapper, an
   exact-body-call package constructor and public wrapper exist for the active
-  endpoint, the summary-to-route bridge has a constructor from existing route packages, an
+  endpoint, the summary-to-route bridge has constructors from existing route packages and the exact-body package, an
   additive active-endpoint prefix theorem compiles with that bridge as an
   explicit premise, a local mixed-route adapter now compiles, an endpoint
   wrapper now consumes the combined component mixed-route provider directly, the

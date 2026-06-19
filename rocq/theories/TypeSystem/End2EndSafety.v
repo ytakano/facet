@@ -13975,6 +13975,48 @@ Proof.
   - exact Hshadow_route.
 Qed.
 
+Lemma mixed_ready_body_or_narrow_summary_provider_route_bridge_of_exact_body_call_route_package :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_bridge.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hexact_body_target Hbody_package.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_and_shadow_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package.
+    + exact Hscope_synthetic.
+    + exact Htyping_prefix.
+    + exact Hprefix_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hexact_body_target.
+    + exact Hbody_package.
+  - intros env0.
+    eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact eval_preserves_frame_scope_roots_ready_mutual.
+    + exact Hprefix_ready.
+    + exact eval_preserves_param_scope_roots_ready_mutual.
+Qed.
+
 Lemma mixed_ready_body_or_narrow_summary_provider_route_bridge_of_prefix_statement_and_synthetic_shadow_summary_at_all :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_root_names_ready_mutual_statement ->

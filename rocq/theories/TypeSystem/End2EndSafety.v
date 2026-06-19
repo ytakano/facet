@@ -12710,6 +12710,7 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_sum
       root_env_no_shadow R ->
       root_env_store_roots_named R s ->
       root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
       typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
         roots ->
       fn_env_unique_by_name env ->

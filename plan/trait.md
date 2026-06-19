@@ -47,9 +47,12 @@ validity checks must be represented in Rocq and the extracted checker.
   preservation shadow checks is defined, extracted, and proved to provide both
   the local mixed provider and ordinary shadow-summary evidence, but it remains
   diagnostic only: making it the active endpoint gate rejected many existing
-  valid programs. Ordinary shadow summaries now lift through local-bounds
-  families to ready-body callee evidence; the remaining proof work is to prove
-  the route bridge without adding a stricter public checker gate.
+  valid programs. A runtime diagnostic theorem now consumes this stronger
+  certificate and derives the ordinary shadow route provider internally; it still
+  needs the synthetic local route provider and the shadow-summary route bridge.
+  Ordinary shadow summaries now lift through local-bounds families to ready-body
+  callee evidence; the remaining proof work is to prove the route bridge without
+  adding a stricter public checker gate.
 
 ## Remaining Tasks
 
@@ -83,9 +86,10 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
   active endpoint now exposes the per-local certificate check and has a wrapper
   safety theorem. A stricter shadow-check certificate proves the extra ordinary
-  shadow evidence but is too restrictive as an active gate, so the public theorem
-  still needs a route bridge from the accepted endpoint's existing evidence
-  without adding public premises or shrinking the accepted language.
+  shadow evidence and has a diagnostic runtime theorem that derives the shadow
+  route provider internally, but it is too restrictive as an active gate. The
+  public theorem still needs a route bridge from the accepted endpoint's existing
+  evidence without adding public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

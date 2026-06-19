@@ -48,12 +48,13 @@ validity checks must be represented in Rocq and the extracted checker.
   local-bounds synthetic direct-call-ready summary is missing for an ordinary
   callee with `no-direct-call-target`.
 - Ready-body fallback proof infrastructure now supplies local-bounds providers,
-  explicit ordinary/synthetic-to-ready evidence adapters, synthetic-check-to-ready
-  provider bridges, a named summary-family route bridge, route-package/reachability
-  helpers, exact-target adapters, pointwise callee evidence, callback-at/local-bounds
-  callback bridges, and checker-to-callback-at provider bridges. This gives
-  synthetic-or-ordinary callee evidence plus store-safe target arguments for
-  alpha-renamed direct targets.
+  explicit ordinary/synthetic-to-ready evidence adapters, ordinary-summary-to-
+  provenance bridges, synthetic-check-to-ready provider bridges, a named
+  summary-family route bridge, route-package/reachability helpers, exact-target
+  adapters, pointwise callee evidence, callback-at/local-bounds callback bridges,
+  and checker-to-callback-at provider bridges. This gives synthetic-or-ordinary
+  callee evidence plus store-safe target arguments for alpha-renamed direct
+  targets.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -104,8 +105,8 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-component endpoint remains diagnostic proof infrastructure only.
 - The active mixed endpoint has the needed direct-ready branch, assoc-base
   callback paths, component-body summary/check routes, and ready-body fallback
-  bridges up through named evidence, synthetic-check, summary-family, and
-  callback-at providers. It still lacks the lower preservation theorem route
+  bridges up through named evidence/provenance, synthetic-check, summary-family,
+  and callback-at providers. It still lacks the lower preservation theorem route
   that lets the mixed no-receiver proof consume ready-body synthetic-or-ordinary
   evidence instead of requiring every local callee to have a synthetic direct-call
   target.

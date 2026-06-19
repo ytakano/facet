@@ -700,6 +700,32 @@ Proof.
     exact Hready.
 Qed.
 
+Lemma callee_body_root_shadow_provenance_summary_of_shadow_summary :
+  forall env fdef,
+    callee_body_root_shadow_summary env fdef ->
+    callee_body_root_shadow_provenance_summary env fdef.
+Proof.
+  intros env fdef Hsummary.
+  unfold callee_body_root_shadow_summary,
+    callee_body_root_shadow_provenance_summary in *.
+  destruct Hsummary as [Hnodup Hready].
+  split.
+  - exact Hnodup.
+  - eapply callee_body_root_shadow_provenance_ready_at_of_ready_at.
+    exact Hready.
+Qed.
+
+Lemma callee_body_root_shadow_provenance_summary_of_summary_at :
+  forall env fname fdef,
+    fn_root_shadow_summary_evidence_at env fname ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_provenance_summary env fdef.
+Proof.
+  intros env fname fdef Hsummary_at Hlookup.
+  eapply callee_body_root_shadow_provenance_summary_of_shadow_summary.
+  eapply Hsummary_at. exact Hlookup.
+Qed.
+
 Lemma env_fns_root_direct_call_ready_summary_evidence_of_shadow :
   forall env,
     env_fns_root_shadow_summary_evidence env ->

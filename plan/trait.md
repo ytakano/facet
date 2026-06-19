@@ -32,7 +32,8 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic fail, 100 component ready-body ok, 100 no-receiver ready-body ok,
   18 shadow-provenance-summary ok, 17 preservation-ready ok, 17 no-receiver
   ready-body plus shadow-checks ok, and 0 direct-receiver-method-present) and
-  the full valid-suite no-receiver ready-body blockers (4 of 222 valid files).
+  the full valid-suite no-receiver ready-body blockers (4 of 222 valid files),
+  including the exact local helper and failed summary gates for each blocker.
 - Ready-body fallback proof infrastructure now includes local-bounds provider
   contracts, synthetic/ordinary route-provider wrappers, Prop-level reachable
   route-package/exact-target and callback adapters, synthetic exact-body route
@@ -119,8 +120,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Promoting the no-receiver ready-body gate to the active mixed checker still
   rejects four valid programs: `type_forall_fn_value_pass_and_call.facet`,
   `hrt_call_twice.facet`, `hrt_item_bounds_as_value.facet`, and
-  `hrt_pass_poly_identity.facet`. `tests/diagnose_trait_gates.sh` now enforces
-  this full-valid blocker list so changes to the frontier are explicit. Keep
+  `hrt_pass_poly_identity.facet`. Diagnostics now identify the failing local
+  helpers (`apply`, `call_twice`, and `accept`) and show that they lack
+  synthetic, ordinary shadow, preservation, and provenance summaries. Keep
   direct-call receiver safety-gate tests invalid until the verified active
   endpoint accepts them.
 

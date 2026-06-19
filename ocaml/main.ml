@@ -536,7 +536,35 @@ let () =
     List.iter
       (fun f ->
         let (fname, _) = f.fn_name in
-        Printf.printf "trait-component-ready-body-summary-failure: %s\n" fname)
+        Printf.printf "trait-component-ready-body-summary-failure: %s\n" fname;
+        let local_env = global_env_with_local_bounds checked_env f.fn_bounds in
+        let local_ready_body_failures =
+          List.filter
+            (fun local_fn ->
+              not
+                (check_fn_root_shadow_synthetic_direct_call_ready_summary
+                   local_env local_fn
+                 || check_fn_root_shadow_summary local_env local_fn))
+            local_env.env_fns
+        in
+        Printf.printf
+          "trait-local-bounds-ready-body-summary-failures: %s: %d\n"
+          fname (List.length local_ready_body_failures);
+        List.iter
+          (fun local_fn ->
+            let (local_fname, _) = local_fn.fn_name in
+            Printf.printf
+              "trait-local-bounds-ready-body-summary-failure: %s: %s\n"
+              fname local_fname;
+            Printf.printf
+              "trait-local-bounds-ready-body-summary-failure-gates: %s: %s: synthetic=%s shadow=%s preservation=%s provenance=%s\n"
+              fname local_fname
+              (if check_fn_root_shadow_synthetic_direct_call_ready_summary
+                    local_env local_fn then "ok" else "fail")
+              (if check_fn_root_shadow_summary local_env local_fn then "ok" else "fail")
+              (if preservation_ready_expr_b local_fn.fn_body then "ok" else "fail")
+              (if provenance_ready_expr_b local_fn.fn_body then "ok" else "fail"))
+          local_ready_body_failures)
       component_ready_body_summary_failures;
     List.iter
       (fun f ->

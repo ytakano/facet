@@ -19,7 +19,11 @@ expected_local_summary_reason=$(mktemp)
 actual_local_summary_reason=$(mktemp)
 expected_full_no_receiver_ready_fail=$(mktemp)
 actual_full_no_receiver_ready_fail=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\" \"$expected_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_fail\"" EXIT
+expected_full_no_receiver_ready_detail=$(mktemp)
+actual_full_no_receiver_ready_detail=$(mktemp)
+expected_full_no_receiver_ready_gates=$(mktemp)
+actual_full_no_receiver_ready_gates=$(mktemp)
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\" \"$expected_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_fail\" \"$expected_full_no_receiver_ready_detail\" \"$actual_full_no_receiver_ready_detail\" \"$expected_full_no_receiver_ready_gates\" \"$actual_full_no_receiver_ready_gates\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -71,6 +75,20 @@ printf "%s\n" \
   tests/valid/lifetime/hrt_item_bounds_as_value.facet \
   tests/valid/lifetime/hrt_pass_poly_identity.facet \
   >"$expected_full_no_receiver_ready_fail"
+
+printf "%s\n" \
+  "tests/valid/function/type_forall_fn_value_pass_and_call.facet: main: apply" \
+  "tests/valid/lifetime/hrt_call_twice.facet: caller: call_twice" \
+  "tests/valid/lifetime/hrt_item_bounds_as_value.facet: caller: accept" \
+  "tests/valid/lifetime/hrt_pass_poly_identity.facet: caller: apply" \
+  >"$expected_full_no_receiver_ready_detail"
+
+printf "%s\n" \
+  "tests/valid/function/type_forall_fn_value_pass_and_call.facet: main: apply: synthetic=fail shadow=fail preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_call_twice.facet: caller: call_twice: synthetic=fail shadow=fail preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_item_bounds_as_value.facet: caller: accept: synthetic=fail shadow=fail preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_pass_poly_identity.facet: caller: apply: synthetic=fail shadow=fail preservation=fail provenance=fail" \
+  >"$expected_full_no_receiver_ready_gates"
 
 total=0
 ok_count=0
@@ -342,6 +360,10 @@ for file in $(find tests/valid -type f -name "*.facet" | sort); do
       "trait-no-receiver-ready-body-summary: fail")
         full_no_receiver_ready_fail_count=$((full_no_receiver_ready_fail_count + 1))
         printf "%s\n" "$file" >>"$actual_full_no_receiver_ready_fail"
+        grep -E "^trait-local-bounds-ready-body-summary-failure: " "$tmp" | \
+          sed "s|^trait-local-bounds-ready-body-summary-failure: |$file: |" >>"$actual_full_no_receiver_ready_detail"
+        grep -E "^trait-local-bounds-ready-body-summary-failure-gates: " "$tmp" | \
+          sed "s|^trait-local-bounds-ready-body-summary-failure-gates: |$file: |" >>"$actual_full_no_receiver_ready_gates"
         ;;
       "trait-no-receiver-ready-body-summary: ok")
         ;;
@@ -399,6 +421,18 @@ fi
 if ! diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_fail" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body blockers changed\n"
   diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_fail" || true
+  status=1
+fi
+
+if ! diff -u "$expected_full_no_receiver_ready_detail" "$actual_full_no_receiver_ready_detail" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body blocker details changed\n"
+  diff -u "$expected_full_no_receiver_ready_detail" "$actual_full_no_receiver_ready_detail" || true
+  status=1
+fi
+
+if ! diff -u "$expected_full_no_receiver_ready_gates" "$actual_full_no_receiver_ready_gates" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body blocker gates changed\n"
+  diff -u "$expected_full_no_receiver_ready_gates" "$actual_full_no_receiver_ready_gates" || true
   status=1
 fi
 

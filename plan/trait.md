@@ -55,17 +55,17 @@ validity checks must be represented in Rocq and the extracted checker.
   combined component mixed-route provider route, mixed disjunction handling now
   has a bridge that needs only a per-target store-safe synthetic route plus the
   ordinary-shadow route family, the existing mixed value/cleanup bridge
-  interface has a constructor from that per-target synthetic route, and there is
-  an active-endpoint runtime theorem that exposes this per-target synthetic route
-  as its only extra proof premise.
+  interface has a constructor from that per-target synthetic route, and active
+  endpoint runtime theorems now expose either the store-safe or plain per-target
+  synthetic prefix route as the only extra proof premise.
 
 ## Remaining Tasks
 
 1. Retarget the required public runtime theorem.
    - Connect the active per-local certificate to route evidence: ordinary-shadow
      uses the prefix ordinary route, narrow uses the proved narrow package, and
-     synthetic-ready must supply the per-target store-safe synthetic route
-     required by `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_evidence_at_route`
+     synthetic-ready must supply the per-target synthetic prefix route required
+     by `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_evidence_at_prefix_route`
      without rebuilding a recursive synthetic-only certificate.
    - Move the required theorem name
      `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
@@ -110,10 +110,10 @@ validity checks must be represented in Rocq and the extracted checker.
   older separate route-provider endpoint factors through it, public prefix and
   non-prefix runtime theorems expose that combined-provider route, and an
   intermediate mixed-disjunction bridge, value/cleanup bridge constructor, and
-  active-endpoint runtime theorem now only require per-target store-safe
-  synthetic evidence for the synthetic branch. The remaining proof target is
-  deriving that per-target synthetic route from the active mixed certificate
-  without assuming recursive synthetic-only evidence.
+  active-endpoint runtime theorems now only require per-target synthetic evidence
+  for the synthetic branch. The remaining proof target is deriving that
+  per-target synthetic prefix route from the active mixed certificate without
+  assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

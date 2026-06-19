@@ -65,7 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body-call route package, a compiled constructor from the public synthetic
   prefix theorem when all-target synthetic summary evidence is available, and active-endpoint runtime wrappers
   that target `infer_program_env_end2end_assoc_direct_receiver_mixed` under that
-  explicit all-target evidence premise.
+  explicit all-target evidence premise, and the active certificate-to-route
+  conversion is now named as
+  `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge`
+  and used by the endpoint summary-bridge theorem.
 
 ## Remaining Tasks
 
@@ -119,7 +122,8 @@ validity checks must be represented in Rocq and the extracted checker.
   non-prefix runtime theorems expose the combined-provider and named bridge routes, and an
   intermediate mixed-disjunction bridge, named summary-provider bridge,
   mixed-route cleanup wrappers, value/cleanup bridge constructor plus prefix/non-prefix wrappers, and active-endpoint runtime theorems now only
-  require the plain per-target synthetic prefix route for the synthetic branch.
+  require the plain per-target synthetic prefix route for the synthetic branch; the active certificate-to-route
+  adapter is now named and used at the endpoint summary-bridge boundary.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

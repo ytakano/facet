@@ -13926,6 +13926,19 @@ Definition mixed_ready_body_or_narrow_summary_provider_route_bridge : Prop :=
     component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
       env.
 
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge :
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env.
+Proof.
+  intros Hbridge env Hprovider.
+  eapply Hbridge.
+  exact Hprovider.
+Qed.
+
 Lemma mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_and_shadow_routes :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
@@ -18591,11 +18604,12 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    eapply Hbridge.
-    eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound.
-    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
-      exact Hprog.
-    + exact Hno_receiver.
+    eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge.
+    + exact Hbridge.
+    + eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound.
+      * eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
+        exact Hprog.
+      * exact Hno_receiver.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

@@ -13096,6 +13096,28 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_synthetic_route_provider_sound :
+  forall env,
+    (component_body_local_bounds_ready_body_summary_provider_in_env env ->
+     component_body_local_bounds_ready_body_route_provider_in_env env) ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true ->
+    forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component)).
+Proof.
+  intros env Hsummary_to_route Hcheck f_component Hin_component
+    Hcomponent_check.
+  eapply component_body_local_bounds_synthetic_route_provider_of_ready_body_route_provider.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_route_provider_sound;
+      eassumption.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_callback_provider_sound :
   forall env,
     (component_body_local_bounds_ready_body_summary_provider_in_env env ->

@@ -14117,6 +14117,38 @@ Proof.
     eassumption.
 Qed.
 
+Definition mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge : Prop :=
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env.
+
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_alpha_summary_route_bridge :
+  mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge ->
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env.
+Proof.
+  intros Hbridge env Hprovider Halpha_provider.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge_of_summary_route_bridge :
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge.
+Proof.
+  intros Hbridge env Hprovider _Halpha_provider.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,
     fn_env_unique_by_name env ->
@@ -18685,7 +18717,7 @@ Proof.
   - exact Heval.
 Qed.
 
-Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_summary_route_bridge :
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_alpha_summary_route_bridge :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -18694,7 +18726,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge ->
   forall env env' f s s' v,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
       infer_ok env' ->
@@ -18718,13 +18750,41 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate
-      Hbridge env env' Hprog Hno_receiver) as [Hroute_provider _Halpha_provider].
-    exact Hroute_provider.
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+      env env' Hprog Hno_receiver) as [Hprovider Halpha_provider].
+    eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_alpha_summary_route_bridge;
+      eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_summary_route_bridge :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hbridge.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_alpha_summary_route_bridge;
+    try eassumption.
+  eapply mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge_of_summary_route_bridge.
+  exact Hbridge.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_callback_providers :

@@ -36,9 +36,9 @@ validity checks must be represented in Rocq and the extracted checker.
   trait/direct frontier). The provider also has local-bounds lookup,
   direct-call-target-shaped, mixed-endpoint, and component-summary conversion
   helpers that package a checked component with its local-bounds narrow callee
-  evidence. The remaining proof work is to connect that narrow-callee component
-  package to the mixed no-receiver safety theorem, replacing the stalled
-  synthetic callback/package route for this branch.
+  evidence. The packaged narrow-callee component now has a direct big-step
+  safety lemma. The remaining proof work is to lift that lemma through the
+  mixed no-receiver branch and retarget the public runtime theorem.
 
 ## Remaining Tasks
 

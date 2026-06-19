@@ -13027,6 +13027,85 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hsummary Hinitial Hstore Heval.
+  destruct Hsummary as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _Hcaptures & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & Hin_callee & Hname_callee &
+      _Hcallee_captures & Hcallee_summary_body & Hnodup & Htyped_shadow &
+      Hcompat & _Hroots & _Henv).
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+  rewrite Hbody in Heval.
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env :
+    store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env. apply store_typed_prefix_exact.
+    eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore. }
+  assert (Hsummary_store_body_env :
+    store_function_closure_targets_summary body_env s).
+  { subst body_env.
+    apply store_function_closure_targets_summary_global_env_with_local_bounds.
+    eapply initial_store_for_fn_closure_targets_summary. exact Hstore. }
+  assert (Heval_body_env : eval body_env s raw_body s' v).
+  { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Htyped_call_shadow :
+    typed_env_roots_shadow_safe body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { rewrite <- Hsynthetic. exact Htyped_shadow. }
+  assert (Heval_call : eval body_env s (ECall fname args) s' v).
+  { unfold direct_call_target_expr in Htarget.
+    destruct raw_body; try discriminate.
+    - inversion Htarget; subst. exact Heval_body_env.
+    - destruct raw_body; try discriminate.
+      inversion Htarget; subst.
+      apply eval_call_expr_fn_as_call. exact Heval_body_env. }
+  assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
+  { subst body_env.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    exact Hsafe_args. }
+  pose proof (typed_env_roots_shadow_safe_roots
+    body_env (fn_outlives f) (fn_lifetimes f)
+    (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
+    (ECall fname args) T_body (sctx_of_ctx Gamma_out) R_body roots_body
+    Htyped_call_shadow) as Htyped_call.
+  dependent destruction Htyped_call.
+  assert (fdef = fcallee) as ->.
+  { eapply Hunique.
+    - exact H.
+    - exact Hin_callee.
+    - exact (eq_sym Hname_callee). }
+  pose proof
+    (eval_direct_call_store_safe_narrow_summary_value_prefix_named
+      body_env (fn_outlives f) (fn_lifetimes f)
+      (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
+      (fn_name fcallee) args σ _ _ _ s s' v fcallee
+      Hsafe_args_body Hcallee_summary_body Hstore_body_env Hroots
+      Hshadow Hrn Hnamed Hkeys Hsummary_store_body_env Heval_call
+      Hunique Hin_callee Hname_callee H1 H2 H3 H4) as Hv_body.
+  assert (Hv_env :
+    value_has_type env s' v (apply_lt_ty σ (fn_ret fcallee))).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv_body. }
+  eapply VHT_Compatible.
+  - exact Hv_env.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

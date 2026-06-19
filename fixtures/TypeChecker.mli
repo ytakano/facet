@@ -1645,6 +1645,9 @@ val check_env_end2end_direct_receiver_mixed_ready : global_env -> bool
 val check_env_root_shadow_no_receiver_component_body_summary_provider_check :
   global_env -> bool
 
+val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check :
+  global_env -> bool
+
 val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
   global_env -> global_env infer_result
 

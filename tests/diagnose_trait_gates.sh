@@ -69,6 +69,7 @@ fail_count=0
 direct_present_count=0
 component_body_summary_count=0
 component_ready_body_summary_count=0
+no_receiver_ready_body_summary_count=0
 status=0
 
 while IFS= read -r file; do
@@ -80,7 +81,8 @@ while IFS= read -r file; do
       trait-direct-receiver-method-present \
       trait-component-body-summary \
       trait-component-ready-body-summary \
-      trait-no-receiver-body-summary
+      trait-no-receiver-body-summary \
+      trait-no-receiver-ready-body-summary
     do
       gate_line=$(grep -E "^${gate}: (ok|fail)$" "$tmp" || true)
       case "$gate_line" in
@@ -97,6 +99,7 @@ while IFS= read -r file; do
     direct_line=$(grep -E "^trait-direct-receiver-method-present: (ok|fail)$" "$tmp" || true)
     component_line=$(grep -E "^trait-component-body-summary: (ok|fail)$" "$tmp" || true)
     component_ready_line=$(grep -E "^trait-component-ready-body-summary: (ok|fail)$" "$tmp" || true)
+    no_receiver_ready_line=$(grep -E "^trait-no-receiver-ready-body-summary: (ok|fail)$" "$tmp" || true)
     case "$direct_line" in
       "trait-direct-receiver-method-present: ok")
         direct_present_count=$((direct_present_count + 1))
@@ -110,6 +113,11 @@ while IFS= read -r file; do
     case "$component_ready_line" in
       "trait-component-ready-body-summary: ok")
         component_ready_body_summary_count=$((component_ready_body_summary_count + 1))
+        ;;
+    esac
+    case "$no_receiver_ready_line" in
+      "trait-no-receiver-ready-body-summary: ok")
+        no_receiver_ready_body_summary_count=$((no_receiver_ready_body_summary_count + 1))
         ;;
     esac
 
@@ -337,6 +345,12 @@ if [ "$component_ready_body_summary_count" -ne 100 ]; then
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s component-ready-body-summary=%s\n" \
-  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count" "$component_ready_body_summary_count"
+if [ "$no_receiver_ready_body_summary_count" -ne 100 ]; then
+  printf "FAIL --diagnose-trait-gates: expected no-receiver-ready-body-summary=100, got %s\n" \
+    "$no_receiver_ready_body_summary_count"
+  status=1
+fi
+
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count"
 exit "$status"

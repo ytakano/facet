@@ -39,7 +39,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Diagnostic endpoints remain for proof routing and fixture sampling, not as
   active authorities. Current trait/direct valid frontier: 100 accepted files,
   96 no-receiver synthetic diagnostic ok, 4 no-receiver diagnostic fail,
-  100 component ready-body fallback diagnostic ok, and
+  100 component ready-body fallback diagnostic ok,
+  100 no-receiver ready-body diagnostic ok, and
   0 direct-receiver-method-present. The four synthetic failures are
   `tests/valid/function/local_let_rec_direct_call.facet`,
   `tests/valid/lifetime/hrt_direct_call_unchanged.facet`,
@@ -56,9 +57,10 @@ validity checks must be represented in Rocq and the extracted checker.
   route contract, a per-callee mixed route adapter, a component/end-to-end
   ready-body route wrapper for no-capture direct-call component bodies, a mixed
   ready-body-check wrapper whose no-receiver branch consumes the ready-body
-  route directly, a diagnostic no-receiver ready-body gate, a diagnostic mixed-
-  route runtime wrapper that removes the abstract summary-to-route bridge from
-  that gate, and a mixed-route provider wrapper that replaces the abstract
+  route directly, an extracted and CLI-tested diagnostic no-receiver ready-
+  body gate, a diagnostic mixed-route runtime wrapper that removes the abstract
+  summary-to-route bridge from that gate, and a mixed-route provider wrapper
+  that replaces the abstract
   summary-to-route bridge with synthetic plus ordinary route providers. This
   gives synthetic-or-ordinary callee evidence plus store-safe target arguments
   for alpha-renamed direct targets, while isolating the remaining public
@@ -117,9 +119,9 @@ validity checks must be represented in Rocq and the extracted checker.
   ready-body route adapter, a component/end-to-end wrapper that consumes
   ready-body route plus ready-body summary providers, a mixed ready-body-check
   wrapper that uses that path in the no-receiver case, a diagnostic boolean gate
-  for no-receiver ready-body summaries, a diagnostic runtime wrapper that uses
-  mixed synthetic plus ordinary route providers instead of an abstract summary-
-  to-route premise, and a mixed-route public wrapper with the same provider
+  for no-receiver ready-body summaries with CLI coverage, a diagnostic runtime
+  wrapper that uses mixed synthetic plus ordinary route providers instead of an
+  abstract summary-to-route premise, and a mixed-route public wrapper with the same provider
   shape. It still needs proven public derivations of those route providers and
   final public-theorem wiring that make this path active without relying on the
   synthetic diagnostic provider.

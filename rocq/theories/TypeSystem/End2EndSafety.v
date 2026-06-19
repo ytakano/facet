@@ -12730,6 +12730,25 @@ Proof.
   - exact Hno_receiver.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_narrow_callee_at_provider_of_no_receiver_component_narrow_summary_provider_check :
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    strict_exact_closure_component_body_narrow_callee_at_provider
+      env' f_component.
+Proof.
+  intros env env' f_component Hprog Hcheck Hno_receiver Hin_component
+    Hcomponent_check fname args synthetic_body fdef _Htarget Hlookup.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_narrow_summary_provider_of_no_receiver_component_narrow_summary_provider_check;
+    eassumption.
+Qed.
+
 Definition shadow_summary_local_bounds_family_route_bridge : Prop :=
   forall base,
     env_fns_root_shadow_summary_evidence base ->

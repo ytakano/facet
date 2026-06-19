@@ -2606,6 +2606,12 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provid
    check_env_root_shadow_provenance_summary env &&
    check_env_preservation_ready env).
 
+Definition check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+    (env : global_env) : bool :=
+  check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+    env ||
+  check_env_root_shadow_no_receiver_component_narrow_summary_provider_check env.
+
 Lemma check_env_end2end_direct_receiver_mixed_ready_cases :
   forall env,
     check_env_end2end_direct_receiver_mixed_ready env = true ->

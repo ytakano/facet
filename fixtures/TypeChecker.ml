@@ -17011,6 +17011,16 @@ let check_env_root_shadow_no_receiver_component_ready_body_summary_provider_chec
         (check_env_root_shadow_provenance_summary env))
       (check_env_preservation_ready env))
 
+(** val check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check env =
+  (||)
+    (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env)
+    (check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+      env)
+
 (** val infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver :
     global_env -> global_env infer_result **)
 

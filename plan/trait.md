@@ -26,43 +26,37 @@ validity checks must be represented in Rocq and the extracted checker.
   this endpoint, but the public runtime theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-- The ready-body route is no longer the main proof strategy for the no-receiver
-  branch. The four full-valid no-receiver blockers all have `narrow=ok`, and
-  the narrow route now has env-level evidence, local-bounds lifting, a sound
-  checker certificate, and a no-receiver diagnostic checker that provides
-  `component_body_local_bounds_narrow_summary_provider_in_env` for the active
-  mixed endpoint. That checker is extracted and regression-tracked in the CLI
-  diagnostics (`no-receiver-narrow-summary=11/100` on the targeted trait/direct
-  frontier). The provider also has local-bounds lookup,
-  direct-call-target-shaped, mixed-endpoint, and component-summary conversion
-  helpers that package a checked component with its local-bounds narrow callee
-  evidence. The packaged narrow-callee component now has a direct big-step
-  safety lemma and has been lifted through the non-strict, strict, and active
-  mixed no-receiver diagnostic branches. A global promotion attempt for the
-  narrow gate was rejected because it makes many existing valid no-receiver
-  programs fail the end-to-end safety gate; the next proof step must either
-  broaden the certificate coverage or apply the gate only to the targeted
-  trait/direct frontier.
+- The ready-body route alone stalled for the no-receiver branch, and the narrow
+  route alone is too restrictive for the full accepted language. The current
+  proof route is a combined no-receiver certificate:
+  `check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check`.
+  It dispatches to the ready-body provider certificate when available and to the
+  narrow store-safe certificate for the remaining targeted cases. The checker is
+  extracted and regression-tracked in CLI diagnostics: on the targeted
+  trait/direct frontier, `no-receiver-ready-body-or-narrow-summary=100/100`,
+  while the narrower standalone certificate remains `no-receiver-narrow-summary=11/100`.
+  The combined certificate has an active mixed diagnostic safety theorem, but
+  still depends on the existing ready-body route bridge for the ready-body arm.
 
 ## Remaining Tasks
 
-1. Finish direct-call receiver activation.
+1. Close the combined certificate proof path.
+   - Remove or discharge the ready-body route-bridge premise from the combined
+     active mixed diagnostic theorem, or replace that arm with already-proven
+     route/provider packages.
+   - Keep the narrow arm as the fallback for the four full-valid ready-body
+     blockers and for the targeted trait/direct frontier.
+
+2. Finish direct-call receiver activation.
+   - Promote only a certificate gate that preserves existing valid tests, most
+     likely the combined ready-body-or-narrow gate after its bridge dependency is
+     closed.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` only after the
-     active endpoint has a certificate gate that preserves existing valid tests.
-   - Do not promote `check_env_root_shadow_no_receiver_component_narrow_summary_provider_check`
-     as a blanket no-receiver requirement; it is proven but too narrow for the
-     full accepted language.
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` after the active
+     endpoint is covered by the proven certificate gate.
    - Add positive direct-call receiver UFCS tests only after the verified active
      endpoint accepts them. Keep existing direct-call receiver safety-gate tests
      invalid until that switch lands.
-
-2. Build a selective or broader certificate gate.
-   - Either classify and gate only the targeted trait/direct frontier where the
-     narrow certificate applies, or broaden the certificate so ordinary valid
-     no-receiver programs still pass.
-   - Regenerate extraction and run the OCaml/CLI regression suite after any
-     active gate change.
 
 3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
@@ -81,12 +75,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  previous ready-body and ordinary shadow-summary bridge path stalled; keep the
-  proof on certificate routes instead of reviving that path.
-- The active mixed no-receiver theorem now consumes the narrow store-safe
-  certificate, but that certificate is not broad enough to be a blanket active
-  endpoint gate. A selective frontier gate or a broader no-receiver certificate
-  is needed before the public runtime theorem can move.
+  combined ready-body-or-narrow certificate preserves the current diagnostic
+  frontier, but its ready-body arm still carries the route-bridge premise.
+- The narrow store-safe certificate is proven and useful as a fallback, but it is
+  not broad enough to be a blanket active endpoint gate by itself.
 - Direct-call receiver safety-gate tests must remain invalid until the verified
   active endpoint accepts those receiver forms through Rocq, extraction, and the
   OCaml CLI without handwritten fallback logic.

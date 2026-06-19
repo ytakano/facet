@@ -14994,6 +14994,28 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check_sound :
+  forall env,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true \/
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hunique Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+    in Hcheck.
+  apply orb_true_iff in Hcheck as [Hready_check | Hnarrow_check].
+  - left.
+    eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound;
+      eassumption.
+  - right.
+    eapply check_env_root_shadow_no_receiver_component_narrow_summary_provider_check_sound;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -15989,6 +16011,80 @@ Proof.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_or_narrow_summary_provider_check_diagnostic :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+      env' = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route env
+    env' f s s' v Hprog Hcombined_check Hinitial Hin Hstore Heval.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+    env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - assert (Hunique : fn_env_unique_by_name env').
+    { eapply infer_program_env_end2end_assoc_unique_by_name.
+      eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+      exact Hprog. }
+    destruct (check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check_sound
+      env' Hunique Hcombined_check Hno_receiver) as [Hready_body | Hnarrow].
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_diagnostic.
+      * exact Hsynthetic_route.
+      * exact Hscope_synthetic.
+      * exact Htyping_ready.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact Hparam_ready.
+      * exact Hsummary_to_route.
+      * exact Hprog.
+      * unfold check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check.
+        rewrite Hno_receiver. simpl. exact Hready_body.
+      * exact Hinitial.
+      * exact Hin.
+      * exact Hstore.
+      * exact Heval.
+    + eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_component_narrow_provider.
+      * eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+        exact Hprog.
+      * exact Hnarrow.
+      * exact Hinitial.
+      * exact Hin.
+      * exact Hstore.
+      * exact Heval.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_and_mixed_route_providers_diagnostic :

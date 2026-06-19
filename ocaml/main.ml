@@ -624,7 +624,10 @@ let () =
       (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
          checked_env);
     print_gate "trait-no-receiver-narrow-summary"
-      (check_env_root_shadow_no_receiver_component_narrow_summary_provider_check checked_env)
+      (check_env_root_shadow_no_receiver_component_narrow_summary_provider_check checked_env);
+    print_gate "trait-no-receiver-ready-body-or-narrow-summary"
+      (check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+         checked_env)
   end;
   Option.iter (fun fname ->
     try Fir.emit_fir fname checked_env

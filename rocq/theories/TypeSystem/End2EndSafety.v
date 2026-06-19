@@ -13119,6 +13119,15 @@ Proof.
     eassumption.
 Qed.
 
+Definition mixed_ready_body_or_narrow_value_cleanup_bridge_statement : Prop :=
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement.
+
 Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

@@ -87,10 +87,11 @@ validity checks must be represented in Rocq and the extracted checker.
   value-only mixed body-call callback is derivable from both global and scoped
   mixed route families, with statement/local-bounds branch-route, env-family,
   component-provider, and endpoint-provider constructors for component-local
-  recursion. The
-  next proof target is a mixed cleanup bridge whose recursive body-call callback
-  consumes that scoped value-only mixed callback rather than the old
-  full-preservation synthetic callback and `fn_root_shadow_synthetic...` evidence.
+  recursion. The next proof target is now named in Rocq as
+  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`: a closed mixed
+  cleanup bridge that consumes value-only recursive evidence internally rather
+  than the old full-preservation synthetic callback and
+  `fn_root_shadow_synthetic...` evidence.
   After that bridge yields a global mixed route without a synthetic-route public
   premise, retarget the endpoint and then the public runtime theorem.
 
@@ -143,10 +144,10 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence-at predicate, and a value-only mixed body-call callback adapter is
   proved from both global and scoped mixed route families with statement/local-bounds
   branch-route, env-family, component-provider, and endpoint-provider variants.
-  Remaining endpoint work is to add a mixed cleanup bridge that accepts this
-  scoped value-only mixed recursive body-target callback, use it to remove the
-  global synthetic branch-route premise, then retarget the public runtime theorem
-  without adding public premises or shrinking the accepted language.
+  Remaining endpoint work is to prove the named
+  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`, use it to remove
+  the global synthetic branch-route premise, then retarget the public runtime
+  theorem without adding public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

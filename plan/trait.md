@@ -37,21 +37,14 @@ validity checks must be represented in Rocq and the extracted checker.
   valid suite (`0/222` failures). Older broader gates remain diagnostic only:
   env-wide `ready_body_or_narrow` and all-local-bounds narrow still fail the same
   four full-valid helper-function cases. The per-local mixed provider is now
-  consumed by compiled runtime helpers at the exact component-local callee lookup
-  and by an env-level captured/component safety theorem. The remaining proof work
-  is to wire that theorem into the active diagnostic route and then retarget the
-  public theorem.
+  consumed by compiled runtime helpers at the exact component-local callee lookup,
+  by a boolean-preserving captured/component env safety theorem, and by the active
+  direct-receiver mixed diagnostic theorem. The remaining proof work is to
+  retarget the public theorem.
 
 ## Remaining Tasks
 
-1. Wire the per-local mixed certificate into the active safety route.
-   - Retarget the active diagnostic theorem from the older env-wide/all-local
-     combined gates to
-     `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check`.
-   - Reuse the compiled per-callee and env-level runtime helpers instead of
-     reintroducing all-env ready-body or all-env narrow premises.
-
-2. Finish direct-call receiver activation.
+1. Finish direct-call receiver activation.
    - Promote only a certificate gate that preserves existing valid tests, most
      likely the combined ready-body-or-narrow gate after its bridge dependency is
      closed.
@@ -62,14 +55,14 @@ validity checks must be represented in Rocq and the extracted checker.
      endpoint accepts them. Keep existing direct-call receiver safety-gate tests
      invalid until that switch lands.
 
-3. Extend receiver coverage conservatively.
+2. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
    - Add remaining receiver forms only when Rocq checker summaries and safety
      proofs provide store/root-safe evidence for each shape.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 
-4. Maintain assoc-aware trait behavior.
+3. Maintain assoc-aware trait behavior.
    - Preserve assoc-aware normalization at checker boundaries rather than by
      rewriting whole raw ASTs.
    - Keep parser/desugar name resolution separate from trait solving and final
@@ -80,8 +73,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
   per-local mixed certificate removes the full-valid diagnostic blockers and now
-  has compiled runtime helper lemmas, but the active diagnostic/public theorem
-  still needs to be retargeted to those helpers.
+  has compiled runtime helper lemmas plus an active diagnostic theorem, but the
+  public theorem still needs to be retargeted to that route.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

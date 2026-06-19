@@ -31,15 +31,15 @@ validity checks must be represented in Rocq and the extracted checker.
   At each component-local callee it accepts synthetic-ready, ordinary-shadow, or
   narrow evidence; this is broad enough for the current valid suite.
 - Runtime proof plumbing for the active endpoint now has named mixed route,
-  cleanup, value-callback, alpha-callback, provider-bundle, and combined
-  route/value bridge adapters. Endpoint-level and public summary-route wrappers
-  factor through the combined route/value bridge; both public exact-body wrappers
-  now factor through that public summary-route path.
+  cleanup, value-callback, alpha-callback, provider-bundle, combined route/value
+  bridge adapters, and a ready-body-route-to-mixed-route provider bridge.
+  Endpoint-level and public summary-route wrappers factor through the combined
+  bridge; both public exact-body wrappers factor through that public path.
 - The active endpoint can currently be proved with either an explicit
-  summary-route bridge or all-target synthetic summary evidence. The remaining
-  gap is deriving the needed synthetic branch route from the active per-local
-  certificate without requiring recursive synthetic-only evidence for all
-  callees.
+  summary-route bridge, all-target synthetic summary evidence, or a ready-body
+  route provider. The remaining gap is proving the ready-body route from the
+  active branch-local mixed certificate without requiring recursive
+  synthetic-only evidence for all callees.
 
 ## Remaining Tasks
 
@@ -75,12 +75,11 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, including combined public summary and exact-body
-  wrappers, but it still needs either a summary-route bridge or all-target
-  synthetic summary evidence. The active mixed certificate gives branch-local
-  evidence for each callee; the next proof target is a mixed recursive route
-  over eval height that consumes branch-local synthetic, ordinary-shadow, or
-  narrow evidence directly, including nested narrow calls.
+  route/value path is available, including combined public summary/exact-body
+  wrappers and a ready-body-route bridge, but the public theorem still lacks a
+  proof that the active branch-local mixed certificate yields the needed
+  recursive ready-body route. That route must consume synthetic,
+  ordinary-shadow, and narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

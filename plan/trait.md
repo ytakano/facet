@@ -91,7 +91,9 @@ validity checks must be represented in Rocq and the extracted checker.
   branch-local mixed evidence plus alpha callback at the recursive callback
   boundary. The named summary-route bridge now also constructs that
   alpha-aware value-callback bridge directly, so the public summary-route
-  wrappers factor through the stronger route-plus-value-callback endpoint.
+  wrappers factor through the stronger route-plus-value-callback endpoint, and
+  an endpoint-level summary-route/value-callback wrapper exposes the same path
+  after the stronger endpoint theorem is available in declaration order.
 
 ## Remaining Tasks
 
@@ -154,7 +156,8 @@ validity checks must be represented in Rocq and the extracted checker.
   alpha-aware route bridge factored into that endpoint and its public wrappers,
   and a matching alpha-aware value-callback bridge with endpoint and public
   wrappers; the named summary-route bridge now supplies both alpha route and
-  alpha value-callback bridges for the public summary-route wrappers.
+  alpha value-callback bridges for the public summary-route wrappers and for
+  a post-definition endpoint-level summary-route/value-callback wrapper.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

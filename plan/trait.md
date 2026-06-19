@@ -34,10 +34,11 @@ validity checks must be represented in Rocq and the extracted checker.
   mixed endpoint. That checker is now extracted and regression-tracked in the
   CLI diagnostics (`no-receiver-narrow-summary=11/100` on the targeted
   trait/direct frontier). The provider also has local-bounds lookup,
-  direct-call-target-shaped, and mixed-endpoint helpers that expose callee-level
-  narrow evidence for a checked component's direct-call target. The remaining
-  proof work is to bridge that narrow callee evidence to the callback/package
-  evidence needed by the public runtime theorem.
+  direct-call-target-shaped, mixed-endpoint, and component-summary conversion
+  helpers that package a checked component with its local-bounds narrow callee
+  evidence. The remaining proof work is to connect that narrow-callee component
+  package to the mixed no-receiver safety theorem, replacing the stalled
+  synthetic callback/package route for this branch.
 
 ## Remaining Tasks
 

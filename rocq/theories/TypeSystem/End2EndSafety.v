@@ -4064,6 +4064,32 @@ Definition strict_exact_closure_component_body_narrow_callee_at_provider
     callee_body_root_shadow_store_safe_narrow_summary
       (global_env_with_local_bounds env' (fn_bounds f_component)) fdef.
 
+Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists fname args raw_body synthetic_body fcallee T_body Gamma_out R_body
+      roots_body,
+    fn_captures fdef = [] /\
+    fn_body fdef = raw_body /\
+    direct_call_target_expr raw_body = Some (fname, args, synthetic_body) /\
+    synthetic_body = ECall fname args /\
+    store_safe_function_value_call_args env args /\
+    In fcallee (env_fns env) /\
+    fn_name fcallee = fname /\
+    fn_captures fcallee = [] /\
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env (fn_bounds fdef)) fcallee /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check :
   forall env env' f_component fname args synthetic_body fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
@@ -12965,6 +12991,40 @@ Proof.
     _Htarget Hlookup.
   eapply component_body_local_bounds_narrow_summary_provider_at_lookup;
     eassumption.
+Qed.
+
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_of_component_and_local_bounds_narrow_provider :
+  forall env f_component,
+    fn_env_unique_by_name env ->
+    component_body_local_bounds_narrow_summary_provider_in_env env ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary
+      env f_component.
+Proof.
+  intros env f_component Hunique Hprovider Hin_component Hcomponent_check
+    Hcomponent.
+  destruct Hcomponent as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & Hcaps & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & Hin_callee & Hname_callee &
+      Hcaps_callee & Hnodup & Htyped & Hcompat & Hroots & Henv_excl).
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f_component)).
+  assert (Hunique_body : fn_env_unique_by_name body_env).
+  { subst body_env. unfold fn_env_unique_by_name in *. simpl. exact Hunique. }
+  assert (Hin_callee_body : In fcallee (env_fns body_env)).
+  { subst body_env. simpl. exact Hin_callee. }
+  assert (Hlookup : lookup_fn fname (env_fns body_env) = Some fcallee).
+  { eapply lookup_fn_in_unique_by_name; eassumption. }
+  assert (Hnarrow_callee :
+    callee_body_root_shadow_store_safe_narrow_summary body_env fcallee).
+  { subst body_env. eapply Hprovider; eassumption. }
+  exists fname, args, raw_body, synthetic_body, fcallee, T_body, Gamma_out,
+    R_body, roots_body.
+  repeat split; try eassumption.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :

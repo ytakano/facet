@@ -33,12 +33,12 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver ready-body plus shadow-checks ok, and 0
   direct-receiver-method-present.
 - Ready-body fallback proof infrastructure now includes local-bounds provider
-  contracts, synthetic/ordinary route-provider wrappers, ready-body and
-  synthetic provider adapters from the combined no-receiver diagnostic, and
-  mixed-route diagnostic theorems that avoid the abstract ready-body route bridge
-  once synthetic and shadow route providers are supplied. The remaining gap is
-  deriving those providers from the active mixed checker's public premises rather
-  than diagnostic-only checks.
+  contracts, synthetic/ordinary route-provider wrappers, Prop-level reachable
+  route-package adapters, ready-body and synthetic provider adapters from the
+  combined no-receiver diagnostic, and mixed-route diagnostic theorems that avoid
+  the abstract ready-body route bridge once synthetic and shadow route providers
+  are supplied. The remaining gap is deriving those providers from the active
+  mixed checker's public premises rather than diagnostic-only checks.
 
 ## Remaining Tasks
 

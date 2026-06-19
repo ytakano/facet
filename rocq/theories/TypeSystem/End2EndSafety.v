@@ -12725,6 +12725,17 @@ Definition component_body_local_bounds_shadow_summary_route_provider_in_env
     eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_mixed_route_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)) /\
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
 Definition component_body_local_bounds_narrow_summary_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -13564,18 +13575,7 @@ Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_
       env = true ->
     component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
       env ->
-    (forall f_component,
-      In f_component (env_fns env) ->
-      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env f_component = true ->
-      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
-        (global_env_with_local_bounds env (fn_bounds f_component))) ->
-    (forall f_component,
-      In f_component (env_fns env) ->
-      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env f_component = true ->
-      eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
-        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    component_body_local_bounds_mixed_route_provider_in_env env ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env) ->
     initial_store_for_fn env f s ->
@@ -13583,7 +13583,7 @@ Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_
     value_has_type env s' v (fn_ret f).
 Proof.
   intros Hroot_names Hroot_keys env f s s' v Hunique Hcombined_check
-    Hprovider Hsynthetic_provider Hordinary_provider Hinitial Hin Hstore Heval.
+    Hprovider Hroute_provider Hinitial Hin Hstore Heval.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
     in Hcombined_check.
   apply forallb_forall with (x := f) in Hcombined_check; [| exact Hin].
@@ -13602,8 +13602,10 @@ Proof.
     + exact Hroot_keys.
     + exact Hunique.
     + exact Hprovider.
-    + eapply Hsynthetic_provider; eassumption.
-    + eapply Hordinary_provider; eassumption.
+    + destruct (Hroute_provider f Hin Hcomponent_check) as [Hsynthetic_route _].
+      exact Hsynthetic_route.
+    + destruct (Hroute_provider f Hin Hcomponent_check) as [_ Hordinary_route].
+      exact Hordinary_route.
     + exact Hin.
     + exact Hcomponent_check.
     + apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
@@ -17116,15 +17118,17 @@ Proof.
     + exact Hunique.
     + exact Hcombined_check.
     + exact Hprovider.
-    + exact (Hsynthetic_provider_when_no_receiver Hno_receiver).
-    + intros _f_component _Hin_component _Hcomponent_check.
-      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
-      * exact Hroots_ready.
-      * exact Hroot_names.
-      * exact Hroot_keys.
-      * exact Hframe_ready.
-      * exact eval_preserves_typing_roots_ready_prefix_mutual.
-      * exact Hparam_ready.
+    + intros f_component Hin_component Hcomponent_check.
+      split.
+      * exact (Hsynthetic_provider_when_no_receiver Hno_receiver
+          f_component Hin_component Hcomponent_check).
+      * eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
+        -- exact Hroots_ready.
+        -- exact Hroot_names.
+        -- exact Hroot_keys.
+        -- exact Hframe_ready.
+        -- exact eval_preserves_typing_roots_ready_prefix_mutual.
+        -- exact Hparam_ready.
     + exact Hinitial.
     + exact Hin.
     + exact Hstore.

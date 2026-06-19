@@ -13192,6 +13192,23 @@ Proof.
     eassumption.
 Qed.
 
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_synthetic_and_shadow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  forall env,
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route env.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_route_provider.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_synthetic_and_shadow_routes;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_mixed_route_provider_synthetic :
   forall env,
     component_body_local_bounds_mixed_route_provider_in_env env ->

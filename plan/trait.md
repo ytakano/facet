@@ -53,10 +53,11 @@ validity checks must be represented in Rocq and the extracted checker.
   summary-family route bridge, route-package/reachability helpers, exact-target
   adapters, pointwise callee evidence, callback-at/local-bounds callback bridges,
   checker-to-callback-at provider bridges, an ordinary shadow-summary prefix
-  route contract, and a per-callee mixed route adapter that dispatches ready-body
-  summaries to synthetic or ordinary routes. This gives synthetic-or-ordinary
-  callee evidence plus store-safe target arguments for alpha-renamed direct
-  targets, while isolating the remaining lower-provider retarget.
+  route contract, a per-callee mixed route adapter, and a component/end-to-end
+  ready-body route wrapper for no-capture direct-call component bodies. This
+  gives synthetic-or-ordinary callee evidence plus store-safe target arguments
+  for alpha-renamed direct targets, while isolating the remaining public
+  provider wiring.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -79,8 +80,8 @@ validity checks must be represented in Rocq and the extracted checker.
      exact-body package facts, store-safe target arguments, and the
      component-only boolean bridge.
    - Prove the final bridge from public prefix-route premises to the
-     no-receiver local-bounds provider and per-callee evidence required by the
-     active mixed proof path, without requiring Prop-to-bool completeness for
+     ready-body route and ready-body summary providers required by the new
+     no-receiver wrapper, without requiring Prop-to-bool completeness for
      component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
@@ -108,10 +109,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The active mixed endpoint has the needed direct-ready branch, assoc-base
   callback paths, component-body summary/check routes, and ready-body fallback
   bridges up through named evidence/provenance, synthetic-check, summary-family,
-  callback-at providers, ordinary shadow-summary prefix routes, and a mixed
-  ready-body route adapter. It still lacks the lower mixed preservation theorem
-  retarget that lets the no-receiver path consume the ready-body route provider
-  instead of converting it back to a synthetic-only local-bounds route.
+  callback-at providers, ordinary shadow-summary prefix routes, a mixed
+  ready-body route adapter, and a component/end-to-end wrapper that consumes
+  ready-body route plus ready-body summary providers. It still needs the public
+  provider derivation and mixed-path wiring that makes this wrapper active
+  without converting back to a synthetic-only local-bounds route.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

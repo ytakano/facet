@@ -12797,6 +12797,64 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc env = infer_ok env' ->
+    component_body_local_bounds_ready_body_route_provider_in_env env' ->
+    component_body_local_bounds_ready_body_summary_provider_in_env env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys env env' f s s' v Hprog
+    Hcomponent_route Hcomponent_ready_summary Hinitial Hin Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { eapply infer_program_env_end2end_assoc_unique_by_name. exact Hprog. }
+  assert (Hcheck_env :
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env' = true).
+  { eapply infer_program_env_end2end_assoc_check_env_ready. exact Hprog. }
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck_env.
+  apply forallb_forall with (x := f) in Hcheck_env; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hcheck_env.
+  apply orb_true_iff in Hcheck_env as [Hcaptured_check | Hexact_check].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + apply check_fn_root_shadow_captured_call_store_safe_summary_sound.
+      exact Hcaptured_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+                env' f Hexact_check) as [Hcomponent _Hexact_target].
+    assert (Hcomponent_check :
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f = true).
+    { unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        in Hexact_check.
+      eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check.
+      - exact Hexact_check.
+      - reflexivity. }
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_body_route_in_local_bounds_family.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + eapply Hcomponent_route; eassumption.
+    + intros fname args synthetic_body _Htarget.
+      eapply component_body_local_bounds_ready_body_summary_provider_at_in;
+        eassumption.
+    + exact Hcomponent.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_summary_provider_route_package :
   forall env f_component used fcall used' fname_body args_body synthetic_body,
     component_body_local_bounds_ready_body_summary_provider_in_env env ->

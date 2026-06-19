@@ -42,11 +42,12 @@ validity checks must be represented in Rocq and the extracted checker.
   component-provider case split, a bundled ready-body summary+route adapter from
   the ready-body check plus synthetic and shadow routes, and combined no-receiver
   diagnostic adapters for ready-body, ready-body summary+route, synthetic,
-  callback, store-callback, and ready-body route-package providers. Mixed-route
-  diagnostic theorems avoid the abstract ready-body route bridge once synthetic
-  and shadow route providers are supplied. The remaining gap is deriving those
-  providers from the active mixed checker's public no-receiver premises rather
-  than diagnostic-only checks.
+  callback, store-callback, and ready-body route-package providers. The
+  ready-body route, callback, synthetic-callback, and store-callback adapters now
+  also have concrete mixed-route variants that avoid the abstract ready-body
+  route bridge once synthetic and shadow route providers are supplied. The
+  remaining gap is deriving those providers from the active mixed checker's
+  public no-receiver premises rather than diagnostic-only checks.
 
 ## Remaining Tasks
 

@@ -12859,6 +12859,28 @@ Definition shadow_summary_local_bounds_family_route_bridge : Prop :=
     eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       base.
 
+
+
+Lemma direct_call_callee_body_root_ready_body_evidence_at_of_shadow_summary_local_bounds_family :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base,
+    env_fns_root_shadow_summary_evidence base ->
+    forall env fname,
+      global_env_local_bounds_family base env ->
+      fn_env_unique_by_name env ->
+      direct_call_callee_body_root_ready_body_evidence_at env fname.
+Proof.
+  intros Hroot_names Hroot_keys base Hsummary_base env fname Hfamily Hunique.
+  eapply direct_call_callee_body_root_ready_body_evidence_at_of_shadow_summary.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - destruct Hfamily as [bounds ->].
+    eapply env_fns_root_shadow_summary_evidence_global_env_with_local_bounds_for_route.
+    exact Hsummary_base.
+  - exact Hunique.
+Qed.
+
 Lemma component_body_local_bounds_shadow_summary_route_provider_of_env_summary :
   shadow_summary_local_bounds_family_route_bridge ->
   forall env,

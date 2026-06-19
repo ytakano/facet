@@ -43,15 +43,16 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-receiver mixed diagnostic theorem. The certificate is now enforced by
   the active extracted endpoint without changing the accepted regression frontier,
   and an active-endpoint safety wrapper obtains that certificate directly from
-  the endpoint. The remaining proof work is to close the route-provider bridge
-  needed by the public theorem.
+  the endpoint. Ordinary shadow summaries now lift through local-bounds families
+  to ready-body callee evidence; the remaining proof work is to wrap that evidence
+  into the route provider needed by the public theorem.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Prove or reuse a no-receiver route-provider bridge that supplies the
-     synthetic and ordinary shadow local-bounds routes required by the
-     active-endpoint mixed safety wrapper without adding public theorem premises.
+   - Prove or reuse a call-route wrapper that converts the local-bounds ready-body
+     callee evidence from synthetic/ordinary shadow summaries into the route
+     provider required by the active-endpoint mixed safety wrapper.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active
@@ -76,9 +77,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
   active endpoint now exposes the per-local certificate check and has a wrapper
-  safety theorem, but the public theorem still needs a derivation of the required
-  no-receiver local-bounds route providers from existing public preservation
-  assumptions.
+  safety theorem, but the public theorem still needs a call-route wrapper that
+  consumes the local-bounds ready-body callee evidence without adding public
+  premises.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

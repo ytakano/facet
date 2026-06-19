@@ -12736,6 +12736,34 @@ Definition component_body_local_bounds_mixed_route_provider_in_env
     eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Lemma component_body_local_bounds_mixed_route_provider_synthetic :
+  forall env,
+    component_body_local_bounds_mixed_route_provider_in_env env ->
+    forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component)).
+Proof.
+  intros env Hprovider f_component Hin Hcheck.
+  exact (proj1 (Hprovider f_component Hin Hcheck)).
+Qed.
+
+Lemma component_body_local_bounds_mixed_route_provider_shadow :
+  forall env,
+    component_body_local_bounds_mixed_route_provider_in_env env ->
+    forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component)).
+Proof.
+  intros env Hprovider f_component Hin Hcheck.
+  exact (proj2 (Hprovider f_component Hin Hcheck)).
+Qed.
+
 Definition component_body_local_bounds_narrow_summary_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -13602,10 +13630,10 @@ Proof.
     + exact Hroot_keys.
     + exact Hunique.
     + exact Hprovider.
-    + destruct (Hroute_provider f Hin Hcomponent_check) as [Hsynthetic_route _].
-      exact Hsynthetic_route.
-    + destruct (Hroute_provider f Hin Hcomponent_check) as [_ Hordinary_route].
-      exact Hordinary_route.
+    + eapply component_body_local_bounds_mixed_route_provider_synthetic;
+        eassumption.
+    + eapply component_body_local_bounds_mixed_route_provider_shadow;
+        eassumption.
     + exact Hin.
     + exact Hcomponent_check.
     + apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.

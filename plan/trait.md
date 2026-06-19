@@ -38,25 +38,31 @@ validity checks must be represented in Rocq and the extracted checker.
   helpers that package a checked component with its local-bounds narrow callee
   evidence. The packaged narrow-callee component now has a direct big-step
   safety lemma and has been lifted through the non-strict, strict, and active
-  mixed no-receiver branches. The remaining proof work is to retarget the public
-  runtime theorem to the active mixed endpoint and then promote the proven gate.
+  mixed no-receiver diagnostic branches. A global promotion attempt for the
+  narrow gate was rejected because it makes many existing valid no-receiver
+  programs fail the end-to-end safety gate; the next proof step must either
+  broaden the certificate coverage or apply the gate only to the targeted
+  trait/direct frontier.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` using the proven
-     active no-receiver narrow certificate theorem.
-   - Promote only proven certificate gates into the active endpoint.
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` only after the
+     active endpoint has a certificate gate that preserves existing valid tests.
+   - Do not promote `check_env_root_shadow_no_receiver_component_narrow_summary_provider_check`
+     as a blanket no-receiver requirement; it is proven but too narrow for the
+     full accepted language.
    - Add positive direct-call receiver UFCS tests only after the verified active
      endpoint accepts them. Keep existing direct-call receiver safety-gate tests
      invalid until that switch lands.
 
-2. Validate and promote the narrow gate.
-   - Wire the active endpoint to require the no-receiver narrow diagnostic only
-     on the no-receiver branch.
-   - Regenerate extraction and run the OCaml/CLI regression suite after the
-     active gate changes.
+2. Build a selective or broader certificate gate.
+   - Either classify and gate only the targeted trait/direct frontier where the
+     narrow certificate applies, or broaden the certificate so ordinary valid
+     no-receiver programs still pass.
+   - Regenerate extraction and run the OCaml/CLI regression suite after any
+     active gate change.
 
 3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
@@ -76,10 +82,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
   previous ready-body and ordinary shadow-summary bridge path stalled; keep the
-  proof on the narrow certificate route.
+  proof on certificate routes instead of reviving that path.
 - The active mixed no-receiver theorem now consumes the narrow store-safe
-  certificate, but the executable endpoint still needs to promote that proven
-  gate before direct-call receiver tests can become valid.
+  certificate, but that certificate is not broad enough to be a blanket active
+  endpoint gate. A selective frontier gate or a broader no-receiver certificate
+  is needed before the public runtime theorem can move.
 - Direct-call receiver safety-gate tests must remain invalid until the verified
   active endpoint accepts those receiver forms through Rocq, extraction, and the
   OCaml CLI without handwritten fallback logic.

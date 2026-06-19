@@ -12689,6 +12689,51 @@ Proof.
   - exact Heval.
 Qed.
 
+Definition fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+    (env : global_env) (fname : ident) : Prop :=
+  forall fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef \/
+    callee_body_root_shadow_summary env fdef \/
+    callee_body_root_shadow_store_safe_narrow_summary env fdef.
+
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+    (env : global_env) : Prop :=
+  forall s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+        roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname ->
+      store_typed_prefix env s' Sigma' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    (env_family : global_env -> Prop) : Prop :=
+  forall env,
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+    (base : global_env) : Prop :=
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    (global_env_local_bounds_family base).
+
 Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -12816,6 +12861,22 @@ Definition component_body_local_bounds_ready_body_or_narrow_summary_provider_in_
       (global_env_with_local_bounds env (fn_bounds f_component)) fdef \/
     callee_body_root_shadow_store_safe_narrow_summary
       (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
+
+Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at :
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    forall f_component fname,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+Proof.
+  intros env Hprovider f_component fname Hin_component Hcomponent_check
+    fdef Hlookup.
+  eapply Hprovider; eassumption.
+Qed.
 
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,

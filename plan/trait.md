@@ -67,8 +67,10 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint wrapper now passes one bundled mixed route provider, with projection
   lemmas for the synthetic and ordinary halves, instead of separate route
   callbacks. A reusable constructor derives the ordinary half from the existing
-  provenance-ready route package, leaving only the synthetic half to derive from
-  the active mixed certificate. Existing synthetic preservation
+  provenance-ready route package. The target height-indexed mixed route shape is
+  now named in Rocq, and the active provider bridges to its lookup-indexed mixed
+  evidence-at predicate. The remaining implementation work is proving that route
+  and using it to derive the synthetic half of the mixed provider. Existing synthetic preservation
   still requires recursive synthetic evidence for all top-level callees, but the
   active certificate may classify recursive callees as ordinary-shadow or narrow.
   The next proof must therefore be a height-indexed mixed route theorem, not
@@ -116,8 +118,9 @@ validity checks must be represented in Rocq and the extracted checker.
   reusable provenance-ready constructor; the public theorem still needs the
   synthetic half of that bundle derived from the active mixed certificate.
   The existing synthetic route theorem requires all-recursive synthetic evidence,
-  which is stronger than the active mixed certificate. Removing the callback
-  requires a new height-indexed mixed route theorem that dispatches recursive
+  which is stronger than the active mixed certificate. The replacement
+  height-indexed mixed route interface and provider-to-evidence bridge are now
+  defined, but the theorem itself is still pending: it must dispatch recursive
   calls through synthetic, ordinary-shadow, or narrow evidence according to the
   active certificate, without adding public premises or shrinking the accepted
   language.

@@ -22,107 +22,39 @@ validity checks must be represented in Rocq and the extracted checker.
   enums, direct-call receivers, generic direct-call receivers, non-pure inferred
   locals, and call-initialized/general annotated locals remain gated.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
-  its only checker authority. That endpoint enforces the direct-receiver mixed
-  checks and the per-local mixed no-receiver certificate without changing the
-  accepted regression frontier. Public checker soundness aliases target this
-  endpoint, but the public runtime theorem
+  its only checker authority. Public checker soundness aliases target this
+  endpoint. The required public runtime theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-- The active no-receiver certificate is per-local mixed evidence:
+- The active no-receiver certificate is
   `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check`.
   At each component-local callee it accepts synthetic-ready, ordinary-shadow, or
-  narrow evidence. This shape is broad enough for the current valid suite, unlike
-  the older blanket narrow/all-local-bounds diagnostics.
-- Runtime proof plumbing now has global and local-bounds mixed value routes,
-  mixed cleanup routes, component providers, endpoint providers, and bridge
-  adapters. Ordinary-shadow routes are derived from the provenance-ready package.
-  Narrow direct calls now have a non-generic runtime package theorem over the
-  post-cleanup result store, and the named narrow cleanup route is proved from
-  that package.
-- A concrete mixed cleanup callback is now derivable from the existing
-  synthetic-ready full route, the ordinary-shadow full route family, and the
-  proved narrow cleanup route. The active endpoint wrapper that assumes a global
-  synthetic branch route now consumes both the mixed route provider and this
-  cleanup provider path, there is an active-endpoint constructor from the
-  exact-body-call route package, and the summary-to-route conversion is named as
-  `mixed_ready_body_or_narrow_summary_provider_route_bridge`. That bridge now has
-  a constructor from the existing synthetic and ordinary-shadow route packages,
-  there is a local-bounds adapter from per-component synthetic/ordinary route
-  families to the mixed ready-body-or-narrow route family, an active endpoint
-  wrapper now consumes a combined component mixed-route provider directly, the
-  older separate synthetic/shadow route-provider endpoint factors through that
-  combined path, there are compiled active-endpoint public theorems for the
-  combined component mixed-route provider and named summary-route bridge routes, mixed disjunction handling now
-  has a bridge that needs only a per-target store-safe synthetic route plus the
-  ordinary-shadow route family, the mixed route plus cleanup callback route and the existing mixed value/cleanup bridge
-  both have public prefix/non-prefix active-endpoint wrappers, and the bridge
-  interface has a constructor from that per-target synthetic route, and active endpoint runtime
-  theorems now expose either the store-safe or plain per-target synthetic prefix
-  route as the only extra proof premise, and short public prefix and non-prefix active-endpoint wrappers expose the
-  exact-body-call route package path. The named
-  summary-provider route bridge also has constructors from the store-safe and
-  plain per-target synthetic routes plus the ordinary-shadow route family, the
-  exact-body-call route package, a compiled constructor from the public synthetic
-  prefix theorem when all-target synthetic summary evidence is available, and active-endpoint runtime wrappers
-  that target `infer_program_env_end2end_assoc_direct_receiver_mixed` under that
-  explicit all-target evidence premise, and the active certificate-to-route
-  conversion is now named as
-  `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge`
-  and used by the endpoint summary-bridge theorem. The active provider also now
-  has a branch-local alpha-renamed body callback adapter,
-  `component_body_local_bounds_ready_body_or_narrow_summary_provider_alpha_body_callback`,
-  which preserves the component-local evidence across `alpha_rename_fn_def` bounds.
-  That callback is now exposed as
-  `component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env`,
-  with a soundness wrapper from the active no-receiver certificate and an
-  endpoint lift from `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-  The active endpoint now also has a named bundle,
-  `infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate`,
-  that carries both the component-local mixed summary provider and the
-  alpha-body callback provider from the same no-receiver certificate. Under the
-  named summary-route bridge, the active certificate is also exposed as
-  `infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate`.
-  The route boundary now has an alpha-aware bridge,
-  `mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge`, and the
-  active summary-bridge endpoint plus its public prefix/non-prefix wrappers now
-  factor through that bridge. A companion value-callback bridge,
-  `mixed_ready_body_or_narrow_alpha_summary_provider_value_callback_bridge`,
-  endpoint theorem, and public prefix/non-prefix wrappers now expose the same
-  branch-local mixed evidence plus alpha callback at the recursive callback
-  boundary. The named summary-route bridge now also constructs that
-  alpha-aware value-callback bridge directly, so the public summary-route
-  wrappers factor through the stronger route-plus-value-callback endpoint, and
-  an endpoint-level summary-route/value-callback wrapper exposes the same path
-  after the stronger endpoint theorem is available in declaration order. The
-  active certificate now also has a named route-plus-value-callback provider
-  package, with a summary-route bridge wrapper, and the stronger endpoint proof
-  consumes that package instead of rebuilding the certificate bundle twice. The
-  endpoint-level and public exact-body-call route package wrappers now both
-  factor through the route-plus-value-callback endpoint instead of older
-  synthetic-branch or summary-only paths.
+  narrow evidence; this is broad enough for the current valid suite.
+- Runtime proof plumbing for the active endpoint now has named mixed route,
+  cleanup, value-callback, alpha-callback, and provider-bundle adapters. The
+  summary-route bridge and exact-body route package path both feed the stronger
+  route-plus-value-callback endpoint. Endpoint-level and public exact-body
+  wrappers use that route/value path.
+- The active endpoint can currently be proved with either an explicit
+  summary-route bridge or all-target synthetic summary evidence. The remaining
+  gap is deriving the needed synthetic branch route from the active per-local
+  certificate without requiring recursive synthetic-only evidence for all
+  callees.
 
 ## Remaining Tasks
 
 1. Retarget the required public runtime theorem.
-   - Connect the active per-local certificate to route evidence: ordinary-shadow
-     uses the prefix ordinary route, narrow uses the proved narrow package, and
-     synthetic-ready must supply the per-target synthetic prefix route required
-     by `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_evidence_at_prefix_route`
-     without rebuilding a recursive synthetic-only certificate.
-   - Move the required theorem name
-     `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
+   - Move `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Keep the theorem premises no stronger than the current public preservation
-     packages; the additive component-mixed-provider runtime theorem is only an
-     intermediate route until the active certificate is connected without extra
-     public obligations.
+   - Keep public premises no stronger than the current preservation packages.
+   - Connect the active per-local certificate to route evidence: synthetic-ready
+     uses the synthetic route, ordinary-shadow uses the ordinary-shadow route,
+     and narrow uses the proved narrow package.
 
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
-     mixed evidence from the active endpoint certificate: synthetic-ready uses
-     the synthetic route, ordinary-shadow uses the prefix ordinary route, and
-     narrow uses the proved narrow cleanup/value package.
+     mixed evidence from the active endpoint certificate.
    - Add positive direct-call receiver UFCS tests only after the verified active
      endpoint accepts them. Keep existing safety-gate tests invalid until Rocq,
      extraction, and the OCaml CLI agree.
@@ -142,38 +74,12 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- The required public runtime theorem still has not been retargeted to the active
-  endpoint. The cleanup side is wired through the active wrapper, an
-  exact-body-call package constructor plus public prefix and non-prefix wrappers exist for the active
-  endpoint, the summary-to-route bridge has constructors from existing route packages and the exact-body package, an
-  additive active-endpoint prefix theorem compiles with that bridge as an
-  explicit premise, a local mixed-route adapter now compiles, an endpoint
-  wrapper now consumes the combined component mixed-route provider directly, the
-  older separate route-provider endpoint factors through it, public prefix and
-  non-prefix runtime theorems expose the combined-provider and named bridge routes, and an
-  intermediate mixed-disjunction bridge, named summary-provider bridge,
-  mixed-route cleanup wrappers, value/cleanup bridge constructor plus prefix/non-prefix wrappers, and active-endpoint runtime theorems now only
-  require the plain per-target synthetic prefix route for the synthetic branch; the active certificate-to-route
-  adapter is now named and used at the endpoint summary-bridge boundary, and
-  the component-local mixed summary evidence now has a named alpha-renamed body
-  callback provider with a certificate-soundness wrapper, active endpoint lift,
-  active endpoint provider bundle used by the mixed-route proof, a
-  route-plus-callback package used by the summary-bridge proof, an
-  alpha-aware route bridge factored into that endpoint and its public wrappers,
-  and a matching alpha-aware value-callback bridge with endpoint and public
-  wrappers; the named summary-route bridge now supplies both alpha route and
-  alpha value-callback bridges for the public summary-route wrappers and for
-  a post-definition endpoint-level summary-route/value-callback wrapper, plus a
-  named active-certificate route/value provider package used by that endpoint
-  path; the endpoint-level and public exact-body wrappers now use the same
-  route/value endpoint path.
-  Compiled active-endpoint wrappers from the public synthetic prefix theorem
-  confirm the remaining gap precisely: the active endpoint can be proved under
-  an explicit all-target synthetic summary evidence premise, but the active
-  mixed certificate only gives evidence for the actual callee branch. The
-  remaining proof target is deriving a branch-local synthetic route, or changing
-  the route shape to consume branch-local evidence directly, without assuming
-  recursive synthetic-only evidence.
+- The required public runtime theorem is not yet retargeted. The active endpoint
+  route/value path is available, but it still needs either a summary-route bridge
+  or all-target synthetic summary evidence. The active mixed certificate gives
+  branch-local evidence for the actual callee, so the next proof target is a
+  branch-local synthetic route or a route shape that consumes branch-local mixed
+  evidence directly.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

@@ -47,15 +47,18 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body-call route package, and the summary-to-route conversion is named as
   `mixed_ready_body_or_narrow_summary_provider_route_bridge`. That bridge now has
   a constructor from the existing synthetic and ordinary-shadow route packages,
-  and there is a compiled active-endpoint public prefix theorem
+  there is a local-bounds adapter from per-component synthetic/ordinary route
+  families to the mixed ready-body-or-narrow route family, and there is a
+  compiled active-endpoint public prefix theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge`.
 
 ## Remaining Tasks
 
 1. Retarget the required public runtime theorem.
-   - Discharge the synthetic-ready branch route required by the
-     summary-to-route bridge without relying on recursive synthetic-only
-     evidence.
+   - Connect the active per-local certificate to per-component route families:
+     synthetic-ready uses the synthetic route, ordinary-shadow uses the prefix
+     ordinary route, and narrow uses the proved narrow package, without
+     rebuilding a recursive synthetic-only certificate.
    - Move the required theorem name
      `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
@@ -91,11 +94,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The required public runtime theorem still has not been retargeted to the active
   endpoint. The cleanup side is wired through the active wrapper, an
   exact-body-call package constructor exists for the active endpoint, the
-  summary-to-route bridge has a constructor from existing route packages, and an
+  summary-to-route bridge has a constructor from existing route packages, an
   additive active-endpoint prefix theorem compiles with that bridge as an
-  explicit premise. The remaining proof target is discharging the synthetic-ready
-  route package without assuming recursive synthetic-only evidence where the
-  active certificate is mixed per callee.
+  explicit premise, and a local mixed-route adapter now compiles. The remaining
+  proof target is connecting the active mixed per-callee certificate to those
+  route families without assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

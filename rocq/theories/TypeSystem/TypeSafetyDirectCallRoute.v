@@ -764,6 +764,18 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_su
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
     (global_env_local_bounds_family base).
 
+Definition eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_family
+    (env_family : global_env -> Prop) : Prop :=
+  forall env,
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env
+      env.
+
+Definition eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_local_bounds_family
+    (base : global_env) : Prop :=
+  eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_family
+    (global_env_local_bounds_family base).
+
 Definition eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
     (base : global_env) : Prop :=
   eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
@@ -23476,4 +23488,40 @@ Proof.
     as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
   repeat split; try assumption.
   eapply store_typed_prefix_exact. exact Hstore'.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_family_of_provenance_ready_with_callee_summary :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_family
+      env_family.
+Proof.
+  intros Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Htyping_prefix Hparam_ready env_family env _Henv.
+  eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary;
+    eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall base,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Htyping_ready Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Htyping_prefix Hparam_ready base.
+  eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_exact_call_statement_evidence_at_height_statement_in_env_family_of_provenance_ready_with_callee_summary;
+    eassumption.
 Qed.

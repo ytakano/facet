@@ -52,19 +52,19 @@ validity checks must be represented in Rocq and the extracted checker.
   shadow summaries now lift through local-bounds families to ready-body callee
   evidence, and the ordinary shadow route bridge is derivable from the
   ready-body local-bounds route bridge plus root name/key preservation. The
-  ordinary-shadow preservation core is now packaged as an exact-input route
-  theorem, matching the route result shape when the call starts from exact
-  `store_typed`. The remaining proof gap is the prefix-input lift: nested calls
-  require the same ordinary-shadow route from `store_typed_prefix`, without
-  adding a stricter public checker gate.
+  ordinary-shadow preservation core is now packaged as exact-input route
+  theorems for single environments and local-bounds families, matching the route
+  result shape when the call starts from exact `store_typed`. The remaining proof
+  gap is the prefix-input lift: nested calls require the same ordinary-shadow
+  route from `store_typed_prefix`, without adding a stricter public checker gate.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Lift the exact-input ordinary-shadow route to the prefix-input route needed
-     by nested calls, then use it with the existing synthetic route to obtain the
-     ready-body local-bounds route bridge from active-endpoint evidence, without
-     depending on the stricter diagnostic shadow-check gate.
+   - Lift the exact-input local-bounds ordinary-shadow route to the prefix-input
+     route needed by nested calls, then use it with the existing synthetic route
+     to obtain the ready-body local-bounds route bridge from active-endpoint
+     evidence, without depending on the stricter diagnostic shadow-check gate.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active

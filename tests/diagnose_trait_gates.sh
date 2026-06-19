@@ -17,7 +17,9 @@ expected_local_summary_detail=$(mktemp)
 actual_local_summary_detail=$(mktemp)
 expected_local_summary_reason=$(mktemp)
 actual_local_summary_reason=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\"" EXIT
+expected_full_no_receiver_ready_fail=$(mktemp)
+actual_full_no_receiver_ready_fail=$(mktemp)
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\" \"$expected_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_fail\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -63,6 +65,13 @@ printf "%s\n" \
   "tests/valid/type_safety_ready_gap/direct_call.facet:main: callee: no-direct-call-target" \
   >"$expected_local_summary_reason"
 
+printf "%s\n" \
+  tests/valid/function/type_forall_fn_value_pass_and_call.facet \
+  tests/valid/lifetime/hrt_call_twice.facet \
+  tests/valid/lifetime/hrt_item_bounds_as_value.facet \
+  tests/valid/lifetime/hrt_pass_poly_identity.facet \
+  >"$expected_full_no_receiver_ready_fail"
+
 total=0
 ok_count=0
 fail_count=0
@@ -73,6 +82,8 @@ component_body_summary_count=0
 component_ready_body_summary_count=0
 no_receiver_ready_body_summary_count=0
 no_receiver_ready_body_shadow_checks_count=0
+full_no_receiver_ready_total=0
+full_no_receiver_ready_fail_count=0
 status=0
 
 while IFS= read -r file; do
@@ -321,6 +332,34 @@ while IFS= read -r file; do
   rm -f "$tmp"
 done <"$target_files"
 
+for file in $(find tests/valid -type f -name "*.facet" | sort); do
+  tmp=$(mktemp)
+  full_no_receiver_ready_total=$((full_no_receiver_ready_total + 1))
+
+  if dune exec ocaml/main.exe -- --diagnose-trait-gates "$file" >"$tmp" 2>&1; then
+    line=$(grep -E "^trait-no-receiver-ready-body-summary: (ok|fail)$" "$tmp" || true)
+    case "$line" in
+      "trait-no-receiver-ready-body-summary: fail")
+        full_no_receiver_ready_fail_count=$((full_no_receiver_ready_fail_count + 1))
+        printf "%s\n" "$file" >>"$actual_full_no_receiver_ready_fail"
+        ;;
+      "trait-no-receiver-ready-body-summary: ok")
+        ;;
+      *)
+        printf "FAIL --diagnose-trait-gates %s: missing full-suite no-receiver-ready-body line\n" "$file"
+        cat "$tmp"
+        status=1
+        ;;
+    esac
+  else
+    printf "FAIL --diagnose-trait-gates %s: full-suite diagnostic command failed\n" "$file"
+    cat "$tmp"
+    status=1
+  fi
+
+  rm -f "$tmp"
+done
+
 if ! diff -u "$expected_fail" "$actual_fail" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: diagnostic frontier changed\n"
   diff -u "$expected_fail" "$actual_fail" || true
@@ -354,6 +393,12 @@ fi
 if ! diff -u "$expected_local_summary_reason" "$actual_local_summary_reason" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: local synthetic summary failure reasons changed\n"
   diff -u "$expected_local_summary_reason" "$actual_local_summary_reason" || true
+  status=1
+fi
+
+if ! diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_fail" >/dev/null; then
+  printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body blockers changed\n"
+  diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_fail" || true
   status=1
 fi
 
@@ -393,6 +438,12 @@ if [ "$no_receiver_ready_body_shadow_checks_count" -ne 17 ]; then
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s shadow-provenance-summary=%s preservation-ready=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s no-receiver-ready-body-summary-with-shadow-checks=%s\n" \
-  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$shadow_provenance_summary_count" "$preservation_ready_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count" "$no_receiver_ready_body_shadow_checks_count"
+if [ "$full_no_receiver_ready_total" -ne 222 ] || [ "$full_no_receiver_ready_fail_count" -ne 4 ]; then
+  printf "FAIL --diagnose-trait-gates: expected full-valid no-receiver-ready-body total=222 fail=4, got total=%s fail=%s\n" \
+    "$full_no_receiver_ready_total" "$full_no_receiver_ready_fail_count"
+  status=1
+fi
+
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s shadow-provenance-summary=%s preservation-ready=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s no-receiver-ready-body-summary-with-shadow-checks=%s full-valid-no-receiver-ready-body-fail=%s/%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$shadow_provenance_summary_count" "$preservation_ready_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count" "$no_receiver_ready_body_shadow_checks_count" "$full_no_receiver_ready_fail_count" "$full_no_receiver_ready_total"
 exit "$status"

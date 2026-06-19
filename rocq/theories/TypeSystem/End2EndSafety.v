@@ -14069,6 +14069,29 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    env_fns_root_shadow_summary_evidence env'.
+Proof.
+  intros env env' Hprog Hcombined_check.
+  destruct
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+      env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - destruct (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_sound
+                env' Hcombined_check Hno_receiver)
+      as [_Hready_body [Hprovenance Hpreservation]].
+    eapply check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks;
+      eassumption.
+  - destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
+      as (Hprovenance & Hpreservation & _Hdirect & _Hcomponent).
+    eapply check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks;
+      eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_diagnostic :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -14306,13 +14329,10 @@ Proof.
   - exact Hprog.
   - eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_of_shadow_checks.
     exact Hcombined_check.
-  - intros Hno_receiver.
+  - intros _Hno_receiver.
     eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
     + exact Hshadow_bridge.
-    + destruct (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_sound
-                  env' Hcombined_check Hno_receiver)
-        as [_Hready_body [Hprovenance Hpreservation]].
-      eapply check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks;
+    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
         eassumption.
   - exact Hinitial.
   - exact Hin.

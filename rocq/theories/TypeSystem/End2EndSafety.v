@@ -13106,6 +13106,38 @@ Proof.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
+Theorem env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_ready
+      env ->
+    component_body_local_bounds_narrow_summary_provider_in_env env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hstrict Hprovider Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hstrict (fn_name f) f Hlookup) as [Hcaptured | Hcomponent_branch].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - destruct Hcomponent_branch as [Hcomponent_check [Hcomponent _Hexact_check]].
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_of_component_and_local_bounds_narrow_provider;
+        eassumption.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

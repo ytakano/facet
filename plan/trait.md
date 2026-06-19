@@ -37,8 +37,10 @@ validity checks must be represented in Rocq and the extracted checker.
   direct-call-target-shaped, mixed-endpoint, and component-summary conversion
   helpers that package a checked component with its local-bounds narrow callee
   evidence. The packaged narrow-callee component now has a direct big-step
-  safety lemma. The remaining proof work is to lift that lemma through the
-  mixed no-receiver branch and retarget the public runtime theorem.
+  safety lemma and has been lifted through the strict captured-or-component
+  environment branch. The remaining proof work is to connect the active mixed
+  no-receiver endpoint to that strict-branch theorem and retarget the public
+  runtime theorem.
 
 ## Remaining Tasks
 

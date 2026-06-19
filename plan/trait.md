@@ -44,8 +44,8 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver-or-provider case splits, a bundled ready-body summary+route
   adapter from the ready-body check plus synthetic and shadow routes, and
   combined no-receiver diagnostic adapters for ready-body, ready-body
-  summary+route, synthetic, callback, store-callback, and ready-body
-  route-package providers, with route-package providers available from both the
+  summary+route, plain and shadow-check synthetic route, callback,
+  store-callback, and ready-body route-package providers, with route-package providers available from both the
   plain ready-body and stricter shadow-check diagnostics. Separated ready-body
   plus provenance/preservation diagnostics now route through the combined
   shadow-check adapter. Plain and shadow-check ready-body diagnostics also

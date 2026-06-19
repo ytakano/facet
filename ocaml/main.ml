@@ -557,12 +557,14 @@ let () =
               "trait-local-bounds-ready-body-summary-failure: %s: %s\n"
               fname local_fname;
             Printf.printf
-              "trait-local-bounds-ready-body-summary-failure-gates: %s: %s: synthetic=%s shadow=%s noncapturing=%s preservation=%s provenance=%s\n"
+              "trait-local-bounds-ready-body-summary-failure-gates: %s: %s: synthetic=%s shadow=%s noncapturing=%s captured=%s preservation=%s provenance=%s\n"
               fname local_fname
               (if check_fn_root_shadow_synthetic_direct_call_ready_summary
                     local_env local_fn then "ok" else "fail")
               (if check_fn_root_shadow_summary local_env local_fn then "ok" else "fail")
               (if check_fn_root_shadow_non_capturing_call_provenance_summary
+                    local_env local_fn then "ok" else "fail")
+              (if check_fn_root_shadow_captured_call_provenance_summary
                     local_env local_fn then "ok" else "fail")
               (if preservation_ready_expr_b local_fn.fn_body then "ok" else "fail")
               (if provenance_ready_expr_b local_fn.fn_body then "ok" else "fail"))

@@ -84,10 +84,10 @@ printf "%s\n" \
   >"$expected_full_no_receiver_ready_detail"
 
 printf "%s\n" \
-  "tests/valid/function/type_forall_fn_value_pass_and_call.facet: main: apply: synthetic=fail shadow=fail noncapturing=fail preservation=fail provenance=fail" \
-  "tests/valid/lifetime/hrt_call_twice.facet: caller: call_twice: synthetic=fail shadow=fail noncapturing=fail preservation=fail provenance=fail" \
-  "tests/valid/lifetime/hrt_item_bounds_as_value.facet: caller: accept: synthetic=fail shadow=fail noncapturing=ok preservation=fail provenance=fail" \
-  "tests/valid/lifetime/hrt_pass_poly_identity.facet: caller: apply: synthetic=fail shadow=fail noncapturing=ok preservation=fail provenance=fail" \
+  "tests/valid/function/type_forall_fn_value_pass_and_call.facet: main: apply: synthetic=fail shadow=fail noncapturing=fail captured=fail preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_call_twice.facet: caller: call_twice: synthetic=fail shadow=fail noncapturing=fail captured=fail preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_item_bounds_as_value.facet: caller: accept: synthetic=fail shadow=fail noncapturing=ok captured=ok preservation=fail provenance=fail" \
+  "tests/valid/lifetime/hrt_pass_poly_identity.facet: caller: apply: synthetic=fail shadow=fail noncapturing=ok captured=ok preservation=fail provenance=fail" \
   >"$expected_full_no_receiver_ready_gates"
 
 total=0

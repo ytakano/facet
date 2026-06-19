@@ -12682,6 +12682,43 @@ Proof.
     eassumption.
 Qed.
 
+Lemma check_env_root_shadow_no_receiver_component_narrow_summary_provider_check_sound :
+  forall env,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hunique Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+    in Hcheck.
+  rewrite Hno_receiver in Hcheck.
+  simpl in Hcheck.
+  eapply component_body_local_bounds_narrow_summary_provider_of_env_summary.
+  - exact Hunique.
+  - eapply check_env_root_shadow_store_safe_narrow_summary_sound.
+    exact Hcheck.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_narrow_summary_provider_of_no_receiver_component_narrow_summary_provider_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_narrow_summary_provider_in_env env'.
+Proof.
+  intros env env' Hprog Hcheck Hno_receiver.
+  eapply check_env_root_shadow_no_receiver_component_narrow_summary_provider_check_sound.
+  - eapply infer_program_env_end2end_assoc_unique_by_name.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog.
+  - exact Hcheck.
+  - exact Hno_receiver.
+Qed.
+
 Definition shadow_summary_local_bounds_family_route_bridge : Prop :=
   forall base,
     env_fns_root_shadow_summary_evidence base ->

@@ -2593,6 +2593,11 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provid
   check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
     env.
 
+Definition check_env_root_shadow_no_receiver_component_narrow_summary_provider_check
+    (env : global_env) : bool :=
+  check_env_root_shadow_direct_receiver_method_present env ||
+  check_env_root_shadow_store_safe_narrow_summary env.
+
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=
   check_env_root_shadow_direct_receiver_method_present env ||

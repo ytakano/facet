@@ -27,21 +27,22 @@ validity checks must be represented in Rocq and the extracted checker.
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
 - The ready-body route is no longer the main proof strategy for the no-receiver
-  branch. Diagnostics show the four full-valid no-receiver ready-body blockers
-  (`type_forall_fn_value_pass_and_call.facet`, `hrt_call_twice.facet`,
-  `hrt_item_bounds_as_value.facet`, and `hrt_pass_poly_identity.facet`) all have
-  `narrow=ok`. The next safety route should promote narrow store-safe summaries
-  through a diagnostic/certificate theorem before retargeting the public theorem.
+  branch. The four full-valid no-receiver blockers all have `narrow=ok`, and
+  the narrow route now has env-level evidence, local-bounds lifting, a sound
+  checker certificate, and a no-receiver diagnostic checker that provides
+  `component_body_local_bounds_narrow_summary_provider_in_env` for the active
+  mixed endpoint. The remaining proof work is to bridge that narrow provider to
+  the callback/package evidence needed by the public runtime theorem.
 
 ## Remaining Tasks
 
-1. Replace the stalled ready-body proof route with a narrow certificate route.
-   - Define the no-receiver local-bounds certificate around existing narrow
-     store-safe summaries and their runtime packages.
-   - Prove checker soundness for the certificate without adding OCaml fallback
-     logic or weakening public theorem statements.
-   - Add a diagnostic theorem showing the active mixed endpoint plus the narrow
-     certificate gives the needed no-receiver safety providers.
+1. Complete the narrow certificate route.
+   - Bridge `component_body_local_bounds_narrow_summary_provider_in_env` to the
+     callback/package provider required by the mixed no-receiver safety branch.
+   - Add the diagnostic safety theorem using the active mixed endpoint plus the
+     narrow certificate, without weakening public theorem statements.
+   - Promote only the proven narrow gate into the active endpoint after the
+     diagnostic theorem closes.
 
 2. Finish direct-call receiver activation.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
@@ -72,10 +73,10 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence for the mixed no-receiver callback path. The previous ready-body and
   ordinary shadow-summary bridge path stalled; do not keep extending it as the
   primary strategy.
-- The current viable path is a narrow store-safe certificate: all known
-  full-valid no-receiver ready-body blockers are covered by the narrow summary,
-  but the certificate provider and theorem-level bridge from that summary to the
-  mixed no-receiver safety argument still need to be built.
+- The current viable path is a narrow store-safe certificate. The checker-side
+  certificate and local-bounds provider are proven, but the runtime bridge from
+  narrow provider evidence to the mixed no-receiver callback/package argument
+  still needs to be built.
 - Direct-call receiver safety-gate tests must remain invalid until the verified
   active endpoint accepts those receiver forms through Rocq, extraction, and the
   OCaml CLI without handwritten fallback logic.

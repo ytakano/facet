@@ -31,8 +31,11 @@ validity checks must be represented in Rocq and the extracted checker.
   the narrow route now has env-level evidence, local-bounds lifting, a sound
   checker certificate, and a no-receiver diagnostic checker that provides
   `component_body_local_bounds_narrow_summary_provider_in_env` for the active
-  mixed endpoint. The remaining proof work is to bridge that narrow provider to
-  the callback/package evidence needed by the public runtime theorem.
+  mixed endpoint. That checker is now extracted and regression-tracked in the
+  CLI diagnostics (`no-receiver-narrow-summary=11/100` on the targeted
+  trait/direct frontier). The remaining proof work is to bridge that narrow
+  provider to the callback/package evidence needed by the public runtime
+  theorem.
 
 ## Remaining Tasks
 

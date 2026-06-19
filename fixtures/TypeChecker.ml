@@ -15669,6 +15669,37 @@ let check_expr_root_shadow_store_safe_narrow_summary_checked env _UU03a9_ n r _U
     (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n r
     (sctx_of_ctx _UU0393_) e
 
+(** val check_fn_root_shadow_store_safe_narrow_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_store_safe_narrow_summary env fdef =
+  match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
+  | Infer_ok _ ->
+    (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
+             fdef.fn_lifetimes (initial_root_env_for_fn fdef)
+             (fn_body_ctx fdef) fdef.fn_body with
+     | Infer_ok p0 ->
+       let (p1, roots_body) = p0 in
+       let (p2, r_body) = p1 in
+       let (t_body, _) = p2 in
+       (&&)
+         ((&&)
+           ((&&)
+             (check_expr_root_shadow_store_safe_narrow_summary env
+               fdef.fn_outlives fdef.fn_lifetimes
+               (initial_root_env_for_fn fdef) (fn_body_ctx fdef) fdef.fn_body)
+             (ty_compatible_b fdef.fn_outlives t_body fdef.fn_ret))
+           (fn_params_roots_exclude_b fdef.fn_params roots_body))
+         (fn_params_root_env_excludes_b fdef.fn_params r_body)
+     | Infer_err _ -> false)
+  | Infer_err _ -> false
+
+(** val check_env_root_shadow_store_safe_narrow_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_store_safe_narrow_summary env =
+  forallb (check_fn_root_shadow_store_safe_narrow_summary env) env.env_fns
+
 (** val check_fn_root_shadow_generic_direct_store_safe_summary_target :
     global_env -> fn_def -> ident -> ty list -> expr list -> expr -> bool **)
 
@@ -16960,6 +16991,13 @@ let check_env_root_shadow_no_receiver_component_ready_body_summary_provider_chec
   (||) (check_env_root_shadow_direct_receiver_method_present env)
     (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
       env)
+
+(** val check_env_root_shadow_no_receiver_component_narrow_summary_provider_check :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_receiver_component_narrow_summary_provider_check env =
+  (||) (check_env_root_shadow_direct_receiver_method_present env)
+    (check_env_root_shadow_store_safe_narrow_summary env)
 
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
     global_env -> bool **)

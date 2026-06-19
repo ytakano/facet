@@ -1466,6 +1466,11 @@ val check_expr_root_shadow_store_safe_narrow_summary_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 
+val check_fn_root_shadow_store_safe_narrow_summary :
+  global_env -> fn_def -> bool
+
+val check_env_root_shadow_store_safe_narrow_summary : global_env -> bool
+
 val check_fn_root_shadow_generic_direct_store_safe_summary_target :
   global_env -> fn_def -> ident -> ty list -> expr list -> expr -> bool
 
@@ -1646,6 +1651,9 @@ val check_env_root_shadow_no_receiver_component_body_summary_provider_check :
   global_env -> bool
 
 val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check :
+  global_env -> bool
+
+val check_env_root_shadow_no_receiver_component_narrow_summary_provider_check :
   global_env -> bool
 
 val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :

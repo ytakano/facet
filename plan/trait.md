@@ -36,20 +36,20 @@ validity checks must be represented in Rocq and the extracted checker.
   and passes both the targeted trait/direct frontier (`100/100`) and the full
   valid suite (`0/222` failures). Older broader gates remain diagnostic only:
   env-wide `ready_body_or_narrow` and all-local-bounds narrow still fail the same
-  four full-valid helper-function cases. The remaining proof work is to consume
-  the per-local mixed provider in the active runtime safety route and then
-  retarget the public theorem.
+  four full-valid helper-function cases. The per-local mixed provider is now
+  consumed by compiled runtime helpers at the exact component-local callee lookup
+  and by an env-level captured/component safety theorem. The remaining proof work
+  is to wire that theorem into the active diagnostic route and then retarget the
+  public theorem.
 
 ## Remaining Tasks
 
-1. Consume the per-local mixed certificate in runtime safety.
-   - Add route/provider lemmas that use
-     `component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env`
-     at the specific local callee lookup instead of requiring an all-env
-     ready-body or all-env narrow provider.
-   - Retarget the active diagnostic safety theorem from the older
-     env-wide/all-local combined gates to
+1. Wire the per-local mixed certificate into the active safety route.
+   - Retarget the active diagnostic theorem from the older env-wide/all-local
+     combined gates to
      `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check`.
+   - Reuse the compiled per-callee and env-level runtime helpers instead of
+     reintroducing all-env ready-body or all-env narrow premises.
 
 2. Finish direct-call receiver activation.
    - Promote only a certificate gate that preserves existing valid tests, most
@@ -79,9 +79,9 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  per-local mixed certificate removes the full-valid diagnostic blockers, but
-  the runtime safety theorem still needs provider lemmas that consume that
-  evidence at the exact local callee lookup.
+  per-local mixed certificate removes the full-valid diagnostic blockers and now
+  has compiled runtime helper lemmas, but the active diagnostic/public theorem
+  still needs to be retargeted to those helpers.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

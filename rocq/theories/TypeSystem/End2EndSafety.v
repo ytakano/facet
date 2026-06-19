@@ -13079,6 +13079,7 @@ Proof.
   repeat split; try eassumption.
 Qed.
 
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->
@@ -13156,6 +13157,151 @@ Proof.
   eapply VHT_Compatible.
   - exact Hv_env.
   - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_body_or_narrow_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f)) ->
+    In f (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys env f s s' v Hunique Hprovider
+    Hready_route Hin_component Hcomponent_check Hcomponent Hinitial Hstore
+    Heval.
+  destruct Hcomponent as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & Hcaps & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & Hin_callee & Hname_callee &
+      Hcaps_callee & Hnodup & Htyped & Hcompat & Hroots & Henv_excl).
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hunique_body : fn_env_unique_by_name body_env).
+  { subst body_env. unfold fn_env_unique_by_name in *. simpl. exact Hunique. }
+  assert (Hin_callee_body : In fcallee (env_fns body_env)).
+  { subst body_env. simpl. exact Hin_callee. }
+  assert (Hlookup : lookup_fn fname (env_fns body_env) = Some fcallee).
+  { subst body_env. eapply lookup_fn_in_unique_by_name; eassumption. }
+  destruct (Hprovider f fname fcallee Hin_component Hcomponent_check Hlookup)
+    as [Hsynthetic_callee | [Hsummary_callee | Hnarrow_callee]].
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_body_route_in_local_bounds_family.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hready_route.
+    + intros fname0 args0 synthetic_body0 Htarget0 fdef0 Hlookup0.
+      pose proof Hname_callee as Hname_callee0.
+      assert (Htarget0_raw :
+        direct_call_target_expr raw_body =
+          Some (fname0, args0, synthetic_body0)).
+      { rewrite <- Hbody. exact Htarget0. }
+      rewrite Htarget in Htarget0_raw.
+      inversion Htarget0_raw; subst.
+      assert (fdef0 = fcallee) as ->.
+      { eapply lookup_fn_unique_by_name.
+        - exact Hlookup0.
+        - exact Hin_callee_body.
+        - exact Hname_callee0.
+        - exact Hunique_body. }
+      left. exact Hsynthetic_callee.
+    + exists fname, args, raw_body, synthetic_body, fcallee, T_body,
+        Gamma_out, R_body, roots_body.
+      repeat split; try eassumption.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_body_route_in_local_bounds_family.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hready_route.
+    + intros fname0 args0 synthetic_body0 Htarget0 fdef0 Hlookup0.
+      pose proof Hname_callee as Hname_callee0.
+      assert (Htarget0_raw :
+        direct_call_target_expr raw_body =
+          Some (fname0, args0, synthetic_body0)).
+      { rewrite <- Hbody. exact Htarget0. }
+      rewrite Htarget in Htarget0_raw.
+      inversion Htarget0_raw; subst.
+      assert (fdef0 = fcallee) as ->.
+      { eapply lookup_fn_unique_by_name.
+        - exact Hlookup0.
+        - exact Hin_callee_body.
+        - exact Hname_callee0.
+        - exact Hunique_body. }
+      right. exact Hsummary_callee.
+    + exists fname, args, raw_body, synthetic_body, fcallee, T_body,
+        Gamma_out, R_body, roots_body.
+      repeat split; try eassumption.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exists fname, args, raw_body, synthetic_body, fcallee, T_body,
+        Gamma_out, R_body, roots_body.
+      repeat split; try eassumption.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
+
+Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_ready_body_or_narrow_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
+      env ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys env f s s' v Hunique Hcombined Hprovider
+    Hroute_provider Hcomponent_checks Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hcombined (fn_name f) f Hlookup) as [Hcaptured | Hcomponent_branch].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - pose proof (Hcomponent_checks f Hin) as Hcomponent_check.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_ready_body_or_narrow_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hprovider.
+    + eapply Hroute_provider; eassumption.
+    + exact Hin.
+    + exact Hcomponent_check.
+    + exact Hcomponent_branch.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
 Qed.
 
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider :

@@ -92,8 +92,9 @@ validity checks must be represented in Rocq and the extracted checker.
   cleanup bridge that consumes value-only recursive evidence internally rather
   than the old full-preservation synthetic callback and
   `fn_root_shadow_synthetic...` evidence.
-  After that bridge yields a global mixed route without a synthetic-route public
-  premise, retarget the endpoint and then the public runtime theorem.
+  An endpoint-local consumer now uses that named bridge to avoid the global
+  synthetic branch-route premise. After the bridge itself is proved, retarget the
+  public runtime theorem.
 
 ## Remaining Tasks
 
@@ -145,9 +146,10 @@ validity checks must be represented in Rocq and the extracted checker.
   proved from both global and scoped mixed route families with statement/local-bounds
   branch-route, env-family, component-provider, and endpoint-provider variants.
   Remaining endpoint work is to prove the named
-  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`, use it to remove
-  the global synthetic branch-route premise, then retarget the public runtime
-  theorem without adding public premises or shrinking the accepted language.
+  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`; an endpoint-local
+  consumer already removes the global synthetic branch-route premise once that
+  bridge is available. Then retarget the public runtime theorem without adding
+  public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

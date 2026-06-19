@@ -56,10 +56,12 @@ validity checks must be represented in Rocq and the extracted checker.
   route contract, a per-callee mixed route adapter, a component/end-to-end
   ready-body route wrapper for no-capture direct-call component bodies, a mixed
   ready-body-check wrapper whose no-receiver branch consumes the ready-body
-  route directly, and a diagnostic no-receiver ready-body gate with a runtime
-  wrapper. This gives synthetic-or-ordinary callee evidence plus store-safe
-  target arguments for alpha-renamed direct targets, while isolating the
-  remaining public provider wiring.
+  route directly, a diagnostic no-receiver ready-body gate with a runtime
+  wrapper, and a mixed-route provider wrapper that replaces the abstract
+  summary-to-route bridge with synthetic plus ordinary route providers. This
+  gives synthetic-or-ordinary callee evidence plus store-safe target arguments
+  for alpha-renamed direct targets, while isolating the remaining public
+  provider wiring.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -80,9 +82,9 @@ validity checks must be represented in Rocq and the extracted checker.
    - Finish replacing the synthetic no-receiver diagnostic dependency by
      deriving a ready-body route provider from public premises and routing the
      public theorem through the ready-body-check wrapper.
-   - Prove the final bridge from public prefix-route premises to the
-     ready-body route and ready-body summary providers required by the active
-     no-receiver wrapper, without requiring Prop-to-bool completeness for
+   - Prove the final bridge from public prefix-route premises to the ordinary
+     and synthetic local-bounds route providers required by the no-receiver
+     ready-body wrapper, without requiring Prop-to-bool completeness for
      component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
@@ -113,10 +115,12 @@ validity checks must be represented in Rocq and the extracted checker.
   callback-at providers, ordinary shadow-summary prefix routes, a mixed
   ready-body route adapter, a component/end-to-end wrapper that consumes
   ready-body route plus ready-body summary providers, a mixed ready-body-check
-  wrapper that uses that path in the no-receiver case, and a diagnostic boolean
-  gate for no-receiver ready-body summaries. It still needs a proven public
-  route-provider bridge and final public-theorem wiring that make this path
-  active without relying on the synthetic diagnostic provider.
+  wrapper that uses that path in the no-receiver case, a diagnostic boolean gate
+  for no-receiver ready-body summaries, and a mixed-route wrapper using
+  synthetic plus ordinary route providers instead of an abstract summary-to-route
+  premise. It still needs proven public derivations of those route providers and
+  final public-theorem wiring that make this path active without relying on the
+  synthetic diagnostic provider.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

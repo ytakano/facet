@@ -51,17 +51,18 @@ validity checks must be represented in Rocq and the extracted checker.
   families to the mixed ready-body-or-narrow route family, an active endpoint
   wrapper now consumes a combined component mixed-route provider directly, the
   older separate synthetic/shadow route-provider endpoint factors through that
-  combined path, and there are compiled active-endpoint public theorems for the
-  combined component mixed-route provider route, including both prefix and
-  non-prefix runtime forms.
+  combined path, there are compiled active-endpoint public theorems for the
+  combined component mixed-route provider route, and mixed disjunction handling
+  now has a bridge that needs only a per-target store-safe synthetic route plus
+  the ordinary-shadow route family.
 
 ## Remaining Tasks
 
 1. Retarget the required public runtime theorem.
-   - Connect the active per-local certificate to per-component route families:
-     synthetic-ready uses the synthetic route, ordinary-shadow uses the prefix
-     ordinary route, and narrow uses the proved narrow package, without
-     rebuilding a recursive synthetic-only certificate.
+   - Connect the active per-local certificate to route evidence: ordinary-shadow
+     uses the prefix ordinary route, narrow uses the proved narrow package, and
+     synthetic-ready must supply the per-target store-safe synthetic route
+     without rebuilding a recursive synthetic-only certificate.
    - Move the required theorem name
      `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
@@ -102,10 +103,12 @@ validity checks must be represented in Rocq and the extracted checker.
   additive active-endpoint prefix theorem compiles with that bridge as an
   explicit premise, a local mixed-route adapter now compiles, an endpoint
   wrapper now consumes the combined component mixed-route provider directly, the
-  older separate route-provider endpoint factors through it, and public prefix
-  and non-prefix runtime theorems expose that combined-provider route. The
-  remaining proof target is connecting the active mixed per-callee certificate to
-  that provider without assuming recursive synthetic-only evidence.
+  older separate route-provider endpoint factors through it, public prefix and
+  non-prefix runtime theorems expose that combined-provider route, and an
+  intermediate mixed-disjunction bridge now only requires per-target store-safe
+  synthetic evidence for the synthetic branch. The remaining proof target is
+  deriving that per-target synthetic route from the active mixed certificate
+  without assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

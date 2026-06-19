@@ -13402,6 +13402,54 @@ Proof.
 Qed.
 
 
+
+Theorem eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_evidence_at_and_shadow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route env s fname
+    args s' v n_call Heval_call _Hheight_call Omega n R Sigma T Sigma' R'
+    roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store
+    Htyped Hunique Hmixed_at.
+  destruct (typed_env_roots_direct_call_inv
+    env Omega n R Sigma fname args T Sigma' R' roots Htyped)
+    as (fdef & sigma & arg_roots & Hin_fdef & Hname_fdef & Hcaps_fdef &
+        Htype_params & Htyped_args & Houtlives & HT & Hroots_eq).
+  assert (Hlookup : lookup_fn fname (env_fns env) = Some fdef).
+  { eapply lookup_fn_in_unique_by_name; eassumption. }
+  destruct (Hmixed_at fdef Hlookup) as [Hsynthetic | [Hsummary | Hnarrow]].
+  - assert (Hsynthetic_at :
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        env fname).
+    { intros fdef0 Hlookup0.
+      assert (fdef0 = fdef) as ->.
+      { eapply lookup_fn_deterministic; eassumption. }
+      exact Hsynthetic. }
+    pose proof
+      (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at
+        Hroot_names Hroot_keys env fname Hsynthetic_at Hunique)
+      as Hevidence_at.
+    eapply Hsynthetic_route; eassumption.
+  - assert (Hsummary_at : fn_root_shadow_summary_evidence_at env fname).
+    { intros fdef0 Hlookup0.
+      assert (fdef0 = fdef) as ->.
+      { eapply lookup_fn_deterministic; eassumption. }
+      exact Hsummary. }
+    pose proof
+      (direct_call_callee_body_root_evidence_at_of_shadow_summary_at
+        Hroot_names Hroot_keys env fname Hsummary_at Hunique)
+      as Hevidence_at.
+    eapply Hshadow_route; eassumption.
+  - rewrite HT.
+    eapply eval_direct_call_store_safe_narrow_summary_value_prefix_named;
+      eassumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_synthetic_and_shadow_route_families :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

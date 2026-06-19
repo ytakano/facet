@@ -13861,6 +13861,28 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_sound :
+  forall env,
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env env /\
+    env_fns_root_shadow_summary_evidence env.
+Proof.
+  intros env Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
+    in Hcheck.
+  rewrite Hno_receiver in Hcheck.
+  simpl in Hcheck.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[Hlocal Hprovenance] Hpreservation].
+  split.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary_sound.
+    exact Hlocal.
+  - eapply check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks;
+      eassumption.
+Qed.
+
 Lemma component_body_local_bounds_synthetic_summary_check_provider_exact_route_package_at_all :
   forall env bounds,
     component_body_local_bounds_synthetic_summary_check_provider_in_env env ->

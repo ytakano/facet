@@ -2648,6 +2648,14 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_narro
   check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
     env.
 
+Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
+    (env : global_env) : bool :=
+  check_env_root_shadow_direct_receiver_method_present env ||
+  (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+     env &&
+   check_env_root_shadow_provenance_summary env &&
+   check_env_preservation_ready env).
+
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=
   check_env_root_shadow_direct_receiver_method_present env ||

@@ -17061,6 +17061,18 @@ let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
     (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
       env)
 
+(** val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks env =
+  (||) (check_env_root_shadow_direct_receiver_method_present env)
+    ((&&)
+      ((&&)
+        (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+          env)
+        (check_env_root_shadow_provenance_summary env))
+      (check_env_preservation_ready env))
+
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
     global_env -> bool **)
 

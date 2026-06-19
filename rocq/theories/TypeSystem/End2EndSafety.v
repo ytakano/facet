@@ -15619,6 +15619,26 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env' /\
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env'.
+Proof.
+  intros Hbridge env env' Hprog Hno_receiver.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+    env env' Hprog Hno_receiver) as [Hprovider Halpha_provider].
+  split.
+  - eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge;
+      eassumption.
+  - exact Halpha_provider.
+Qed.
+
 Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_sound :
   forall env,
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
@@ -18698,12 +18718,9 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge.
-    + exact Hbridge.
-    + eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound.
-      * eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
-        exact Hprog.
-      * exact Hno_receiver.
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate
+      Hbridge env env' Hprog Hno_receiver) as [Hroute_provider _Halpha_provider].
+    exact Hroute_provider.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

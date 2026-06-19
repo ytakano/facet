@@ -13143,6 +13143,27 @@ Definition component_body_local_bounds_mixed_ready_body_or_narrow_route_provider
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_route_provider :
+  forall env,
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env.
+Proof.
+  intros env Hprovider f_component Hin Hcheck.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family_of_route_family.
+  eapply Hprovider; eassumption.
+Qed.
+
 Lemma component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_statement :
   forall env,
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->

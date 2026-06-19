@@ -62,11 +62,12 @@ validity checks must be represented in Rocq and the extracted checker.
   summary-to-route bridge from that gate, a mixed-route provider wrapper
   that replaces the abstract summary-to-route bridge with synthetic plus
   ordinary route providers, a ready-body-check-to-synthetic-route bridge for
-  component local-bounds families, and a diagnostic wrapper whose mixed route
-  derives the synthetic provider from the ready-body gate. This gives
-  synthetic-or-ordinary callee evidence plus store-safe target arguments for
-  alpha-renamed direct targets, while isolating the remaining public provider
-  wiring.
+  component local-bounds families, a diagnostic wrapper whose mixed route
+  derives the synthetic provider from the ready-body gate, and an ordinary
+  shadow-summary bridge that derives the local-bounds ordinary provider from
+  global shadow-summary evidence. This gives synthetic-or-ordinary callee
+  evidence plus store-safe target arguments for alpha-renamed direct targets,
+  while isolating the remaining public route theorem wiring.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -87,8 +88,8 @@ validity checks must be represented in Rocq and the extracted checker.
    - Promote the ready-body no-receiver diagnostic route from diagnostic-only
      proof plumbing to the public runtime theorem by deriving its synthetic and
      ordinary route providers from public premises.
-   - Prove the final bridge from public prefix-route premises to the ordinary
-     local-bounds route provider required by the no-receiver ready-body wrapper,
+   - Prove the ordinary shadow-summary local-bounds route bridge itself, derive
+     the needed global shadow-summary evidence from the active checker premises,
      then remove the remaining abstract ready-body route bridge from the public
      wiring without requiring Prop-to-bool completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
@@ -125,10 +126,12 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper that uses mixed synthetic plus ordinary route providers instead of an
   abstract summary-to-route premise, a mixed-route public wrapper with the same
   provider shape, a bridge from ready-body checks to synthetic route providers,
-  and a diagnostic wrapper that uses that bridge instead of taking a synthetic
-  provider premise. It still needs a proven public derivation of the ordinary
-  route provider plus final public-theorem wiring that removes the remaining
-  abstract ready-body route bridge.
+  a diagnostic wrapper that uses that bridge instead of taking a synthetic
+  provider premise, and an ordinary provider wrapper based on global
+  shadow-summary evidence. It still needs the ordinary shadow-summary route
+  bridge proof, derivation of global shadow-summary evidence from active checker
+  premises, and final public-theorem wiring that removes the remaining abstract
+  ready-body route bridge.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

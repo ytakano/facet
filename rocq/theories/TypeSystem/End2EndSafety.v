@@ -12708,6 +12708,22 @@ Definition component_body_local_bounds_narrow_summary_provider_in_env
     env_fns_root_shadow_store_safe_narrow_summary_evidence
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component fname fdef,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+      Some fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary
+      (global_env_with_local_bounds env (fn_bounds f_component)) fdef \/
+    callee_body_root_shadow_summary
+      (global_env_with_local_bounds env (fn_bounds f_component)) fdef \/
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
+
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,
     fn_env_unique_by_name env ->
@@ -13546,6 +13562,62 @@ Proof.
   eapply (proj1 (forallb_forall
     (check_fn_root_shadow_synthetic_direct_call_ready_summary env)
     (env_fns env)) Hcheck); exact Hin.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary_sound :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+      env = true ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hcheck f_component fname fdef Hin_component Hcomponent_check
+    Hlookup.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+    in Hcheck.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+      env)
+    (env_fns env)) Hcheck f_component Hin_component) as Hlocal_check.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+    in Hlocal_check.
+  rewrite Hcomponent_check in Hlocal_check.
+  pose (local_env := global_env_with_local_bounds env (fn_bounds f_component)).
+  assert (Hin_local : In fdef (env_fns local_env)).
+  { subst local_env. eapply lookup_fn_in. exact Hlookup. }
+  pose proof (proj1 (forallb_forall
+    (fun local_fdef =>
+       check_fn_root_shadow_synthetic_direct_call_ready_summary
+         local_env local_fdef ||
+       check_fn_root_shadow_summary local_env local_fdef ||
+       check_fn_root_shadow_store_safe_narrow_summary local_env local_fdef)
+    (env_fns local_env)) Hlocal_check fdef Hin_local) as Hfn_check.
+  repeat rewrite orb_true_iff in Hfn_check.
+  destruct Hfn_check as [[Hsynthetic | Hsummary] | Hnarrow].
+  - left.
+    eapply check_fn_root_shadow_synthetic_direct_call_ready_summary_sound.
+    exact Hsynthetic.
+  - right. left.
+    eapply check_fn_root_shadow_summary_sound.
+    exact Hsummary.
+  - right. right.
+    eapply check_fn_root_shadow_store_safe_narrow_summary_sound.
+    exact Hnarrow.
+Qed.
+
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound :
+  forall env,
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+    in Hcheck.
+  rewrite Hno_receiver in Hcheck.
+  simpl in Hcheck.
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary_sound.
+  exact Hcheck.
 Qed.
 
 Lemma component_body_local_bounds_synthetic_summary_check_provider_exact_route_package_at_all :

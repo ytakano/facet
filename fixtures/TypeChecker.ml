@@ -16101,6 +16101,33 @@ let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_wi
       env)
     env.env_fns
 
+(** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary env fdef =
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then let local_env = global_env_with_local_bounds env fdef.fn_bounds in
+       forallb (fun local_fdef ->
+         (||)
+           ((||)
+             (check_fn_root_shadow_synthetic_direct_call_ready_summary
+               local_env local_fdef)
+             (check_fn_root_shadow_summary local_env local_fdef))
+           (check_fn_root_shadow_store_safe_narrow_summary local_env
+             local_fdef))
+         local_env.env_fns
+  else true
+
+(** val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary env =
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
+      env)
+    env.env_fns
+
 (** val check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
     global_env -> fn_def -> bool **)
 
@@ -17024,6 +17051,14 @@ let check_env_root_shadow_no_receiver_component_narrow_summary_provider_check en
 let check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check env =
   (||) (check_env_root_shadow_direct_receiver_method_present env)
     (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+      env)
+
+(** val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check env =
+  (||) (check_env_root_shadow_direct_receiver_method_present env)
+    (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
       env)
 
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :

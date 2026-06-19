@@ -21,11 +21,12 @@ expected_full_no_receiver_ready_fail=$(mktemp)
 actual_full_no_receiver_ready_fail=$(mktemp)
 actual_full_no_receiver_ready_body_or_narrow_fail=$(mktemp)
 actual_full_no_receiver_ready_body_or_local_narrow_fail=$(mktemp)
+actual_full_no_receiver_ready_body_or_local_bounds_narrow_fail=$(mktemp)
 expected_full_no_receiver_ready_detail=$(mktemp)
 actual_full_no_receiver_ready_detail=$(mktemp)
 expected_full_no_receiver_ready_gates=$(mktemp)
 actual_full_no_receiver_ready_gates=$(mktemp)
-trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\" \"$expected_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_body_or_narrow_fail\" \"$actual_full_no_receiver_ready_body_or_local_narrow_fail\" \"$expected_full_no_receiver_ready_detail\" \"$actual_full_no_receiver_ready_detail\" \"$expected_full_no_receiver_ready_gates\" \"$actual_full_no_receiver_ready_gates\"" EXIT
+trap "rm -f \"$target_files\" \"$expected_fail\" \"$actual_fail\" \"$expected_component_fail\" \"$actual_component_fail\" \"$expected_component_reason\" \"$actual_component_reason\" \"$expected_local_summary_count\" \"$actual_local_summary_count\" \"$expected_local_summary_detail\" \"$actual_local_summary_detail\" \"$expected_local_summary_reason\" \"$actual_local_summary_reason\" \"$expected_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_fail\" \"$actual_full_no_receiver_ready_body_or_narrow_fail\" \"$actual_full_no_receiver_ready_body_or_local_narrow_fail\" \"$actual_full_no_receiver_ready_body_or_local_bounds_narrow_fail\" \"$expected_full_no_receiver_ready_detail\" \"$actual_full_no_receiver_ready_detail\" \"$expected_full_no_receiver_ready_gates\" \"$actual_full_no_receiver_ready_gates\"" EXIT
 
 find tests/valid \( -path "*direct*" -o -path "*trait*" \) -type f -name "*.facet" | sort >"$target_files"
 
@@ -104,12 +105,14 @@ no_receiver_ready_body_summary_count=0
 no_receiver_ready_body_shadow_checks_count=0
 no_receiver_narrow_summary_count=0
 no_receiver_local_bounds_narrow_summary_count=0
-no_receiver_ready_body_or_narrow_summary_count=0
 no_receiver_ready_body_or_local_narrow_summary_count=0
+no_receiver_ready_body_or_narrow_summary_count=0
+no_receiver_ready_body_or_local_bounds_narrow_summary_count=0
 full_no_receiver_ready_total=0
 full_no_receiver_ready_fail_count=0
 full_no_receiver_ready_body_or_narrow_fail_count=0
 full_no_receiver_ready_body_or_local_narrow_fail_count=0
+full_no_receiver_ready_body_or_local_bounds_narrow_fail_count=0
 status=0
 
 while IFS= read -r file; do
@@ -128,6 +131,7 @@ while IFS= read -r file; do
       trait-no-receiver-ready-body-summary-with-shadow-checks \
       trait-no-receiver-narrow-summary \
       trait-no-receiver-local-bounds-narrow-summary \
+      trait-no-receiver-ready-body-or-local-narrow-summary \
       trait-no-receiver-ready-body-or-narrow-summary \
       trait-no-receiver-ready-body-or-local-bounds-narrow-summary
     do
@@ -152,8 +156,9 @@ while IFS= read -r file; do
     no_receiver_ready_shadow_checks_line=$(grep -E "^trait-no-receiver-ready-body-summary-with-shadow-checks: (ok|fail)$" "$tmp" || true)
     no_receiver_narrow_line=$(grep -E "^trait-no-receiver-narrow-summary: (ok|fail)$" "$tmp" || true)
     no_receiver_local_bounds_narrow_line=$(grep -E "^trait-no-receiver-local-bounds-narrow-summary: (ok|fail)$" "$tmp" || true)
+    no_receiver_ready_body_or_local_narrow_line=$(grep -E "^trait-no-receiver-ready-body-or-local-narrow-summary: (ok|fail)$" "$tmp" || true)
     no_receiver_ready_body_or_narrow_line=$(grep -E "^trait-no-receiver-ready-body-or-narrow-summary: (ok|fail)$" "$tmp" || true)
-    no_receiver_ready_body_or_local_narrow_line=$(grep -E "^trait-no-receiver-ready-body-or-local-bounds-narrow-summary: (ok|fail)$" "$tmp" || true)
+    no_receiver_ready_body_or_local_bounds_narrow_line=$(grep -E "^trait-no-receiver-ready-body-or-local-bounds-narrow-summary: (ok|fail)$" "$tmp" || true)
     case "$direct_line" in
       "trait-direct-receiver-method-present: ok")
         direct_present_count=$((direct_present_count + 1))
@@ -199,14 +204,19 @@ while IFS= read -r file; do
         no_receiver_local_bounds_narrow_summary_count=$((no_receiver_local_bounds_narrow_summary_count + 1))
         ;;
     esac
+    case "$no_receiver_ready_body_or_local_narrow_line" in
+      "trait-no-receiver-ready-body-or-local-narrow-summary: ok")
+        no_receiver_ready_body_or_local_narrow_summary_count=$((no_receiver_ready_body_or_local_narrow_summary_count + 1))
+        ;;
+    esac
     case "$no_receiver_ready_body_or_narrow_line" in
       "trait-no-receiver-ready-body-or-narrow-summary: ok")
         no_receiver_ready_body_or_narrow_summary_count=$((no_receiver_ready_body_or_narrow_summary_count + 1))
         ;;
     esac
-    case "$no_receiver_ready_body_or_local_narrow_line" in
+    case "$no_receiver_ready_body_or_local_bounds_narrow_line" in
       "trait-no-receiver-ready-body-or-local-bounds-narrow-summary: ok")
-        no_receiver_ready_body_or_local_narrow_summary_count=$((no_receiver_ready_body_or_local_narrow_summary_count + 1))
+        no_receiver_ready_body_or_local_bounds_narrow_summary_count=$((no_receiver_ready_body_or_local_bounds_narrow_summary_count + 1))
         ;;
     esac
 
@@ -425,11 +435,26 @@ for file in $(find tests/valid -type f -name "*.facet" | sort); do
         ;;
     esac
 
-    local_combined_line=$(grep -E "^trait-no-receiver-ready-body-or-local-bounds-narrow-summary: (ok|fail)$" "$tmp" || true)
-    case "$local_combined_line" in
-      "trait-no-receiver-ready-body-or-local-bounds-narrow-summary: fail")
+    local_narrow_combined_line=$(grep -E "^trait-no-receiver-ready-body-or-local-narrow-summary: (ok|fail)$" "$tmp" || true)
+    case "$local_narrow_combined_line" in
+      "trait-no-receiver-ready-body-or-local-narrow-summary: fail")
         full_no_receiver_ready_body_or_local_narrow_fail_count=$((full_no_receiver_ready_body_or_local_narrow_fail_count + 1))
         printf "%s\n" "$file" >>"$actual_full_no_receiver_ready_body_or_local_narrow_fail"
+        ;;
+      "trait-no-receiver-ready-body-or-local-narrow-summary: ok")
+        ;;
+      *)
+        printf "FAIL --diagnose-trait-gates %s: missing full-suite no-receiver-ready-body-or-local-narrow line\n" "$file"
+        cat "$tmp"
+        status=1
+        ;;
+    esac
+
+    local_bounds_combined_line=$(grep -E "^trait-no-receiver-ready-body-or-local-bounds-narrow-summary: (ok|fail)$" "$tmp" || true)
+    case "$local_bounds_combined_line" in
+      "trait-no-receiver-ready-body-or-local-bounds-narrow-summary: fail")
+        full_no_receiver_ready_body_or_local_bounds_narrow_fail_count=$((full_no_receiver_ready_body_or_local_bounds_narrow_fail_count + 1))
+        printf "%s\n" "$file" >>"$actual_full_no_receiver_ready_body_or_local_bounds_narrow_fail"
         ;;
       "trait-no-receiver-ready-body-or-local-bounds-narrow-summary: ok")
         ;;
@@ -496,9 +521,15 @@ if ! diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_r
   status=1
 fi
 
-if ! diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_body_or_local_narrow_fail" >/dev/null; then
+if [ -s "$actual_full_no_receiver_ready_body_or_local_narrow_fail" ]; then
+  printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body-or-local-narrow blockers found\n"
+  cat "$actual_full_no_receiver_ready_body_or_local_narrow_fail"
+  status=1
+fi
+
+if ! diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_body_or_local_bounds_narrow_fail" >/dev/null; then
   printf "FAIL --diagnose-trait-gates: full valid no-receiver-ready-body-or-local-bounds-narrow blockers changed\n"
-  diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_body_or_local_narrow_fail" || true
+  diff -u "$expected_full_no_receiver_ready_fail" "$actual_full_no_receiver_ready_body_or_local_bounds_narrow_fail" || true
   status=1
 fi
 
@@ -562,15 +593,21 @@ if [ "$no_receiver_local_bounds_narrow_summary_count" -ne 94 ]; then
   status=1
 fi
 
+if [ "$no_receiver_ready_body_or_local_narrow_summary_count" -ne 100 ]; then
+  printf "FAIL --diagnose-trait-gates: expected no-receiver-ready-body-or-local-narrow-summary=100, got %s\n" \
+    "$no_receiver_ready_body_or_local_narrow_summary_count"
+  status=1
+fi
+
 if [ "$no_receiver_ready_body_or_narrow_summary_count" -ne 100 ]; then
   printf "FAIL --diagnose-trait-gates: expected no-receiver-ready-body-or-narrow-summary=100, got %s\n" \
     "$no_receiver_ready_body_or_narrow_summary_count"
   status=1
 fi
 
-if [ "$no_receiver_ready_body_or_local_narrow_summary_count" -ne 100 ]; then
+if [ "$no_receiver_ready_body_or_local_bounds_narrow_summary_count" -ne 100 ]; then
   printf "FAIL --diagnose-trait-gates: expected no-receiver-ready-body-or-local-bounds-narrow-summary=100, got %s\n" \
-    "$no_receiver_ready_body_or_local_narrow_summary_count"
+    "$no_receiver_ready_body_or_local_bounds_narrow_summary_count"
   status=1
 fi
 
@@ -586,12 +623,18 @@ if [ "$full_no_receiver_ready_body_or_narrow_fail_count" -ne 4 ]; then
   status=1
 fi
 
-if [ "$full_no_receiver_ready_body_or_local_narrow_fail_count" -ne 4 ]; then
-  printf "FAIL --diagnose-trait-gates: expected full-valid no-receiver-ready-body-or-local-bounds-narrow fail=4, got %s\n" \
+if [ "$full_no_receiver_ready_body_or_local_narrow_fail_count" -ne 0 ]; then
+  printf "FAIL --diagnose-trait-gates: expected full-valid no-receiver-ready-body-or-local-narrow fail=0, got %s\n" \
     "$full_no_receiver_ready_body_or_local_narrow_fail_count"
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s shadow-provenance-summary=%s preservation-ready=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s no-receiver-ready-body-summary-with-shadow-checks=%s no-receiver-narrow-summary=%s no-receiver-local-bounds-narrow-summary=%s no-receiver-ready-body-or-narrow-summary=%s no-receiver-ready-body-or-local-bounds-narrow-summary=%s full-valid-no-receiver-ready-body-fail=%s/%s full-valid-no-receiver-ready-body-or-narrow-fail=%s/%s full-valid-no-receiver-ready-body-or-local-bounds-narrow-fail=%s/%s\n" \
-  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$shadow_provenance_summary_count" "$preservation_ready_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count" "$no_receiver_ready_body_shadow_checks_count" "$no_receiver_narrow_summary_count" "$no_receiver_local_bounds_narrow_summary_count" "$no_receiver_ready_body_or_narrow_summary_count" "$no_receiver_ready_body_or_local_narrow_summary_count" "$full_no_receiver_ready_fail_count" "$full_no_receiver_ready_total" "$full_no_receiver_ready_body_or_narrow_fail_count" "$full_no_receiver_ready_total" "$full_no_receiver_ready_body_or_local_narrow_fail_count" "$full_no_receiver_ready_total"
+if [ "$full_no_receiver_ready_body_or_local_bounds_narrow_fail_count" -ne 4 ]; then
+  printf "FAIL --diagnose-trait-gates: expected full-valid no-receiver-ready-body-or-local-bounds-narrow fail=4, got %s\n" \
+    "$full_no_receiver_ready_body_or_local_bounds_narrow_fail_count"
+  status=1
+fi
+
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s shadow-provenance-summary=%s preservation-ready=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s no-receiver-ready-body-summary-with-shadow-checks=%s no-receiver-narrow-summary=%s no-receiver-local-bounds-narrow-summary=%s no-receiver-ready-body-or-local-narrow-summary=%s no-receiver-ready-body-or-narrow-summary=%s no-receiver-ready-body-or-local-bounds-narrow-summary=%s full-valid-no-receiver-ready-body-fail=%s/%s full-valid-no-receiver-ready-body-or-local-narrow-fail=%s/%s full-valid-no-receiver-ready-body-or-narrow-fail=%s/%s full-valid-no-receiver-ready-body-or-local-bounds-narrow-fail=%s/%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$shadow_provenance_summary_count" "$preservation_ready_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count" "$no_receiver_ready_body_shadow_checks_count" "$no_receiver_narrow_summary_count" "$no_receiver_local_bounds_narrow_summary_count" "$no_receiver_ready_body_or_local_narrow_summary_count" "$no_receiver_ready_body_or_narrow_summary_count" "$no_receiver_ready_body_or_local_bounds_narrow_summary_count" "$full_no_receiver_ready_fail_count" "$full_no_receiver_ready_total" "$full_no_receiver_ready_body_or_local_narrow_fail_count" "$full_no_receiver_ready_total" "$full_no_receiver_ready_body_or_narrow_fail_count" "$full_no_receiver_ready_total" "$full_no_receiver_ready_body_or_local_bounds_narrow_fail_count" "$full_no_receiver_ready_total"
 exit "$status"

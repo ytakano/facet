@@ -12378,6 +12378,24 @@ Qed.
 
 
 
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_check_provider :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env = true ->
+    forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true.
+Proof.
+  intros env Hcheck f_component Hin_component.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+    in Hcheck.
+  eapply (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env)
+    (env_fns env)) Hcheck); exact Hin_component.
+Qed.
+
 Lemma check_env_end2end_direct_receiver_ready_facts :
   forall env,
     check_env_end2end_direct_receiver_ready env = true ->
@@ -14200,6 +14218,23 @@ Proof.
   rewrite Hno_receiver in Hcheck.
   simpl in Hcheck.
   exact Hcheck.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true.
+Proof.
+  intros env env' _Hprog Hdirect_ready f_component Hin_component.
+  destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
+    as (_Hprov_check & _Hpres_check & _Hdirect_check & Hcomponent_env_check).
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_check_provider;
+    eassumption.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_reachable_package_provider_of_no_receiver_component_body_summary_provider_check :

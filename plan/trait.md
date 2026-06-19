@@ -57,17 +57,17 @@ validity checks must be represented in Rocq and the extracted checker.
   result shape when the call starts from exact `store_typed`. The
   ordinary-shadow preservation path now has prefix-store route theorems for
   single environments and local-bounds families. The remaining proof gap is
-  wiring that ordinary route, together with the existing synthetic route, into
-  the active endpoint's ready-body local-bounds bridge and then retargeting the
+  the active endpoint path now discharges the ordinary shadow route provider from
+  the global prefix route package. The remaining proof gap is discharging the
+  synthetic route provider from existing endpoint evidence, then retargeting the
   public runtime theorem without adding a stricter checker gate.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Use the prefix-store ordinary-shadow local-bounds route together with the
-     existing synthetic route to obtain the ready-body local-bounds route bridge
-     from active-endpoint evidence, without depending on the stricter diagnostic
-     shadow-check gate.
+   - Discharge the remaining synthetic route provider from active-endpoint evidence
+     so the ready-body local-bounds route bridge is obtained without depending
+     on the stricter diagnostic shadow-check gate.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active
@@ -95,9 +95,9 @@ validity checks must be represented in Rocq and the extracted checker.
   safety theorem. A stricter shadow-check certificate proves the extra ordinary
   shadow evidence and has diagnostic runtime theorems that derive the shadow
   route bridge from the ready-body route bridge, but it is too restrictive as an
-  active gate. The public theorem still needs the ready-body route bridge to be
-  rebuilt from the accepted endpoint's existing synthetic and ordinary prefix
-  routes, without adding public premises or shrinking the accepted language.
+  active gate. The public theorem still needs the remaining synthetic route provider to be
+  rebuilt from the accepted endpoint's existing evidence, without adding public
+  premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

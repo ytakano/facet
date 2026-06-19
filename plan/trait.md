@@ -78,14 +78,16 @@ validity checks must be represented in Rocq and the extracted checker.
   and ordinary-shadow route packages plus the narrow direct-call value lemma, and
   a constructor lifts those branch-route packages into the endpoint's mixed
   local-bounds provider. The endpoint path now consumes a single global synthetic branch-route theorem
-  instead of a per-component synthetic callback; remaining work is deriving that
-  theorem internally and then retargeting the public theorem.
-  Existing synthetic preservation
-  still requires recursive synthetic evidence for all top-level callees, but the
-  active certificate may classify recursive callees as ordinary-shadow or narrow.
-  The next proof must therefore be a height-indexed mixed route theorem, not
-  another adapter around the blanket synthetic route provider. After that theorem
-  exists, retarget the public runtime theorem without adding public premises.
+  instead of a per-component synthetic callback, but the direct derivation is
+  still blocked by the recursive evidence shape of the existing synthetic cleanup
+  bridge. That bridge asks for synthetic-only evidence at each direct body target,
+  while the active local certificate may classify that same target as synthetic,
+  ordinary-shadow, or narrow. Small adapters now lift synthetic-only,
+  ordinary-shadow, and narrow evidence into the mixed evidence-at predicate, so
+  the next proof target is a mixed cleanup bridge whose recursive body-call
+  callback consumes mixed evidence rather than `fn_root_shadow_synthetic...`.
+  After that bridge yields a global mixed route without a synthetic-route public
+  premise, retarget the endpoint and then the public runtime theorem.
 
 ## Remaining Tasks
 
@@ -125,20 +127,18 @@ validity checks must be represented in Rocq and the extracted checker.
   active gate. The component-level mixed callee helper is proved and lifted through
   the active endpoint-local certificate wrapper, with synthetic and ordinary
   route families bundled as one mixed provider. The ordinary half is derived by a
-  reusable provenance-ready constructor; the public theorem still needs the
-  synthetic half of that bundle derived from the active mixed certificate.
-  The existing synthetic route theorem requires all-recursive synthetic evidence,
-  which is stronger than the active mixed certificate. The replacement
-  height-indexed mixed value-safety route interface, statement/family adapters,
-  provider-to-evidence bridge, direct call typing inversion lemma,
-  component/env-root/endpoint consumer helpers, and route-provider constructor
-  are now defined; the interface includes closure-target summary because the
-  narrow branch needs it. The global mixed value route theorem and branch-package provider constructor are
-  proved. The endpoint wrapper now has a theorem that takes one global synthetic
-  branch-route premise instead of a local synthetic provider callback. Remaining
-  endpoint work is to derive that premise internally, then retarget the public
-  runtime theorem without adding public premises or shrinking the accepted
-  language.
+  reusable provenance-ready constructor; the synthetic half cannot be recovered
+  by reusing the existing synthetic route theorem because that theorem requires
+  recursive synthetic-only evidence. The replacement height-indexed mixed
+  value-safety route interface, statement/family adapters, provider-to-evidence
+  bridge, direct call typing inversion lemma, component/env-root/endpoint
+  consumer helpers, route-provider constructor, global mixed value route theorem,
+  and branch-package provider constructor are now defined. Evidence adapters now
+  lift synthetic-only, ordinary-shadow, and narrow summaries into the mixed
+  evidence-at predicate. Remaining endpoint work is to add a mixed cleanup bridge
+  that accepts mixed recursive body-target evidence, use it to remove the global
+  synthetic branch-route premise, then retarget the public runtime theorem without
+  adding public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

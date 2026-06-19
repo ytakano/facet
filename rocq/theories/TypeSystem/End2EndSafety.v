@@ -12719,6 +12719,35 @@ Definition fn_root_shadow_ready_body_or_narrow_summary_evidence_at
     callee_body_root_shadow_summary env fdef \/
     callee_body_root_shadow_store_safe_narrow_summary env fdef.
 
+Lemma fn_root_shadow_ready_body_or_narrow_summary_evidence_at_of_synthetic_at :
+  forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname.
+Proof.
+  intros env fname Hsynthetic fdef Hlookup.
+  left. eapply Hsynthetic. exact Hlookup.
+Qed.
+
+Lemma fn_root_shadow_ready_body_or_narrow_summary_evidence_at_of_shadow_at :
+  forall env fname,
+    fn_root_shadow_summary_evidence_at env fname ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname.
+Proof.
+  intros env fname Hsummary fdef Hlookup.
+  right. left. eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma fn_root_shadow_ready_body_or_narrow_summary_evidence_at_of_narrow_at :
+  forall env fname,
+    (forall fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      callee_body_root_shadow_store_safe_narrow_summary env fdef) ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname.
+Proof.
+  intros env fname Hnarrow fdef Hlookup.
+  right. right. eapply Hnarrow. exact Hlookup.
+Qed.
+
 Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
     (env : global_env) : Prop :=
   forall s fname args s' v n_call,

@@ -20398,7 +20398,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hprefix_ready
     Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready
     Hexact_body_target Hbody_package.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_exact_body_call_route_package;
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_exact_body_call_route_package;
     eassumption.
 Qed.
 

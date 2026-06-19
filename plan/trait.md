@@ -155,8 +155,8 @@ validity checks must be represented in Rocq and the extracted checker.
   store/ref/root preservation tuple used by the existing synthetic cleanup core,
   projects back to the value-only callback, has statement/env-family and
   local-bounds-family adapters, has component and endpoint-local provider
-  constructors, and has provider projections into the existing value-callback
-  provider path. The named
+  constructors, projects into the existing value-callback provider path, and has
+  an endpoint-local runtime theorem that accepts cleanup providers directly. The named
   `mixed_ready_body_or_narrow_value_cleanup_bridge_statement` now has a
   compiled constructor from the existing global synthetic branch-route theorem,
   and its statement records the frame/param root-scope packages needed by the

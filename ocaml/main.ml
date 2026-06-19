@@ -517,6 +517,10 @@ let () =
     in
     print_gate "trait-direct-receiver-method-present"
       (check_env_root_shadow_direct_receiver_method_present checked_env);
+    print_gate "trait-shadow-provenance-summary"
+      (check_env_root_shadow_provenance_summary checked_env);
+    print_gate "trait-preservation-ready"
+      (check_env_preservation_ready checked_env);
     print_gate "trait-component-body-summary"
       (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
          checked_env);
@@ -579,7 +583,10 @@ let () =
     print_gate "trait-no-receiver-body-summary"
       (check_env_root_shadow_no_receiver_component_body_summary_provider_check checked_env);
     print_gate "trait-no-receiver-ready-body-summary"
-      (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check checked_env)
+      (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check checked_env);
+    print_gate "trait-no-receiver-ready-body-summary-with-shadow-checks"
+      (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+         checked_env)
   end;
   Option.iter (fun fname ->
     try Fir.emit_fir fname checked_env

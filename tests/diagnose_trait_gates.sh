@@ -67,9 +67,12 @@ total=0
 ok_count=0
 fail_count=0
 direct_present_count=0
+shadow_provenance_summary_count=0
+preservation_ready_count=0
 component_body_summary_count=0
 component_ready_body_summary_count=0
 no_receiver_ready_body_summary_count=0
+no_receiver_ready_body_shadow_checks_count=0
 status=0
 
 while IFS= read -r file; do
@@ -79,10 +82,13 @@ while IFS= read -r file; do
   if dune exec ocaml/main.exe -- --diagnose-trait-gates "$file" >"$tmp" 2>&1; then
     for gate in \
       trait-direct-receiver-method-present \
+      trait-shadow-provenance-summary \
+      trait-preservation-ready \
       trait-component-body-summary \
       trait-component-ready-body-summary \
       trait-no-receiver-body-summary \
-      trait-no-receiver-ready-body-summary
+      trait-no-receiver-ready-body-summary \
+      trait-no-receiver-ready-body-summary-with-shadow-checks
     do
       gate_line=$(grep -E "^${gate}: (ok|fail)$" "$tmp" || true)
       case "$gate_line" in
@@ -97,12 +103,25 @@ while IFS= read -r file; do
     done
 
     direct_line=$(grep -E "^trait-direct-receiver-method-present: (ok|fail)$" "$tmp" || true)
+    shadow_provenance_line=$(grep -E "^trait-shadow-provenance-summary: (ok|fail)$" "$tmp" || true)
+    preservation_ready_line=$(grep -E "^trait-preservation-ready: (ok|fail)$" "$tmp" || true)
     component_line=$(grep -E "^trait-component-body-summary: (ok|fail)$" "$tmp" || true)
     component_ready_line=$(grep -E "^trait-component-ready-body-summary: (ok|fail)$" "$tmp" || true)
     no_receiver_ready_line=$(grep -E "^trait-no-receiver-ready-body-summary: (ok|fail)$" "$tmp" || true)
+    no_receiver_ready_shadow_checks_line=$(grep -E "^trait-no-receiver-ready-body-summary-with-shadow-checks: (ok|fail)$" "$tmp" || true)
     case "$direct_line" in
       "trait-direct-receiver-method-present: ok")
         direct_present_count=$((direct_present_count + 1))
+        ;;
+    esac
+    case "$shadow_provenance_line" in
+      "trait-shadow-provenance-summary: ok")
+        shadow_provenance_summary_count=$((shadow_provenance_summary_count + 1))
+        ;;
+    esac
+    case "$preservation_ready_line" in
+      "trait-preservation-ready: ok")
+        preservation_ready_count=$((preservation_ready_count + 1))
         ;;
     esac
     case "$component_line" in
@@ -118,6 +137,11 @@ while IFS= read -r file; do
     case "$no_receiver_ready_line" in
       "trait-no-receiver-ready-body-summary: ok")
         no_receiver_ready_body_summary_count=$((no_receiver_ready_body_summary_count + 1))
+        ;;
+    esac
+    case "$no_receiver_ready_shadow_checks_line" in
+      "trait-no-receiver-ready-body-summary-with-shadow-checks: ok")
+        no_receiver_ready_body_shadow_checks_count=$((no_receiver_ready_body_shadow_checks_count + 1))
         ;;
     esac
 
@@ -339,6 +363,18 @@ if [ "$total" -ne 100 ] || [ "$ok_count" -ne 96 ] || [ "$fail_count" -ne 4 ]; th
   status=1
 fi
 
+if [ "$shadow_provenance_summary_count" -ne 18 ]; then
+  printf "FAIL --diagnose-trait-gates: expected shadow-provenance-summary=18, got %s\n" \
+    "$shadow_provenance_summary_count"
+  status=1
+fi
+
+if [ "$preservation_ready_count" -ne 17 ]; then
+  printf "FAIL --diagnose-trait-gates: expected preservation-ready=17, got %s\n" \
+    "$preservation_ready_count"
+  status=1
+fi
+
 if [ "$component_ready_body_summary_count" -ne 100 ]; then
   printf "FAIL --diagnose-trait-gates: expected component-ready-body-summary=100, got %s\n" \
     "$component_ready_body_summary_count"
@@ -351,6 +387,12 @@ if [ "$no_receiver_ready_body_summary_count" -ne 100 ]; then
   status=1
 fi
 
-printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s\n" \
-  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count"
+if [ "$no_receiver_ready_body_shadow_checks_count" -ne 17 ]; then
+  printf "FAIL --diagnose-trait-gates: expected no-receiver-ready-body-summary-with-shadow-checks=17, got %s\n" \
+    "$no_receiver_ready_body_shadow_checks_count"
+  status=1
+fi
+
+printf "diagnose-trait-gates: total=%s ok=%s fail=%s direct-present=%s shadow-provenance-summary=%s preservation-ready=%s component-body-summary=%s component-ready-body-summary=%s no-receiver-ready-body-summary=%s no-receiver-ready-body-summary-with-shadow-checks=%s\n" \
+  "$total" "$ok_count" "$fail_count" "$direct_present_count" "$shadow_provenance_summary_count" "$preservation_ready_count" "$component_body_summary_count" "$component_ready_body_summary_count" "$no_receiver_ready_body_summary_count" "$no_receiver_ready_body_shadow_checks_count"
 exit "$status"

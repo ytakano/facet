@@ -40,8 +40,9 @@ validity checks must be represented in Rocq and the extracted checker.
   active authorities. Current trait/direct valid frontier: 100 accepted files,
   96 no-receiver synthetic diagnostic ok, 4 no-receiver diagnostic fail,
   100 component ready-body fallback diagnostic ok,
-  100 no-receiver ready-body diagnostic ok, and
-  0 direct-receiver-method-present. The four synthetic failures are
+  100 no-receiver ready-body diagnostic ok, 18 shadow-provenance-summary ok,
+  17 preservation-ready ok, 17 no-receiver ready-body plus shadow-checks ok,
+  and 0 direct-receiver-method-present. The four synthetic failures are
   `tests/valid/function/local_let_rec_direct_call.facet`,
   `tests/valid/lifetime/hrt_direct_call_unchanged.facet`,
   `tests/valid/trait/assoc_projection_call_arg_compat.facet`, and
@@ -65,8 +66,12 @@ validity checks must be represented in Rocq and the extracted checker.
   component local-bounds families, a diagnostic wrapper whose mixed route
   derives the synthetic provider from the ready-body gate, an ordinary
   shadow-summary bridge that derives the local-bounds ordinary provider from
-  global shadow-summary evidence, and a checker-facts bridge that derives that
-  global evidence from provenance and preservation checks. This gives
+  global shadow-summary evidence, a checker-facts bridge that derives that
+  global evidence from provenance and preservation checks, and an extracted
+  diagnostic gate measuring the ready-body fallback combined with those shadow
+  checks. The combined diagnostic currently covers only 17/100 files because
+  the active no-receiver branch does not expose preservation/provenance checks.
+  This gives
   synthetic-or-ordinary callee evidence plus store-safe target arguments for
   alpha-renamed direct targets, while isolating the remaining public route
   theorem wiring.
@@ -134,7 +139,10 @@ validity checks must be represented in Rocq and the extracted checker.
   that evidence. It still needs the ordinary shadow-summary route bridge proof,
   exposure of provenance/preservation checks from active checker premises, and
   final public-theorem wiring that removes the remaining abstract ready-body
-  route bridge.
+  route bridge. The diagnostic no-receiver ready-body plus shadow-check gate is
+  17/100, matching the preservation-ready frontier, so that exposure cannot be
+  inferred from the current no-receiver branch without changing the active gate
+  shape or proving the facts from other accepted premises.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

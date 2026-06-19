@@ -13449,6 +13449,17 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Lemma component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_of_statement :
+  forall env,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_in_env
+      env.
+Proof.
+  intros env Hcleanup f_component _Hin_component _Hcomponent_check.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family_of_statement.
+  exact Hcleanup.
+Qed.
+
 Lemma component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_of_route_provider :
   forall env,
     component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env

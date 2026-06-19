@@ -93,9 +93,11 @@ validity checks must be represented in Rocq and the extracted checker.
   by the ordinary-shadow branch, which the endpoint already has. A compiled
   constructor proves this named bridge from the old global synthetic branch-route
   theorem plus the ordinary-shadow route package. The endpoint-local consumer
-  uses the named bridge, but the bridge is not yet independently proved from
-  value-only recursive mixed evidence. After that independent bridge is proved,
-  retarget the public runtime theorem.
+  uses the named bridge, and a public-premise-shaped active-endpoint theorem now
+  targets `infer_program_env_end2end_assoc_direct_receiver_mixed` through that
+  bridge. The bridge is not yet independently proved from value-only recursive
+  mixed evidence; after that proof lands, retarget the public runtime theorem by
+  replacing the old strict-exact endpoint with this active-endpoint helper.
 
 ## Remaining Tasks
 
@@ -149,11 +151,14 @@ validity checks must be represented in Rocq and the extracted checker.
   The named `mixed_ready_body_or_narrow_value_cleanup_bridge_statement` now has a
   compiled constructor from the existing global synthetic branch-route theorem,
   and its statement records the frame/param root-scope packages needed by the
-  ordinary-shadow branch. This validates the bridge wiring but does not solve the
-  independent cleanup proof: the remaining work is to prove the same bridge from
-  value-only mixed recursive evidence instead of the synthetic-only full
-  preservation callback. Then retarget the public runtime theorem without adding
-  public premises or shrinking the accepted language.
+  ordinary-shadow branch. A public-premise-shaped active-endpoint theorem now
+  consumes that named bridge, so the final public retarget has a compiled target
+  once the bridge no longer depends on the old synthetic branch route. This
+  validates the endpoint wiring but does not solve the independent cleanup proof:
+  the remaining work is to prove the same bridge from value-only mixed recursive
+  evidence instead of the synthetic-only full preservation callback. Then retarget
+  the public runtime theorem without adding public premises or shrinking the
+  accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

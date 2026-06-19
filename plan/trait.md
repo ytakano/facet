@@ -49,8 +49,9 @@ validity checks must be represented in Rocq and the extracted checker.
   a constructor from the existing synthetic and ordinary-shadow route packages,
   there is a local-bounds adapter from per-component synthetic/ordinary route
   families to the mixed ready-body-or-narrow route family, an active endpoint
-  wrapper now consumes a combined component mixed-route provider directly, and
-  there is a compiled active-endpoint public prefix theorem
+  wrapper now consumes a combined component mixed-route provider directly, the
+  older separate synthetic/shadow route-provider endpoint factors through that
+  combined path, and there is a compiled active-endpoint public prefix theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge`.
 
 ## Remaining Tasks
@@ -97,10 +98,11 @@ validity checks must be represented in Rocq and the extracted checker.
   exact-body-call package constructor exists for the active endpoint, the
   summary-to-route bridge has a constructor from existing route packages, an
   additive active-endpoint prefix theorem compiles with that bridge as an
-  explicit premise, a local mixed-route adapter now compiles, and an endpoint
-  wrapper now consumes the combined component mixed-route provider directly. The
-  remaining proof target is connecting the active mixed per-callee certificate to
-  that provider without assuming recursive synthetic-only evidence.
+  explicit premise, a local mixed-route adapter now compiles, an endpoint
+  wrapper now consumes the combined component mixed-route provider directly, and
+  the older separate route-provider endpoint factors through it. The remaining
+  proof target is connecting the active mixed per-callee certificate to that
+  provider without assuming recursive synthetic-only evidence.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

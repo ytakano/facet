@@ -18758,7 +18758,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hsynthetic_provider_when_no_receiver
     Hshadow_provider_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_and_mixed_route_providers_diagnostic.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_component_mixed_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -18768,10 +18768,10 @@ Proof.
   - exact Hframe_ready.
   - exact Hparam_ready.
   - exact Hprog.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
-    exact Hprog.
-  - exact Hsynthetic_provider_when_no_receiver.
-  - exact Hshadow_provider_when_no_receiver.
+  - intros Hno_receiver f_component Hin_component Hcomponent_check.
+    split.
+    + eapply Hsynthetic_provider_when_no_receiver; eassumption.
+    + eapply Hshadow_provider_when_no_receiver; eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

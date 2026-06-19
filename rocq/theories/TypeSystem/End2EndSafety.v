@@ -15030,6 +15030,43 @@ Proof.
   - exact Hcomponent_check.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_route_bridge ->
+  shadow_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_summary_provider_in_env env' /\
+    component_body_local_bounds_ready_body_route_provider_in_env env' /\
+    component_body_local_bounds_ready_body_callback_provider_in_env env' /\
+    component_body_local_bounds_synthetic_ready_body_callback_provider_in_env
+      env' /\
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      strict_exact_closure_component_body_store_safe_callback_at_provider
+        env' f_component).
+Proof.
+  intros Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env'
+    Hprog Hcombined_check Hno_receiver.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_mixed_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - exact Hcombined_check.
+  - exact Hno_receiver.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_exact_route_package_at_all_of_no_receiver_component_ready_body_summary_provider_check :
   forall env env' bounds,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -15530,7 +15567,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
     Hshadow_bridge env env' f s s' v Hprog Hcombined_check Hinitial Hin
     Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_and_mixed_route_providers_diagnostic.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_body_local_bounds_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -15540,14 +15577,13 @@ Proof.
   - exact Hframe_ready.
   - exact Hparam_ready.
   - exact Hprog.
-  - eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_of_shadow_checks.
-    exact Hcombined_check.
   - intros Hno_receiver.
-    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
-      eassumption.
-  - intros _Hno_receiver.
-    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
-      eassumption.
+    pose proof
+      (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+        Hroot_names Hroot_keys Hsummary_to_route Hshadow_bridge env env' Hprog
+        Hcombined_check Hno_receiver) as
+        (_Hsummary_provider & Hroute_provider & _Hcallback_provider).
+    exact Hroute_provider.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

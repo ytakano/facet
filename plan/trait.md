@@ -10,87 +10,35 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Current State
 
 - Traits, impls, associated types, trait methods, method-local type parameters,
-  generic-trait impl remapping, and associated type projections are parsed,
-  lowered, and checked through the extracted Rocq checker. Associated
-  projections in signature and surface type positions, plus explicit UFCS method
-  targets, reject lifetime arguments in trait refs at checker boundaries. Impl
-  method bodies are elaborated to hidden functions and checked even when
-  uncalled.
-- Method calls use receiver-first prefix UFCS forms:
-  `(<Ty as Trait>::method receiver args...)` and
-  `(Trait::method receiver args...)`. Generic trait arguments remain explicit
-  through the former spelling; dot syntax remains rejected for this phase.
-- Short UFCS currently accepts receiver types known before checker execution:
-  function parameters, typed literals, annotated pure local literals after
-  receiver-let elimination regardless of mutability, inferred pure local
-  literal/unit receivers regardless of mutability, fieldless struct literals and
-  payloadless enum constructors, including generic instances, as direct
-  receivers or after local receiver-let elimination, with store-safe argument
-  evidence checked in Rocq.
-- Still-gated receiver forms are field-bearing struct literals and
-  payload-bearing enum constructors, including generic instances, direct-call
-  receivers, generic direct-call receivers, non-pure inferred locals, annotated
-  locals initialized by calls, and other general annotated locals.
+  generic-trait impl remapping, associated type projections, and receiver-first
+  UFCS method calls are parsed, lowered, and checked through the extracted Rocq
+  checker. Impl method bodies are elaborated to hidden functions and checked even
+  when uncalled. Dot syntax, associated type defaults, equality constraints, and
+  `deriving` remain syntax-level deferred.
+- Supported method receivers are forms whose type is known before checker
+  execution: parameters, typed literals, pure literal/unit locals after
+  receiver-let elimination, fieldless struct literals, and payloadless enum
+  constructors, including generic instances. Field-bearing structs, payload
+  enums, direct-call receivers, generic direct-call receivers, non-pure inferred
+  locals, and call-initialized/general annotated locals remain gated.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
-  its only extracted checker authority, with no fallback acceptance path. Public
-  checker soundness aliases target this assoc-base mixed endpoint. The public
-  runtime theorem `infer_program_env_end2end_big_step_safe_checked_initial_ready`
-  still targets the strict mixed endpoint.
-- Diagnostic endpoints remain for proof routing and fixture sampling, not as
-  active authorities. Current trait/direct valid frontier: 100 accepted files,
-  96 no-receiver synthetic diagnostic ok, 4 no-receiver diagnostic fail,
-  100 component ready-body fallback diagnostic ok,
-  100 no-receiver ready-body diagnostic ok, 18 shadow-provenance-summary ok,
-  17 preservation-ready ok, 17 no-receiver ready-body plus shadow-checks ok,
-  and 0 direct-receiver-method-present. The four synthetic failures are
-  `tests/valid/function/local_let_rec_direct_call.facet`,
-  `tests/valid/lifetime/hrt_direct_call_unchanged.facet`,
-  `tests/valid/trait/assoc_projection_call_arg_compat.facet`, and
-  `tests/valid/type_safety_ready_gap/direct_call.facet`; each fails because a
-  local-bounds synthetic direct-call-ready summary is missing for an ordinary
-  callee with `no-direct-call-target`.
-- Ready-body fallback proof infrastructure now supplies local-bounds providers,
-  explicit ordinary/synthetic-to-ready evidence adapters, ordinary-summary-to-
-  provenance bridges, synthetic-check-to-ready provider bridges, a named
-  summary-family route bridge, route-package/reachability helpers, exact-target
-  adapters, pointwise callee evidence, callback-at/local-bounds callback bridges,
-  checker-to-callback-at provider bridges, an ordinary shadow-summary prefix
-  route contract, a per-callee mixed route adapter, a component/end-to-end
-  ready-body route wrapper for no-capture direct-call component bodies, a mixed
-  ready-body-check wrapper whose no-receiver branch consumes the ready-body
-  route directly, an extracted and CLI-tested diagnostic no-receiver ready-
-  body gate, a diagnostic mixed-route runtime wrapper that removes the abstract
-  summary-to-route bridge from that gate, a mixed-route provider wrapper
-  that replaces the abstract summary-to-route bridge with synthetic plus
-  ordinary route providers, a ready-body-check-to-synthetic-route bridge for
-  component local-bounds families, a diagnostic wrapper whose mixed route
-  derives the synthetic provider from the ready-body gate, an ordinary
-  shadow-summary bridge that derives the local-bounds ordinary provider from
-  global shadow-summary evidence, a checker-facts bridge that derives that
-  global evidence from provenance and preservation checks, an extracted
-  diagnostic gate measuring the ready-body fallback combined with those shadow
-  checks, a theorem-level route that consumes that combined gate in the
-  no-receiver branch, a reusable active-checker case split showing mixed
-  success plus the combined diagnostic yields global shadow-summary evidence,
-  a component shadow-route provider adapter from that evidence, no-receiver
-  ready-body and synthetic route provider adapters from the combined diagnostic,
-  and a mixed-route theorem for the combined diagnostic that avoids the abstract
-  ready-body route bridge when synthetic-route evidence is supplied. The combined
-  diagnostic currently covers only 17/100 files because the active
-  no-receiver branch does not expose preservation/provenance checks. This gives
-  synthetic-or-ordinary callee evidence plus store-safe target arguments for
-  alpha-renamed direct targets, while isolating the remaining public route
-  theorem wiring.
-- The remaining activation gap is proof-side. The retained mixed no-receiver
-  path still consumes synthetic summary-route/local-bounds evidence, while the
-  broad body-summary gate that would provide it rejects valid coverage.
-  Retargeting the canonical public theorem to
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` requires routing the
-  ready-body fallback evidence into that mixed no-receiver callback path, then
-  deriving the needed provider/check facts from the existing public premises.
-- Associated type defaults, equality constraints, and `deriving` are reserved
-  for future surface forms. Provisional syntax for them is explicitly rejected
-  with parser diagnostics.
+  its only checker authority. Public checker soundness aliases already target
+  this endpoint, but the public runtime theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
+- Diagnostic endpoints are proof-routing and fixture-sampling aids only. Current
+  trait/direct valid frontier: 100 accepted files, 96 no-receiver synthetic ok,
+  4 no-receiver synthetic fail, 100 component ready-body ok, 100 no-receiver
+  ready-body ok, 18 shadow-provenance-summary ok, 17 preservation-ready ok, 17
+  no-receiver ready-body plus shadow-checks ok, and 0
+  direct-receiver-method-present.
+- Ready-body fallback proof infrastructure now includes local-bounds provider
+  contracts, synthetic/ordinary route-provider wrappers, ready-body and
+  synthetic provider adapters from the combined no-receiver diagnostic, and
+  mixed-route diagnostic theorems that avoid the abstract ready-body route bridge
+  once synthetic and shadow route providers are supplied. The remaining gap is
+  deriving those providers from the active mixed checker's public premises rather
+  than diagnostic-only checks.
 
 ## Remaining Tasks
 
@@ -124,52 +72,23 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- Assoc strict direct-receiver endpoint trials reject broad valid coverage with
-  `ErrEndToEndSafetyGateFailed`. Related rejected diagnostic endpoints and
-  unused ready-check helper booleans have been removed; the base
-  direct-component endpoint remains diagnostic proof infrastructure only.
-- The active mixed endpoint has the needed direct-ready branch, assoc-base
-  callback paths, component-body summary/check routes, and ready-body fallback
-  bridges up through named evidence/provenance, synthetic-check, summary-family,
-  callback-at providers, ordinary shadow-summary prefix routes, a mixed
-  ready-body route adapter, a component/end-to-end wrapper that consumes
-  ready-body route plus ready-body summary providers, a mixed ready-body-check
-  wrapper that uses that path in the no-receiver case, a diagnostic boolean gate
-  for no-receiver ready-body summaries with CLI coverage, a diagnostic runtime
-  wrapper that uses mixed synthetic plus ordinary route providers instead of an
-  abstract summary-to-route premise, a mixed-route public wrapper with the same
-  provider shape, a bridge from ready-body checks to synthetic route providers,
-  a diagnostic wrapper that uses that bridge instead of taking a synthetic
-  provider premise, an ordinary provider wrapper based on global shadow-summary
-  evidence, a checker-facts bridge from provenance/preservation checks to that
-  evidence, a theorem route for the combined ready-body plus shadow-check
-  diagnostic gate, an active-checker case split that derives global
-  shadow-summary evidence from mixed success plus that combined diagnostic,
-  an adapter from that evidence to the component shadow-route provider,
-  no-receiver ready-body and synthetic route provider adapters from the combined
-  diagnostic, and a mixed-route theorem for the combined diagnostic that no
-  longer requires the abstract ready-body route bridge once synthetic-route
-  evidence is supplied.
-  It still needs the ordinary shadow-summary route bridge proof, derivation of
-  that synthetic-route evidence from active no-receiver premises, and final
-  public-theorem wiring. The combined diagnostic gate is 17/100, matching the
-  preservation-ready frontier, so that exposure cannot be inferred from the
-  current no-receiver branch without changing the active gate shape or proving
-  the facts from other accepted premises.
-- The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
-  fixture, but it is not the active CLI authority and no longer has a retained
-  runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage
-  but still rejects the direct-call receiver fixture because the direct-ready
-  branch requires the global component gate.
-- A trial promotion of the no-receiver ready-body summary gate to the active
-  mixed checker preserved the trait/direct diagnostic frontier but rejected
-  broader higher-ranked/function-value valid programs, so the ready-body gate
-  remains diagnostic until the public route-provider bridge is scoped correctly.
-- A diagnostic retarget to `assoc_direct_receiver_base_combined` accepted the
-  short and explicit direct-call receiver UFCS safety-gate fixtures and
-  preserved the current regression suite except for those two expected-invalid
-  flips; its unreferenced runtime wrappers and rejected broad/component-only
-  ready-check diagnostics have been removed.
+- Retargeting the public runtime theorem to
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` still needs proof-side
+  evidence for the mixed no-receiver callback path. The active endpoint accepts
+  broad valid coverage, but it does not expose enough provenance/preservation
+  facts to derive the combined shadow-check diagnostic beyond 17/100 files.
+- The ordinary shadow-summary local-bounds route bridge is still unproved.
+  Existing lower-level route lemmas can consume shadow-route evidence or combine
+  already-provided synthetic and shadow routes, but they do not construct the
+  ordinary route from `env_fns_root_shadow_summary_evidence` alone.
+- The ready-body route bridge cannot currently be derived from the public
+  synthetic prefix theorem plus per-callee ready-body evidence: the public
+  synthetic route requires whole-environment direct-call evidence, while the
+  ready-body branch supplies only the current callee's synthetic evidence.
+- Diagnostic checker retargeting experiments that accepted direct-call receiver
+  safety-gate fixtures either rejected broader valid programs or relied on
+  endpoints that are not the active CLI authority. Keep direct-call receiver
+  safety-gate tests invalid until the verified active endpoint accepts them.
 
 ## Key Decisions
 

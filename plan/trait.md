@@ -84,8 +84,9 @@ validity checks must be represented in Rocq and the extracted checker.
   while the active local certificate may classify that same target as synthetic,
   ordinary-shadow, or narrow. Small adapters now lift synthetic-only,
   ordinary-shadow, and narrow evidence into the mixed evidence-at predicate. A
-  value-only mixed body-call callback is derivable from the global mixed route,
-  with env-family and local-bounds adapters for component-local recursion. The
+  value-only mixed body-call callback is derivable from both global and scoped
+  mixed route families, with env-family and local-bounds adapters for
+  component-local recursion. The
   next proof target is a mixed cleanup bridge whose recursive body-call callback
   consumes that scoped value-only mixed callback rather than the old
   full-preservation synthetic callback and `fn_root_shadow_synthetic...` evidence.
@@ -139,7 +140,8 @@ validity checks must be represented in Rocq and the extracted checker.
   and branch-package provider constructor are now defined. Evidence adapters now
   lift synthetic-only, ordinary-shadow, and narrow summaries into the mixed
   evidence-at predicate, and a value-only mixed body-call callback adapter is
-  proved from the global mixed route with env-family and local-bounds variants.
+  proved from both global and scoped mixed route families with env-family and
+  local-bounds variants.
   Remaining endpoint work is to add a mixed cleanup bridge that accepts this
   scoped value-only mixed recursive body-target callback, use it to remove the
   global synthetic branch-route premise, then retarget the public runtime theorem

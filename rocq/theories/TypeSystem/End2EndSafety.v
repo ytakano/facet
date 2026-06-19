@@ -19215,9 +19215,8 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hprefix_ready
     Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready
-    Hexact_body_target Hbody_package env env' f s s' v Hprog Hinitial Hin
-    Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_synthetic_branch_route.
+    Hexact_body_target Hbody_package.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_summary_route_value_callback_bridge.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -19226,7 +19225,7 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package.
+  - eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_exact_body_call_route_package.
     + exact Hscope_synthetic.
     + exact eval_preserves_typing_ready_prefix_mutual.
     + exact Hprefix_ready.
@@ -19235,11 +19234,6 @@ Proof.
     + exact Hroot_keys.
     + exact Hexact_body_target.
     + exact Hbody_package.
-  - exact Hprog.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_providers :

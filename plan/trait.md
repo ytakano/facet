@@ -22,8 +22,9 @@ validity checks must be represented in Rocq and the extracted checker.
   enums, direct-call receivers, generic direct-call receivers, non-pure inferred
   locals, and call-initialized/general annotated locals remain gated.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
-  its only checker authority. Public checker soundness aliases already target
-  this endpoint, but the public runtime theorem
+  its only checker authority. That endpoint now requires both direct-receiver
+  mixed readiness and the per-local mixed no-receiver certificate. Public checker
+  soundness aliases already target this endpoint, but the public runtime theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
 - The ready-body route alone stalled for the no-receiver branch, and the narrow
@@ -39,18 +40,17 @@ validity checks must be represented in Rocq and the extracted checker.
   four full-valid helper-function cases. The per-local mixed provider is now
   consumed by compiled runtime helpers at the exact component-local callee lookup,
   by a boolean-preserving captured/component env safety theorem, and by the active
-  direct-receiver mixed diagnostic theorem. The remaining proof work is to
-  retarget the public theorem.
+  direct-receiver mixed diagnostic theorem. The certificate is now enforced by
+  the active extracted endpoint without changing the accepted regression frontier.
+  The remaining proof work is to retarget the public theorem.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Promote only a certificate gate that preserves existing valid tests, most
-     likely the combined ready-body-or-narrow gate after its bridge dependency is
-     closed.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` after the active
-     endpoint is covered by the proven certificate gate.
+     `infer_program_env_end2end_assoc_direct_receiver_mixed`, using the endpoint's
+     promoted per-local certificate check and existing mixed diagnostic/runtime
+     helpers.
    - Add positive direct-call receiver UFCS tests only after the verified active
      endpoint accepts them. Keep existing direct-call receiver safety-gate tests
      invalid until that switch lands.
@@ -72,9 +72,9 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  per-local mixed certificate removes the full-valid diagnostic blockers and now
-  has compiled runtime helper lemmas plus an active diagnostic theorem, but the
-  public theorem still needs to be retargeted to that route.
+  active endpoint now exposes the per-local certificate check, but the public
+  theorem still needs to connect that accepted endpoint to the compiled mixed
+  diagnostic/runtime route without adding handwritten OCaml fallback logic.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

@@ -2705,7 +2705,9 @@ Definition infer_program_env_end2end_assoc_direct_receiver_mixed
   match infer_program_env_end2end_assoc env with
   | infer_err err => infer_err err
   | infer_ok env' =>
-      if check_env_end2end_direct_receiver_mixed_ready env'
+      if check_env_end2end_direct_receiver_mixed_ready env' &&
+         check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+           env'
       then infer_ok env'
       else infer_err ErrEndToEndSafetyGateFailed
   end.
@@ -2724,7 +2726,9 @@ Definition infer_program_env_end2end_assoc_receiver_method_exact_mixed
   | infer_ok env' =>
       if check_env_root_shadow_receiver_method_strict_exact_closure_summary
            env' &&
-         check_env_end2end_direct_receiver_mixed_ready env'
+         check_env_end2end_direct_receiver_mixed_ready env' &&
+         check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+           env'
       then infer_ok env'
       else infer_err ErrEndToEndSafetyGateFailed
   end.

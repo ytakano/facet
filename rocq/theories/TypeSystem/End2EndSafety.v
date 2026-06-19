@@ -309,10 +309,31 @@ Proof.
   unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hprog.
   destruct (infer_program_env_end2end_assoc env)
     as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked) eqn:Hgate; try discriminate.
+  apply andb_true_iff in Hgate as [_Hmixed_ready _Hlocal_check].
   injection Hprog as <-.
   reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked) eqn:Hgate; try discriminate.
+  apply andb_true_iff in Hgate as [_Hmixed_ready Hlocal_check].
+  injection Hprog as <-.
+  exact Hlocal_check.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_sound :
@@ -398,9 +419,11 @@ Proof.
   destruct (infer_program_env_end2end_assoc env)
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
-    env_checked); simpl in Hprog; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
-    try discriminate.
+    env_checked) eqn:Hexact; simpl in Hprog; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked) eqn:Hgate; try discriminate.
+  apply andb_true_iff in Hgate as [_Hmixed_ready _Hlocal_check].
   injection Hprog as ->.
   reflexivity.
 Qed.
@@ -417,9 +440,10 @@ Proof.
   destruct (infer_program_env_end2end_assoc env)
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_root_shadow_receiver_method_strict_exact_closure_summary
-    env_checked); simpl in Hprog; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
-    eqn:Hready; try discriminate.
+    env_checked) eqn:Hexact; simpl in Hprog; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked) eqn:Hgate; try discriminate.
   injection Hprog as ->.
   reflexivity.
 Qed.
@@ -12461,8 +12485,10 @@ Proof.
   unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hprog.
   destruct (infer_program_env_end2end_assoc env)
     as [env_checked | err] eqn:Hbase; try discriminate.
-  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked)
-    eqn:Hmixed_ready; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked) eqn:Hgate; try discriminate.
+  apply andb_true_iff in Hgate as [Hmixed_ready _Hlocal_check].
   injection Hprog as <-.
   eapply check_env_end2end_direct_receiver_mixed_ready_cases.
   exact Hmixed_ready.

@@ -17119,7 +17119,9 @@ let check_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
 let infer_program_env_end2end_assoc_direct_receiver_mixed env =
   match infer_program_env_end2end_assoc env with
   | Infer_ok env' ->
-    if check_env_end2end_direct_receiver_mixed_ready env'
+    if (&&) (check_env_end2end_direct_receiver_mixed_ready env')
+         (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+           env')
     then Infer_ok env'
     else Infer_err ErrEndToEndSafetyGateFailed
   | Infer_err err -> Infer_err err

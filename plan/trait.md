@@ -38,8 +38,9 @@ validity checks must be represented in Rocq and the extracted checker.
   package adapters from component-local synthetic summaries, no-receiver
   synthetic route-package wrappers from the body-summary diagnostic check,
   active-mixed bridges exposing bundled direct-branch provider facts
-  (pointwise component checks plus provenance/preservation checks) for
-  direct-ready/direct-receiver-present branches plus explicit
+  (pointwise component checks plus provenance/preservation checks) and a
+  reusable direct-ready synthetic local-bounds route provider for
+  direct-ready/direct-receiver-present branches, plus explicit
   no-receiver-or-provider case splits, a bundled ready-body summary+route
   adapter from the ready-body check plus synthetic and shadow routes, and
   combined no-receiver diagnostic adapters for ready-body, ready-body

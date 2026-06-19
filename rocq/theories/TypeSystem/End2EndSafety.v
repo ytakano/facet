@@ -14067,6 +14067,30 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_alpha_body_callback :
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    forall fname fdef fcall used used' fname_body args_body synthetic_body,
+      In fdef (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env fdef = true ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros env Hprovider fname fdef fcall used used' fname_body args_body
+    synthetic_body Hin_component Hcomponent_check _Hname Hrename _Htarget.
+  destruct (alpha_rename_fn_def_static_fields used fdef fcall used' Hrename)
+    as [_ [_ [_ [_ [_ [_ Hbounds]]]]]].
+  rewrite Hbounds.
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,
     fn_env_unique_by_name env ->

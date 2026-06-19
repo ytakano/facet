@@ -68,7 +68,10 @@ validity checks must be represented in Rocq and the extracted checker.
   explicit all-target evidence premise, and the active certificate-to-route
   conversion is now named as
   `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge`
-  and used by the endpoint summary-bridge theorem.
+  and used by the endpoint summary-bridge theorem. The active provider also now
+  has a branch-local alpha-renamed body callback adapter,
+  `component_body_local_bounds_ready_body_or_narrow_summary_provider_alpha_body_callback`,
+  which preserves the component-local evidence across `alpha_rename_fn_def` bounds.
 
 ## Remaining Tasks
 
@@ -123,7 +126,9 @@ validity checks must be represented in Rocq and the extracted checker.
   intermediate mixed-disjunction bridge, named summary-provider bridge,
   mixed-route cleanup wrappers, value/cleanup bridge constructor plus prefix/non-prefix wrappers, and active-endpoint runtime theorems now only
   require the plain per-target synthetic prefix route for the synthetic branch; the active certificate-to-route
-  adapter is now named and used at the endpoint summary-bridge boundary.
+  adapter is now named and used at the endpoint summary-bridge boundary, and
+  the component-local mixed summary evidence now has a named alpha-renamed body
+  callback adapter.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

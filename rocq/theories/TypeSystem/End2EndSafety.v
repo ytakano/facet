@@ -14091,6 +14091,32 @@ Proof.
     eassumption.
 Qed.
 
+Definition component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+    (env : global_env) : Prop :=
+  forall fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+
+Lemma component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_of_summary_provider :
+  forall env,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env.
+Proof.
+  intros env Hprovider fname fdef fcall used used' fname_body args_body
+    synthetic_body Hin_component Hcomponent_check Hname Hrename Htarget.
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_alpha_body_callback;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,
     fn_env_unique_by_name env ->
@@ -15542,6 +15568,20 @@ Proof.
   simpl in Hcheck.
   eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary_sound.
   exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_alpha_body_callback_provider_check_sound :
+  forall env,
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env.
+Proof.
+  intros env Hcheck Hno_receiver.
+  eapply component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_of_summary_provider.
+  eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound;
+    eassumption.
 Qed.
 
 Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_sound :

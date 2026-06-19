@@ -1141,6 +1141,29 @@ Definition check_expr_root_shadow_store_safe_narrow_summary_checked
   check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
     10000 env Ω n R (sctx_of_ctx Γ) e.
 
+Definition check_fn_root_shadow_store_safe_narrow_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef),
+        infer_core_env_roots_shadow_safe env
+          (fn_outlives fdef) (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
+          (fn_body fdef) with
+  | infer_ok _, infer_ok (T_body, Gamma_out, R_body, roots_body) =>
+      check_expr_root_shadow_store_safe_narrow_summary env
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
+        (fn_body fdef) &&
+      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+      fn_params_roots_exclude_b (fn_params fdef) roots_body &&
+      fn_params_root_env_excludes_b (fn_params fdef) R_body
+  | _, _ => false
+  end.
+
+Definition check_env_root_shadow_store_safe_narrow_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_store_safe_narrow_summary env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_generic_direct_store_safe_summary_target
     (env : global_env) (fdef : fn_def) (fname : ident) (type_args : list Ty)
     (args : list expr) (synthetic_body : expr) : bool :=

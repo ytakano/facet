@@ -153,6 +153,26 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       expr_root_shadow_store_safe_narrow_summary
         env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots roots.
 
+Definition callee_body_root_shadow_store_safe_narrow_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists T_body Gamma_out R_body roots_body ret_roots,
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    expr_root_shadow_store_safe_narrow_summary env
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Gamma_out) R_body roots_body
+      ret_roots /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Definition env_fns_root_shadow_store_safe_narrow_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef.
+
 Inductive expr_root_shadow_store_safe_narrow_summary_checked
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->

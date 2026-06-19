@@ -1046,6 +1046,52 @@ Proof.
     + right. eapply IH. exact Hlookup.
 Qed.
 
+Lemma check_fn_root_shadow_store_safe_narrow_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_store_safe_narrow_summary env fdef = true ->
+    callee_body_root_shadow_store_safe_narrow_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_store_safe_narrow_summary in Hcheck.
+  destruct (infer_env_roots_shadow_safe env fdef
+    (initial_root_env_for_fn fdef))
+    as [[[[T_env Gamma_env] R_env] roots_env] | err_env] eqn:Henv;
+    try discriminate.
+  destruct (infer_core_env_roots_shadow_safe env
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))
+    as [[[[T_body Gamma_out] R_body] roots_body] | err_body] eqn:Hbody;
+    try discriminate.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[[Hexpr Hcompat] Hroots] Hroot_env].
+  destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
+    env (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef)
+    T_body Gamma_out R_body roots_body Hbody Hexpr)
+    as [ret_roots Hsummary].
+  unfold callee_body_root_shadow_store_safe_narrow_summary.
+  exists T_body, Gamma_out, R_body, roots_body, ret_roots.
+  repeat split.
+  - eapply infer_env_roots_shadow_safe_params_nodup. exact Henv.
+  - exact Hsummary.
+  - exact Hcompat.
+  - apply fn_params_roots_exclude_b_sound. exact Hroots.
+  - apply fn_params_root_env_excludes_b_sound. exact Hroot_env.
+Qed.
+
+Lemma check_env_root_shadow_store_safe_narrow_summary_sound :
+  forall env,
+    check_env_root_shadow_store_safe_narrow_summary env = true ->
+    env_fns_root_shadow_store_safe_narrow_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_store_safe_narrow_summary in Hcheck.
+  rewrite forallb_forall in Hcheck.
+  eapply check_fn_root_shadow_store_safe_narrow_summary_sound.
+  eapply Hcheck.
+  eapply lookup_fn_in. exact Hlookup.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_narrow_summary_checked_sound :
   forall env Omega n R Gamma e T Gamma' R' roots,
     infer_core_env_roots_shadow_safe_checked env Omega n R Gamma e =

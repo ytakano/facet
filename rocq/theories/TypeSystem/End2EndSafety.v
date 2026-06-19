@@ -13078,6 +13078,39 @@ Proof.
     eassumption.
 Qed.
 
+Lemma component_body_local_bounds_synthetic_summary_check_provider_reachable_package_and_exact_target_provider :
+  forall env bounds base_fname,
+    component_body_local_bounds_synthetic_summary_check_provider_in_env env ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    (forall env0 fname,
+      global_env_local_bounds_family
+        (global_env_with_local_bounds env bounds) env0 ->
+      forall fdef fcall used used' fname_body args_body synthetic_body,
+        In fdef (env_fns env0) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, fn_body fcall)) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      (global_env_with_local_bounds env bounds) base_fname /\
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_exact_body_target_provider
+      (global_env_with_local_bounds env bounds) base_fname.
+Proof.
+  intros env bounds base_fname Hprovider Hcomponent_check Htarget.
+  split.
+  - eapply component_body_local_bounds_synthetic_summary_check_provider_reachable_package_provider;
+      eassumption.
+  - intros env0 fname Hreachable.
+    eapply Htarget.
+    eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_local_bounds_family.
+    exact Hreachable.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_summary_provider_of_synthetic_summary_check_provider :
   forall env,
     component_body_local_bounds_synthetic_summary_check_provider_in_env env ->
@@ -14167,6 +14200,66 @@ Proof.
   rewrite Hno_receiver in Hcheck.
   simpl in Hcheck.
   exact Hcheck.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_reachable_package_provider_of_no_receiver_component_body_summary_provider_check :
+  forall env env' bounds base_fname,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      (global_env_with_local_bounds env' bounds) base_fname.
+Proof.
+  intros env env' bounds base_fname _Hprog Hbody_check Hno_receiver
+    Hcomponent_check.
+  eapply component_body_local_bounds_synthetic_summary_check_provider_reachable_package_provider.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_local_bounds_synthetic_summary_provider_sound.
+    eapply check_env_root_shadow_no_receiver_component_body_summary_provider_check_sound;
+      eassumption.
+  - exact Hcomponent_check.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_reachable_package_and_exact_target_provider_of_no_receiver_component_body_summary_provider_check :
+  forall env env' bounds base_fname,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true) ->
+    (forall env0 fname,
+      global_env_local_bounds_family
+        (global_env_with_local_bounds env' bounds) env0 ->
+      forall fdef fcall used used' fname_body args_body synthetic_body,
+        In fdef (env_fns env0) ->
+        fn_name fdef = fname ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, fn_body fcall)) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      (global_env_with_local_bounds env' bounds) base_fname /\
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_exact_body_target_provider
+      (global_env_with_local_bounds env' bounds) base_fname.
+Proof.
+  intros env env' bounds base_fname _Hprog Hbody_check Hno_receiver
+    Hcomponent_check Htarget.
+  eapply component_body_local_bounds_synthetic_summary_check_provider_reachable_package_and_exact_target_provider.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary_local_bounds_synthetic_summary_provider_sound.
+    eapply check_env_root_shadow_no_receiver_component_body_summary_provider_check_sound;
+      eassumption.
+  - exact Hcomponent_check.
+  - exact Htarget.
 Qed.
 
 Lemma check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound :

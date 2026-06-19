@@ -35,12 +35,14 @@ validity checks must be represented in Rocq and the extracted checker.
 - Ready-body fallback proof infrastructure now includes local-bounds provider
   contracts, synthetic/ordinary route-provider wrappers, Prop-level reachable
   route-package/exact-target and callback adapters, synthetic exact-body route
-  package adapters from component-local synthetic summaries, and combined
-  no-receiver diagnostic adapters for ready-body, synthetic, callback,
-  store-callback, and route-package providers. Mixed-route diagnostic theorems
-  avoid the abstract ready-body route bridge once synthetic and shadow route
-  providers are supplied. The remaining gap is deriving those providers from the
-  active mixed checker's public premises rather than diagnostic-only checks.
+  package adapters from component-local synthetic summaries, no-receiver
+  synthetic route-package wrappers from the body-summary diagnostic check, and
+  combined no-receiver diagnostic adapters for ready-body, synthetic, callback,
+  store-callback, and ready-body route-package providers. Mixed-route diagnostic
+  theorems avoid the abstract ready-body route bridge once synthetic and shadow
+  route providers are supplied. The remaining gap is deriving those providers
+  from the active mixed checker's public premises rather than diagnostic-only
+  checks.
 
 ## Remaining Tasks
 
@@ -86,10 +88,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The ready-body route bridge cannot currently be derived from the public
   synthetic prefix theorem plus per-callee ready-body evidence: the public
   synthetic route requires whole-environment direct-call evidence, while the
-  ready-body branch supplies only the current callee's synthetic evidence. A
-  synthetic exact-body route-package adapter now covers the pure synthetic
-  summary path, but the mixed ready-body path still needs the ordinary shadow
-  route bridge and a public way to expose the component-check premise.
+  ready-body branch supplies only the current callee's synthetic evidence. The
+  pure synthetic summary path now has exact-body route-package providers,
+  including no-receiver diagnostic wrappers, but the mixed ready-body path still
+  needs the ordinary shadow route bridge and a public way to expose the
+  component-check premise.
 - Diagnostic checker retargeting experiments that accepted direct-call receiver
   safety-gate fixtures either rejected broader valid programs or relied on
   endpoints that are not the active CLI authority. In particular, promoting the

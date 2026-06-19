@@ -14125,6 +14125,44 @@ Proof.
   exact Hready_body.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hsummary_to_route env env' Hprog Hcombined_check Hno_receiver.
+  eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+  - exact Hsummary_to_route.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component)).
+Proof.
+  intros Hsummary_to_route env env' Hprog Hcombined_check Hno_receiver.
+  eapply component_body_local_bounds_synthetic_route_provider_of_ready_body_route_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_diagnostic :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -14403,7 +14441,7 @@ Proof.
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
     Hshadow_bridge env env' f s s' v Hprog Hcombined_check Hinitial Hin
     Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_and_shadow_route_provider_diagnostic.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_and_mixed_route_providers_diagnostic.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -14412,10 +14450,12 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - exact Hsummary_to_route.
   - exact Hprog.
   - eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_of_shadow_checks.
     exact Hcombined_check.
+  - intros Hno_receiver.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
   - intros _Hno_receiver.
     eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
       eassumption.

@@ -33,8 +33,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Runtime proof plumbing for the active endpoint now has named mixed route,
   cleanup, value-callback, alpha-callback, provider-bundle, and combined
   route/value bridge adapters. Endpoint-level and public summary-route wrappers
-  factor through the combined route/value bridge; the exact-body route package
-  and public exact-body wrappers also use that route/value path.
+  factor through the combined route/value bridge; public exact-body wrappers now
+  factor through that public summary-route path.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge or all-target synthetic summary evidence. The remaining
   gap is deriving the needed synthetic branch route from the active per-local

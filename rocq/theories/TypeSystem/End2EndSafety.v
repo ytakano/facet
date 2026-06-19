@@ -20347,7 +20347,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hprefix_ready
     Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready
     Hexact_body_target Hbody_package.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_alpha_summary_route_value_callback_bridge.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -20356,18 +20356,7 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge_of_summary_route_bridge.
-    eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_exact_body_call_route_package.
-    + exact Hscope_synthetic.
-    + exact eval_preserves_typing_ready_prefix_mutual.
-    + exact Hprefix_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hexact_body_target.
-    + exact Hbody_package.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_value_callback_bridge_of_summary_route_bridge.
-    eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_exact_body_call_route_package.
+  - eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_exact_body_call_route_package.
     + exact Hscope_synthetic.
     + exact eval_preserves_typing_ready_prefix_mutual.
     + exact Hprefix_ready.

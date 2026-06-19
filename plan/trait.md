@@ -57,8 +57,8 @@ validity checks must be represented in Rocq and the extracted checker.
   ordinary-shadow route family, the existing mixed value/cleanup bridge
   interface has a constructor from that per-target synthetic route, and active
   endpoint runtime theorems now expose either the store-safe or plain per-target
-  synthetic prefix route as the only extra proof premise, and a short public
-  active-endpoint wrapper exposes the exact-body-call route package path. The named
+  synthetic prefix route as the only extra proof premise, and short public prefix and non-prefix active-endpoint wrappers expose the
+  exact-body-call route package path. The named
   summary-provider route bridge also has constructors from the store-safe and
   plain per-target synthetic routes plus the ordinary-shadow route family, the
   exact-body-call route package, a compiled constructor from the public synthetic
@@ -109,7 +109,7 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - The required public runtime theorem still has not been retargeted to the active
   endpoint. The cleanup side is wired through the active wrapper, an
-  exact-body-call package constructor and public wrapper exist for the active
+  exact-body-call package constructor plus public prefix and non-prefix wrappers exist for the active
   endpoint, the summary-to-route bridge has constructors from existing route packages and the exact-body package, an
   additive active-endpoint prefix theorem compiles with that bridge as an
   explicit premise, a local mixed-route adapter now compiles, an endpoint

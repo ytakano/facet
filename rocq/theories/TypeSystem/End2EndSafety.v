@@ -13554,6 +13554,65 @@ Proof.
     + exact Heval.
 Qed.
 
+
+Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_mixed_ready_body_or_narrow_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys env f s s' v Hunique Hcombined_check
+    Hprovider Hsynthetic_provider Hordinary_provider Hinitial Hin Hstore Heval.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply forallb_forall with (x := f) in Hcombined_check; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply orb_true_iff in Hcombined_check as [Hcaptured_check | Hcomponent_check].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + apply check_fn_root_shadow_captured_call_store_safe_summary_sound.
+      exact Hcaptured_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_mixed_ready_body_or_narrow_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hprovider.
+    + eapply Hsynthetic_provider; eassumption.
+    + eapply Hordinary_provider; eassumption.
+    + exact Hin.
+    + exact Hcomponent_check.
+    + apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcomponent_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider :
   forall env f s s' v,
     fn_env_unique_by_name env ->
@@ -17032,29 +17091,59 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hsynthetic_provider_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_providers.
-  - exact Hsynthetic_route.
-  - exact Hscope_synthetic.
-  - exact Htyping_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hprog.
-  - exact Hsynthetic_provider_when_no_receiver.
-  - intros _Hno_receiver _f_component _Hin_component _Hcomponent_check.
-    eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+    env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - assert (Hunique : fn_env_unique_by_name env').
+    { eapply infer_program_env_end2end_assoc_unique_by_name.
+      eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+      exact Hprog. }
+    assert (Hprovider :
+      component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+        env').
+    { eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound.
+      - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_certificate_check.
+        exact Hprog.
+      - exact Hno_receiver. }
+    assert (Hcombined_check :
+      check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+        env' = true).
+    { eapply infer_program_env_end2end_assoc_combined_check_env_ready.
+      eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+      exact Hprog. }
+    eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_mixed_ready_body_or_narrow_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hcombined_check.
+    + exact Hprovider.
+    + exact (Hsynthetic_provider_when_no_receiver Hno_receiver).
+    + intros _f_component _Hin_component _Hcomponent_check.
+      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact eval_preserves_typing_roots_ready_prefix_mutual.
+      * exact Hparam_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_when_direct_ready.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
     + exact Hroots_ready.
     + exact Hroot_names.
     + exact Hroot_keys.
     + exact Hframe_ready.
-    + exact eval_preserves_typing_roots_ready_prefix_mutual.
     + exact Hparam_ready.
-  - exact Hinitial.
-  - exact Hin.
-  - exact Hstore.
-  - exact Heval.
+    + exact Hprog.
+    + exact Hdirect_ready.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_and_mixed_route_providers_diagnostic :

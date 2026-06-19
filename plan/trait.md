@@ -50,7 +50,8 @@ validity checks must be represented in Rocq and the extracted checker.
   plus provenance/preservation diagnostics now route through the combined
   shadow-check adapter. Plain and shadow-check ready-body diagnostics also
   expose bundled mixed-route provider packages for summary, route, callback,
-  synthetic-callback, and per-component store-callback providers. The plain
+  synthetic-callback, and per-component store-callback providers, including
+  adapters that fill the supplied-shadow or supplied-synthetic side. The plain
   shadow-summary bridge path and the shadow-check diagnostic both expose
   route-bridge-based bundled providers; the plain mixed-route diagnostic and
   the full shadow-check, synthetic-provider,

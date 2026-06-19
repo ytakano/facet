@@ -13374,6 +13374,100 @@ Proof.
 Qed.
 
 
+
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_mixed_route_provider :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f)) ->
+    In f (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hprovider Hmixed_route Hin_component
+    Hcomponent_check Hcomponent Hinitial Hstore Heval.
+  destruct Hcomponent as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _Hcaptures & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & _Hin_callee & _Hname_callee &
+      _Hcallee_captures & Hnodup & Htyped_shadow & Hcompat & _Hroots &
+      _Henv).
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+  rewrite Hbody in Heval.
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env :
+    store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore. }
+  assert (Hsummary_store_body_env :
+    store_function_closure_targets_summary body_env s).
+  { subst body_env.
+    apply store_function_closure_targets_summary_global_env_with_local_bounds.
+    eapply initial_store_for_fn_closure_targets_summary. exact Hstore. }
+  assert (Heval_body_env : eval body_env s raw_body s' v).
+  { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Htyped_call_shadow :
+    typed_env_roots_shadow_safe body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { rewrite <- Hsynthetic. exact Htyped_shadow. }
+  assert (Htyped_call :
+    typed_env_roots body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { eapply typed_env_roots_shadow_safe_roots. exact Htyped_call_shadow. }
+  assert (Heval_call : eval body_env s (ECall fname args) s' v).
+  { unfold direct_call_target_expr in Htarget.
+    destruct raw_body; try discriminate.
+    - inversion Htarget; subst. exact Heval_body_env.
+    - destruct raw_body; try discriminate.
+      inversion Htarget; subst.
+      apply eval_call_expr_fn_as_call. exact Heval_body_env. }
+  assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
+  { subst body_env.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    exact Hsafe_args. }
+  assert (Hstore_body_prefix :
+    store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { eapply store_typed_prefix_exact. exact Hstore_body_env. }
+  assert (Hunique_body : fn_env_unique_by_name body_env).
+  { subst body_env. unfold fn_env_unique_by_name in *. simpl. exact Hunique. }
+  assert (Hmixed_at :
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at body_env fname).
+  { subst body_env.
+    eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at;
+      eassumption. }
+  destruct (direct_call_eval_height_exists body_env s (ECall fname args)
+    s' v Heval_call) as [n_call Hheight_call].
+  destruct (Hmixed_route body_env
+              (global_env_local_bounds_family_base body_env)
+              s fname args s' v n_call Heval_call Hheight_call
+              (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+              (sctx_of_ctx (fn_body_ctx f)) T_body
+              (sctx_of_ctx Gamma_out) R_body roots_body Hsafe_args_body
+              Hstore_body_prefix Hroots Hshadow Hrn Hnamed Hkeys
+              Hsummary_store_body_env Htyped_call Hunique_body Hmixed_at)
+    as [_Hstore_body_prefix' [Hv_body [_Hpres_body [_Hroots_body
+        [_Hvroots_body [_Hshadow_body _Hrn_body]]]]]].
+  eapply VHT_Compatible.
+  - subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_mixed_ready_body_or_narrow_provider :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

@@ -31,10 +31,10 @@ validity checks must be represented in Rocq and the extracted checker.
   At each component-local callee it accepts synthetic-ready, ordinary-shadow, or
   narrow evidence; this is broad enough for the current valid suite.
 - Runtime proof plumbing for the active endpoint now has named mixed route,
-  cleanup, value-callback, alpha-callback, and provider-bundle adapters. The
-  summary-route bridge and exact-body route package path both feed the stronger
-  route-plus-value-callback endpoint. Endpoint-level and public exact-body
-  wrappers use that route/value path.
+  cleanup, value-callback, alpha-callback, provider-bundle, and combined
+  route/value bridge adapters. The summary-route bridge and exact-body route
+  package path both feed the stronger route-plus-value-callback endpoint.
+  Endpoint-level and public exact-body wrappers use that route/value path.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge or all-target synthetic summary evidence. The remaining
   gap is deriving the needed synthetic branch route from the active per-local
@@ -75,8 +75,9 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, but it still needs either a summary-route bridge
-  or all-target synthetic summary evidence. The active mixed certificate gives
+  route/value path is available, including a combined route/value bridge, but it
+  still needs either a summary-route bridge or all-target synthetic summary
+  evidence. The active mixed certificate gives
   branch-local evidence for the actual callee, so the next proof target is a
   branch-local synthetic route or a route shape that consumes branch-local mixed
   evidence directly.

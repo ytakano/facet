@@ -87,8 +87,12 @@ validity checks must be represented in Rocq and the extracted checker.
   ready-body branch supplies only the current callee's synthetic evidence.
 - Diagnostic checker retargeting experiments that accepted direct-call receiver
   safety-gate fixtures either rejected broader valid programs or relied on
-  endpoints that are not the active CLI authority. Keep direct-call receiver
-  safety-gate tests invalid until the verified active endpoint accepts them.
+  endpoints that are not the active CLI authority. In particular, promoting the
+  no-receiver ready-body gate to the active mixed checker rejected
+  `type_forall_fn_value_pass_and_call.facet`, `hrt_call_twice.facet`,
+  `hrt_item_bounds_as_value.facet`, and `hrt_pass_poly_identity.facet`. Keep
+  direct-call receiver safety-gate tests invalid until the verified active
+  endpoint accepts them.
 
 ## Key Decisions
 

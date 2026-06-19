@@ -52,7 +52,7 @@ validity checks must be represented in Rocq and the extracted checker.
   wrapper now consumes a combined component mixed-route provider directly, the
   older separate synthetic/shadow route-provider endpoint factors through that
   combined path, there are compiled active-endpoint public theorems for the
-  combined component mixed-route provider route, mixed disjunction handling now
+  combined component mixed-route provider and named summary-route bridge routes, mixed disjunction handling now
   has a bridge that needs only a per-target store-safe synthetic route plus the
   ordinary-shadow route family, the existing mixed value/cleanup bridge
   interface has a constructor from that per-target synthetic route, and active
@@ -115,7 +115,7 @@ validity checks must be represented in Rocq and the extracted checker.
   explicit premise, a local mixed-route adapter now compiles, an endpoint
   wrapper now consumes the combined component mixed-route provider directly, the
   older separate route-provider endpoint factors through it, public prefix and
-  non-prefix runtime theorems expose that combined-provider route, and an
+  non-prefix runtime theorems expose the combined-provider and named bridge routes, and an
   intermediate mixed-disjunction bridge, named summary-provider bridge,
   value/cleanup bridge constructor, and active-endpoint runtime theorems now only
   require the plain per-target synthetic prefix route for the synthetic branch.

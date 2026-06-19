@@ -54,9 +54,9 @@ validity checks must be represented in Rocq and the extracted checker.
   combined path, there are compiled active-endpoint public theorems for the
   combined component mixed-route provider and named summary-route bridge routes, mixed disjunction handling now
   has a bridge that needs only a per-target store-safe synthetic route plus the
-  ordinary-shadow route family, the existing mixed value/cleanup bridge
-  interface has a constructor from that per-target synthetic route and public
-  prefix/non-prefix active-endpoint wrappers, and active endpoint runtime
+  ordinary-shadow route family, the mixed route plus cleanup callback route and the existing mixed value/cleanup bridge
+  both have public prefix/non-prefix active-endpoint wrappers, and the bridge
+  interface has a constructor from that per-target synthetic route, and active endpoint runtime
   theorems now expose either the store-safe or plain per-target synthetic prefix
   route as the only extra proof premise, and short public prefix and non-prefix active-endpoint wrappers expose the
   exact-body-call route package path. The named
@@ -118,7 +118,7 @@ validity checks must be represented in Rocq and the extracted checker.
   older separate route-provider endpoint factors through it, public prefix and
   non-prefix runtime theorems expose the combined-provider and named bridge routes, and an
   intermediate mixed-disjunction bridge, named summary-provider bridge,
-  value/cleanup bridge constructor plus prefix/non-prefix wrappers, and active-endpoint runtime theorems now only
+  mixed-route cleanup wrappers, value/cleanup bridge constructor plus prefix/non-prefix wrappers, and active-endpoint runtime theorems now only
   require the plain per-target synthetic prefix route for the synthetic branch.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under

@@ -75,12 +75,12 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, including a combined route/value bridge, but it
-  still needs either a summary-route bridge or all-target synthetic summary
-  evidence. The active mixed certificate gives
-  branch-local evidence for the actual callee, so the next proof target is a
-  branch-local synthetic route or a route shape that consumes branch-local mixed
-  evidence directly.
+  route/value path is available, including combined public summary and exact-body
+  wrappers, but it still needs either a summary-route bridge or all-target
+  synthetic summary evidence. The active mixed certificate gives branch-local
+  evidence for each callee; the next proof target is a mixed recursive route
+  over eval height that consumes branch-local synthetic, ordinary-shadow, or
+  narrow evidence directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

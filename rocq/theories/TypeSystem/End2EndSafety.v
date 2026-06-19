@@ -18450,7 +18450,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsynthetic_branch_route
     env env' f s s' v Hprog Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_cleanup_callback_providers.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -18462,6 +18462,20 @@ Proof.
   - exact Hprog.
   - intros _Hno_receiver.
     eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_synthetic_and_shadow_routes.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hsynthetic_branch_route.
+    + intros env0.
+      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact eval_preserves_typing_roots_ready_prefix_mutual.
+      * exact Hparam_ready.
+  - intros _Hno_receiver.
+    eapply component_body_local_bounds_mixed_ready_body_or_narrow_cleanup_callback_provider_of_statement.
+    eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_of_synthetic_shadow_and_narrow_routes.
     + exact Hroot_names.
     + exact Hroot_keys.
     + exact Hsynthetic_branch_route.

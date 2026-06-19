@@ -41,8 +41,9 @@ validity checks must be represented in Rocq and the extracted checker.
   that package.
 - A concrete mixed cleanup callback is now derivable from the existing
   synthetic-ready full route, the ordinary-shadow full route family, and the
-  proved narrow cleanup route. This removes the previous abstract narrow cleanup
-  premise from that callback path.
+  proved narrow cleanup route. The active endpoint wrapper that assumes a global
+  synthetic branch route now consumes both the mixed route provider and this
+  cleanup provider path.
 
 ## Remaining Tasks
 
@@ -81,10 +82,10 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The public runtime theorem still has not been retargeted to the active
-  endpoint. The cleanup side now has the narrow package and mixed callback path;
-  the remaining risk is the synthetic branch-route dependency, whose older proof
-  shape asks for recursive synthetic-only evidence while the active certificate
-  is mixed per callee.
+  endpoint. The cleanup side is wired through the active wrapper; the remaining
+  risk is the synthetic branch-route dependency, whose older proof shape asks for
+  recursive synthetic-only evidence while the active certificate is mixed per
+  callee.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

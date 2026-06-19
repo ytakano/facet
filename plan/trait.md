@@ -43,14 +43,16 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic-ready full route, the ordinary-shadow full route family, and the
   proved narrow cleanup route. The active endpoint wrapper that assumes a global
   synthetic branch route now consumes both the mixed route provider and this
-  cleanup provider path, and there is an active-endpoint constructor from the
-  exact-body-call route package.
+  cleanup provider path, there is an active-endpoint constructor from the
+  exact-body-call route package, and the remaining summary-to-route conversion is
+  named as `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
 
 ## Remaining Tasks
 
 1. Retarget the public runtime theorem.
-   - Feed the concrete mixed cleanup callback into the active endpoint runtime
-     wrapper.
+   - Prove `mixed_ready_body_or_narrow_summary_provider_route_bridge`, converting
+     the active endpoint's per-local mixed summaries into the mixed route
+     provider.
    - Replace the remaining public theorem target
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      with `infer_program_env_end2end_assoc_direct_receiver_mixed`.
@@ -84,10 +86,9 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - The public runtime theorem still has not been retargeted to the active
   endpoint. The cleanup side is wired through the active wrapper, and an
-  exact-body-call package constructor exists for the active endpoint; the
-  remaining risk is deriving or replacing the synthetic branch-route package
-  without relying on recursive synthetic-only evidence where the active
-  certificate is mixed per callee.
+  exact-body-call package constructor exists for the active endpoint. The
+  remaining proof target is the named summary-to-route bridge from active
+  per-local mixed summaries to mixed route providers.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

@@ -14092,6 +14092,22 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  shadow_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    component_body_local_bounds_shadow_summary_route_provider_in_env env'.
+Proof.
+  intros Hshadow_bridge env env' Hprog Hcombined_check.
+  eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
+  - exact Hshadow_bridge.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_diagnostic :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -14330,10 +14346,8 @@ Proof.
   - eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_of_shadow_checks.
     exact Hcombined_check.
   - intros _Hno_receiver.
-    eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
-    + exact Hshadow_bridge.
-    + eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_evidence_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
-        eassumption.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_shadow_summary_route_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks;
+      eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

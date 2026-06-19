@@ -93,7 +93,10 @@ validity checks must be represented in Rocq and the extracted checker.
   alpha-aware value-callback bridge directly, so the public summary-route
   wrappers factor through the stronger route-plus-value-callback endpoint, and
   an endpoint-level summary-route/value-callback wrapper exposes the same path
-  after the stronger endpoint theorem is available in declaration order.
+  after the stronger endpoint theorem is available in declaration order. The
+  active certificate now also has a named route-plus-value-callback provider
+  package, with a summary-route bridge wrapper, and the stronger endpoint proof
+  consumes that package instead of rebuilding the certificate bundle twice.
 
 ## Remaining Tasks
 
@@ -157,7 +160,9 @@ validity checks must be represented in Rocq and the extracted checker.
   and a matching alpha-aware value-callback bridge with endpoint and public
   wrappers; the named summary-route bridge now supplies both alpha route and
   alpha value-callback bridges for the public summary-route wrappers and for
-  a post-definition endpoint-level summary-route/value-callback wrapper.
+  a post-definition endpoint-level summary-route/value-callback wrapper, plus a
+  named active-certificate route/value provider package used by that endpoint
+  path.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under
   an explicit all-target synthetic summary evidence premise, but the active

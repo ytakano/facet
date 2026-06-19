@@ -13106,6 +13106,48 @@ Proof.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
+Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
+      env ->
+    component_body_local_bounds_narrow_summary_provider_in_env env ->
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hcombined Hprovider Hcomponent_checks
+    Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hcombined (fn_name f) f Hlookup) as [Hcaptured | Hcomponent_branch].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - pose proof (Hcomponent_checks f Hin) as Hcomponent_check.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + eapply (callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_of_component_and_local_bounds_narrow_provider
+        env f).
+      * exact Hunique.
+      * exact Hprovider.
+      * exact Hin.
+      * exact Hcomponent_check.
+      * exact Hcomponent_branch.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider :
   forall env f s s' v,
     fn_env_unique_by_name env ->

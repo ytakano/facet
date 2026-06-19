@@ -12804,6 +12804,15 @@ Definition component_body_local_bounds_mixed_route_provider_in_env
     eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)).
+
 Lemma component_body_local_bounds_mixed_route_provider_synthetic :
   forall env,
     component_body_local_bounds_mixed_route_provider_in_env env ->
@@ -13799,6 +13808,50 @@ Proof.
     + exact Heval.
 Qed.
 
+
+
+Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_mixed_route_provider :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hcombined_check Hprovider Hroute_provider
+    Hinitial Hin Hstore Heval.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply forallb_forall with (x := f) in Hcombined_check; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply orb_true_iff in Hcombined_check as [Hcaptured_check | Hcomponent_check].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + apply check_fn_root_shadow_captured_call_store_safe_summary_sound.
+      exact Hcaptured_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_mixed_route_provider.
+    + exact Hunique.
+    + exact Hprovider.
+    + eapply Hroute_provider; eassumption.
+    + exact Hin.
+    + exact Hcomponent_check.
+    + apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcomponent_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
 
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_mixed_ready_body_or_narrow_provider :
   eval_preserves_root_names_ready_mutual_statement ->

@@ -4053,6 +4053,17 @@ Definition strict_exact_closure_component_body_store_safe_callback_at_provider
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at
       (global_env_with_local_bounds env' (fn_bounds f_component)) fdef.
 
+Definition strict_exact_closure_component_body_narrow_callee_at_provider
+    (env' : global_env) (f_component : fn_def) : Prop :=
+  forall fname args synthetic_body fdef,
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fdef.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check :
   forall env env' f_component fname args synthetic_body fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
@@ -12920,6 +12931,21 @@ Lemma component_body_local_bounds_narrow_summary_provider_at_lookup :
 Proof.
   intros env Hprovider f_component fname fdef Hin Hcheck Hlookup.
   eapply Hprovider; eassumption.
+Qed.
+
+Lemma component_body_local_bounds_narrow_summary_provider_narrow_callee_at_provider :
+  forall env f_component,
+    component_body_local_bounds_narrow_summary_provider_in_env env ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    strict_exact_closure_component_body_narrow_callee_at_provider
+      env f_component.
+Proof.
+  intros env f_component Hprovider Hin Hcheck fname args synthetic_body fdef
+    _Htarget Hlookup.
+  eapply component_body_local_bounds_narrow_summary_provider_at_lookup;
+    eassumption.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :

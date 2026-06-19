@@ -61,10 +61,12 @@ validity checks must be represented in Rocq and the extracted checker.
   body gate, a diagnostic mixed-route runtime wrapper that removes the abstract
   summary-to-route bridge from that gate, a mixed-route provider wrapper
   that replaces the abstract summary-to-route bridge with synthetic plus
-  ordinary route providers, and a ready-body-check-to-synthetic-route bridge
-  for component local-bounds families. This gives synthetic-or-ordinary callee
-  evidence plus store-safe target arguments for alpha-renamed direct targets,
-  while isolating the remaining public provider wiring.
+  ordinary route providers, a ready-body-check-to-synthetic-route bridge for
+  component local-bounds families, and a diagnostic wrapper whose mixed route
+  derives the synthetic provider from the ready-body gate. This gives
+  synthetic-or-ordinary callee evidence plus store-safe target arguments for
+  alpha-renamed direct targets, while isolating the remaining public provider
+  wiring.
 - The remaining activation gap is proof-side. The retained mixed no-receiver
   path still consumes synthetic summary-route/local-bounds evidence, while the
   broad body-summary gate that would provide it rejects valid coverage.
@@ -87,8 +89,8 @@ validity checks must be represented in Rocq and the extracted checker.
      ordinary route providers from public premises.
    - Prove the final bridge from public prefix-route premises to the ordinary
      local-bounds route provider required by the no-receiver ready-body wrapper,
-     then wire it together with the ready-body-check-derived synthetic provider
-     without requiring Prop-to-bool completeness for component summaries.
+     then remove the remaining abstract ready-body route bridge from the public
+     wiring without requiring Prop-to-bool completeness for component summaries.
    - Add positive direct-call receiver UFCS tests only after the active
      extracted checker accepts them through the verified endpoint. Keep existing
      direct-call receiver safety-gate tests invalid until that switch lands.
@@ -122,10 +124,11 @@ validity checks must be represented in Rocq and the extracted checker.
   for no-receiver ready-body summaries with CLI coverage, a diagnostic runtime
   wrapper that uses mixed synthetic plus ordinary route providers instead of an
   abstract summary-to-route premise, a mixed-route public wrapper with the same
-  provider shape, and a bridge from ready-body checks to synthetic route
-  providers. It still needs a proven public derivation of the ordinary route
-  provider and final public-theorem wiring that make this path active without
-  relying on the synthetic diagnostic provider.
+  provider shape, a bridge from ready-body checks to synthetic route providers,
+  and a diagnostic wrapper that uses that bridge instead of taking a synthetic
+  provider premise. It still needs a proven public derivation of the ordinary
+  route provider plus final public-theorem wiring that removes the remaining
+  abstract ready-body route bridge.
 - The assoc direct-receiver-base endpoint accepts the basic direct-call receiver
   fixture, but it is not the active CLI authority and no longer has a retained
   runtime wrapper theorem. Its mixed wrapper preserves ordinary valid coverage

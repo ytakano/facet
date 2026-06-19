@@ -48,6 +48,8 @@ Respect generated files: edit Rocq sources first and let `make` update extractio
 
 When a Rocq compile is slow, times out, appears OOM-killed, or clearly regresses, use the `rocq-compile-time-profiler` skill before continuing proof edits. Prefer targeted profiling first, for example `rocq compile -time-file /tmp/name.txt -R theories Facet -o /tmp/File.vo -noglob theories/TypeSystem/File.v` under an appropriate `timeout`, so tracked `.vo`/`.glob` outputs are not churned while diagnosing the bottleneck. Avoid repeated full `make` runs until the specific slow file or proof command has been identified.
 
+When a Rocq proof path stalls, stop expanding the same proof indefinitely. Treat a proof path as stalled if the same theorem or proof obligation has no substantive progress after two focused work sessions, if three or more helper lemmas fail to close the same obligation, if the proof effort starts pushing toward weaker theorem statements or extra public premises, or if diagnostics show an existing narrower verified summary/certificate already covers the target programs. In that case, reframe the safety argument around the smallest existing verified checker summary, certificate, or runtime package that proves the required property. Prove a diagnostic or certificate theorem first, then promote the check into the public endpoint only after the certificate route is sound.
+
 # Sub-agent policy
 
 Use sub-agents only for implementation tasks.

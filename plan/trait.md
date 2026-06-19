@@ -26,69 +26,40 @@ validity checks must be represented in Rocq and the extracted checker.
   this endpoint, but the public runtime theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-- Diagnostic endpoints are proof-routing and fixture-sampling aids only.
-  `tests/diagnose_trait_gates.sh` now checks both the trait/direct valid
-  frontier (100 accepted files, 96 no-receiver synthetic ok, 4 no-receiver
-  synthetic fail, 100 component ready-body ok, 100 no-receiver ready-body ok,
-  18 shadow-provenance-summary ok, 17 preservation-ready ok, 17 no-receiver
-  ready-body plus shadow-checks ok, and 0 direct-receiver-method-present) and
-  the full valid-suite no-receiver ready-body blockers (4 of 222 valid files),
-  including the exact local helper and failed summary gates for each blocker.
-- Ready-body fallback proof infrastructure now includes local-bounds provider
-  contracts, synthetic/ordinary route-provider wrappers, Prop-level reachable
-  route-package/exact-target and callback adapters, synthetic exact-body route
-  package adapters from component-local synthetic summaries, no-receiver
-  synthetic route-package wrappers from the body-summary diagnostic check,
-  active-mixed bridges exposing bundled direct-branch provider facts
-  (pointwise component checks plus provenance/preservation checks) and a
-  reusable direct-ready synthetic local-bounds route provider for
-  direct-ready/direct-receiver-present branches, plus explicit
-  no-receiver-or-provider case splits, a bundled ready-body summary+route
-  adapter from the ready-body check plus synthetic and shadow routes, and
-  combined no-receiver diagnostic adapters for ready-body, ready-body
-  summary+route, plain and shadow-check synthetic route, callback,
-  store-callback, and ready-body route-package providers, with route-package providers available from both the
-  plain ready-body and stricter shadow-check diagnostics. Separated ready-body
-  plus provenance/preservation diagnostics now route through the combined
-  shadow-check adapter. Plain and shadow-check ready-body diagnostics also
-  expose bundled mixed-route provider packages for summary, route, callback,
-  synthetic-callback, and per-component store-callback providers, including
-  adapters that fill the supplied-shadow or supplied-synthetic side. The plain
-  shadow-summary bridge path and the shadow-check diagnostic both expose
-  route-bridge-based bundled providers; the plain mixed-route diagnostic and
-  the full shadow-check, synthetic-provider,
-  shadow-route-provider, shadow-summary-bridge, and provenance/preservation
-  diagnostic runtime variants now consume bundled providers directly. These
-  bundled variants avoid the abstract ready-body route bridge once synthetic and
-  shadow route providers are supplied.
-  The remaining gap is deriving those providers from the active mixed checker's
-  public no-receiver premises rather than diagnostic-only checks.
+- The ready-body route is no longer the main proof strategy for the no-receiver
+  branch. Diagnostics show the four full-valid no-receiver ready-body blockers
+  (`type_forall_fn_value_pass_and_call.facet`, `hrt_call_twice.facet`,
+  `hrt_item_bounds_as_value.facet`, and `hrt_pass_poly_identity.facet`) all have
+  `narrow=ok`. The next safety route should promote narrow store-safe summaries
+  through a diagnostic/certificate theorem before retargeting the public theorem.
 
 ## Remaining Tasks
 
-1. Finish direct-call receiver activation.
-   - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` without adding
-     OCaml fallback logic or weakening the public theorem with a new premise.
-   - Promote the ready-body no-receiver diagnostic route from diagnostic-only
-     proof plumbing to the public runtime theorem by deriving its synthetic and
-     ordinary route providers from public premises.
-   - Prove the ordinary shadow-summary local-bounds route bridge itself, then
-     connect the active checker's exposed direct-branch checks and no-receiver
-     provider facts so the public theorem no longer needs the abstract ready-body
-     route bridge or Prop-to-bool completeness for component summaries.
-   - Add positive direct-call receiver UFCS tests only after the active
-     extracted checker accepts them through the verified endpoint. Keep existing
-     direct-call receiver safety-gate tests invalid until that switch lands.
+1. Replace the stalled ready-body proof route with a narrow certificate route.
+   - Define the no-receiver local-bounds certificate around existing narrow
+     store-safe summaries and their runtime packages.
+   - Prove checker soundness for the certificate without adding OCaml fallback
+     logic or weakening public theorem statements.
+   - Add a diagnostic theorem showing the active mixed endpoint plus the narrow
+     certificate gives the needed no-receiver safety providers.
 
-2. Extend receiver coverage conservatively.
+2. Finish direct-call receiver activation.
+   - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` only after the
+     narrow certificate route is sound.
+   - Promote only proven certificate gates into the active endpoint.
+   - Add positive direct-call receiver UFCS tests only after the verified active
+     endpoint accepts them. Keep existing direct-call receiver safety-gate tests
+     invalid until that switch lands.
+
+3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
-   - Add the remaining receiver forms only when Rocq checker summaries and
-     safety proofs provide store/root-safe evidence for each shape.
+   - Add remaining receiver forms only when Rocq checker summaries and safety
+     proofs provide store/root-safe evidence for each shape.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 
-3. Maintain assoc-aware trait behavior.
+4. Maintain assoc-aware trait behavior.
    - Preserve assoc-aware normalization at checker boundaries rather than by
      rewriting whole raw ASTs.
    - Keep parser/desugar name resolution separate from trait solving and final
@@ -98,38 +69,16 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` still needs proof-side
-  evidence for the mixed no-receiver callback path. The active endpoint now
-  exposes a bundled direct-branch package containing component, provenance, and
-  preservation checks, but the no-receiver branch still needs route providers
-  derived from public premises rather than diagnostic-only shadow checks.
-- The ordinary shadow-summary local-bounds route bridge is still unproved.
-  Existing lower-level route lemmas can consume shadow-route evidence or combine
-  already-provided synthetic and shadow routes, but they do not construct the
-  ordinary route from `env_fns_root_shadow_summary_evidence` alone.
-- The ready-body route bridge cannot currently be derived from the public
-  synthetic prefix theorem plus per-callee ready-body evidence: the public
-  synthetic route requires whole-environment direct-call evidence, while the
-  ready-body branch supplies only the current callee's synthetic evidence. The
-  pure synthetic summary path now has exact-body route-package providers,
-  including no-receiver diagnostic wrappers, and active mixed direct-ready or
-  direct-receiver-present branches can expose the pointwise component-check
-  provider through a reusable case split. The mixed no-receiver path has a
-  bundled ready-body summary+route adapter once synthetic and ordinary shadow
-  routes are supplied, but still needs the ordinary shadow route bridge and a
-  public way to expose the component-check premise.
-- Promoting the no-receiver ready-body gate to the active mixed checker still
-  rejects four valid programs: `type_forall_fn_value_pass_and_call.facet`,
-  `hrt_call_twice.facet`, `hrt_item_bounds_as_value.facet`, and
-  `hrt_pass_poly_identity.facet`. Diagnostics now identify the failing local
-  helpers (`apply`, `call_twice`, and `accept`) and show that they lack
-  synthetic, ordinary shadow, preservation, and provenance summaries. The
-  non-capturing and captured-call provenance sidecars already cover
-  `hrt_item_bounds_as_value` and `hrt_pass_poly_identity`, but not
-  `type_forall_fn_value_pass_and_call` or `hrt_call_twice`; however, the narrow
-  store-safe expression summary covers all four helpers. Ready-body evidence
-  still needs a proof-facing bridge before these summaries can help this gate.
-  Keep direct-call receiver safety-gate tests invalid until the verified active
-  endpoint accepts them.
+  evidence for the mixed no-receiver callback path. The previous ready-body and
+  ordinary shadow-summary bridge path stalled; do not keep extending it as the
+  primary strategy.
+- The current viable path is a narrow store-safe certificate: all known
+  full-valid no-receiver ready-body blockers are covered by the narrow summary,
+  but the certificate provider and theorem-level bridge from that summary to the
+  mixed no-receiver safety argument still need to be built.
+- Direct-call receiver safety-gate tests must remain invalid until the verified
+  active endpoint accepts those receiver forms through Rocq, extraction, and the
+  OCaml CLI without handwritten fallback logic.
 
 ## Key Decisions
 

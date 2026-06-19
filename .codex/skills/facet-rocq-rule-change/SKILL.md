@@ -59,6 +59,12 @@ Facet has Rocq proofs for core type safety. Changes to typing-related rules must
     - When Rocq compile times are high, profile and optimize the bottlenecks before committing changes.
 11. If extraction is affected, run extraction and OCaml tests.
 
+## Stalled proof paths
+
+If a proof path becomes long-running or repeatedly fails, reassess the theorem shape before adding more helper lemmas. Treat the path as stalled when the same theorem or obligation has no substantive progress after two focused work sessions, when three or more helper lemmas fail to close the same obligation, when the proof requires weakening theorem statements or adding public premises, or when diagnostics show a narrower verified summary/certificate already covers the target programs.
+
+When this happens, stop the direct proof attempt and split the safety claim into smaller checker certificates with soundness lemmas. Prefer reusing existing verified summaries, runtime packages, and diagnostic checks. Prove the diagnostic or certificate theorem first; retarget a public theorem only after the certificate route is sound.
+
 ## Hard constraints
 
 - Do not silently weaken linearity.

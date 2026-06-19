@@ -14472,6 +14472,96 @@ Proof.
   exact Hready_body.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_summary_provider_in_env env'.
+Proof.
+  intros env env' _Hprog Hready_body_check Hno_receiver.
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
+  eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+  - exact Hsummary_to_route.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check;
+      eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_callback_provider_in_env env'.
+Proof.
+  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  eapply component_body_local_bounds_ready_body_callback_provider_of_route_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_synthetic_ready_body_callback_provider_in_env
+      env'.
+Proof.
+  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  eapply component_body_local_bounds_synthetic_ready_body_callback_provider_of_ready_body_callback_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_callback_at_provider_of_no_receiver_component_ready_body_summary_provider_check :
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    strict_exact_closure_component_body_store_safe_callback_at_provider
+      env' f_component.
+Proof.
+  intros Hsummary_to_route env env' f_component Hprog Hready_body_check
+    Hno_receiver Hin_component Hcomponent_check.
+  eapply component_body_local_bounds_ready_body_summary_provider_store_safe_callback_at_provider.
+  - eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
+    exact Hsummary_to_route.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check;
+      eassumption.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_and_route_provider_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

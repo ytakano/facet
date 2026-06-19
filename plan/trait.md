@@ -87,14 +87,15 @@ validity checks must be represented in Rocq and the extracted checker.
   value-only mixed body-call callback is derivable from both global and scoped
   mixed route families, with statement/local-bounds branch-route, env-family,
   component-provider, and endpoint-provider constructors for component-local
-  recursion. The next proof target is now named in Rocq as
-  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`: a closed mixed
-  cleanup bridge that consumes value-only recursive evidence internally rather
-  than the old full-preservation synthetic callback and
-  `fn_root_shadow_synthetic...` evidence.
-  An endpoint-local consumer now uses that named bridge to avoid the global
-  synthetic branch-route premise. After the bridge itself is proved, retarget the
-  public runtime theorem.
+  recursion. The cleanup bridge target is now named in Rocq as
+  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`; its contract now
+  explicitly includes the frame/param root-scope preservation packages required
+  by the ordinary-shadow branch, which the endpoint already has. A compiled
+  constructor proves this named bridge from the old global synthetic branch-route
+  theorem plus the ordinary-shadow route package. The endpoint-local consumer
+  uses the named bridge, but the bridge is not yet independently proved from
+  value-only recursive mixed evidence. After that independent bridge is proved,
+  retarget the public runtime theorem.
 
 ## Remaining Tasks
 
@@ -145,10 +146,13 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence-at predicate, and a value-only mixed body-call callback adapter is
   proved from both global and scoped mixed route families with statement/local-bounds
   branch-route, env-family, component-provider, and endpoint-provider variants.
-  Remaining endpoint work is to prove the named
-  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`; an endpoint-local
-  consumer already removes the global synthetic branch-route premise once that
-  bridge is available. Then retarget the public runtime theorem without adding
+  The named `mixed_ready_body_or_narrow_value_cleanup_bridge_statement` now has a
+  compiled constructor from the existing global synthetic branch-route theorem,
+  and its statement records the frame/param root-scope packages needed by the
+  ordinary-shadow branch. This validates the bridge wiring but does not solve the
+  independent cleanup proof: the remaining work is to prove the same bridge from
+  value-only mixed recursive evidence instead of the synthetic-only full
+  preservation callback. Then retarget the public runtime theorem without adding
   public premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint

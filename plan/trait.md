@@ -125,9 +125,9 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic, ordinary shadow, preservation, and provenance summaries. The
   non-capturing and captured-call provenance sidecars already cover
   `hrt_item_bounds_as_value` and `hrt_pass_poly_identity`, but not
-  `type_forall_fn_value_pass_and_call` or `hrt_call_twice`; ready-body evidence
-  still needs a proof-facing bridge before those summaries can help this gate,
-  and the remaining two helpers need a different or extended summary family.
+  `type_forall_fn_value_pass_and_call` or `hrt_call_twice`; however, the narrow
+  store-safe expression summary covers all four helpers. Ready-body evidence
+  still needs a proof-facing bridge before these summaries can help this gate.
   Keep direct-call receiver safety-gate tests invalid until the verified active
   endpoint accepts them.
 

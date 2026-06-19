@@ -557,7 +557,7 @@ let () =
               "trait-local-bounds-ready-body-summary-failure: %s: %s\n"
               fname local_fname;
             Printf.printf
-              "trait-local-bounds-ready-body-summary-failure-gates: %s: %s: synthetic=%s shadow=%s noncapturing=%s captured=%s preservation=%s provenance=%s\n"
+              "trait-local-bounds-ready-body-summary-failure-gates: %s: %s: synthetic=%s shadow=%s noncapturing=%s captured=%s narrow=%s preservation=%s provenance=%s\n"
               fname local_fname
               (if check_fn_root_shadow_synthetic_direct_call_ready_summary
                     local_env local_fn then "ok" else "fail")
@@ -566,6 +566,10 @@ let () =
                     local_env local_fn then "ok" else "fail")
               (if check_fn_root_shadow_captured_call_provenance_summary
                     local_env local_fn then "ok" else "fail")
+              (if check_expr_root_shadow_store_safe_narrow_summary
+                    local_env local_fn.fn_outlives local_fn.fn_lifetimes
+                    (initial_root_env_for_fn local_fn) (fn_body_ctx local_fn)
+                    local_fn.fn_body then "ok" else "fail")
               (if preservation_ready_expr_b local_fn.fn_body then "ok" else "fail")
               (if provenance_ready_expr_b local_fn.fn_body then "ok" else "fail"))
           local_ready_body_failures)

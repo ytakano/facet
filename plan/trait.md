@@ -96,7 +96,10 @@ validity checks must be represented in Rocq and the extracted checker.
   after the stronger endpoint theorem is available in declaration order. The
   active certificate now also has a named route-plus-value-callback provider
   package, with a summary-route bridge wrapper, and the stronger endpoint proof
-  consumes that package instead of rebuilding the certificate bundle twice.
+  consumes that package instead of rebuilding the certificate bundle twice. The
+  public exact-body-call route package wrapper now also factors through the
+  alpha route-plus-value-callback endpoint instead of the older summary-only
+  bridge path.
 
 ## Remaining Tasks
 
@@ -162,6 +165,7 @@ validity checks must be represented in Rocq and the extracted checker.
   alpha value-callback bridges for the public summary-route wrappers and for
   a post-definition endpoint-level summary-route/value-callback wrapper, plus a
   named active-certificate route/value provider package used by that endpoint
+  path; the public exact-body wrapper now uses the same route/value endpoint
   path.
   Compiled active-endpoint wrappers from the public synthetic prefix theorem
   confirm the remaining gap precisely: the active endpoint can be proved under

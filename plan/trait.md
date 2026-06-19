@@ -98,8 +98,12 @@ validity checks must be represented in Rocq and the extracted checker.
   through that bridge, including the shorter
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_value_cleanup_bridge`.
   The bridge is not yet independently proved from mixed recursive cleanup
-  evidence; after that proof lands, retarget the public runtime theorem by
-  replacing the old strict-exact endpoint with this active-endpoint helper.
+  evidence. A global mixed cleanup route interface now exists, projects to the
+  body-call cleanup callback shape, and dispatches across synthetic-ready,
+  ordinary-shadow, and narrow cases once the narrow branch supplies post-cleanup
+  store/root preservation. After that final narrow route proof lands, retarget
+  the public runtime theorem by replacing the old strict-exact endpoint with this
+  active-endpoint helper.
 
 ## Remaining Tasks
 
@@ -165,10 +169,14 @@ validity checks must be represented in Rocq and the extracted checker.
   consume that named bridge, so the final public retarget has a concise compiled
   target once the bridge no longer depends on the old synthetic branch route.
   This validates the endpoint wiring but does not solve the independent cleanup
-  proof: the remaining work is to prove the stronger mixed cleanup callback for
-  synthetic-ready, ordinary-shadow, and narrow body-call targets, use it in the
-  cleanup bridge, and only then retarget the public runtime theorem without
-  adding public premises or shrinking the accepted language.
+  proof. The global cleanup route target is now named, the required narrow
+  direct-call cleanup route is stated precisely, a cleanup-route-to-body-callback
+  adapter is proved, and a mixed cleanup dispatcher is proved from the existing
+  synthetic and ordinary-shadow full routes plus that narrow cleanup route. The
+  remaining proof work is to expose/prove the narrow route over the post-cleanup
+  direct-call result store, then use the mixed cleanup dispatcher in the cleanup
+  bridge and retarget the public runtime theorem without adding public premises
+  or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

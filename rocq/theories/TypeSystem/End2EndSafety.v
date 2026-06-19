@@ -12768,6 +12768,68 @@ Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_sum
       fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname ->
       value_has_type env s' v T.
 
+Definition eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_statement_evidence_at_height_statement
+    : Prop :=
+  forall env s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+        roots ->
+      fn_env_unique_by_name env ->
+      forall fdef sigma Sigma_args R_args arg_roots,
+        In fdef (env_fns env) ->
+        fn_name fdef = fname ->
+        fn_captures fdef = [] ->
+        fn_type_params fdef = 0 ->
+        typed_args_roots env Omega n R Sigma args
+          (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args
+          arg_roots ->
+        Forall (fun '(a, b) => outlives Omega a b)
+          (apply_lt_outlives sigma (fn_outlives fdef)) ->
+        callee_body_root_shadow_store_safe_narrow_summary env fdef ->
+        store_typed_prefix env s' Sigma' /\
+        value_has_type env s' v (apply_lt_ty sigma (fn_ret fdef)) /\
+        store_ref_targets_preserved env s s' /\
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R'.
+
+Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement
+    : Prop :=
+  forall env s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+        roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_ready_body_or_narrow_summary_evidence_at env fname ->
+      store_typed_prefix env s' Sigma' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
 Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
     (env_family : global_env -> Prop) : Prop :=
   forall env,
@@ -13018,6 +13080,22 @@ Proof.
   unfold
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement,
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement
+    in *.
+  intros env fname fdef fcall used used' s_args s_body vs ret R_args
+    arg_roots fname_body args_body T_body Gamma_out R_body roots_body Hin
+    Hname Hrename Htarget Hsafe_args Htyped Hunique Hmixed_at Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval n_body_call Hheight.
+  eapply Hroute; eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_of_cleanup_route :
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement.
+Proof.
+  intros Hroute.
+  unfold
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement
     in *.
   intros env fname fdef fcall used used' s_args s_body vs ret R_args
     arg_roots fname_body args_body T_body Gamma_out R_body roots_body Hin
@@ -13297,6 +13375,53 @@ Proof.
   - rewrite HT.
     eapply eval_direct_call_store_safe_narrow_summary_value_prefix_named;
       eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_shadow_and_narrow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route Hnarrow_route
+    env s fname args s' v n_call Heval_call Hheight_call Omega n R Sigma T
+    Sigma' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary_store Htyped Hunique Hmixed_at.
+  destruct (typed_env_roots_direct_call_inv
+    env Omega n R Sigma fname args T Sigma' R' roots Htyped)
+    as (fdef & sigma & arg_roots & Hin_fdef & Hname_fdef & Hcaps_fdef &
+        Htype_params & Htyped_args & Houtlives & HT & Hroots_eq).
+  assert (Hlookup : lookup_fn fname (env_fns env) = Some fdef).
+  { eapply lookup_fn_in_unique_by_name; eassumption. }
+  destruct (Hmixed_at fdef Hlookup) as [Hsynthetic | [Hsummary | Hnarrow]].
+  - assert (Hsynthetic_at :
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        env fname).
+    { intros fdef0 Hlookup0.
+      assert (fdef0 = fdef) as ->.
+      { eapply lookup_fn_deterministic; eassumption. }
+      exact Hsynthetic. }
+    pose proof
+      (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at
+        Hroot_names Hroot_keys env fname Hsynthetic_at Hunique)
+      as Hevidence_at.
+    eapply Hsynthetic_route; eassumption.
+  - assert (Hsummary_at : fn_root_shadow_summary_evidence_at env fname).
+    { intros fdef0 Hlookup0.
+      assert (fdef0 = fdef) as ->.
+      { eapply lookup_fn_deterministic; eassumption. }
+      exact Hsummary. }
+    pose proof
+      (direct_call_callee_body_root_evidence_at_of_shadow_summary_at
+        Hroot_names Hroot_keys env fname Hsummary_at Hunique)
+      as Hevidence_at.
+    eapply Hshadow_route; eassumption.
+  - rewrite HT.
+    eapply Hnarrow_route; eassumption.
 Qed.
 
 Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_of_synthetic_and_shadow_routes :

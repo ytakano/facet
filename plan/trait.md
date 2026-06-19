@@ -122,9 +122,12 @@ validity checks must be represented in Rocq and the extracted checker.
   `hrt_call_twice.facet`, `hrt_item_bounds_as_value.facet`, and
   `hrt_pass_poly_identity.facet`. Diagnostics now identify the failing local
   helpers (`apply`, `call_twice`, and `accept`) and show that they lack
-  synthetic, ordinary shadow, preservation, and provenance summaries. Keep
-  direct-call receiver safety-gate tests invalid until the verified active
-  endpoint accepts them.
+  synthetic, ordinary shadow, preservation, and provenance summaries. The
+  non-capturing function-value sidecar already covers `hrt_item_bounds_as_value`
+  and `hrt_pass_poly_identity`, but not `type_forall_fn_value_pass_and_call` or
+  `hrt_call_twice`; ready-body evidence still needs a proof-facing bridge before
+  those summaries can help this gate. Keep direct-call receiver safety-gate
+  tests invalid until the verified active endpoint accepts them.
 
 ## Key Decisions
 

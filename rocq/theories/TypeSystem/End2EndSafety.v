@@ -12738,6 +12738,42 @@ Proof.
     exact Hcheck.
 Qed.
 
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary_sound :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+      env = true ->
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hcheck f_component Hin_component Hcomponent_check.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+    in Hcheck.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+      env)
+    (env_fns env)) Hcheck f_component Hin_component) as Hlocal_check.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+    in Hlocal_check.
+  rewrite Hcomponent_check in Hlocal_check.
+  eapply check_env_root_shadow_store_safe_narrow_summary_sound.
+  exact Hlocal_check.
+Qed.
+
+Lemma check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check_sound :
+  forall env,
+    check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check
+    in Hcheck.
+  rewrite Hno_receiver in Hcheck.
+  simpl in Hcheck.
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary_sound.
+  exact Hcheck.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_narrow_summary_provider_of_no_receiver_component_narrow_summary_provider_check :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -15013,6 +15049,27 @@ Proof.
       eassumption.
   - right.
     eapply check_env_root_shadow_no_receiver_component_narrow_summary_provider_check_sound;
+      eassumption.
+Qed.
+
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check_sound :
+  forall env,
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check
+      env = true ->
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      env = true \/
+    component_body_local_bounds_narrow_summary_provider_in_env env.
+Proof.
+  intros env Hcheck Hno_receiver.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check
+    in Hcheck.
+  apply orb_true_iff in Hcheck as [Hready_check | Hnarrow_check].
+  - left.
+    eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound;
+      eassumption.
+  - right.
+    eapply check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check_sound;
       eassumption.
 Qed.
 

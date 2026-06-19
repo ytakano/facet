@@ -625,8 +625,14 @@ let () =
          checked_env);
     print_gate "trait-no-receiver-narrow-summary"
       (check_env_root_shadow_no_receiver_component_narrow_summary_provider_check checked_env);
+    print_gate "trait-no-receiver-local-bounds-narrow-summary"
+      (check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check
+         checked_env);
     print_gate "trait-no-receiver-ready-body-or-narrow-summary"
       (check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summary_provider_check
+         checked_env);
+    print_gate "trait-no-receiver-ready-body-or-local-bounds-narrow-summary"
+      (check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check
          checked_env)
   end;
   Option.iter (fun fname ->

@@ -1747,6 +1747,22 @@ Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_sum
       env)
     (env_fns env).
 
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then
+    check_env_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env (fn_bounds fdef))
+  else true.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+      env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef ||
@@ -2598,6 +2614,12 @@ Definition check_env_root_shadow_no_receiver_component_narrow_summary_provider_c
   check_env_root_shadow_direct_receiver_method_present env ||
   check_env_root_shadow_store_safe_narrow_summary env.
 
+Definition check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check
+    (env : global_env) : bool :=
+  check_env_root_shadow_direct_receiver_method_present env ||
+  check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_local_bounds_narrow_summary
+    env.
+
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=
   check_env_root_shadow_direct_receiver_method_present env ||
@@ -2611,6 +2633,13 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_or_narrow_summ
   check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
     env ||
   check_env_root_shadow_no_receiver_component_narrow_summary_provider_check env.
+
+Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check
+    (env : global_env) : bool :=
+  check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
+    env ||
+  check_env_root_shadow_no_receiver_component_local_bounds_narrow_summary_provider_check
+    env.
 
 Lemma check_env_end2end_direct_receiver_mixed_ready_cases :
   forall env,

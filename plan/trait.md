@@ -37,11 +37,17 @@ validity checks must be represented in Rocq and the extracted checker.
   while the narrower standalone certificate remains `no-receiver-narrow-summary=11/100`.
   Across the full valid suite, the combined env-level gate still fails the same
   four no-receiver ready-body blockers (`4/222`), so it is not yet a blanket
-  active endpoint gate. The combined certificate has active mixed diagnostic
-  safety theorems. The
-  broad ready-body bridge premise has been narrowed to explicit mixed
-  route-provider obligations for the ready-body arm; the narrow arm is closed by
-  the store-safe narrow certificate.
+  active endpoint gate. A narrower diagnostic certificate,
+  `check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check`,
+  is also extracted and proven sound, but it still fails those same four full
+  valid programs. The reason is now explicit: the local-bounds narrow provider
+  requires every function in the component-local environment to have narrow
+  evidence, while these blockers contain helper functions with no direct-call
+  target. The next viable shape is therefore per-local-function ready-body-or-
+  narrow evidence, not an all-local narrow provider. The combined certificate
+  has active mixed diagnostic safety theorems. The broad ready-body bridge
+  premise has been narrowed to explicit mixed route-provider obligations for the
+  ready-body arm; the narrow arm is closed by the store-safe narrow certificate.
 
 ## Remaining Tasks
 
@@ -49,8 +55,12 @@ validity checks must be represented in Rocq and the extracted checker.
    - Discharge the mixed route-provider obligations needed by the combined
      ready-body arm, or replace them with a checker certificate that packages
      the required route evidence directly.
-   - Explain or eliminate the four full-valid combined env-gate blockers before
-     using the combined gate as a blanket active endpoint requirement.
+   - Replace the all-local narrow fallback with a per-local-function
+     ready-body-or-narrow certificate: helper functions without direct-call
+     targets must not force the whole local-bounds environment down the narrow
+     route.
+   - Eliminate the four full-valid combined env-gate blockers before using the
+     combined gate as a blanket active endpoint requirement.
 
 2. Finish direct-call receiver activation.
    - Promote only a certificate gate that preserves existing valid tests, most
@@ -83,7 +93,10 @@ validity checks must be represented in Rocq and the extracted checker.
   combined ready-body-or-narrow certificate preserves the targeted diagnostic
   frontier, but its ready-body arm still needs verified mixed route-provider
   evidence and its four full-valid env-gate blockers must be addressed before it
-  can become a blanket active endpoint gate.
+  can become a blanket active endpoint gate. The local-bounds narrow diagnostic
+  confirms those four blockers are caused by all-local narrow requirements over
+  helper functions with no direct-call target, so the next certificate must mix
+  ready-body and narrow evidence per local function.
 - The narrow store-safe certificate is proven and useful as a fallback, but it is
   not broad enough to be a blanket active endpoint gate by itself.
 - Direct-call receiver safety-gate tests must remain invalid until the verified

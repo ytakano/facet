@@ -45,12 +45,12 @@ validity checks must be represented in Rocq and the extracted checker.
   callback, store-callback, and ready-body route-package providers, with
   route-package providers available from both the plain ready-body and stricter
   shadow-check diagnostics. Plain ready-body diagnostics also expose summary,
-  route, callback, synthetic-callback, and store-callback provider projections;
-  both plain and shadow-check diagnostics have concrete mixed-route variants
-  that avoid the abstract ready-body route bridge once synthetic and shadow route
-  providers are supplied. The remaining gap is deriving those providers from the
-  active mixed checker's public no-receiver premises rather than diagnostic-only
-  checks.
+  route, callback, synthetic-callback, and store-callback provider projections,
+  plus a bundled mixed-route provider package; both plain and shadow-check
+  diagnostics have concrete mixed-route variants that avoid the abstract
+  ready-body route bridge once synthetic and shadow route providers are supplied.
+  The remaining gap is deriving those providers from the active mixed checker's
+  public no-receiver premises rather than diagnostic-only checks.
 
 ## Remaining Tasks
 

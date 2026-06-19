@@ -77,9 +77,9 @@ validity checks must be represented in Rocq and the extracted checker.
   provider expected by the endpoint wrapper. The global mixed value route theorem is now proved from the existing synthetic
   and ordinary-shadow route packages plus the narrow direct-call value lemma, and
   a constructor lifts those branch-route packages into the endpoint's mixed
-  local-bounds provider. The remaining implementation work is deriving the
-  synthetic branch-route package inside the active endpoint path and then
-  retargeting the public theorem.
+  local-bounds provider. The endpoint path now consumes a single global synthetic branch-route theorem
+  instead of a per-component synthetic callback; remaining work is deriving that
+  theorem internally and then retargeting the public theorem.
   Existing synthetic preservation
   still requires recursive synthetic evidence for all top-level callees, but the
   active certificate may classify recursive callees as ordinary-shadow or narrow.
@@ -134,9 +134,11 @@ validity checks must be represented in Rocq and the extracted checker.
   component/env-root/endpoint consumer helpers, and route-provider constructor
   are now defined; the interface includes closure-target summary because the
   narrow branch needs it. The global mixed value route theorem and branch-package provider constructor are
-  proved. Remaining endpoint work is to derive the synthetic branch-route package
-  internally, then retarget the public runtime theorem without adding public
-  premises or shrinking the accepted language.
+  proved. The endpoint wrapper now has a theorem that takes one global synthetic
+  branch-route premise instead of a local synthetic provider callback. Remaining
+  endpoint work is to derive that premise internally, then retarget the public
+  runtime theorem without adding public premises or shrinking the accepted
+  language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint
   gates by themselves.

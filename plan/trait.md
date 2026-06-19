@@ -37,14 +37,14 @@ validity checks must be represented in Rocq and the extracted checker.
   route-package/exact-target and callback adapters, synthetic exact-body route
   package adapters from component-local synthetic summaries, no-receiver
   synthetic route-package wrappers from the body-summary diagnostic check,
-  active-mixed direct-ready/direct-receiver-present bridges from the environment
-  component check to the pointwise component-check provider, and combined
-  no-receiver diagnostic adapters for ready-body, synthetic, callback,
-  store-callback, and ready-body route-package providers. Mixed-route diagnostic
-  theorems avoid the abstract ready-body route bridge once synthetic and shadow
-  route providers are supplied. The remaining gap is deriving those providers
-  from the active mixed checker's public no-receiver premises rather than
-  diagnostic-only checks.
+  active-mixed bridges exposing the pointwise component-check provider for
+  direct-ready/direct-receiver-present branches plus an explicit no-receiver-or
+  component-provider case split, and combined no-receiver diagnostic adapters
+  for ready-body, synthetic, callback, store-callback, and ready-body
+  route-package providers. Mixed-route diagnostic theorems avoid the abstract
+  ready-body route bridge once synthetic and shadow route providers are supplied.
+  The remaining gap is deriving those providers from the active mixed checker's
+  public no-receiver premises rather than diagnostic-only checks.
 
 ## Remaining Tasks
 
@@ -94,8 +94,9 @@ validity checks must be represented in Rocq and the extracted checker.
   pure synthetic summary path now has exact-body route-package providers,
   including no-receiver diagnostic wrappers, and active mixed direct-ready or
   direct-receiver-present branches can expose the pointwise component-check
-  provider. The mixed no-receiver path still needs the ordinary shadow route
-  bridge and a public way to expose the component-check premise.
+  provider through a reusable case split. The mixed no-receiver path still needs
+  the ordinary shadow route bridge and a public way to expose the component-check
+  premise.
 - Diagnostic checker retargeting experiments that accepted direct-call receiver
   safety-gate fixtures either rejected broader valid programs or relied on
   endpoints that are not the active CLI authority. In particular, promoting the

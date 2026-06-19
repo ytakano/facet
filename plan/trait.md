@@ -66,8 +66,9 @@ validity checks must be represented in Rocq and the extracted checker.
   certificate wrapper, so ordinary-shadow routing is derived internally. The
   endpoint wrapper now passes one bundled mixed route provider, with projection
   lemmas for the synthetic and ordinary halves, instead of separate route
-  callbacks. The remaining proof gap is deriving the synthetic half of that
-  bundle from the active mixed certificate. Existing synthetic preservation
+  callbacks. A reusable constructor derives the ordinary half from the existing
+  provenance-ready route package, leaving only the synthetic half to derive from
+  the active mixed certificate. Existing synthetic preservation
   still requires recursive synthetic evidence for all top-level callees, but the
   active certificate may classify recursive callees as ordinary-shadow or narrow.
   The next proof must therefore be a height-indexed mixed route theorem, not
@@ -111,9 +112,9 @@ validity checks must be represented in Rocq and the extracted checker.
   route bridge from the ready-body route bridge, but it is too restrictive as an
   active gate. The component-level mixed callee helper is proved and lifted through
   the active endpoint-local certificate wrapper, with synthetic and ordinary
-  route families bundled as one mixed provider and exposed through projection
-  lemmas. The public theorem still needs the synthetic half of that bundle
-  derived from the active mixed certificate.
+  route families bundled as one mixed provider. The ordinary half is derived by a
+  reusable provenance-ready constructor; the public theorem still needs the
+  synthetic half of that bundle derived from the active mixed certificate.
   The existing synthetic route theorem requires all-recursive synthetic evidence,
   which is stronger than the active mixed certificate. Removing the callback
   requires a new height-indexed mixed route theorem that dispatches recursive

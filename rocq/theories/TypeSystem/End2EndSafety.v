@@ -12764,6 +12764,34 @@ Proof.
   exact (proj2 (Hprovider f_component Hin Hcheck)).
 Qed.
 
+Lemma component_body_local_bounds_mixed_route_provider_of_synthetic_and_provenance_ready :
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env,
+    (forall f_component,
+      In f_component (env_fns env) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    component_body_local_bounds_mixed_route_provider_in_env env.
+Proof.
+  intros Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready env
+    Hsynthetic_provider f_component Hin_component Hcomponent_check.
+  split.
+  - eapply Hsynthetic_provider; eassumption.
+  - eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact eval_preserves_typing_roots_ready_prefix_mutual.
+    + exact Hparam_ready.
+Qed.
+
 Definition component_body_local_bounds_narrow_summary_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -17146,17 +17174,13 @@ Proof.
     + exact Hunique.
     + exact Hcombined_check.
     + exact Hprovider.
-    + intros f_component Hin_component Hcomponent_check.
-      split.
-      * exact (Hsynthetic_provider_when_no_receiver Hno_receiver
-          f_component Hin_component Hcomponent_check).
-      * eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
-        -- exact Hroots_ready.
-        -- exact Hroot_names.
-        -- exact Hroot_keys.
-        -- exact Hframe_ready.
-        -- exact eval_preserves_typing_roots_ready_prefix_mutual.
-        -- exact Hparam_ready.
+    + eapply component_body_local_bounds_mixed_route_provider_of_synthetic_and_provenance_ready.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact Hparam_ready.
+      * exact (Hsynthetic_provider_when_no_receiver Hno_receiver).
     + exact Hinitial.
     + exact Hin.
     + exact Hstore.

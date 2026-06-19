@@ -13646,6 +13646,27 @@ Proof.
     + exact Hparam_ready.
 Qed.
 
+
+Theorem mixed_ready_body_or_narrow_value_cleanup_bridge_statement_of_synthetic_evidence_at_route :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  mixed_ready_body_or_narrow_value_cleanup_bridge_statement.
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_evidence_at_and_shadow_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hsynthetic_route.
+  - intros env.
+    eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hprefix_ready.
+    + exact Hparam_ready.
+Qed.
+
 Definition component_body_local_bounds_synthetic_summary_check_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

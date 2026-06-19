@@ -12785,14 +12785,14 @@ Definition eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_
       typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
         roots ->
       fn_env_unique_by_name env ->
-      forall fdef sigma Sigma_args R_args arg_roots,
+      forall fdef sigma arg_roots,
         In fdef (env_fns env) ->
         fn_name fdef = fname ->
         fn_captures fdef = [] ->
         fn_type_params fdef = 0 ->
         typed_args_roots env Omega n R Sigma args
-          (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args
-          arg_roots ->
+          (apply_lt_params sigma (fn_params fdef)) Sigma' R' arg_roots ->
+        roots = root_sets_union arg_roots ->
         Forall (fun '(a, b) => outlives Omega a b)
           (apply_lt_outlives sigma (fn_outlives fdef)) ->
         callee_body_root_shadow_store_safe_narrow_summary env fdef ->
@@ -12803,6 +12803,30 @@ Definition eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_
         value_roots_within roots v /\
         store_no_shadow s' /\
         root_env_no_shadow R'.
+
+Theorem eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_package :
+  eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros env s fname args s' v n_call Heval_call _Hheight_call Omega n R
+    Sigma T Sigma' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Hsummary_store Htyped Hunique fdef sigma arg_roots Hin_fdef
+    Hname_fdef Hcaps_fdef Htype_params Htyped_args Hroots_eq Houtlives
+    Hnarrow.
+  pose proof (eval_direct_call_store_safe_narrow_summary_package_prefix_named
+    env Omega n R Sigma fname args sigma Sigma' R' arg_roots s s' v fdef
+    Hsafe_args Hnarrow Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary_store Heval_call Hunique Hin_fdef Hname_fdef Hcaps_fdef
+    Htype_params Htyped_args Houtlives) as Hpkg.
+  repeat split.
+  - exact (generic_direct_call_package_store _ _ _ _ _ _ _ _ Hpkg).
+  - exact (generic_direct_call_package_value _ _ _ _ _ _ _ _ Hpkg).
+  - exact (generic_direct_call_package_preserved _ _ _ _ _ _ _ _ Hpkg).
+  - exact (generic_direct_call_package_roots _ _ _ _ _ _ _ _ Hpkg).
+  - rewrite Hroots_eq.
+    exact (generic_direct_call_package_value_roots _ _ _ _ _ _ _ _ Hpkg).
+  - exact (generic_direct_call_package_shadow _ _ _ _ _ _ _ _ Hpkg).
+  - exact (generic_direct_call_package_root_shadow _ _ _ _ _ _ _ _ Hpkg).
+Qed.
 
 Definition eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement
     : Prop :=
@@ -13436,6 +13460,42 @@ Proof.
   intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route.
   eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_of_route.
   eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_and_shadow_routes;
+    eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_of_synthetic_shadow_and_narrow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_of_cleanup_route.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_cleanup_summary_at_prefix_call_statement_evidence_at_height_statement_of_synthetic_shadow_and_narrow_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hsynthetic_route.
+  - exact Hshadow_route.
+  - exact eval_preserves_typing_roots_store_safe_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_of_package.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family_of_synthetic_shadow_and_narrow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  forall base,
+    eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route base.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_in_local_bounds_family_of_statement.
+  eapply eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_cleanup_callback_height_statement_of_synthetic_shadow_and_narrow_routes;
     eassumption.
 Qed.
 

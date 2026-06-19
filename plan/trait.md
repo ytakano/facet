@@ -14,7 +14,7 @@ validity checks must be represented in Rocq and the extracted checker.
   UFCS method calls are parsed, lowered, and checked through the extracted Rocq
   checker. Impl method bodies are elaborated to hidden functions and checked even
   when uncalled. Dot syntax, associated type defaults, equality constraints, and
-  `deriving` remain syntax-level deferred.
+  `deriving` remain deferred.
 - Supported method receivers are forms whose type is known before checker
   execution: parameters, typed literals, pure literal/unit locals after
   receiver-let elimination, fieldless struct literals, and payloadless enum
@@ -22,111 +22,57 @@ validity checks must be represented in Rocq and the extracted checker.
   enums, direct-call receivers, generic direct-call receivers, non-pure inferred
   locals, and call-initialized/general annotated locals remain gated.
 - The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
-  its only checker authority. That endpoint now requires both direct-receiver
-  mixed readiness and the per-local mixed no-receiver certificate. Public checker
-  soundness aliases already target this endpoint, but the public runtime theorem
+  its only checker authority. That endpoint enforces the direct-receiver mixed
+  checks and the per-local mixed no-receiver certificate without changing the
+  accepted regression frontier. Public checker soundness aliases target this
+  endpoint, but the public runtime theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
   `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-- The ready-body route alone stalled for the no-receiver branch, and the narrow
-  route alone is too restrictive for the full accepted language. The current
-  viable no-receiver certificate shape is per-local mixed evidence:
+- The active no-receiver certificate is per-local mixed evidence:
   `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check`.
-  For every component-local function it accepts synthetic-ready, ordinary shadow
-  summary, or narrow evidence. This checker is extracted, has a Rocq soundness
-  lemma to `component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env`,
-  and passes both the targeted trait/direct frontier (`100/100`) and the full
-  valid suite (`0/222` failures). Older broader gates remain diagnostic only:
-  env-wide `ready_body_or_narrow` and all-local-bounds narrow still fail the same
-  four full-valid helper-function cases. The per-local mixed provider is now
-  consumed by compiled runtime helpers at the exact component-local callee lookup,
-  by a boolean-preserving captured/component env safety theorem, and by the active
-  direct-receiver mixed diagnostic theorem. The certificate is now enforced by
-  the active extracted endpoint without changing the accepted regression frontier,
-  and an active-endpoint safety wrapper obtains that certificate directly from
-  the endpoint. A stronger no-receiver local-mixed check with provenance and
-  preservation shadow checks is defined, extracted, and proved to provide both
-  the local mixed provider and ordinary shadow-summary evidence, but it remains
-  diagnostic only: making it the active endpoint gate rejected many existing
-  valid programs. A runtime diagnostic theorem now consumes this stronger
-  certificate and derives the ordinary shadow route provider internally. Ordinary
-  shadow summaries now lift through local-bounds families to ready-body callee
-  evidence, and the ordinary shadow route bridge is derivable from the
-  ready-body local-bounds route bridge plus root name/key preservation. The
-  ordinary-shadow preservation core is now packaged as exact-input route
-  theorems for single environments and local-bounds families, matching the route
-  result shape when the call starts from exact `store_typed`. The
-  ordinary-shadow preservation path now has prefix-store route theorems for
-  single environments and local-bounds families. The active endpoint path now
-  discharges the ordinary shadow route provider from the global prefix route
-  package. A component-level mixed callee helper now consumes the active
-  per-local certificate at the selected callee: synthetic-ready locals use the
-  synthetic route family, ordinary-shadow locals use the prefix ordinary route,
-  and narrow locals stay on the narrow safety branch. That helper is now lifted
-  through a check-based env/root safety theorem and the active endpoint-local
-  certificate wrapper, so ordinary-shadow routing is derived internally. The
-  endpoint wrapper now passes one bundled mixed route provider, with projection
-  lemmas for the synthetic and ordinary halves, instead of separate route
-  callbacks. A reusable constructor derives the ordinary half from the existing
-  provenance-ready route package. The target height-indexed mixed route shape is
-  now named in Rocq as a value-safety route, with statement/family adapters and
-  the closure-target summary premise needed by the narrow branch. The active provider bridges to its
-  lookup-indexed mixed evidence-at predicate, and a direct-call `typed_env_roots` inversion lemma exposes the
-  callee needed for dispatch. Component-local, env/root, and endpoint-local safety now have helpers
-  that consume this mixed route interface directly, and a provider constructor
-  lifts any proved global mixed route theorem into the component local-bounds
-  provider expected by the endpoint wrapper. The global mixed value route theorem is now proved from the existing synthetic
-  and ordinary-shadow route packages plus the narrow direct-call value lemma, and
-  a constructor lifts those branch-route packages into the endpoint's mixed
-  local-bounds provider. The endpoint path now consumes a single global synthetic branch-route theorem
-  instead of a per-component synthetic callback, but the direct derivation is
-  still blocked by the recursive evidence shape of the existing synthetic cleanup
-  bridge. That bridge asks for synthetic-only evidence at each direct body target,
-  while the active local certificate may classify that same target as synthetic,
-  ordinary-shadow, or narrow. Small adapters now lift synthetic-only,
-  ordinary-shadow, and narrow evidence into the mixed evidence-at predicate. A
-  value-only mixed body-call callback is derivable from both global and scoped
-  mixed route families, with statement/local-bounds branch-route, env-family,
-  component-provider, and endpoint-provider constructors for component-local
-  recursion. The cleanup bridge target is now named in Rocq as
-  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement`; its contract now
-  explicitly includes the frame/param root-scope preservation packages required
-  by the ordinary-shadow branch, which the endpoint already has. A compiled
-  constructor proves this named bridge from the old global synthetic branch-route
-  theorem plus the ordinary-shadow route package. The endpoint-local consumer
-  uses the named bridge, and public-premise-shaped active-endpoint runtime
-  theorems now target `infer_program_env_end2end_assoc_direct_receiver_mixed`
-  through that bridge, including the shorter
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_value_cleanup_bridge`.
-  The bridge is not yet independently proved from mixed recursive cleanup
-  evidence. A global mixed cleanup route interface now exists, projects to the
-  body-call cleanup callback shape, and dispatches across synthetic-ready,
-  ordinary-shadow, and narrow cases once the narrow branch supplies post-cleanup
-  store/root preservation. After that final narrow route proof lands, retarget
-  the public runtime theorem by replacing the old strict-exact endpoint with this
-  active-endpoint helper.
+  At each component-local callee it accepts synthetic-ready, ordinary-shadow, or
+  narrow evidence. This shape is broad enough for the current valid suite, unlike
+  the older blanket narrow/all-local-bounds diagnostics.
+- Runtime proof plumbing now has global and local-bounds mixed value routes,
+  mixed cleanup routes, component providers, endpoint providers, and bridge
+  adapters. Ordinary-shadow routes are derived from the provenance-ready package.
+  Narrow direct calls now have a non-generic runtime package theorem over the
+  post-cleanup result store, and the named narrow cleanup route is proved from
+  that package.
+- A concrete mixed cleanup callback is now derivable from the existing
+  synthetic-ready full route, the ordinary-shadow full route family, and the
+  proved narrow cleanup route. This removes the previous abstract narrow cleanup
+  premise from that callback path.
 
 ## Remaining Tasks
 
-1. Finish direct-call receiver activation.
-   - Replace the remaining blanket synthetic-route callback with a per-callee
-     ready-body route built from the active endpoint's mixed local evidence:
-     synthetic-ready cases use the existing synthetic route, ordinary-shadow
-     cases use the new prefix ordinary route, and narrow cases stay on the
-     narrow branch.
-   - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
-     `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Add positive direct-call receiver UFCS tests only after the verified active
-     endpoint accepts them. Keep existing direct-call receiver safety-gate tests
-     invalid until that switch lands.
+1. Retarget the public runtime theorem.
+   - Feed the concrete mixed cleanup callback into the active endpoint runtime
+     wrapper.
+   - Replace the remaining public theorem target
+     `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
+     with `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+   - Keep the theorem premises no stronger than the current public preservation
+     packages; do not add public proof obligations merely to make the retarget
+     compile.
 
-2. Extend receiver coverage conservatively.
+2. Finish direct-call receiver activation.
+   - Replace the remaining blanket synthetic-route dependency with per-callee
+     mixed evidence from the active endpoint certificate: synthetic-ready uses
+     the synthetic route, ordinary-shadow uses the prefix ordinary route, and
+     narrow uses the proved narrow cleanup/value package.
+   - Add positive direct-call receiver UFCS tests only after the verified active
+     endpoint accepts them. Keep existing safety-gate tests invalid until Rocq,
+     extraction, and the OCaml CLI agree.
+
+3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
    - Add remaining receiver forms only when Rocq checker summaries and safety
      proofs provide store/root-safe evidence for each shape.
    - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
      roadmap slice.
 
-3. Maintain assoc-aware trait behavior.
+4. Maintain assoc-aware trait behavior.
    - Preserve assoc-aware normalization at checker boundaries rather than by
      rewriting whole raw ASTs.
    - Keep parser/desugar name resolution separate from trait solving and final
@@ -134,52 +80,14 @@ validity checks must be represented in Rocq and the extracted checker.
 
 ## Unresolved Blockers
 
-- Retargeting the public runtime theorem to
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  active endpoint now exposes the per-local certificate check and has a wrapper
-  safety theorem. A stricter shadow-check certificate proves the extra ordinary
-  shadow evidence and has diagnostic runtime theorems that derive the shadow
-  route bridge from the ready-body route bridge, but it is too restrictive as an
-  active gate. The component-level mixed callee helper is proved and lifted through
-  the active endpoint-local certificate wrapper, with synthetic and ordinary
-  route families bundled as one mixed provider. The ordinary half is derived by a
-  reusable provenance-ready constructor; the synthetic half cannot be recovered
-  by reusing the existing synthetic route theorem because that theorem requires
-  recursive synthetic-only evidence. The replacement height-indexed mixed
-  value-safety route interface, statement/family adapters, provider-to-evidence
-  bridge, direct call typing inversion lemma, component/env-root/endpoint
-  consumer helpers, route-provider constructor, global mixed value route theorem,
-  and branch-package provider constructor are now defined. Evidence adapters now
-  lift synthetic-only, ordinary-shadow, and narrow summaries into the mixed
-  evidence-at predicate, and a value-only mixed body-call callback adapter is
-  proved from both global and scoped mixed route families with statement/local-bounds
-  branch-route, env-family, component-provider, and endpoint-provider variants.
-  Cleanup needs more than final value typing after parameter removal, so a
-  stronger mixed body-call cleanup callback target is now named; it returns the
-  store/ref/root preservation tuple used by the existing synthetic cleanup core,
-  projects back to the value-only callback, has statement/env-family and
-  local-bounds-family adapters, has component and endpoint-local provider
-  constructors, projects into the existing value-callback provider path, and has
-  endpoint-local plus public-style active-endpoint runtime theorems that accept
-  cleanup providers or a global cleanup callback directly. The named
-  `mixed_ready_body_or_narrow_value_cleanup_bridge_statement` now has a
-  compiled constructor from the existing global synthetic branch-route theorem,
-  and its statement records the frame/param root-scope packages needed by the
-  ordinary-shadow branch. Public-premise-shaped active-endpoint theorems now
-  consume that named bridge, so the final public retarget has a concise compiled
-  target once the bridge no longer depends on the old synthetic branch route.
-  This validates the endpoint wiring but does not solve the independent cleanup
-  proof. The global cleanup route target is now named, the required narrow
-  direct-call cleanup route is stated precisely, a cleanup-route-to-body-callback
-  adapter is proved, and a mixed cleanup dispatcher is proved from the existing
-  synthetic and ordinary-shadow full routes plus that narrow cleanup route. The
-  remaining proof work is to expose/prove the narrow route over the post-cleanup
-  direct-call result store, then use the mixed cleanup dispatcher in the cleanup
-  bridge and retarget the public runtime theorem without adding public premises
-  or shrinking the accepted language.
-- The standalone narrow and all-local-bounds narrow certificates are proven and
-  useful diagnostics, but they are not broad enough to be blanket active endpoint
-  gates by themselves.
+- The public runtime theorem still has not been retargeted to the active
+  endpoint. The cleanup side now has the narrow package and mixed callback path;
+  the remaining risk is the synthetic branch-route dependency, whose older proof
+  shape asks for recursive synthetic-only evidence while the active certificate
+  is mixed per callee.
+- The stricter shadow-check certificate proves extra ordinary-shadow evidence and
+  remains useful diagnostically, but it is too restrictive to become the active
+  endpoint gate without rejecting current valid programs.
 - Direct-call receiver safety-gate tests must remain invalid until the verified
   active endpoint accepts those receiver forms through Rocq, extraction, and the
   OCaml CLI without handwritten fallback logic.

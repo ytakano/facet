@@ -56,18 +56,22 @@ validity checks must be represented in Rocq and the extracted checker.
   theorems for single environments and local-bounds families, matching the route
   result shape when the call starts from exact `store_typed`. The
   ordinary-shadow preservation path now has prefix-store route theorems for
-  single environments and local-bounds families. The remaining proof gap is
-  the active endpoint path now discharges the ordinary shadow route provider from
-  the global prefix route package. The remaining proof gap is discharging the
-  synthetic route provider from existing endpoint evidence, then retargeting the
-  public runtime theorem without adding a stricter checker gate.
+  single environments and local-bounds families. The active endpoint path now
+  discharges the ordinary shadow route provider from the global prefix route
+  package. The remaining proof gap is a per-callee ready-body route for mixed
+  local evidence: synthetic locals can use the existing synthetic route,
+  ordinary-shadow locals can use the new ordinary route, and narrow locals must
+  continue through the narrow safety branch without requiring a blanket synthetic
+  provider.
 
 ## Remaining Tasks
 
 1. Finish direct-call receiver activation.
-   - Discharge the remaining synthetic route provider from active-endpoint evidence
-     so the ready-body local-bounds route bridge is obtained without depending
-     on the stricter diagnostic shadow-check gate.
+   - Replace the remaining blanket synthetic-route callback with a per-callee
+     ready-body route built from the active endpoint's mixed local evidence:
+     synthetic-ready cases use the existing synthetic route, ordinary-shadow
+     cases use the new prefix ordinary route, and narrow cases stay on the
+     narrow branch.
    - Retarget `infer_program_env_end2end_big_step_safe_checked_initial_ready` to
      `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Add positive direct-call receiver UFCS tests only after the verified active
@@ -95,8 +99,9 @@ validity checks must be represented in Rocq and the extracted checker.
   safety theorem. A stricter shadow-check certificate proves the extra ordinary
   shadow evidence and has diagnostic runtime theorems that derive the shadow
   route bridge from the ready-body route bridge, but it is too restrictive as an
-  active gate. The public theorem still needs the remaining synthetic route provider to be
-  rebuilt from the accepted endpoint's existing evidence, without adding public
+  active gate. The public theorem still needs the remaining blanket
+  synthetic-route callback to be replaced by a mixed-evidence route theorem,
+  without adding public
   premises or shrinking the accepted language.
 - The standalone narrow and all-local-bounds narrow certificates are proven and
   useful diagnostics, but they are not broad enough to be blanket active endpoint

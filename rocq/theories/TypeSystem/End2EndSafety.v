@@ -13138,6 +13138,34 @@ Proof.
     + exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_narrow_callee_provider :
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+      env = infer_ok env' ->
+    component_body_local_bounds_narrow_summary_provider_in_env env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros env env' f s s' v Hprog Hprovider Hinitial Hin Hstore Heval.
+  pose proof
+    (infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_base
+      env env' Hprog) as Hbase.
+  eapply env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_component_narrow_callee_provider.
+  - eapply infer_program_env_end2end_assoc_strict_exact_closure_unique_by_name.
+    exact Hbase.
+  - eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_strict_ready.
+    eapply infer_program_env_end2end_assoc_strict_exact_closure_check_env_ready.
+    exact Hbase.
+  - exact Hprovider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

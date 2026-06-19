@@ -656,6 +656,43 @@ Proof.
   exact (Hsummary fname fdef Hlookup).
 Qed.
 
+Lemma callee_body_root_shadow_summary_global_env_with_local_bounds_for_route :
+  forall env bounds fdef,
+    callee_body_root_shadow_summary env fdef ->
+    callee_body_root_shadow_summary
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef [Hnodup Hready_at].
+  split; [exact Hnodup |].
+  unfold callee_body_root_shadow_ready_at in *.
+  destruct Hready_at as
+    (T_body & Γ_out & R_body & roots_body & Hprov & Hready & Htyped &
+      Hcompat & Hexclude_roots & Hexclude_env).
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split;
+    try exact Hprov;
+    try exact Hready;
+    try exact Hcompat;
+    try exact Hexclude_roots;
+    try exact Hexclude_env.
+  change (global_env_with_local_bounds
+    (global_env_with_local_bounds env bounds) (fn_bounds fdef))
+    with (global_env_with_local_bounds env (fn_bounds fdef)).
+  exact Htyped.
+Qed.
+
+Lemma env_fns_root_shadow_summary_evidence_global_env_with_local_bounds_for_route :
+  forall env bounds,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_shadow_summary_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hsummary fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  eapply callee_body_root_shadow_summary_global_env_with_local_bounds_for_route.
+  exact (Hsummary fname fdef Hlookup).
+Qed.
+
 Lemma env_fns_root_shadow_summary_evidence_in_unique :
   forall env,
     env_fns_root_shadow_summary_evidence env ->

@@ -20158,6 +20158,56 @@ Proof.
     eassumption.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_combined_route_value_callback_bridge :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hbridge.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_combined_route_value_callback_bridge;
+    eassumption.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_combined_route_value_callback_bridge :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hbridge.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_combined_route_value_callback_bridge;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_alpha_summary_route_bridge :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -20233,12 +20283,10 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_wit
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hbridge.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_alpha_summary_route_value_callback_bridge;
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_combined_route_value_callback_bridge;
     try eassumption.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge_of_summary_route_bridge.
-    exact Hbridge.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_value_callback_bridge_of_summary_route_bridge.
-    exact Hbridge.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_summary_route_bridge.
+  exact Hbridge.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_route_bridge :
@@ -20262,12 +20310,10 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summa
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hbridge.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_summary_route_value_callback_bridge;
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_combined_route_value_callback_bridge;
     try eassumption.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_route_bridge_of_summary_route_bridge.
-    exact Hbridge.
-  - eapply mixed_ready_body_or_narrow_alpha_summary_provider_value_callback_bridge_of_summary_route_bridge.
-    exact Hbridge.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_summary_route_bridge.
+  exact Hbridge.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_exact_body_call_route_package :

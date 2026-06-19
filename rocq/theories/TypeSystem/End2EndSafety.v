@@ -14108,6 +14108,23 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
+      env' = true ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_summary_provider_in_env env'.
+Proof.
+  intros env env' _Hprog Hcombined_check Hno_receiver.
+  destruct (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks_sound
+              env' Hcombined_check Hno_receiver)
+    as [Hready_body _Hshadow_checks].
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
+  exact Hready_body.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_provider_check_diagnostic :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

@@ -35,7 +35,10 @@ validity checks must be represented in Rocq and the extracted checker.
   extracted and regression-tracked in CLI diagnostics: on the targeted
   trait/direct frontier, `no-receiver-ready-body-or-narrow-summary=100/100`,
   while the narrower standalone certificate remains `no-receiver-narrow-summary=11/100`.
-  The combined certificate has active mixed diagnostic safety theorems. The
+  Across the full valid suite, the combined env-level gate still fails the same
+  four no-receiver ready-body blockers (`4/222`), so it is not yet a blanket
+  active endpoint gate. The combined certificate has active mixed diagnostic
+  safety theorems. The
   broad ready-body bridge premise has been narrowed to explicit mixed
   route-provider obligations for the ready-body arm; the narrow arm is closed by
   the store-safe narrow certificate.
@@ -46,8 +49,8 @@ validity checks must be represented in Rocq and the extracted checker.
    - Discharge the mixed route-provider obligations needed by the combined
      ready-body arm, or replace them with a checker certificate that packages
      the required route evidence directly.
-   - Keep the narrow arm as the fallback for the four full-valid ready-body
-     blockers and for the targeted trait/direct frontier.
+   - Explain or eliminate the four full-valid combined env-gate blockers before
+     using the combined gate as a blanket active endpoint requirement.
 
 2. Finish direct-call receiver activation.
    - Promote only a certificate gate that preserves existing valid tests, most
@@ -77,9 +80,10 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - Retargeting the public runtime theorem to
   `infer_program_env_end2end_assoc_direct_receiver_mixed` is still pending. The
-  combined ready-body-or-narrow certificate preserves the current diagnostic
+  combined ready-body-or-narrow certificate preserves the targeted diagnostic
   frontier, but its ready-body arm still needs verified mixed route-provider
-  evidence before it can become an active endpoint gate.
+  evidence and its four full-valid env-gate blockers must be addressed before it
+  can become a blanket active endpoint gate.
 - The narrow store-safe certificate is proven and useful as a fallback, but it is
   not broad enough to be a blanket active endpoint gate by itself.
 - Direct-call receiver safety-gate tests must remain invalid until the verified

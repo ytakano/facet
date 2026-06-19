@@ -14237,6 +14237,24 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_receiver_present :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = true ->
+    forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true.
+Proof.
+  intros env env' Hprog Hpresent f_component Hin_component.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
+              env env' Hprog) as [Hno_receiver | Hdirect_ready].
+  - rewrite Hpresent in Hno_receiver. discriminate.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_component_check_provider_when_direct_ready;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_reachable_package_provider_of_no_receiver_component_body_summary_provider_check :
   forall env env' bounds base_fname,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

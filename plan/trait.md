@@ -72,8 +72,10 @@ validity checks must be represented in Rocq and the extracted checker.
   checks, a theorem-level route that consumes that combined gate in the
   no-receiver branch, a reusable active-checker case split showing mixed
   success plus the combined diagnostic yields global shadow-summary evidence,
-  and a component shadow-route provider adapter from that evidence. The
-  combined diagnostic currently covers only 17/100 files because the active
+  a component shadow-route provider adapter from that evidence, and a mixed-
+  route theorem for the combined diagnostic that avoids the abstract ready-body
+  route bridge when synthetic-route evidence is supplied. The combined
+  diagnostic currently covers only 17/100 files because the active
   no-receiver branch does not expose preservation/provenance checks. This gives
   synthetic-or-ordinary callee evidence plus store-safe target arguments for
   alpha-renamed direct targets, while isolating the remaining public route
@@ -142,11 +144,12 @@ validity checks must be represented in Rocq and the extracted checker.
   evidence, a theorem route for the combined ready-body plus shadow-check
   diagnostic gate, an active-checker case split that derives global
   shadow-summary evidence from mixed success plus that combined diagnostic,
-  and an adapter from that evidence to the component shadow-route provider. It
-  still needs the ordinary shadow-summary route bridge proof, full exposure of
-  provenance/preservation checks from active no-receiver premises, and final
-  public-theorem wiring that removes the remaining abstract ready-body route
-  bridge. The combined diagnostic gate is 17/100, matching the
+  an adapter from that evidence to the component shadow-route provider, and a
+  mixed-route theorem for the combined diagnostic that no longer requires the
+  abstract ready-body route bridge once synthetic-route evidence is supplied.
+  It still needs the ordinary shadow-summary route bridge proof, derivation of
+  that synthetic-route evidence from active no-receiver premises, and final
+  public-theorem wiring. The combined diagnostic gate is 17/100, matching the
   preservation-ready frontier, so that exposure cannot be inferred from the
   current no-receiver branch without changing the active gate shape or proving
   the facts from other accepted premises.

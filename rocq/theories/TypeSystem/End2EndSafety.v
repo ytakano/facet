@@ -601,6 +601,47 @@ Proof.
     exact Hprog.
 Qed.
 
+Definition direct_receiver_method_narrow_summary_local_bounds_stable
+    (env : global_env) : Prop :=
+  forall bounds fdef,
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      (global_env_with_local_bounds env bounds) fdef.
+
+Lemma env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds :
+  forall env bounds,
+    direct_receiver_method_narrow_summary_local_bounds_stable env ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hdirect_stable Hevidence fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  destruct (Hevidence fname fdef Hlookup) as [[Hprov Hready] | Hdirect].
+  - left. split.
+    + eapply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+      exact Hprov.
+    + exact Hready.
+  - right. eapply Hdirect_stable. exact Hdirect.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds :
+  forall env env' bounds,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      (global_env_with_local_bounds env' bounds).
+Proof.
+  intros env env' bounds Hprog Hdirect_stable.
+  eapply env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
+  - exact Hdirect_stable.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

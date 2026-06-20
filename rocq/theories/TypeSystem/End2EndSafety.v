@@ -20359,23 +20359,27 @@ Proof.
       eassumption.
 Qed.
 
+Definition direct_receiver_split_direct_ready_branch_bundle_in_env
+    (env : global_env) : Prop :=
+  ((forall f_component,
+     In f_component (env_fns env) ->
+     check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env f_component = true) /\
+   check_env_root_shadow_provenance_summary env = true /\
+   check_env_preservation_ready env = true) /\
+  env_fns_root_shadow_provenance_summary_evidence env /\
+  env_fns_preservation_ready env /\
+  check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    env = true /\
+  check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+    env = true.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =
       infer_ok env' ->
     check_env_end2end_direct_receiver_ready env' = true ->
-    ((forall f_component,
-       In f_component (env_fns env') ->
-       check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
-         env' f_component = true) /\
-     check_env_root_shadow_provenance_summary env' = true /\
-     check_env_preservation_ready env' = true) /\
-    env_fns_root_shadow_provenance_summary_evidence env' /\
-    env_fns_preservation_ready env' /\
-    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
-      env' = true /\
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-      env' = true.
+    direct_receiver_split_direct_ready_branch_bundle_in_env env'.
 Proof.
   intros env env' Hprog Hdirect_ready.
   split.
@@ -20383,6 +20387,54 @@ Proof.
       eassumption.
   - eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_runtime_facts_when_direct_ready;
       eassumption.
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_direct_ready_branch_bundle :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_split_direct_ready_branch_bundle_in_env env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hbranch_bundle Hinitial Hin Hstore Heval.
+  destruct Hbranch_bundle as
+    (_Hprovider_bundle & Hprovenance & Hpreservation & Hdirect_check &
+      Hcomponent_check).
+  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hprovenance.
+  - exact Hpreservation.
+  - exact Hdirect_check.
+  - exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_direct_ready :
@@ -20407,11 +20459,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hdirect_ready Hinitial Hin Hstore Heval.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready
-    env env' Hprog Hdirect_ready) as
-    (_Hprovider_bundle & Hprovenance & Hpreservation & Hdirect_check &
-      Hcomponent_check).
-  eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_direct_ready_branch_bundle.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -20420,18 +20468,13 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
-    exact Hprog.
-  - exact Hprovenance.
-  - exact Hpreservation.
-  - exact Hdirect_check.
-  - exact Hcomponent_check.
+  - exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready;
+      eassumption.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
-  - apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
-  - apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
 Qed.
 
 

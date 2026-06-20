@@ -15878,6 +15878,28 @@ Proof.
   - exact Hfamily.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_evidence_at_in_nested_local_bounds_family_of_local_certificate :
+  forall env env' base env0 f_component fname,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env0 f_component = true ->
+    fn_root_shadow_ready_body_or_narrow_summary_evidence_at
+      (global_env_with_local_bounds env0 (fn_bounds f_component)) fname.
+Proof.
+  intros env env' base env0 f_component fname Hprog Hno_receiver Hbase
+    Hfamily Hin_component Hcomponent_check.
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_nested_local_bounds_family_of_local_certificate;
+      eassumption.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :
   mixed_ready_body_or_narrow_summary_provider_route_bridge ->
   forall env env',

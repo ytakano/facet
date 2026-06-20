@@ -419,6 +419,39 @@ Proof.
   exact Hlocal.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_or_direct_receiver_method_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check
+      env env' Hprog) as Hlocal.
+  destruct
+    (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts
+      env' Hlocal) as [_Hprovider [Hprovenance _Hpreservation]].
+  exact Hprovenance.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_preservation_or_direct_receiver_method_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_preservation_ready_or_direct_receiver_method env' = true.
+Proof.
+  intros env env' Hprog.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check
+      env env' Hprog) as Hlocal.
+  destruct
+    (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts
+      env' Hlocal) as [_Hprovider [_Hprovenance Hpreservation]].
+  exact Hpreservation.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

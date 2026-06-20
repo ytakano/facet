@@ -87,8 +87,8 @@ validity checks must be represented in Rocq and the extracted checker.
   component-local-bounds provider packaging, and component-provider lookup
   case/projection facts for paired evidence. Diagnostic
   no-receiver/direct-ready runtime wrappers and a case-dispatched runtime theorem
-  over the proved branches exist; the no-receiver runtime path now consumes the
-  packaged ready-body route provider. Consuming the concrete paired evidence in
+  over the proved branches exist; the no-receiver runtime path and case
+  dispatcher now consume the packaged ready-body route provider. Consuming the concrete paired evidence in
   the direct replay proof and active endpoint wiring remain.
 
 ## Remaining Tasks
@@ -119,8 +119,8 @@ validity checks must be represented in Rocq and the extracted checker.
      route-provider packaging, component-local-bounds provider packaging, and
      component-provider lookup case/projection facts,
      separate no-receiver/direct-ready runtime wrappers, a no-receiver runtime
-     path consuming the packaged ready-body route provider, and a
-     case-dispatched runtime theorem are proved; the next step is proving or
+     path and case dispatcher consuming the packaged ready-body route provider
+     are proved; the next step is proving or
      avoiding local-bounds stability for direct-receiver narrow summaries so
      split evidence can feed replay without whole-environment generic
      provenance/preservation readiness.
@@ -163,9 +163,10 @@ validity checks must be represented in Rocq and the extracted checker.
   readiness still fails for the raw receiver-call body and the strict ordinary
   component summary remains false. The extracted split certificate and proposed
   split end-to-end gate both pass this fixture and preserve the old no-receiver
-  theorem path through an `End2EndSafety` wrapper; that no-receiver runtime path
-  now consumes the packaged ready-body route provider, and the direct-ready
-  runtime branch is proved under the explicit direct-ready gate. A case-dispatched
+  theorem path through an `End2EndSafety` wrapper; that no-receiver runtime
+  path and the case dispatcher now consume the packaged ready-body route
+  provider, and the direct-ready runtime branch is
+  proved under the explicit direct-ready gate. A case-dispatched
   split theorem exists, and split provenance/preservation certificates now have
   Prop-level and paired per-callee evidence packages, concrete callee consumer
   facts, non-direct callee ordinary-evidence projections, conditional

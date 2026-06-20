@@ -47,13 +47,15 @@ validity checks must be represented in Rocq and the extracted checker.
   heighted local-bounds routes. The combined bridge is packaged directly from
   synthetic-ready plus ordinary-shadow route premises.
 - The active endpoint can currently be proved with either an explicit
-  summary-route bridge, a synthetic-branch route, synthetic evidence-at routes,
-  all-target synthetic summary evidence, a ready-body route provider, or separate
-  per-component synthetic and ordinary-shadow route providers. Public prefix and
-  non-prefix wrappers expose the synthetic-branch, synthetic evidence-at,
-  ready-body, and synthetic-plus-shadow route-provider paths. The remaining gap
-  is proving the ready-body route from the active branch-local mixed certificate
-  without requiring recursive synthetic-only evidence for all callees.
+  summary-route bridge, a mixed-ready-or-narrow route provider, a synthetic-branch
+  route, synthetic evidence-at routes, all-target synthetic summary evidence, a
+  ready-body route provider, or separate per-component synthetic and
+  ordinary-shadow route providers. Public prefix and non-prefix wrappers expose
+  the synthetic-branch, synthetic evidence-at, mixed-ready-or-narrow, ready-body,
+  and synthetic-plus-shadow route-provider paths. The remaining gap is proving a
+  recursive route directly from the active branch-local mixed certificate without
+  requiring recursive synthetic-only evidence for all callees; the stricter
+  ready-body-only route still cannot consume narrow branches by itself.
 
 ## Remaining Tasks
 
@@ -90,8 +92,9 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
   route/value path is available, including public ready-body-route wrappers,
-  public synthetic-branch, synthetic-evidence-route, and synthetic-plus-shadow
-  route-provider wrappers, combined summary/exact-body wrappers, direct
+  public mixed-ready-or-narrow route-provider wrappers, public synthetic-branch,
+  synthetic-evidence-route, and synthetic-plus-shadow route-provider wrappers,
+  combined summary/exact-body wrappers, direct
   combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
   active-certificate bundles for combined-bridge, nested local-bounds,
   branch-local, synthetic-branch, synthetic-evidence-at, exact-body, all-target

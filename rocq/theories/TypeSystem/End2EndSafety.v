@@ -377,6 +377,34 @@ Proof.
   exact Hcombined.
 Qed.
 
+Lemma check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_direct_receiver_combined_no_receiver :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env = true ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true.
+Proof.
+  intros env Hno_receiver Hcombined.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  apply forallb_forall. intros fdef Hin.
+  unfold check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined.
+  apply forallb_forall with (x := fdef) in Hcombined; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    in Hcombined.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  pose proof
+    (check_env_root_shadow_direct_receiver_method_present_false_forall
+      env fdef Hno_receiver Hin) as Hfn_no_receiver.
+  rewrite (check_fn_root_shadow_direct_receiver_method_store_safe_summary_false_of_not_present
+    env fdef Hfn_no_receiver) in Hcombined.
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary env fdef);
+    simpl in *; exact Hcombined.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =
@@ -19573,6 +19601,70 @@ Proof.
     + exact Heval.
 Qed.
 
+
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_diagnostic :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  ready_body_summary_local_bounds_family_route_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hsummary_to_route env env' f s s' v
+    Hprog Hno_receiver Hsynthetic_provider Hinitial Hin Hstore Heval.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check
+      env env' Hprog) as Hsplit_local.
+  assert (Hshadow_check :
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
+      env' = true).
+  { eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_of_direct_receiver_splits_no_receiver;
+      eassumption. }
+  destruct (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_sound
+    env' Hshadow_check Hno_receiver) as [Hprovider Hshadow_summary].
+  assert (Hroute_provider :
+    component_body_local_bounds_ready_body_route_provider_in_env env').
+  { eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
+    - eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
+        eassumption.
+    - exact Hsynthetic_provider.
+    - eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
+      + eapply shadow_summary_local_bounds_family_route_bridge_of_ready_body_route_bridge;
+          eassumption.
+      + exact Hshadow_summary. }
+  assert (Hcombined_check :
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' = true).
+  { eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_direct_receiver_combined_no_receiver.
+    - exact Hno_receiver.
+    - eapply infer_program_env_end2end_assoc_direct_receiver_split_combined_check.
+      exact Hprog. }
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_ready_body_or_narrow_provider.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hcombined_check.
+  - exact Hprovider.
+  - exact Hroute_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
 
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_provider :

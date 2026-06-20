@@ -40,9 +40,10 @@ validity checks must be represented in Rocq and the extracted checker.
   form is also stable through nested local bounds. The combined bridge is now
   packaged directly from synthetic-ready plus ordinary-shadow route premises.
 - The active endpoint can currently be proved with either an explicit
-  summary-route bridge, all-target synthetic summary evidence, or a ready-body
-  route provider. The remaining gap is proving the ready-body route from the
-  active branch-local mixed certificate without requiring recursive
+  summary-route bridge, a synthetic-branch route, all-target synthetic summary
+  evidence, or a ready-body route provider. Public wrappers expose the
+  synthetic-branch route path. The remaining gap is proving the ready-body route
+  from the active branch-local mixed certificate without requiring recursive
   synthetic-only evidence for all callees.
 
 ## Remaining Tasks

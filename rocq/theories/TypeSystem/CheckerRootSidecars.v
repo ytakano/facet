@@ -2765,6 +2765,84 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma check_fn_root_shadow_direct_receiver_method_store_safe_summary_false_of_not_present :
+  forall env fdef,
+    check_fn_root_shadow_direct_receiver_method_present env fdef = false ->
+    check_fn_root_shadow_direct_receiver_method_store_safe_summary
+      env fdef = false.
+Proof.
+  intros env fdef Hpresent.
+  unfold check_fn_root_shadow_direct_receiver_method_present in Hpresent.
+  destruct (direct_call_receiver_method_target_expr (fn_body fdef))
+    eqn:Hdirect; [discriminate |].
+  unfold check_fn_root_shadow_direct_receiver_method_store_safe_summary.
+  rewrite Hdirect. reflexivity.
+Qed.
+
+Lemma check_env_root_shadow_provenance_summary_of_split_no_receiver :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env = true ->
+    check_env_root_shadow_provenance_summary env = true.
+Proof.
+  intros env Hno_receiver Hsplit.
+  unfold check_env_root_shadow_provenance_summary.
+  apply forallb_forall. intros fdef Hin.
+  destruct (check_env_root_shadow_provenance_summary_or_direct_receiver_method_cases
+    env fdef Hsplit Hin) as [Hprov | Hdirect]; [exact Hprov |].
+  pose proof
+    (check_env_root_shadow_direct_receiver_method_present_false_forall
+      env fdef Hno_receiver Hin) as Hfn_no_receiver.
+  rewrite (check_fn_root_shadow_direct_receiver_method_store_safe_summary_false_of_not_present
+    env fdef Hfn_no_receiver) in Hdirect.
+  discriminate.
+Qed.
+
+Lemma check_env_preservation_ready_of_split_no_receiver :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_preservation_ready_or_direct_receiver_method env = true ->
+    check_env_preservation_ready env = true.
+Proof.
+  intros env Hno_receiver Hsplit.
+  unfold check_env_preservation_ready.
+  apply forallb_forall. intros fdef Hin.
+  destruct (check_env_preservation_ready_or_direct_receiver_method_cases
+    env fdef Hsplit Hin) as [Hpreservation | Hdirect];
+    [exact Hpreservation |].
+  pose proof
+    (check_env_root_shadow_direct_receiver_method_present_false_forall
+      env fdef Hno_receiver Hin) as Hfn_no_receiver.
+  rewrite (check_fn_root_shadow_direct_receiver_method_store_safe_summary_false_of_not_present
+    env fdef Hfn_no_receiver) in Hdirect.
+  discriminate.
+Qed.
+
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks_of_direct_receiver_splits_no_receiver :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env = true ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks
+      env = true.
+Proof.
+  intros env Hno_receiver Hsplit.
+  destruct
+    (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts
+      env Hsplit) as (Hprovider & Hprovenance_split & Hpreservation_split).
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+    in Hprovider.
+  rewrite Hno_receiver in *. simpl in *.
+  rewrite Hprovider.
+  rewrite (check_env_root_shadow_provenance_summary_of_split_no_receiver
+    env Hno_receiver Hprovenance_split).
+  rewrite (check_env_preservation_ready_of_split_no_receiver
+    env Hno_receiver Hpreservation_split).
+  reflexivity.
+Qed.
+
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=
   check_env_root_shadow_direct_receiver_method_present env ||

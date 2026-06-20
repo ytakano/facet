@@ -61,9 +61,10 @@ validity checks must be represented in Rocq and the extracted checker.
   functions that fail despite direct-receiver summary coverage, by inspecting
   extracted diagnostic endpoints without changing checker authority. Rocq now
   has a checker-side split certificate for ordinary provenance/preservation
-  readiness or direct-receiver-method summary coverage, plus per-function case
-  lemmas that expose the split; it is not yet wired into the active endpoint
-  theorem.
+  readiness or direct-receiver-method summary coverage, per-function case lemmas,
+  and a no-receiver reduction lemma showing the split certificate recovers the
+  old shadow-check path when no direct receiver method is present. It is not yet
+  wired into the active endpoint theorem.
 
 ## Remaining Tasks
 
@@ -78,11 +79,13 @@ validity checks must be represented in Rocq and the extracted checker.
      narrow callees use the proved narrow package.
 
 2. Finish direct-call receiver activation.
-   - Prove runtime soundness for the split certificate
+   - Prove the direct-receiver branch of runtime soundness for the split
+     certificate
      `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits`:
-     use the new per-function cases so ordinary functions keep the existing
-     provenance/preservation packages and direct-receiver-summary functions use
-     the existing receiver replay theorem.
+     ordinary no-receiver programs already reduce to the old shadow-check path;
+     direct-receiver-summary functions still need to use the existing receiver
+     replay theorem without requiring whole-environment generic
+     provenance/preservation readiness.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
    - Wire the split certificate into the active endpoint only after the theorem
@@ -120,9 +123,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct-receiver summary, direct-component, component-ready-body, and
   no-receiver mixed summary gates pass, while generic provenance/preservation
   readiness still fails for the raw receiver-call body and the strict ordinary
-  component summary remains false. The new split certificate and case lemmas
-  name the intended checker shape, but the runtime theorem is not yet proved or
-  used by the active endpoint; no handwritten OCaml fallback logic is allowed.
+  component summary remains false. The split certificate now preserves the old
+  no-receiver theorem path, but the direct-receiver runtime branch is not yet
+  proved or used by the active endpoint; no handwritten OCaml fallback logic is
+  allowed.
 
 ## Key Decisions
 

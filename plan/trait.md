@@ -68,8 +68,11 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver branch. The split certificate is extracted and diagnostics show
   the blocked direct-call receiver fixture passes it while the authoritative
   checker still rejects. The proposed direct-receiver split end-to-end gate is
-  named in Rocq, extracted, and also passes that fixture diagnostically; the
-  direct-receiver runtime branch and endpoint wiring remain.
+  named in Rocq, extracted, and also passes that fixture diagnostically. A
+  diagnostic-only split endpoint now composes the direct-receiver base checker
+  with this split gate and also accepts the blocked fixture, without changing
+  the authoritative CLI endpoint; the direct-receiver runtime branch and active
+  endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -85,10 +88,12 @@ validity checks must be represented in Rocq and the extracted checker.
 
 2. Finish direct-call receiver activation.
    - Prove runtime soundness for the proposed gate
-     `check_env_end2end_direct_receiver_split_ready`: the no-receiver branch now
-     delegates to the old shadow-check route; direct-receiver-summary functions
-     still need to use the existing receiver replay theorem without requiring
-     whole-environment generic provenance/preservation readiness.
+     `check_env_end2end_direct_receiver_split_ready` as used by diagnostic
+     endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: the
+     no-receiver branch now delegates to the old shadow-check route;
+     direct-receiver-summary functions still need to use the existing receiver
+     replay theorem without requiring whole-environment generic
+     provenance/preservation readiness.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
    - Wire the split certificate into the active endpoint only after the theorem
@@ -130,7 +135,9 @@ validity checks must be represented in Rocq and the extracted checker.
   split end-to-end gate both pass this fixture and preserve the old no-receiver
   theorem path up to an `End2EndSafety` wrapper, but the direct-receiver runtime
   branch is not yet proved or used by the active endpoint; no handwritten OCaml
-  fallback logic is allowed.
+  fallback logic is allowed. The diagnostic split endpoint demonstrates the
+  candidate gate over the direct-receiver base environment only; it is not yet
+  the active checker authority.
 
 ## Key Decisions
 

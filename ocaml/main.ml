@@ -681,12 +681,23 @@ let () =
          checked_env)
   in
   let diagnose_rejected_trait_gates () =
-    match infer_program_env_end2end_assoc_direct_receiver_base env_for_checker with
+    let base_result =
+      infer_program_env_end2end_assoc_direct_receiver_base env_for_checker
+    in
+    let split_result =
+      infer_program_env_end2end_assoc_direct_receiver_split env_for_checker
+    in
+    (match base_result with
     | Infer_ok env' ->
       Printf.printf "trait-diagnostic-direct-receiver-base: ok\n";
       print_trait_gate_diagnostics env'
     | Infer_err _ ->
-      Printf.printf "trait-diagnostic-direct-receiver-base: fail\n"
+      Printf.printf "trait-diagnostic-direct-receiver-base: fail\n");
+    match split_result with
+    | Infer_ok _ ->
+      Printf.printf "trait-diagnostic-direct-receiver-split: ok\n"
+    | Infer_err _ ->
+      Printf.printf "trait-diagnostic-direct-receiver-split: fail\n"
   in
   let checked_env =
     match infer_program_env_end2end_assoc_direct_receiver_mixed env_for_checker with

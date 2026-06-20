@@ -555,6 +555,7 @@ if dune exec ocaml/main.exe -- --diagnose-trait-gates \
 else
   for line in \
     "trait-diagnostic-direct-receiver-base: ok" \
+    "trait-diagnostic-direct-receiver-split: ok" \
     "trait-direct-receiver-method-present: ok" \
     "trait-preservation-ready: fail" \
     "trait-direct-receiver-ready: fail" \

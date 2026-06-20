@@ -732,6 +732,43 @@ Proof.
   - exact Hnot_direct.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_summary_and_preservation_ready_when_no_receiver :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    env_fns_root_shadow_provenance_summary_evidence env' /\
+    env_fns_preservation_ready env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  eapply env_fns_root_shadow_provenance_summary_and_preservation_ready_of_paired_no_direct.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
+  - eapply env_fns_no_direct_receiver_method_narrow_summary_of_no_receiver_method_present.
+    exact Hno_receiver.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_summary_and_preservation_ready_local_bounds_when_no_receiver :
+  forall env env' bounds,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env' bounds) /\
+    env_fns_preservation_ready (global_env_with_local_bounds env' bounds).
+Proof.
+  intros env env' bounds Hprog Hno_receiver.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_split_provenance_summary_and_preservation_ready_when_no_receiver
+    env env' Hprog Hno_receiver) as [Hprovenance Hpreservation].
+  split.
+  - eapply env_fns_root_shadow_provenance_summary_evidence_global_env_with_local_bounds.
+    exact Hprovenance.
+  - eapply env_fns_preservation_ready_global_env_with_local_bounds.
+    exact Hpreservation.
+Qed.
+
 Definition direct_receiver_method_narrow_summary_local_bounds_stable
     (env : global_env) : Prop :=
   forall bounds fdef,

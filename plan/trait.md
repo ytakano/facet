@@ -40,11 +40,12 @@ validity checks must be represented in Rocq and the extracted checker.
   form is also stable through nested local bounds. The combined bridge is now
   packaged directly from synthetic-ready plus ordinary-shadow route premises.
 - The active endpoint can currently be proved with either an explicit
-  summary-route bridge, a synthetic-branch route, all-target synthetic summary
-  evidence, or a ready-body route provider. Public prefix and non-prefix
-  wrappers expose the synthetic-branch route path. The remaining gap is proving
-  the ready-body route from the active branch-local mixed certificate without
-  requiring recursive synthetic-only evidence for all callees.
+  summary-route bridge, a synthetic-branch route, synthetic evidence-at routes,
+  all-target synthetic summary evidence, or a ready-body route provider. Public
+  prefix and non-prefix wrappers expose the synthetic-branch and synthetic
+  evidence-at route paths. The remaining gap is proving the ready-body route
+  from the active branch-local mixed certificate without requiring recursive
+  synthetic-only evidence for all callees.
 
 ## Remaining Tasks
 
@@ -81,12 +82,12 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
   route/value path is available, including public ready-body-route wrappers,
-  public synthetic-branch-route wrappers, combined summary/exact-body wrappers,
-  direct combined-bridge packaging from synthetic-ready plus ordinary-shadow
-  routes, and an active-certificate provider bundle through the combined bridge
-  plus nested local-bounds stability for the active summary, alpha-callback,
-  mixed route, mixed value, scoped evidence-at, and active branch-local
-  provider-package forms.
+  public synthetic-branch and synthetic-evidence-route wrappers, combined
+  summary/exact-body wrappers, direct combined-bridge packaging from
+  synthetic-ready plus ordinary-shadow routes, and an active-certificate
+  provider bundle through the combined bridge plus nested local-bounds stability
+  for the active summary, alpha-callback, mixed route, mixed value, scoped
+  evidence-at, and active branch-local provider-package forms.
   The public theorem still lacks a proof that this certificate yields the needed
   recursive ready-body route. That route must consume synthetic, ordinary-shadow,
   and narrow branches directly, including nested narrow calls.

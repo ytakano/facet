@@ -15481,6 +15481,30 @@ Proof.
   - eapply Hshadow_provider; eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_ready_body_route_provider_when_no_receiver_and_synthetic_provider :
+  ready_body_summary_local_bounds_family_mixed_route_bridge ->
+  shadow_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hready_bridge Hshadow_bridge env env' Hprog Hno_receiver
+    Hsynthetic_provider.
+  eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
+  - exact Hready_bridge.
+  - exact Hsynthetic_provider.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_shadow_summary_route_provider_when_no_receiver;
+      eassumption.
+Qed.
+
 Definition component_body_local_bounds_ready_body_callback_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

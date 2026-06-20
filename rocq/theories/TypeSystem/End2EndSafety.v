@@ -14342,6 +14342,36 @@ Proof.
     exact Hbridge.
 Qed.
 
+Lemma mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_synthetic_and_shadow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_summary_route_bridge.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_and_shadow_routes;
+    eassumption.
+Qed.
+
+Lemma mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_synthetic_evidence_at_and_shadow_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  (forall env,
+    eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge.
+Proof.
+  intros Hroot_names Hroot_keys Hsynthetic_route Hshadow_route.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge_of_summary_route_bridge.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_evidence_at_and_shadow_routes;
+    eassumption.
+Qed.
+
 Lemma component_body_local_bounds_narrow_summary_provider_of_env_summary :
   forall env,
     fn_env_unique_by_name env ->

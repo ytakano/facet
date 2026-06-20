@@ -2551,6 +2551,56 @@ Definition check_env_root_shadow_direct_receiver_method_present
   existsb (check_fn_root_shadow_direct_receiver_method_present env)
     (env_fns env).
 
+Definition check_fn_root_shadow_provenance_summary_or_direct_receiver_method
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_provenance_summary env fdef ||
+  check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef.
+
+Definition check_env_root_shadow_provenance_summary_or_direct_receiver_method
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_provenance_summary_or_direct_receiver_method env)
+    (env_fns env).
+
+Definition check_fn_preservation_ready_or_direct_receiver_method
+    (env : global_env) (fdef : fn_def) : bool :=
+  preservation_ready_expr_b (fn_body fdef) ||
+  check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef.
+
+Definition check_env_preservation_ready_or_direct_receiver_method
+    (env : global_env) : bool :=
+  forallb (check_fn_preservation_ready_or_direct_receiver_method env)
+    (env_fns env).
+
+Lemma check_env_root_shadow_provenance_summary_or_direct_receiver_method_forall :
+  forall env fdef,
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env = true ->
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_provenance_summary_or_direct_receiver_method
+      env fdef = true.
+Proof.
+  intros env fdef Hcheck Hin.
+  unfold check_env_root_shadow_provenance_summary_or_direct_receiver_method
+    in Hcheck.
+  eapply (proj1 (forallb_forall
+    (check_fn_root_shadow_provenance_summary_or_direct_receiver_method env)
+    (env_fns env)) Hcheck); exact Hin.
+Qed.
+
+Lemma check_env_preservation_ready_or_direct_receiver_method_forall :
+  forall env fdef,
+    check_env_preservation_ready_or_direct_receiver_method env = true ->
+    In fdef (env_fns env) ->
+    check_fn_preservation_ready_or_direct_receiver_method env fdef = true.
+Proof.
+  intros env fdef Hcheck Hin.
+  unfold check_env_preservation_ready_or_direct_receiver_method in Hcheck.
+  eapply (proj1 (forallb_forall
+    (check_fn_preservation_ready_or_direct_receiver_method env)
+    (env_fns env)) Hcheck); exact Hin.
+Qed.
+
 Lemma check_fn_root_shadow_direct_receiver_method_present_false_facts :
   forall env fdef,
     check_fn_root_shadow_direct_receiver_method_present env fdef = false ->
@@ -2655,6 +2705,13 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_narro
      env &&
    check_env_root_shadow_provenance_summary env &&
    check_env_preservation_ready env).
+
+Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+    (env : global_env) : bool :=
+  check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+    env &&
+  check_env_root_shadow_provenance_summary_or_direct_receiver_method env &&
+  check_env_preservation_ready_or_direct_receiver_method env.
 
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=

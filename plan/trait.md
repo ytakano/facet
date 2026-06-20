@@ -59,7 +59,10 @@ validity checks must be represented in Rocq and the extracted checker.
   reports trait gates for active-endpoint rejections, including method-present
   functions, direct-receiver sub-gates, and the generic provenance/preservation
   functions that fail despite direct-receiver summary coverage, by inspecting
-  extracted diagnostic endpoints without changing checker authority.
+  extracted diagnostic endpoints without changing checker authority. Rocq now
+  has a checker-side split certificate for ordinary provenance/preservation
+  readiness or direct-receiver-method summary coverage; it is not yet wired into
+  the active endpoint theorem.
 
 ## Remaining Tasks
 
@@ -74,13 +77,15 @@ validity checks must be represented in Rocq and the extracted checker.
      narrow callees use the proved narrow package.
 
 2. Finish direct-call receiver activation.
+   - Prove soundness for the split certificate
+     `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits`:
+     ordinary functions use the existing provenance/preservation packages, while
+     direct-receiver-summary functions use the existing receiver replay theorem.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
-   - Close the direct-receiver-ready failures for method-present functions. The
-     explicit function-call receiver currently reaches the direct-receiver base
-     endpoint, but `main` still fails provenance, preservation, and component
-     summary sub-gates. Add positive direct-call receiver UFCS tests only after
-     Rocq, extraction, and the CLI accept them without fallback logic.
+   - Wire the split certificate into the active endpoint only after the theorem
+     is proved, then add positive direct-call receiver UFCS tests with Rocq,
+     extraction, and CLI coverage.
 
 3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
@@ -113,10 +118,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct-receiver summary, direct-component, component-ready-body, and
   no-receiver mixed summary gates pass, while generic provenance/preservation
   readiness still fails for the raw receiver-call body and the strict ordinary
-  component summary remains false. Activation should split the safety theorem so
-  direct-receiver-summary functions do not have to masquerade as generic
-  provenance/preservation-ready bodies; no handwritten OCaml fallback logic is
-  allowed.
+  component summary remains false. The new split certificate names the intended
+  checker shape, but its runtime theorem is not yet proved or used by the active
+  endpoint; no handwritten OCaml fallback logic is allowed.
 
 ## Key Decisions
 

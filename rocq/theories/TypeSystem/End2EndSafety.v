@@ -16054,6 +16054,37 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_mixed_routes :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    (forall f_component,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    component_body_local_bounds_shadow_summary_route_provider_in_env env' ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env' /\
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hroot_names Hroot_keys env env' Hprog Hno_receiver
+    Hsynthetic_provider Hshadow_provider.
+  split.
+  - destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+      env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
+    exact Hprovider.
+  - eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
+    + eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
+        eassumption.
+    + exact Hsynthetic_provider.
+    + exact Hshadow_provider.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :
   mixed_ready_body_or_narrow_summary_provider_route_bridge ->
   forall env env',
@@ -18937,18 +18968,11 @@ Proof.
     { eapply infer_program_env_end2end_assoc_unique_by_name.
       eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
       exact Hprog. }
-    assert (Hprovider :
-      component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
-        env').
-    { eapply check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound;
-        eassumption. }
-    assert (Hroute_provider :
-      component_body_local_bounds_ready_body_route_provider_in_env env').
-    { eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
-      - eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
-          eassumption.
-      - exact (Hsynthetic_provider_when_no_receiver Hno_receiver).
-      - exact (Hshadow_provider_when_no_receiver Hno_receiver). }
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_mixed_routes
+      Hroot_names Hroot_keys env env' Hprog Hno_receiver
+      (Hsynthetic_provider_when_no_receiver Hno_receiver)
+      (Hshadow_provider_when_no_receiver Hno_receiver))
+      as [Hprovider Hroute_provider].
     assert (Hcombined_check :
       check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
         env' = true).

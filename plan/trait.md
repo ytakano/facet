@@ -33,8 +33,8 @@ validity checks must be represented in Rocq and the extracted checker.
 - Runtime proof plumbing for the active endpoint now has named mixed route,
   cleanup, value-callback, alpha-callback, provider-bundle, combined route/value
   bridge adapters, and ready-body-route bridges to mixed route and value-callback
-  providers. Endpoint-level and public summary-route wrappers factor through the
-  combined bridge; both public exact-body wrappers factor through that path.
+  providers. Endpoint and public wrappers expose the ready-body route path;
+  public summary and exact-body wrappers factor through the combined path.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, all-target synthetic summary evidence, or a ready-body
   route provider. The remaining gap is proving the ready-body route from the
@@ -75,11 +75,11 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, including combined public summary/exact-body
-  wrappers and ready-body-route-to-route/value bridges, but the public theorem
-  still lacks a proof that the active branch-local mixed certificate yields the
-  needed recursive ready-body route. That route must consume synthetic,
-  ordinary-shadow, and narrow branches directly, including nested narrow calls.
+  route/value path is available, including public ready-body-route and combined
+  summary/exact-body wrappers, but the public theorem still lacks a proof that
+  the active branch-local mixed certificate yields the needed recursive
+  ready-body route. That route must consume synthetic, ordinary-shadow, and
+  narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

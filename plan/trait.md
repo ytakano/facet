@@ -80,7 +80,8 @@ validity checks must be represented in Rocq and the extracted checker.
   non-direct callee projections back to ordinary provenance/preservation, and
   conditional local-bounds bridges/projections, concrete local-bounds case
   consumers, name-indexed evidence-at wrappers, name-indexed non-direct
-  ordinary-evidence projections, component-local-bounds provider packaging, and
+  ordinary-evidence projections, no-direct conversions back to ordinary
+  environment evidence, component-local-bounds provider packaging, and
   component-provider lookup case/projection facts for paired evidence. Diagnostic
   no-receiver/direct-ready runtime wrappers and a case-dispatched runtime theorem
   over the proved branches exist; consuming the concrete paired evidence in the
@@ -107,9 +108,10 @@ validity checks must be represented in Rocq and the extracted checker.
      evidence packages, concrete callee consumer facts, non-direct callee
      ordinary-evidence projections, conditional local-bounds bridges/projections,
      concrete local-bounds case consumers, name-indexed evidence-at wrappers,
-     name-indexed non-direct ordinary-evidence projections,
-     component-local-bounds provider packaging, and component-provider lookup
-     case/projection facts, separate no-receiver/direct-ready runtime wrappers,
+     name-indexed non-direct ordinary-evidence projections, no-direct
+     conversions back to ordinary environment evidence, component-local-bounds
+     provider packaging, and component-provider lookup case/projection facts,
+     separate no-receiver/direct-ready runtime wrappers,
      and a case-dispatched runtime theorem are proved; the next step is proving
      or avoiding local-bounds stability for direct-receiver narrow summaries so
      split evidence can feed replay without whole-environment generic
@@ -160,8 +162,9 @@ validity checks must be represented in Rocq and the extracted checker.
   facts, non-direct callee ordinary-evidence projections, conditional
   local-bounds bridges/projections, concrete local-bounds case consumers,
   name-indexed evidence-at wrappers, name-indexed non-direct ordinary-evidence
-  projections, component-local-bounds provider packaging, and
-  component-provider lookup case/projection facts. The remaining replay gap is
+  projections, no-direct conversions back to ordinary environment evidence,
+  component-local-bounds provider packaging, and component-provider lookup
+  case/projection facts. The remaining replay gap is
   direct-receiver narrow-summary stability under local bounds, or an equivalent
   replay theorem that consumes the direct summary without reconstructing generic
   provenance/preservation for the local-bounds environment. Until that is

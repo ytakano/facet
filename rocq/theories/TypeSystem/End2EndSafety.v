@@ -637,6 +637,39 @@ Proof.
     exact Hprog.
 Qed.
 
+Definition env_fns_no_direct_receiver_method_narrow_summary
+    (env : global_env) : Prop :=
+  forall fdef,
+    In fdef (env_fns env) ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        env fdef.
+
+Lemma env_fns_root_shadow_provenance_summary_and_preservation_ready_of_paired_no_direct :
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env ->
+    env_fns_no_direct_receiver_method_narrow_summary env ->
+    env_fns_root_shadow_provenance_summary_evidence env /\
+    env_fns_preservation_ready env.
+Proof.
+  intros env Hunique Hevidence Hno_direct.
+  split.
+  - intros fname fdef Hlookup.
+    destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+      as [Hin _].
+    destruct (Hevidence fname fdef Hlookup) as [[Hprov _Hready] | Hdirect].
+    + exact Hprov.
+    + exfalso. exact (Hno_direct fdef Hin Hdirect).
+  - intros fdef Hin.
+    pose proof (lookup_fn_in_unique_by_name env
+      (fn_name fdef) fdef Hin eq_refl Hunique) as Hlookup.
+    destruct (Hevidence (fn_name fdef) fdef Hlookup)
+      as [[_Hprov Hready] | Hdirect].
+    + exact Hready.
+    + exfalso. exact (Hno_direct fdef Hin Hdirect).
+Qed.
+
 Lemma env_fns_root_shadow_provenance_preservation_of_paired_for_in_not_direct :
   forall env fdef,
     fn_env_unique_by_name env ->
@@ -761,6 +794,28 @@ Proof.
   - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
     + exact Hprog.
     + exact Hdirect_stable.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_summary_and_preservation_ready_local_bounds_when_no_direct :
+  forall env env' bounds,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    env_fns_no_direct_receiver_method_narrow_summary
+      (global_env_with_local_bounds env' bounds) ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env' bounds) /\
+    env_fns_preservation_ready (global_env_with_local_bounds env' bounds).
+Proof.
+  intros env env' bounds Hprog Hdirect_stable Hno_direct.
+  eapply env_fns_root_shadow_provenance_summary_and_preservation_ready_of_paired_no_direct.
+  - eapply fn_env_unique_by_name_global_env_with_local_bounds.
+    eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
+    + exact Hprog.
+    + exact Hdirect_stable.
+  - exact Hno_direct.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_at_local_bounds :

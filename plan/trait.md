@@ -83,8 +83,9 @@ validity checks must be represented in Rocq and the extracted checker.
   ordinary-evidence projections, no-direct conversions back to ordinary
   environment evidence, no-receiver boolean bridges to no-direct evidence,
   no-receiver ordinary-evidence wrappers with local-bounds lifting,
-  component-local-bounds provider packaging, and component-provider lookup
-  case/projection facts for paired evidence. Diagnostic
+  no-receiver shadow-summary route-provider packaging, component-local-bounds
+  provider packaging, and component-provider lookup case/projection facts for
+  paired evidence. Diagnostic
   no-receiver/direct-ready runtime wrappers and a case-dispatched runtime theorem
   over the proved branches exist; consuming the concrete paired evidence in the
   direct replay proof and active endpoint wiring remain.
@@ -113,8 +114,9 @@ validity checks must be represented in Rocq and the extracted checker.
      name-indexed non-direct ordinary-evidence projections, no-direct
      conversions back to ordinary environment evidence, no-receiver boolean
      bridges to no-direct evidence, no-receiver ordinary-evidence wrappers with
-     local-bounds lifting, component-local-bounds provider packaging, and
-     component-provider lookup case/projection facts,
+     local-bounds lifting, no-receiver shadow-summary route-provider packaging,
+     component-local-bounds provider packaging, and component-provider lookup
+     case/projection facts,
      separate no-receiver/direct-ready runtime wrappers,
      and a case-dispatched runtime theorem are proved; the next step is proving
      or avoiding local-bounds stability for direct-receiver narrow summaries so
@@ -168,8 +170,9 @@ validity checks must be represented in Rocq and the extracted checker.
   name-indexed evidence-at wrappers, name-indexed non-direct ordinary-evidence
   projections, no-direct conversions back to ordinary environment evidence,
   no-receiver boolean bridges to no-direct evidence, no-receiver
-  ordinary-evidence wrappers with local-bounds lifting, component-local-bounds
-  provider packaging, and component-provider lookup case/projection facts. The
+  ordinary-evidence wrappers with local-bounds lifting, no-receiver
+  shadow-summary route-provider packaging, component-local-bounds provider
+  packaging, and component-provider lookup case/projection facts. The
   remaining replay gap is
   direct-receiver narrow-summary stability under local bounds, or an equivalent
   replay theorem that consumes the direct summary without reconstructing generic

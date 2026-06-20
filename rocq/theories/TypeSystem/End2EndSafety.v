@@ -769,6 +769,20 @@ Proof.
     exact Hpreservation.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_root_shadow_summary_evidence_when_no_receiver :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    env_fns_root_shadow_summary_evidence env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_split_provenance_summary_and_preservation_ready_when_no_receiver
+    env env' Hprog Hno_receiver) as [Hprovenance Hpreservation].
+  eapply env_fns_root_shadow_summary_evidence_of_provenance_and_preservation;
+    eassumption.
+Qed.
+
 Definition direct_receiver_method_narrow_summary_local_bounds_stable
     (env : global_env) : Prop :=
   forall bounds fdef,
@@ -15365,6 +15379,21 @@ Proof.
   eapply Hbridge.
   eapply env_fns_root_shadow_summary_evidence_global_env_with_local_bounds_for_route.
   exact Hsummary.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_shadow_summary_route_provider_when_no_receiver :
+  shadow_summary_local_bounds_family_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_shadow_summary_route_provider_in_env env'.
+Proof.
+  intros Hbridge env env' Hprog Hno_receiver.
+  eapply component_body_local_bounds_shadow_summary_route_provider_of_env_summary.
+  - exact Hbridge.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_root_shadow_summary_evidence_when_no_receiver;
+      eassumption.
 Qed.
 
 Lemma check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks :

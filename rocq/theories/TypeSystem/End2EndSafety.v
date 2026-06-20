@@ -20312,6 +20312,33 @@ Proof.
   split; assumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_runtime_facts_when_direct_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    env_fns_root_shadow_provenance_summary_evidence env' /\
+    env_fns_preservation_ready env' /\
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' = true /\
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true.
+Proof.
+  intros env env' _Hprog Hdirect_ready.
+  destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
+    as (Hprov_check & Hpres_check & Hdirect_check & Hcomponent_check).
+  split.
+  - eapply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
+    eapply check_env_root_shadow_provenance_summary_ready.
+    exact Hprov_check.
+  - split.
+    + eapply check_env_preservation_ready_sound.
+      exact Hpres_check.
+    + split.
+      * exact Hdirect_check.
+      * exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_provider_bundle_when_direct_ready :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =
@@ -20354,8 +20381,9 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hdirect_ready Hinitial Hin Hstore Heval.
-  destruct (check_env_end2end_direct_receiver_ready_facts env' Hdirect_ready)
-    as (Hprov_check & Hpres_check & Hdirect_check & Hcomponent_check).
+  destruct (infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_runtime_facts_when_direct_ready
+    env env' Hprog Hdirect_ready) as
+    (Hprovenance & Hpreservation & Hdirect_check & Hcomponent_check).
   eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -20367,11 +20395,8 @@ Proof.
   - exact Hparam_ready.
   - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
     exact Hprog.
-  - eapply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
-    eapply check_env_root_shadow_provenance_summary_ready.
-    exact Hprov_check.
-  - eapply check_env_preservation_ready_sound.
-    exact Hpres_check.
+  - exact Hprovenance.
+  - exact Hpreservation.
   - exact Hdirect_check.
   - exact Hcomponent_check.
   - exact Hinitial.

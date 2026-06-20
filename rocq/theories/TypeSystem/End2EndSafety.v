@@ -16002,6 +16002,28 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_active_ready_body_or_narrow_provider_bundle_in_nested_local_bounds_family_of_combined_bridge_local_certificate :
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge ->
+  forall env env' base env0,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env0 /\
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env0 /\
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env0 /\
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env0.
+Proof.
+  intros Hbridge env env' base env0 Hprog Hbase Hfamily Hno_receiver.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_in_nested_local_bounds_family_of_combined_bridge_local_certificate;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :
   mixed_ready_body_or_narrow_summary_provider_route_bridge ->
   forall env env',

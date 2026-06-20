@@ -36,8 +36,8 @@ validity checks must be represented in Rocq and the extracted checker.
   providers. Endpoint and public wrappers expose the ready-body route path; the
   active local certificate packages summary, alpha-callback, route, and value
   providers through the combined bridge, including nested local-bounds-family
-  extensions. Its scoped evidence-at form is also stable through nested local
-  bounds.
+  extensions and an active branch-local argument order. Its scoped evidence-at
+  form is also stable through nested local bounds.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, all-target synthetic summary evidence, or a ready-body
   route provider. The remaining gap is proving the ready-body route from the
@@ -81,8 +81,8 @@ validity checks must be represented in Rocq and the extracted checker.
   route/value path is available, including public ready-body-route wrappers,
   combined summary/exact-body wrappers, and an active-certificate provider
   bundle through the combined bridge plus nested local-bounds stability for the
-  active summary, alpha-callback, mixed route, mixed value, and scoped
-  evidence-at forms.
+  active summary, alpha-callback, mixed route, mixed value, scoped evidence-at,
+  and active branch-local provider-package forms.
   The public theorem still lacks a proof that this certificate yields the needed
   recursive ready-body route. That route must consume synthetic, ordinary-shadow,
   and narrow branches directly, including nested narrow calls.

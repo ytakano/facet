@@ -72,9 +72,9 @@ validity checks must be represented in Rocq and the extracted checker.
   diagnostic-only split endpoint now composes the direct-receiver base checker
   with this split gate and also accepts the blocked fixture, without changing
   the authoritative CLI endpoint. `End2EndSafety` proves this endpoint's base
-  result, split-gate result, checker-soundness facts, combined-check bridge, and
-  no-receiver bridge to the base-mixed endpoint; the direct-receiver runtime
-  branch and active endpoint wiring remain.
+  result, split-gate result, checker-soundness facts, endpoint uniqueness facts,
+  combined-check bridge, and no-receiver bridge to the base-mixed endpoint; the
+  direct-receiver runtime branch and active endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -92,7 +92,7 @@ validity checks must be represented in Rocq and the extracted checker.
    - Prove runtime soundness for the proposed gate
      `check_env_end2end_direct_receiver_split_ready` as used by diagnostic
      endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: basic
-     endpoint soundness and executable bridge facts are proved, and the
+     endpoint soundness, uniqueness, and executable bridge facts are proved, and the
      no-receiver branch now delegates to the old shadow-check route;
      direct-receiver-summary functions still need to use the existing receiver
      replay theorem without requiring whole-environment generic
@@ -140,7 +140,7 @@ validity checks must be represented in Rocq and the extracted checker.
   branch is not yet proved or used by the active endpoint; no handwritten OCaml
   fallback logic is allowed. The diagnostic split endpoint demonstrates the
   candidate gate over the direct-receiver base environment only, with checker
-  soundness inherited from the base endpoint and no-receiver executable routing
+  soundness and uniqueness inherited from the base endpoint and no-receiver executable routing
   bridged to base-mixed; it is not yet the active checker authority or
   runtime-safety endpoint.
 

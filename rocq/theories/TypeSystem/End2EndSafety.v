@@ -299,6 +299,26 @@ Proof.
   eapply infer_program_env_end2end_assoc_direct_receiver_base_sound; eauto.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_base_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_base env = infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err]
+    eqn:Helab; try discriminate.
+  destruct (infer_fns_env_end2end_assoc_direct_receiver_base
+              env_elab (env_fns env_elab)) as [[] | err]
+    eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  apply andb_true_iff in Hunique_global as [Hunique_top _].
+  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =
@@ -313,6 +333,18 @@ Proof.
     eqn:Hsplit; try discriminate.
   injection Hprog as <-.
   reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  eapply infer_program_env_end2end_assoc_direct_receiver_base_unique_by_name.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_base.
+  exact Hprog.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_ready_check :

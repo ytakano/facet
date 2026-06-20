@@ -20359,6 +20359,32 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_end2end_direct_receiver_ready env' = true ->
+    ((forall f_component,
+       In f_component (env_fns env') ->
+       check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+         env' f_component = true) /\
+     check_env_root_shadow_provenance_summary env' = true /\
+     check_env_preservation_ready env' = true) /\
+    env_fns_root_shadow_provenance_summary_evidence env' /\
+    env_fns_preservation_ready env' /\
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' = true /\
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' = true.
+Proof.
+  intros env env' Hprog Hdirect_ready.
+  split.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_provider_bundle_when_direct_ready;
+      eassumption.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_runtime_facts_when_direct_ready;
+      eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_direct_ready :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

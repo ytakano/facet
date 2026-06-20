@@ -419,6 +419,52 @@ Proof.
   exact Hlocal.
 Qed.
 
+Definition env_fns_root_shadow_provenance_summary_or_direct_receiver_method_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_provenance_summary env fdef \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef.
+
+Definition env_fns_preservation_ready_or_direct_receiver_method
+    (env : global_env) : Prop :=
+  forall fdef,
+    In fdef (env_fns env) ->
+    preservation_ready_expr (fn_body fdef) \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef.
+
+Lemma check_env_root_shadow_provenance_summary_or_direct_receiver_method_ready :
+  forall env,
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env = true ->
+    env_fns_root_shadow_provenance_summary_or_direct_receiver_method_evidence
+      env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  destruct (check_env_root_shadow_provenance_summary_or_direct_receiver_method_cases
+    env fdef Hcheck Hin) as [Hprov | Hdirect].
+  - left. apply check_fn_root_shadow_provenance_summary_sound. exact Hprov.
+  - right. apply check_fn_root_shadow_direct_receiver_method_store_safe_summary_sound.
+    exact Hdirect.
+Qed.
+
+Lemma check_env_preservation_ready_or_direct_receiver_method_sound :
+  forall env,
+    check_env_preservation_ready_or_direct_receiver_method env = true ->
+    env_fns_preservation_ready_or_direct_receiver_method env.
+Proof.
+  intros env Hcheck fdef Hin.
+  destruct (check_env_preservation_ready_or_direct_receiver_method_cases
+    env fdef Hcheck Hin) as [Hpreservation | Hdirect].
+  - left. apply preservation_ready_expr_b_sound. exact Hpreservation.
+  - right. apply check_fn_root_shadow_direct_receiver_method_store_safe_summary_sound.
+    exact Hdirect.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_or_direct_receiver_method_check :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =
@@ -450,6 +496,31 @@ Proof.
     (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts
       env' Hlocal) as [_Hprovider [_Hprovenance Hpreservation]].
   exact Hpreservation.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_or_direct_receiver_method_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    env_fns_root_shadow_provenance_summary_or_direct_receiver_method_evidence
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply check_env_root_shadow_provenance_summary_or_direct_receiver_method_ready.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_or_direct_receiver_method_check.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_preservation_or_direct_receiver_method_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    env_fns_preservation_ready_or_direct_receiver_method env'.
+Proof.
+  intros env env' Hprog.
+  eapply check_env_preservation_ready_or_direct_receiver_method_sound.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_preservation_or_direct_receiver_method_check.
+  exact Hprog.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :

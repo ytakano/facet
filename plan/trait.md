@@ -80,10 +80,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The required public runtime theorem is not yet retargeted. The active endpoint
   route/value path is available, including public ready-body-route wrappers,
   combined summary/exact-body wrappers, and an active-certificate provider
-  bundle through the combined bridge and nested local-bounds stability for the active summary provider and evidence-at
-  form, but the public theorem still lacks a proof that this certificate yields
-  the needed recursive ready-body route. That route must consume synthetic, ordinary-shadow, and
-  narrow branches directly, including nested narrow calls.
+  bundle through the combined bridge plus nested local-bounds stability for the
+  active summary provider, scoped evidence-at form, and mixed route provider.
+  The public theorem still lacks a proof that this certificate yields the needed
+  recursive ready-body route. That route must consume synthetic, ordinary-shadow,
+  and narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

@@ -38,10 +38,11 @@ validity checks must be represented in Rocq and the extracted checker.
   providers through the combined bridge, including nested local-bounds-family
   extensions and an active branch-local argument order. It also has reusable
   local-certificate route bundles from global synthetic-branch routes,
-  all-target synthetic summary evidence, separate synthetic/ordinary-shadow
-  routes, and component mixed-route providers; the synthetic-branch, all-target
-  synthetic summary, and component mixed-route endpoints now flow through the
-  ready-body route path. Scoped evidence-at remains stable through nested local
+  exact-body route packages, all-target synthetic summary evidence, separate
+  synthetic/ordinary-shadow routes, and component mixed-route providers; the
+  synthetic-branch, exact-body, all-target synthetic summary, and component
+  mixed-route endpoints now flow through the ready-body route path. Scoped
+  evidence-at remains stable through nested local
   bounds, and non-height synthetic evidence-at routes are bridged to heighted
   local-bounds routes. The combined bridge is packaged directly from
   synthetic-ready plus ordinary-shadow route premises.
@@ -93,8 +94,9 @@ validity checks must be represented in Rocq and the extracted checker.
   route-provider wrappers, combined summary/exact-body wrappers, direct
   combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
   active-certificate bundles for combined-bridge, nested local-bounds,
-  branch-local, synthetic-branch, all-target synthetic-summary, component
-  mixed-route, and per-component synthetic-plus-shadow route-provider forms. The
+  branch-local, synthetic-branch, exact-body, all-target synthetic-summary,
+  component mixed-route, and per-component synthetic-plus-shadow route-provider
+  forms. The
   public theorem still lacks a
   proof that the active certificate itself yields
   the needed recursive ready-body route. That route must consume synthetic,

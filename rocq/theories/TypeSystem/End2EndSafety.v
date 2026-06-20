@@ -20567,6 +20567,58 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_branch_bundles_diagnostic :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false /\
+     component_body_local_bounds_ready_body_route_provider_in_env env') \/
+    direct_receiver_split_direct_ready_branch_bundle_in_env env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v Hprog
+    Hcase Hinitial Hin Hstore Heval.
+  destruct Hcase as [[Hno_receiver Hroute_provider] | Hdirect_bundle].
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_no_receiver_ready_body_route_provider_diagnostic.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hprog.
+    + exact Hno_receiver.
+    + exact Hroute_provider.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_direct_ready_branch_bundle.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hparam_ready.
+    + exact Hprog.
+    + exact Hdirect_bundle.
+    + exact Hinitial.
+    + exact Hin.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_ready_case_and_no_receiver_ready_body_route_provider_diagnostic :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -20592,32 +20644,27 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v Hprog
     Hcase Hroute_provider_when_no_receiver Hinitial Hin Hstore Heval.
-  destruct Hcase as [Hno_receiver | Hdirect_ready].
-  - eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_no_receiver_ready_body_route_provider_diagnostic.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hprog.
-    + exact Hno_receiver.
-    + exact (Hroute_provider_when_no_receiver Hno_receiver).
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
-  - eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_direct_ready.
-    + exact Hsynthetic_route.
-    + exact Hscope_synthetic.
-    + exact Htyping_ready.
-    + exact Hroots_ready.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hframe_ready.
-    + exact Hparam_ready.
-    + exact Hprog.
-    + exact Hdirect_ready.
-    + exact Hinitial.
-    + exact Hin.
-    + exact Hstore.
-    + exact Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_branch_bundles_diagnostic.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - destruct Hcase as [Hno_receiver | Hdirect_ready].
+    + left. split.
+      * exact Hno_receiver.
+      * exact (Hroute_provider_when_no_receiver Hno_receiver).
+    + right.
+      eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready;
+        eassumption.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_ready_case_diagnostic :

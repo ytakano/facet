@@ -680,6 +680,30 @@ Proof.
     exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_for_in_local_bounds_not_direct :
+  forall env env' bounds fdef,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    In fdef (env_fns (global_env_with_local_bounds env' bounds)) ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        (global_env_with_local_bounds env' bounds) fdef ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env' bounds) fdef /\
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env env' bounds fdef Hprog Hdirect_stable Hin Hnot_direct.
+  eapply env_fns_root_shadow_provenance_preservation_of_paired_for_in_not_direct.
+  - eapply fn_env_unique_by_name_global_env_with_local_bounds.
+    eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hin.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
+    + exact Hprog.
+    + exact Hdirect_stable.
+  - exact Hnot_direct.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

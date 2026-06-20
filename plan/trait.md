@@ -77,8 +77,8 @@ validity checks must be represented in Rocq and the extracted checker.
   exposed split provenance/preservation certificates, Prop-level runtime
   evidence packages, a paired per-callee split evidence package,
   replay-friendly in-environment consumer facts for concrete callees,
-  non-direct callee projections back to ordinary provenance/preservation, and a
-  conditional local-bounds bridge for paired evidence. Diagnostic
+  non-direct callee projections back to ordinary provenance/preservation, and
+  conditional local-bounds bridges/projections for paired evidence. Diagnostic
   no-receiver/direct-ready runtime wrappers and a case-dispatched runtime theorem
   over the proved branches exist; consuming the concrete paired evidence in the
   direct replay proof and active endpoint wiring remain.
@@ -102,8 +102,8 @@ validity checks must be represented in Rocq and the extracted checker.
      endpoint soundness, uniqueness, executable bridge facts, split
      provenance/preservation certificate facts, Prop-level and paired per-callee
      evidence packages, concrete callee consumer facts, non-direct callee
-     ordinary-evidence projections, a conditional local-bounds bridge, separate
-     no-receiver/direct-ready runtime wrappers,
+     ordinary-evidence projections, conditional local-bounds bridges/projections,
+     separate no-receiver/direct-ready runtime wrappers,
      and a case-dispatched runtime theorem are proved; the next step is proving
      or avoiding local-bounds stability for direct-receiver narrow summaries so
      split evidence can feed replay without whole-environment generic
@@ -151,8 +151,8 @@ validity checks must be represented in Rocq and the extracted checker.
   branch is now proved under the explicit direct-ready gate. A case-dispatched
   split theorem exists, and split provenance/preservation certificates now have
   Prop-level and paired per-callee evidence packages, concrete callee consumer
-  facts, non-direct callee ordinary-evidence projections, and a conditional
-  local-bounds bridge. The remaining replay gap is
+  facts, non-direct callee ordinary-evidence projections, and conditional
+  local-bounds bridges/projections. The remaining replay gap is
   direct-receiver narrow-summary stability under local bounds, or an equivalent
   replay theorem that consumes the direct summary without reconstructing generic
   provenance/preservation for the local-bounds environment. Until that is

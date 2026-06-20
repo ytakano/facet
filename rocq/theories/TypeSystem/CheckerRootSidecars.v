@@ -2843,6 +2843,26 @@ Proof.
   reflexivity.
 Qed.
 
+Definition check_env_end2end_direct_receiver_split_ready
+    (env : global_env) : bool :=
+  check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    env &&
+  check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+    env.
+
+Lemma check_env_end2end_direct_receiver_split_ready_facts :
+  forall env,
+    check_env_end2end_direct_receiver_split_ready env = true ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env = true /\
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
+  apply andb_true_iff in Hcheck. exact Hcheck.
+Qed.
+
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=
   check_env_root_shadow_direct_receiver_method_present env ||

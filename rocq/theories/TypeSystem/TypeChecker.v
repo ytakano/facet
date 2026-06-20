@@ -76,6 +76,7 @@ Extraction "../fixtures/TypeChecker.ml"
   infer_program_env_end2end_assoc_strict_exact_closure
   check_program_env_end2end_assoc_strict_exact_closure
   check_env_end2end_direct_receiver_ready
+  check_env_end2end_direct_receiver_split_ready
   check_fn_root_shadow_direct_receiver_method_present
   check_env_root_shadow_direct_receiver_method_present
   check_env_end2end_direct_receiver_mixed_ready

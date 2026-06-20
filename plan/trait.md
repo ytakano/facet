@@ -67,8 +67,9 @@ validity checks must be represented in Rocq and the extracted checker.
   now exposes a diagnostic runtime wrapper that uses this reduction for the
   no-receiver branch. The split certificate is extracted and diagnostics show
   the blocked direct-call receiver fixture passes it while the authoritative
-  checker still rejects; the direct-receiver runtime branch and endpoint wiring
-  remain.
+  checker still rejects. The proposed direct-receiver split end-to-end gate is
+  named in Rocq, extracted, and also passes that fixture diagnostically; the
+  direct-receiver runtime branch and endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -83,13 +84,11 @@ validity checks must be represented in Rocq and the extracted checker.
      narrow callees use the proved narrow package.
 
 2. Finish direct-call receiver activation.
-   - Prove the direct-receiver branch of runtime soundness for the split
-     certificate
-     `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits`:
-     the no-receiver branch now delegates to the old shadow-check route; direct-
-     receiver-summary functions still need to use the existing receiver replay
-     theorem without requiring whole-environment generic provenance/preservation
-     readiness.
+   - Prove runtime soundness for the proposed gate
+     `check_env_end2end_direct_receiver_split_ready`: the no-receiver branch now
+     delegates to the old shadow-check route; direct-receiver-summary functions
+     still need to use the existing receiver replay theorem without requiring
+     whole-environment generic provenance/preservation readiness.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
    - Wire the split certificate into the active endpoint only after the theorem
@@ -127,10 +126,11 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct-receiver summary, direct-component, component-ready-body, and
   no-receiver mixed summary gates pass, while generic provenance/preservation
   readiness still fails for the raw receiver-call body and the strict ordinary
-  component summary remains false. The extracted split certificate passes this
-  fixture and preserves the old no-receiver theorem path up to an `End2EndSafety`
-  wrapper, but the direct-receiver runtime branch is not yet proved or used by
-  the active endpoint; no handwritten OCaml fallback logic is allowed.
+  component summary remains false. The extracted split certificate and proposed
+  split end-to-end gate both pass this fixture and preserve the old no-receiver
+  theorem path up to an `End2EndSafety` wrapper, but the direct-receiver runtime
+  branch is not yet proved or used by the active endpoint; no handwritten OCaml
+  fallback logic is allowed.
 
 ## Key Decisions
 

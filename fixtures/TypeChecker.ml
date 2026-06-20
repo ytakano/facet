@@ -17113,6 +17113,15 @@ let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
       (check_env_root_shadow_provenance_summary_or_direct_receiver_method env))
     (check_env_preservation_ready_or_direct_receiver_method env)
 
+(** val check_env_end2end_direct_receiver_split_ready : global_env -> bool **)
+
+let check_env_end2end_direct_receiver_split_ready env =
+  (&&)
+    (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env)
+    (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env)
+
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
     global_env -> bool **)
 

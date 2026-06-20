@@ -1692,6 +1692,8 @@ val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
 val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits :
   global_env -> bool
 
+val check_env_end2end_direct_receiver_split_ready : global_env -> bool
+
 val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
   global_env -> bool
 

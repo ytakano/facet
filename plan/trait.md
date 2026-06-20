@@ -37,11 +37,13 @@ validity checks must be represented in Rocq and the extracted checker.
   active local certificate packages summary, alpha-callback, route, and value
   providers through the combined bridge, including nested local-bounds-family
   extensions and an active branch-local argument order. It also has reusable
-  local-certificate route bundles from global synthetic-branch routes, separate
-  synthetic/ordinary-shadow routes, and component mixed-route providers; the
-  synthetic-branch and component mixed-route endpoints now flow through the
+  local-certificate route bundles from global synthetic-branch routes,
+  all-target synthetic summary evidence, separate synthetic/ordinary-shadow
+  routes, and component mixed-route providers; the synthetic-branch, all-target
+  synthetic summary, and component mixed-route endpoints now flow through the
   ready-body route path. Scoped evidence-at remains stable through nested local
-  bounds. The combined bridge is packaged directly from
+  bounds, and non-height synthetic evidence-at routes are bridged to heighted
+  local-bounds routes. The combined bridge is packaged directly from
   synthetic-ready plus ordinary-shadow route premises.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, a synthetic-branch route, synthetic evidence-at routes,
@@ -91,8 +93,9 @@ validity checks must be represented in Rocq and the extracted checker.
   route-provider wrappers, combined summary/exact-body wrappers, direct
   combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
   active-certificate bundles for combined-bridge, nested local-bounds,
-  branch-local, synthetic-branch, component mixed-route, and per-component
-  synthetic-plus-shadow route-provider forms. The public theorem still lacks a
+  branch-local, synthetic-branch, all-target synthetic-summary, component
+  mixed-route, and per-component synthetic-plus-shadow route-provider forms. The
+  public theorem still lacks a
   proof that the active certificate itself yields
   the needed recursive ready-body route. That route must consume synthetic,
   ordinary-shadow, and narrow branches directly, including nested narrow calls.

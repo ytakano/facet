@@ -13296,6 +13296,28 @@ Proof.
   - exact Hmixed_at.
 Qed.
 
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_evidence_at :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros Hroute env s fname args s' v _n_call Heval _Hheight Omega n R
+    Sigma T Sigma' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Htyped Hunique Hsummary Hevidence.
+  eapply Hroute; eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_evidence_at :
+  forall base,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+Proof.
+  intros base Hroute.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_statement.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_evidence_at.
+  exact Hroute.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_body_call_value_callback_height_statement_in_local_bounds_family_of_route_family :
   forall base,
     eval_preserves_typing_roots_store_safe_mixed_ready_body_or_narrow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
@@ -16129,6 +16151,47 @@ Proof.
     + intros f_component _Hin_component _Hcomponent_check.
       eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_statement.
       exact Hsynthetic_route.
+    + intros f_component _Hin_component _Hcomponent_check.
+      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
+      * exact Hroots_ready.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * exact Hframe_ready.
+      * exact eval_preserves_typing_roots_ready_prefix_mutual.
+      * exact Hparam_ready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_synthetic_shadow_summary_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      env fname) ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env' /\
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hsynthetic_route Hroots_ready Hroot_names Hroot_keys Hframe_ready
+    Hparam_ready Hsummary_at_all env env' Hprog Hno_receiver.
+  split.
+  - destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+      env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
+    exact Hprovider.
+  - eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
+    + eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
+        eassumption.
+    + intros f_component _Hin_component _Hcomponent_check.
+      eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_evidence_at.
+      eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_prefix_statement_and_shadow_summary_at_all;
+        eassumption.
     + intros f_component _Hin_component _Hcomponent_check.
       eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_provenance_ready_with_callee_summary.
       * exact Hroots_ready.
@@ -21196,8 +21259,9 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_wit
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_at_all.
-  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_summary_route_bridge.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_at_all env env'
+    f s s' v Hprog Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -21206,19 +21270,17 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_prefix_statement_and_synthetic_shadow_summary_at_all.
-    + exact Hsynthetic_route.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact Hsummary_at_all.
-    + intros env0.
-      eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
-      * exact Hroots_ready.
-      * exact Hroot_names.
-      * exact Hroot_keys.
-      * exact Hframe_ready.
-      * exact eval_preserves_typing_roots_ready_prefix_mutual.
-      * exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver.
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_synthetic_shadow_summary_at_all
+      Hsynthetic_route Hroots_ready Hroot_names Hroot_keys Hframe_ready
+      Hparam_ready Hsummary_at_all env env' Hprog Hno_receiver)
+      as [_Hprovider Hroute_provider].
+    exact Hroute_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_shadow_summary_at_all :

@@ -509,6 +509,25 @@ let () =
       (check_env_root_shadow_provenance_summary checked_env);
     print_gate "trait-preservation-ready"
       (check_env_preservation_ready checked_env);
+    print_gate "trait-direct-receiver-ready"
+      (check_env_end2end_direct_receiver_ready checked_env);
+    List.iter
+      (fun f ->
+        if check_fn_root_shadow_direct_receiver_method_present checked_env f then
+          let (fname, _) = f.fn_name in
+          Printf.printf
+            "trait-direct-receiver-method-function: %s: provenance=%s preservation=%s direct-component=%s component=%s\n"
+            fname
+            (if check_env_root_shadow_provenance_summary checked_env then "ok"
+             else "fail")
+            (if check_env_preservation_ready checked_env then "ok" else "fail")
+            (if check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+                  checked_env
+             then "ok" else "fail")
+            (if check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+                  checked_env
+             then "ok" else "fail"))
+      checked_env.env_fns;
     print_gate "trait-component-body-summary"
       (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
          checked_env);

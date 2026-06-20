@@ -56,8 +56,9 @@ validity checks must be represented in Rocq and the extracted checker.
   the exact remaining mismatch: the mixed-route bridge needs a store-safe
   synthetic summary route for synthetic branches, but the required public theorem
   only assumes the weaker synthetic prefix preservation premise. Diagnostic mode
-  can now report trait gates for active-endpoint rejections by inspecting the
-  extracted direct-receiver base endpoint without changing checker authority.
+  reports trait gates for active-endpoint rejections, including method-present
+  functions and direct-receiver sub-gates, by inspecting extracted diagnostic
+  endpoints without changing checker authority.
 
 ## Remaining Tasks
 
@@ -74,10 +75,11 @@ validity checks must be represented in Rocq and the extracted checker.
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
-   - Use `--diagnose-trait-gates` on rejected safety-gate cases to distinguish
-     direct-receiver preservation/provenance failures from component summary
-     failures. Add positive direct-call receiver UFCS tests only after the
-     verified active endpoint accepts them through Rocq, extraction, and the CLI.
+   - Close the direct-receiver-ready failures for method-present functions. The
+     explicit function-call receiver currently reaches the direct-receiver base
+     endpoint, but `main` still fails provenance, preservation, and component
+     summary sub-gates. Add positive direct-call receiver UFCS tests only after
+     Rocq, extraction, and the CLI accept them without fallback logic.
 
 3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
@@ -106,10 +108,11 @@ validity checks must be represented in Rocq and the extracted checker.
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.
 - Direct-call receiver safety-gate tests remain invalid. Diagnostics for the
-  explicit function-call receiver case show the direct-receiver marker is present
-  and component/no-receiver summary gates pass, while provenance and preservation
-  gates still fail; activation must close those Rocq obligations without
-  handwritten OCaml fallback logic.
+  explicit function-call receiver case show `main` is the method-present function:
+  direct-component and no-receiver summary gates pass, while provenance,
+  preservation, and the direct-receiver component summary gate still fail.
+  Activation must close those Rocq obligations without handwritten OCaml fallback
+  logic.
 
 ## Key Decisions
 

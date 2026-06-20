@@ -557,6 +557,8 @@ else
     "trait-diagnostic-direct-receiver-base: ok" \
     "trait-direct-receiver-method-present: ok" \
     "trait-preservation-ready: fail" \
+    "trait-direct-receiver-ready: fail" \
+    "trait-direct-receiver-method-function: main: provenance=fail preservation=fail direct-component=ok component=fail" \
     "trait-component-ready-body-summary: ok" \
     "trait-no-receiver-ready-body-or-local-narrow-summary: ok"
   do

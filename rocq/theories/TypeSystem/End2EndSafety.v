@@ -462,6 +462,26 @@ Proof.
   - right. exact Hdirect.
 Qed.
 
+Definition fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at
+    (env : global_env) (fname : ident) : Prop :=
+  forall fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    (callee_body_root_shadow_provenance_summary env fdef /\
+     preservation_ready_expr (fn_body fdef)) \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef.
+
+Lemma fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at_of_env :
+  forall env fname,
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env ->
+    fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at
+      env fname.
+Proof.
+  intros env fname Hevidence fdef Hlookup.
+  exact (Hevidence fname fdef Hlookup).
+Qed.
+
 Lemma check_env_root_shadow_provenance_summary_or_direct_receiver_method_ready :
   forall env,
     check_env_root_shadow_provenance_summary_or_direct_receiver_method
@@ -725,6 +745,21 @@ Proof.
   - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
     + exact Hprog.
     + exact Hdirect_stable.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_at_local_bounds :
+  forall env env' bounds fname,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at
+      (global_env_with_local_bounds env' bounds) fname.
+Proof.
+  intros env env' bounds fname Hprog Hdirect_stable.
+  eapply fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at_of_env.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_global_env_with_local_bounds.
+  - exact Hprog.
+  - exact Hdirect_stable.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :

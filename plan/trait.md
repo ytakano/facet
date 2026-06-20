@@ -71,8 +71,9 @@ validity checks must be represented in Rocq and the extracted checker.
   named in Rocq, extracted, and also passes that fixture diagnostically. A
   diagnostic-only split endpoint now composes the direct-receiver base checker
   with this split gate and also accepts the blocked fixture, without changing
-  the authoritative CLI endpoint; the direct-receiver runtime branch and active
-  endpoint wiring remain.
+  the authoritative CLI endpoint. `End2EndSafety` proves this endpoint's base
+  result, split-gate result, and checker-soundness facts; the direct-receiver
+  runtime branch and active endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -89,8 +90,9 @@ validity checks must be represented in Rocq and the extracted checker.
 2. Finish direct-call receiver activation.
    - Prove runtime soundness for the proposed gate
      `check_env_end2end_direct_receiver_split_ready` as used by diagnostic
-     endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: the
-     no-receiver branch now delegates to the old shadow-check route;
+     endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: basic
+     endpoint soundness facts are proved, and the no-receiver branch now
+     delegates to the old shadow-check route;
      direct-receiver-summary functions still need to use the existing receiver
      replay theorem without requiring whole-environment generic
      provenance/preservation readiness.
@@ -136,8 +138,9 @@ validity checks must be represented in Rocq and the extracted checker.
   theorem path up to an `End2EndSafety` wrapper, but the direct-receiver runtime
   branch is not yet proved or used by the active endpoint; no handwritten OCaml
   fallback logic is allowed. The diagnostic split endpoint demonstrates the
-  candidate gate over the direct-receiver base environment only; it is not yet
-  the active checker authority.
+  candidate gate over the direct-receiver base environment only, with checker
+  soundness inherited from the base endpoint; it is not yet the active checker
+  authority or runtime-safety endpoint.
 
 ## Key Decisions
 

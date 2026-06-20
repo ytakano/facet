@@ -52,10 +52,12 @@ validity checks must be represented in Rocq and the extracted checker.
   ready-body route provider, or separate per-component synthetic and
   ordinary-shadow route providers. Public prefix and non-prefix wrappers expose
   the synthetic-branch, synthetic evidence-at, mixed-ready-or-narrow, ready-body,
-  and synthetic-plus-shadow route-provider paths. The remaining gap is proving a
-  recursive route directly from the active branch-local mixed certificate without
-  requiring recursive synthetic-only evidence for all callees; the stricter
-  ready-body-only route still cannot consume narrow branches by itself.
+  and synthetic-plus-shadow route-provider paths. A direct retarget attempt shows
+  the exact remaining mismatch: the mixed-route bridge needs a store-safe
+  synthetic summary route for synthetic branches, but the required public theorem
+  only assumes the weaker synthetic prefix preservation premise. The remaining
+  gap is deriving that branch route from the active mixed certificate, including
+  nested narrow calls, without adding public premises.
 
 ## Remaining Tasks
 
@@ -64,9 +66,10 @@ validity checks must be represented in Rocq and the extracted checker.
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Keep public premises no stronger than the current preservation packages.
-   - Connect the active per-local certificate to route evidence: synthetic-ready
-     uses the synthetic route, ordinary-shadow uses the ordinary-shadow route,
-     and narrow uses the proved narrow package.
+   - Prove the missing internal branch-route adapter: under the active local
+     certificate, synthetic-ready callees must obtain the store-safe synthetic
+     summary route, ordinary-shadow callees use the ordinary-shadow route, and
+     narrow callees use the proved narrow package.
 
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
@@ -91,19 +94,13 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, including public ready-body-route wrappers,
-  public mixed-ready-or-narrow route-provider wrappers, public synthetic-branch,
-  synthetic-evidence-route, and synthetic-plus-shadow route-provider wrappers,
-  combined summary/exact-body wrappers, direct
-  combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
-  active-certificate bundles for combined-bridge, nested local-bounds,
-  branch-local, synthetic-branch, synthetic-evidence-at, exact-body, all-target
-  synthetic-summary, component mixed-route, and per-component
-  synthetic-plus-shadow route-provider forms. The
-  public theorem still lacks a
-  proof that the active certificate itself yields
-  the needed recursive ready-body route. That route must consume synthetic,
-  ordinary-shadow, and narrow branches directly, including nested narrow calls.
+  route/value path is available through public ready-body, mixed-ready-or-narrow,
+  synthetic-branch, synthetic-evidence, synthetic-plus-shadow, combined bridge,
+  exact-body, and all-target synthetic-summary wrappers. The remaining blocker is
+  internal: the active certificate proves ready-body-or-narrow summary evidence,
+  but the recursive route still needs store-safe synthetic branch routing for
+  synthetic-ready callees, ordinary-shadow routing for shadow callees, and narrow
+  package routing for narrow callees without adding any public premise.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

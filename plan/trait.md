@@ -35,7 +35,8 @@ validity checks must be represented in Rocq and the extracted checker.
   bridge adapters, and ready-body-route bridges to mixed route and value-callback
   providers. Endpoint and public wrappers expose the ready-body route path; the
   active local certificate now packages route/value providers through the
-  combined bridge, and public summary/exact-body wrappers factor through it.
+  combined bridge, endpoint wrappers consume that package, and public
+  summary/exact-body wrappers factor through it.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, all-target synthetic summary evidence, or a ready-body
   route provider. The remaining gap is proving the ready-body route from the

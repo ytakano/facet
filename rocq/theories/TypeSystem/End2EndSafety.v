@@ -19164,14 +19164,12 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
-      env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
-    destruct (Hbridge env' Hprovider) as [Hroute_provider _Hvalue_provider].
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_value_callback_provider_of_combined_bridge_local_certificate
+      Hbridge env env' Hprog Hno_receiver) as [Hroute_provider _].
     exact Hroute_provider.
   - intros Hno_receiver.
-    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
-      env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
-    destruct (Hbridge env' Hprovider) as [_Hroute_provider Hvalue_provider].
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_value_callback_provider_of_combined_bridge_local_certificate
+      Hbridge env env' Hprog Hno_receiver) as [_ Hvalue_provider].
     exact Hvalue_provider.
   - exact Hinitial.
   - exact Hin.

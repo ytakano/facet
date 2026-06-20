@@ -43,11 +43,12 @@ validity checks must be represented in Rocq and the extracted checker.
   route premises.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, a synthetic-branch route, synthetic evidence-at routes,
-  all-target synthetic summary evidence, or a ready-body route provider. Public
-  prefix and non-prefix wrappers expose the synthetic-branch and synthetic
-  evidence-at route paths. The remaining gap is proving the ready-body route
-  from the active branch-local mixed certificate without requiring recursive
-  synthetic-only evidence for all callees.
+  all-target synthetic summary evidence, a ready-body route provider, or separate
+  per-component synthetic and ordinary-shadow route providers. Public prefix and
+  non-prefix wrappers expose the synthetic-branch, synthetic evidence-at,
+  ready-body, and synthetic-plus-shadow route-provider paths. The remaining gap
+  is proving the ready-body route from the active branch-local mixed certificate
+  without requiring recursive synthetic-only evidence for all callees.
 
 ## Remaining Tasks
 
@@ -84,14 +85,14 @@ validity checks must be represented in Rocq and the extracted checker.
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
   route/value path is available, including public ready-body-route wrappers,
-  public synthetic-branch and synthetic-evidence-route wrappers, combined
-  summary/exact-body wrappers, direct combined-bridge packaging from
-  synthetic-ready plus ordinary-shadow routes, and active-certificate bundles for
-  combined-bridge, nested local-bounds, branch-local, and per-component
-  synthetic-plus-shadow route-provider forms. The public theorem still lacks a
-  proof that the active certificate itself yields the needed recursive ready-body
-  route. That route must consume synthetic, ordinary-shadow, and narrow branches
-  directly, including nested narrow calls.
+  public synthetic-branch, synthetic-evidence-route, and synthetic-plus-shadow
+  route-provider wrappers, combined summary/exact-body wrappers, direct
+  combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
+  active-certificate bundles for combined-bridge, nested local-bounds,
+  branch-local, and per-component synthetic-plus-shadow route-provider forms. The
+  public theorem still lacks a proof that the active certificate itself yields
+  the needed recursive ready-body route. That route must consume synthetic,
+  ordinary-shadow, and narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.

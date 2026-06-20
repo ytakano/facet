@@ -20736,6 +20736,89 @@ Proof.
     eassumption.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_synthetic_shadow_route_providers :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall f_component,
+        In f_component (env_fns env') ->
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env' f_component = true ->
+        eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+          (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      component_body_local_bounds_shadow_summary_route_provider_in_env env') ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
+    Hprog Hsynthetic_provider_when_no_receiver
+    Hshadow_provider_when_no_receiver.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_ready_body_route_provider.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hprog.
+  - intros Hno_receiver.
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_mixed_routes
+      Hroot_names Hroot_keys env env' Hprog Hno_receiver
+      (Hsynthetic_provider_when_no_receiver Hno_receiver)
+      (Hshadow_provider_when_no_receiver Hno_receiver))
+      as [_Hprovider Hroute_provider].
+    exact Hroute_provider.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_synthetic_shadow_route_providers :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      forall f_component,
+        In f_component (env_fns env') ->
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env' f_component = true ->
+        eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+          (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    (check_env_root_shadow_direct_receiver_method_present env' = false ->
+      component_body_local_bounds_shadow_summary_route_provider_in_env env') ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_synthetic_shadow_route_providers;
+    eassumption.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix_with_alpha_summary_route_value_callback_bridge :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

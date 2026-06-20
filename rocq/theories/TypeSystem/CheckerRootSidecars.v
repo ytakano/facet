@@ -2601,6 +2601,40 @@ Proof.
     (env_fns env)) Hcheck); exact Hin.
 Qed.
 
+Lemma check_env_root_shadow_provenance_summary_or_direct_receiver_method_cases :
+  forall env fdef,
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env = true ->
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_provenance_summary env fdef = true \/
+    check_fn_root_shadow_direct_receiver_method_store_safe_summary
+      env fdef = true.
+Proof.
+  intros env fdef Hcheck Hin.
+  pose proof
+    (check_env_root_shadow_provenance_summary_or_direct_receiver_method_forall
+      env fdef Hcheck Hin) as Hfn.
+  unfold check_fn_root_shadow_provenance_summary_or_direct_receiver_method
+    in Hfn.
+  apply orb_true_iff in Hfn. exact Hfn.
+Qed.
+
+Lemma check_env_preservation_ready_or_direct_receiver_method_cases :
+  forall env fdef,
+    check_env_preservation_ready_or_direct_receiver_method env = true ->
+    In fdef (env_fns env) ->
+    preservation_ready_expr_b (fn_body fdef) = true \/
+    check_fn_root_shadow_direct_receiver_method_store_safe_summary
+      env fdef = true.
+Proof.
+  intros env fdef Hcheck Hin.
+  pose proof
+    (check_env_preservation_ready_or_direct_receiver_method_forall
+      env fdef Hcheck Hin) as Hfn.
+  unfold check_fn_preservation_ready_or_direct_receiver_method in Hfn.
+  apply orb_true_iff in Hfn. exact Hfn.
+Qed.
+
 Lemma check_fn_root_shadow_direct_receiver_method_present_false_facts :
   forall env fdef,
     check_fn_root_shadow_direct_receiver_method_present env fdef = false ->
@@ -2712,6 +2746,24 @@ Definition check_env_root_shadow_no_receiver_component_ready_body_or_local_narro
     env &&
   check_env_root_shadow_provenance_summary_or_direct_receiver_method env &&
   check_env_preservation_ready_or_direct_receiver_method env.
+
+Lemma check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts :
+  forall env,
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env = true ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env = true /\
+    check_env_root_shadow_provenance_summary_or_direct_receiver_method
+      env = true /\
+    check_env_preservation_ready_or_direct_receiver_method env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+    in Hcheck.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[Hprovider Hprovenance] Hpreservation].
+  repeat split; assumption.
+Qed.
 
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks
     (env : global_env) : bool :=

@@ -826,6 +826,59 @@ Proof.
   - exact Hdirect_stable.
 Qed.
 
+Lemma component_body_local_bounds_provenance_preservation_provider_lookup_not_direct :
+  forall env f_component fname fdef,
+    component_body_local_bounds_provenance_preservation_or_direct_receiver_method_provider_in_env
+      env ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+      Some fdef ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env (fn_bounds f_component)) fdef /\
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env f_component fname fdef Hprovider Hin_component Hcomponent_check
+    Hlookup Hnot_direct.
+  eapply fn_root_shadow_provenance_preservation_of_evidence_at_not_direct.
+  - eapply Hprovider; eassumption.
+  - exact Hlookup.
+  - exact Hnot_direct.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_component_body_local_bounds_provenance_preservation_lookup_not_direct :
+  forall env env' f_component fname fdef,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef ->
+    callee_body_root_shadow_provenance_summary
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fdef /\
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env env' f_component fname fdef Hprog Hdirect_stable Hin_component
+    Hcomponent_check Hlookup Hnot_direct.
+  eapply component_body_local_bounds_provenance_preservation_provider_lookup_not_direct.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_component_body_local_bounds_provenance_preservation_or_direct_receiver_method_provider.
+    + exact Hprog.
+    + exact Hdirect_stable.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+  - exact Hlookup.
+  - exact Hnot_direct.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

@@ -644,6 +644,30 @@ Definition env_fns_no_direct_receiver_method_narrow_summary
     ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
         env fdef.
 
+Lemma env_fns_no_direct_receiver_method_narrow_summary_of_no_receiver_method_present :
+  forall env,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    env_fns_no_direct_receiver_method_narrow_summary env.
+Proof.
+  intros env Hpresent fdef Hin Hsummary.
+  eapply callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary_absurd_of_env_no_receiver_method;
+    eassumption.
+Qed.
+
+Lemma env_fns_no_direct_receiver_method_narrow_summary_global_env_with_local_bounds_of_no_receiver_method_present :
+  forall env bounds,
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    env_fns_no_direct_receiver_method_narrow_summary
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hpresent.
+  eapply env_fns_no_direct_receiver_method_narrow_summary_of_no_receiver_method_present.
+  unfold check_env_root_shadow_direct_receiver_method_present in *.
+  change (env_fns (global_env_with_local_bounds env bounds))
+    with (env_fns env).
+  exact Hpresent.
+Qed.
+
 Lemma env_fns_root_shadow_provenance_summary_and_preservation_ready_of_paired_no_direct :
   forall env,
     fn_env_unique_by_name env ->

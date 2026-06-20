@@ -36,8 +36,8 @@ validity checks must be represented in Rocq and the extracted checker.
   providers. Endpoint and public wrappers expose the ready-body route path; the
   active local certificate now packages route/value providers through the
   combined bridge, endpoint wrappers consume that package, and public
-  summary/exact-body wrappers factor through it. Its ready-body-or-narrow
-  summary provider is stable under one local-bounds-family extension.
+  summary/exact-body wrappers factor through it. Its ready-body-or-narrow summary provider is stable through nested
+  local-bounds-family extensions.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, all-target synthetic summary evidence, or a ready-body
   route provider. The remaining gap is proving the ready-body route from the
@@ -80,9 +80,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - The required public runtime theorem is not yet retargeted. The active endpoint
   route/value path is available, including public ready-body-route wrappers,
   combined summary/exact-body wrappers, and an active-certificate provider
-  bundle through the combined bridge and local-bounds stability for the active
-  summary provider, but the public theorem still lacks a proof that the active
-  branch-local mixed certificate yields the needed recursive ready-body route. That route must consume synthetic, ordinary-shadow, and
+  bundle through the combined bridge and nested local-bounds stability for the active summary provider, but the public
+  theorem still lacks a proof that this certificate yields the needed recursive
+  ready-body route. That route must consume synthetic, ordinary-shadow, and
   narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active

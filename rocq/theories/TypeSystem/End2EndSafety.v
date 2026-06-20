@@ -14148,6 +14148,20 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_in_local_bounds_family :
+  forall env env0,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    global_env_local_bounds_family env env0 ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env0.
+Proof.
+  intros env env0 Hprovider Hfamily.
+  destruct Hfamily as [bounds ->].
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_global_env_with_local_bounds.
+  exact Hprovider.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at :
   forall env,
     component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
@@ -15845,6 +15859,23 @@ Proof.
   destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
     env env' Hprog Hno_receiver) as [Hprovider _].
   exact Hprovider.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_nested_local_bounds_family_of_local_certificate :
+  forall env env' base env0,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env0.
+Proof.
+  intros env env' base env0 Hprog Hno_receiver Hbase Hfamily.
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_in_local_bounds_family.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_local_bounds_family_of_local_certificate;
+      eassumption.
+  - exact Hfamily.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :

@@ -801,6 +801,31 @@ Proof.
   - exact Hnot_direct.
 Qed.
 
+Definition component_body_local_bounds_provenance_preservation_or_direct_receiver_method_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    forall fname,
+      fn_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_at
+        (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_component_body_local_bounds_provenance_preservation_or_direct_receiver_method_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_narrow_summary_local_bounds_stable env' ->
+    component_body_local_bounds_provenance_preservation_or_direct_receiver_method_provider_in_env
+      env'.
+Proof.
+  intros env env' Hprog Hdirect_stable f_component _Hin_component
+    _Hcomponent_check fname.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence_at_local_bounds.
+  - exact Hprog.
+  - exact Hdirect_stable.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

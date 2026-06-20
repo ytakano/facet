@@ -57,8 +57,9 @@ validity checks must be represented in Rocq and the extracted checker.
   synthetic summary route for synthetic branches, but the required public theorem
   only assumes the weaker synthetic prefix preservation premise. Diagnostic mode
   reports trait gates for active-endpoint rejections, including method-present
-  functions and direct-receiver sub-gates, by inspecting extracted diagnostic
-  endpoints without changing checker authority.
+  functions, direct-receiver sub-gates, and the generic provenance/preservation
+  functions that fail despite direct-receiver summary coverage, by inspecting
+  extracted diagnostic endpoints without changing checker authority.
 
 ## Remaining Tasks
 
@@ -109,10 +110,13 @@ validity checks must be represented in Rocq and the extracted checker.
   endpoint gate without rejecting current valid programs.
 - Direct-call receiver safety-gate tests remain invalid. Diagnostics for the
   explicit function-call receiver case show `main` is the method-present function:
-  direct-component and no-receiver summary gates pass, while provenance,
-  preservation, and the direct-receiver component summary gate still fail.
-  Activation must close those Rocq obligations without handwritten OCaml fallback
-  logic.
+  the direct-receiver summary, direct-component, component-ready-body, and
+  no-receiver mixed summary gates pass, while generic provenance/preservation
+  readiness still fails for the raw receiver-call body and the strict ordinary
+  component summary remains false. Activation should split the safety theorem so
+  direct-receiver-summary functions do not have to masquerade as generic
+  provenance/preservation-ready bodies; no handwritten OCaml fallback logic is
+  allowed.
 
 ## Key Decisions
 

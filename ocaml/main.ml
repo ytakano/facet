@@ -528,6 +528,36 @@ let () =
                   checked_env
              then "ok" else "fail"))
       checked_env.env_fns;
+    List.iter
+      (fun f ->
+        if not (check_fn_root_shadow_provenance_summary checked_env f) then
+          let (fname, _) = f.fn_name in
+          Printf.printf
+            "trait-shadow-provenance-function: %s: direct-receiver-method=%s direct-receiver-summary=%s preservation-expr=%s provenance-expr=%s\n"
+            fname
+            (if check_fn_root_shadow_direct_receiver_method_present checked_env f
+             then "ok" else "fail")
+            (if check_fn_root_shadow_direct_receiver_method_store_safe_summary
+                  checked_env f
+             then "ok" else "fail")
+            (if preservation_ready_expr_b f.fn_body then "ok" else "fail")
+            (if provenance_ready_expr_b f.fn_body then "ok" else "fail"))
+      checked_env.env_fns;
+    List.iter
+      (fun f ->
+        if not (preservation_ready_expr_b f.fn_body) then
+          let (fname, _) = f.fn_name in
+          Printf.printf
+            "trait-preservation-function: %s: direct-receiver-method=%s direct-receiver-summary=%s provenance-summary=%s\n"
+            fname
+            (if check_fn_root_shadow_direct_receiver_method_present checked_env f
+             then "ok" else "fail")
+            (if check_fn_root_shadow_direct_receiver_method_store_safe_summary
+                  checked_env f
+             then "ok" else "fail")
+            (if check_fn_root_shadow_provenance_summary checked_env f then "ok"
+             else "fail"))
+      checked_env.env_fns;
     print_gate "trait-component-body-summary"
       (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
          checked_env);

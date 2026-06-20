@@ -559,6 +559,8 @@ else
     "trait-preservation-ready: fail" \
     "trait-direct-receiver-ready: fail" \
     "trait-direct-receiver-method-function: main: provenance=fail preservation=fail direct-component=ok component=fail" \
+    "trait-shadow-provenance-function: main: direct-receiver-method=ok direct-receiver-summary=ok preservation-expr=fail provenance-expr=fail" \
+    "trait-preservation-function: main: direct-receiver-method=ok direct-receiver-summary=ok provenance-summary=fail" \
     "trait-component-ready-body-summary: ok" \
     "trait-no-receiver-ready-body-or-local-narrow-summary: ok"
   do

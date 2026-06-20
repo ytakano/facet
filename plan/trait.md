@@ -55,9 +55,9 @@ validity checks must be represented in Rocq and the extracted checker.
   and synthetic-plus-shadow route-provider paths. A direct retarget attempt shows
   the exact remaining mismatch: the mixed-route bridge needs a store-safe
   synthetic summary route for synthetic branches, but the required public theorem
-  only assumes the weaker synthetic prefix preservation premise. The remaining
-  gap is deriving that branch route from the active mixed certificate, including
-  nested narrow calls, without adding public premises.
+  only assumes the weaker synthetic prefix preservation premise. Diagnostic mode
+  can now report trait gates for active-endpoint rejections by inspecting the
+  extracted direct-receiver base endpoint without changing checker authority.
 
 ## Remaining Tasks
 
@@ -74,9 +74,10 @@ validity checks must be represented in Rocq and the extracted checker.
 2. Finish direct-call receiver activation.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
-   - Add positive direct-call receiver UFCS tests only after the verified active
-     endpoint accepts them. Keep existing safety-gate tests invalid until Rocq,
-     extraction, and the OCaml CLI agree.
+   - Use `--diagnose-trait-gates` on rejected safety-gate cases to distinguish
+     direct-receiver preservation/provenance failures from component summary
+     failures. Add positive direct-call receiver UFCS tests only after the
+     verified active endpoint accepts them through Rocq, extraction, and the CLI.
 
 3. Extend receiver coverage conservatively.
    - Keep receiver-first prefix calls as the canonical surface syntax.
@@ -104,9 +105,11 @@ validity checks must be represented in Rocq and the extracted checker.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and
   remains useful diagnostically, but it is too restrictive to become the active
   endpoint gate without rejecting current valid programs.
-- Direct-call receiver safety-gate tests must remain invalid until the verified
-  active endpoint accepts those receiver forms through Rocq, extraction, and the
-  OCaml CLI without handwritten fallback logic.
+- Direct-call receiver safety-gate tests remain invalid. Diagnostics for the
+  explicit function-call receiver case show the direct-receiver marker is present
+  and component/no-receiver summary gates pass, while provenance and preservation
+  gates still fail; activation must close those Rocq obligations without
+  handwritten OCaml fallback logic.
 
 ## Key Decisions
 

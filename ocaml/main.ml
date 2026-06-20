@@ -477,19 +477,7 @@ let () =
   in
   let env_for_checker = alpha_normalize_global_env env in
   let diagnostics = diagnostic_map_of_envs env env_for_checker in
-  let checked_env =
-    match infer_program_env_end2end_assoc_direct_receiver_mixed env_for_checker with
-    | Infer_ok env' ->
-      List.iter (fun f ->
-        let (fname, _) = f.fn_name in
-        Printf.printf "OK: %s\n" fname
-      ) env'.env_fns;
-      env'
-    | Infer_err e ->
-      Printf.eprintf "Type error: %s\n" (string_of_infer_error ~diagnostics e);
-      exit 1
-  in
-  if !diagnose_trait_gates then begin
+  let print_trait_gate_diagnostics checked_env =
     let print_gate name ok =
       Printf.printf "%s: %s\n" name (if ok then "ok" else "fail")
     in
@@ -637,7 +625,30 @@ let () =
     print_gate "trait-no-receiver-ready-body-or-local-bounds-narrow-summary"
       (check_env_root_shadow_no_receiver_component_ready_body_or_local_bounds_narrow_summary_provider_check
          checked_env)
-  end;
+  in
+  let diagnose_rejected_trait_gates () =
+    match infer_program_env_end2end_assoc_direct_receiver_base env_for_checker with
+    | Infer_ok env' ->
+      Printf.printf "trait-diagnostic-direct-receiver-base: ok\n";
+      print_trait_gate_diagnostics env'
+    | Infer_err _ ->
+      Printf.printf "trait-diagnostic-direct-receiver-base: fail\n"
+  in
+  let checked_env =
+    match infer_program_env_end2end_assoc_direct_receiver_mixed env_for_checker with
+    | Infer_ok env' ->
+      List.iter (fun f ->
+        let (fname, _) = f.fn_name in
+        Printf.printf "OK: %s\n" fname
+      ) env'.env_fns;
+      env'
+    | Infer_err e ->
+      if !diagnose_trait_gates then diagnose_rejected_trait_gates ();
+      Printf.eprintf "Type error: %s\n" (string_of_infer_error ~diagnostics e);
+      exit 1
+  in
+  if !diagnose_trait_gates then
+    print_trait_gate_diagnostics checked_env;
   Option.iter (fun fname ->
     try Fir.emit_fir fname checked_env
     with Failure msg ->

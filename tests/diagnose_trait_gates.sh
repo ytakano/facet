@@ -545,6 +545,30 @@ if ! diff -u "$expected_full_no_receiver_ready_gates" "$actual_full_no_receiver_
   status=1
 fi
 
+rejected_tmp=$(mktemp)
+if dune exec ocaml/main.exe -- --diagnose-trait-gates \
+    tests/invalid/trait/method_call_explicit_ufcs_fn_receiver_safety_gate.facet \
+    >"$rejected_tmp" 2>&1; then
+  printf "FAIL --diagnose-trait-gates: rejected direct-call receiver diagnostic unexpectedly succeeded\n"
+  cat "$rejected_tmp"
+  status=1
+else
+  for line in \
+    "trait-diagnostic-direct-receiver-base: ok" \
+    "trait-direct-receiver-method-present: ok" \
+    "trait-preservation-ready: fail" \
+    "trait-component-ready-body-summary: ok" \
+    "trait-no-receiver-ready-body-or-local-narrow-summary: ok"
+  do
+    if ! grep -Fx "$line" "$rejected_tmp" >/dev/null; then
+      printf "FAIL --diagnose-trait-gates: rejected direct-call receiver diagnostic missing '%s'\n" "$line"
+      cat "$rejected_tmp"
+      status=1
+    fi
+  done
+fi
+rm -f "$rejected_tmp"
+
 if [ "$total" -ne 100 ] || [ "$ok_count" -ne 96 ] || [ "$fail_count" -ne 4 ]; then
   printf "FAIL --diagnose-trait-gates: expected total=100 ok=96 fail=4, got total=%s ok=%s fail=%s\n" \
     "$total" "$ok_count" "$fail_count"

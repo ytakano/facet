@@ -14129,6 +14129,25 @@ Proof.
   - exact Hshadow_route.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_global_env_with_local_bounds :
+  forall env bounds,
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hprovider f_component fname fdef Hin_component
+    Hcomponent_check Hlookup.
+  change (env_fns (global_env_with_local_bounds env bounds)) with
+    (env_fns env) in Hin_component.
+  rewrite check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds
+    in Hcomponent_check.
+  change (global_env_with_local_bounds
+    (global_env_with_local_bounds env bounds) (fn_bounds f_component)) with
+    (global_env_with_local_bounds env (fn_bounds f_component)) in Hlookup.
+  eapply Hprovider; eassumption.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_evidence_at :
   forall env,
     component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
@@ -15809,6 +15828,23 @@ Proof.
     + exact Hno_receiver.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_alpha_body_callback_provider_of_local_certificate;
       eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_local_bounds_family_of_local_certificate :
+  forall env env' env0,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    global_env_local_bounds_family env' env0 ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env0.
+Proof.
+  intros env env' env0 Hprog Hno_receiver Hfamily.
+  destruct Hfamily as [bounds ->].
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_global_env_with_local_bounds.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+    env env' Hprog Hno_receiver) as [Hprovider _].
+  exact Hprovider.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :

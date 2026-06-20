@@ -435,6 +435,33 @@ Definition env_fns_preservation_ready_or_direct_receiver_method
     callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
       env fdef.
 
+Definition env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    (callee_body_root_shadow_provenance_summary env fdef /\
+     preservation_ready_expr (fn_body fdef)) \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef.
+
+Lemma env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_of_split_parts :
+  forall env,
+    env_fns_root_shadow_provenance_summary_or_direct_receiver_method_evidence
+      env ->
+    env_fns_preservation_ready_or_direct_receiver_method env ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env.
+Proof.
+  intros env Hprovenance Hpreservation fname fdef Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  destruct (Hprovenance fname fdef Hlookup) as [Hprov | Hdirect].
+  - destruct (Hpreservation fdef Hin) as [Hpres | Hdirect].
+    + left. split; assumption.
+    + right. exact Hdirect.
+  - right. exact Hdirect.
+Qed.
+
 Lemma check_env_root_shadow_provenance_summary_or_direct_receiver_method_ready :
   forall env,
     check_env_root_shadow_provenance_summary_or_direct_receiver_method
@@ -521,6 +548,21 @@ Proof.
   eapply check_env_preservation_ready_or_direct_receiver_method_sound.
   eapply infer_program_env_end2end_assoc_direct_receiver_split_preservation_or_direct_receiver_method_check.
   exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_of_split_parts.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_or_direct_receiver_method_evidence.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :

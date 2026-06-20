@@ -74,11 +74,11 @@ validity checks must be represented in Rocq and the extracted checker.
   the authoritative CLI endpoint. `End2EndSafety` proves this endpoint's base
   result, split-gate result, checker-soundness facts, endpoint uniqueness facts,
   combined-check bridge, no-receiver bridge to the base-mixed endpoint,
-  exposed split provenance/preservation certificates and their Prop-level
-  runtime evidence packages, diagnostic no-receiver/direct-ready runtime
-  wrappers, and a case-dispatched runtime theorem over the proved branches;
-  consuming split evidence in the direct replay proof and active endpoint wiring
-  remain.
+  exposed split provenance/preservation certificates, Prop-level runtime
+  evidence packages, and a paired per-callee split evidence package, diagnostic
+  no-receiver/direct-ready runtime wrappers, and a case-dispatched runtime
+  theorem over the proved branches; consuming the paired evidence in the direct
+  replay proof and active endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -97,11 +97,11 @@ validity checks must be represented in Rocq and the extracted checker.
      `check_env_end2end_direct_receiver_split_ready` as used by diagnostic
      endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: basic
      endpoint soundness, uniqueness, executable bridge facts, split
-     provenance/preservation certificate facts and Prop-level evidence packages,
-     separate no-receiver/direct-ready runtime wrappers, and a case-dispatched
-     runtime theorem are proved; the next step is consuming split direct-receiver
-     evidence in replay without requiring whole-environment generic
-     provenance/preservation readiness.
+     provenance/preservation certificate facts, Prop-level and paired per-callee
+     evidence packages, separate no-receiver/direct-ready runtime wrappers, and
+     a case-dispatched runtime theorem are proved; the next step is consuming
+     paired split direct-receiver evidence in replay without requiring
+     whole-environment generic provenance/preservation readiness.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
    - Wire the split certificate into the active endpoint only after the theorem
@@ -144,8 +144,9 @@ validity checks must be represented in Rocq and the extracted checker.
   theorem path through an `End2EndSafety` wrapper, and the direct-ready runtime
   branch is now proved under the explicit direct-ready gate. A case-dispatched
   split theorem exists, and split provenance/preservation certificates now have
-  Prop-level evidence packages, but that evidence is not yet consumed by replay
-  strongly enough to select the direct branch for the blocked fixture or to replace the active
+  Prop-level and paired per-callee evidence packages, but that evidence is not
+  yet consumed by replay strongly enough to select the direct branch for the
+  blocked fixture or to replace the active
   endpoint; no handwritten OCaml
   fallback logic is allowed. The diagnostic split endpoint demonstrates the
   candidate gate over the direct-receiver base environment only, with checker

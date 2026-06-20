@@ -15853,6 +15853,24 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_value_callback_provider_of_combined_bridge_local_certificate :
+  mixed_ready_body_or_narrow_summary_provider_route_value_callback_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env' /\
+    component_body_local_bounds_mixed_ready_body_or_narrow_value_callback_provider_in_env
+      env'.
+Proof.
+  intros Hbridge env env' Hprog Hno_receiver.
+  destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+    env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
+  eapply Hbridge.
+  exact Hprovider.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_value_callback_provider_of_summary_route_bridge_local_certificate :
   mixed_ready_body_or_narrow_summary_provider_route_bridge ->
   forall env env',

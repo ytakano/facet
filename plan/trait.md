@@ -33,8 +33,9 @@ validity checks must be represented in Rocq and the extracted checker.
 - Runtime proof plumbing for the active endpoint now has named mixed route,
   cleanup, value-callback, alpha-callback, provider-bundle, combined route/value
   bridge adapters, and ready-body-route bridges to mixed route and value-callback
-  providers. Endpoint and public wrappers expose the ready-body route path;
-  public summary and exact-body wrappers factor through the combined path.
+  providers. Endpoint and public wrappers expose the ready-body route path; the
+  active local certificate now packages route/value providers through the
+  combined bridge, and public summary/exact-body wrappers factor through it.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, all-target synthetic summary evidence, or a ready-body
   route provider. The remaining gap is proving the ready-body route from the
@@ -75,8 +76,9 @@ validity checks must be represented in Rocq and the extracted checker.
 ## Unresolved Blockers
 
 - The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available, including public ready-body-route and combined
-  summary/exact-body wrappers, but the public theorem still lacks a proof that
+  route/value path is available, including public ready-body-route wrappers,
+  combined summary/exact-body wrappers, and an active-certificate provider
+  bundle through the combined bridge, but the public theorem still lacks a proof that
   the active branch-local mixed certificate yields the needed recursive
   ready-body route. That route must consume synthetic, ordinary-shadow, and
   narrow branches directly, including nested narrow calls.

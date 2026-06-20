@@ -14633,6 +14633,23 @@ Proof.
   eapply Hprovider; eassumption.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_route_provider_of_mixed_route_provider :
+  ready_body_summary_local_bounds_family_mixed_route_bridge ->
+  forall env,
+    component_body_local_bounds_mixed_route_provider_in_env env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env.
+Proof.
+  intros Hbridge env Hmixed_provider.
+  eapply component_body_local_bounds_ready_body_route_provider_of_synthetic_and_shadow_route_providers.
+  - exact Hbridge.
+  - intros f_component Hin_component Hcomponent_check.
+    eapply component_body_local_bounds_mixed_route_provider_synthetic;
+      eassumption.
+  - intros f_component Hin_component Hcomponent_check.
+    eapply component_body_local_bounds_mixed_route_provider_shadow;
+      eassumption.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_callback_provider_of_route_provider :
   forall env,
     component_body_local_bounds_ready_body_route_provider_in_env env ->
@@ -16083,6 +16100,29 @@ Proof.
         eassumption.
     + exact Hsynthetic_provider.
     + exact Hshadow_provider.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_component_mixed_route_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_mixed_route_provider_in_env env' ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env' /\
+    component_body_local_bounds_ready_body_route_provider_in_env env'.
+Proof.
+  intros Hroot_names Hroot_keys env env' Hprog Hno_receiver Hmixed_provider.
+  split.
+  - destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+      env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
+    exact Hprovider.
+  - eapply component_body_local_bounds_ready_body_route_provider_of_mixed_route_provider.
+    + eapply ready_body_summary_local_bounds_family_mixed_route_bridge_of_routes;
+        eassumption.
+    + exact Hmixed_provider.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_and_alpha_callback_provider_of_local_certificate :
@@ -19226,7 +19266,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hmixed_provider_when_no_receiver Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_mixed_route_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_ready_body_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -19237,10 +19277,11 @@ Proof.
   - exact Hparam_ready.
   - exact Hprog.
   - intros Hno_receiver.
-    eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_mixed_route_provider.
-    + exact Hroot_names.
-    + exact Hroot_keys.
-    + exact (Hmixed_provider_when_no_receiver Hno_receiver).
+    destruct (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_route_bundle_of_local_certificate_and_component_mixed_route_provider
+      Hroot_names Hroot_keys env env' Hprog Hno_receiver
+      (Hmixed_provider_when_no_receiver Hno_receiver))
+      as [_Hprovider Hroute_provider].
+    exact Hroute_provider.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

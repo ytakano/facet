@@ -36,11 +36,12 @@ validity checks must be represented in Rocq and the extracted checker.
   providers. Endpoint and public wrappers expose the ready-body route path; the
   active local certificate packages summary, alpha-callback, route, and value
   providers through the combined bridge, including nested local-bounds-family
-  extensions and an active branch-local argument order. It also has a reusable
-  local-certificate route bundle from per-component synthetic and ordinary-shadow
-  routes. Scoped evidence-at remains stable through nested local bounds. The
-  combined bridge is packaged directly from synthetic-ready plus ordinary-shadow
-  route premises.
+  extensions and an active branch-local argument order. It also has reusable
+  local-certificate route bundles from both separate synthetic/ordinary-shadow
+  routes and component mixed-route providers; the component mixed-route endpoint
+  now flows through the ready-body route path. Scoped evidence-at remains stable
+  through nested local bounds. The combined bridge is packaged directly from
+  synthetic-ready plus ordinary-shadow route premises.
 - The active endpoint can currently be proved with either an explicit
   summary-route bridge, a synthetic-branch route, synthetic evidence-at routes,
   all-target synthetic summary evidence, a ready-body route provider, or separate
@@ -89,8 +90,8 @@ validity checks must be represented in Rocq and the extracted checker.
   route-provider wrappers, combined summary/exact-body wrappers, direct
   combined-bridge packaging from synthetic-ready plus ordinary-shadow routes, and
   active-certificate bundles for combined-bridge, nested local-bounds,
-  branch-local, and per-component synthetic-plus-shadow route-provider forms. The
-  public theorem still lacks a proof that the active certificate itself yields
+  branch-local, component mixed-route, and per-component synthetic-plus-shadow
+  route-provider forms. The public theorem still lacks a proof that the active certificate itself yields
   the needed recursive ready-body route. That route must consume synthetic,
   ordinary-shadow, and narrow branches directly, including nested narrow calls.
 - The stricter shadow-check certificate proves extra ordinary-shadow evidence and

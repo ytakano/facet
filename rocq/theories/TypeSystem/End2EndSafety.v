@@ -20407,9 +20407,10 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v
     Hprog Hdirect_ready Hinitial Hin Hstore Heval.
-  destruct (infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_runtime_facts_when_direct_ready
+  destruct (infer_program_env_end2end_assoc_direct_receiver_split_direct_ready_branch_bundle_when_direct_ready
     env env' Hprog Hdirect_ready) as
-    (Hprovenance & Hpreservation & Hdirect_check & Hcomponent_check).
+    (_Hprovider_bundle & Hprovenance & Hpreservation & Hdirect_check &
+      Hcomponent_check).
   eapply check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.

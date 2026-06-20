@@ -63,8 +63,9 @@ validity checks must be represented in Rocq and the extracted checker.
   has a checker-side split certificate for ordinary provenance/preservation
   readiness or direct-receiver-method summary coverage, per-function case lemmas,
   and a no-receiver reduction lemma showing the split certificate recovers the
-  old shadow-check path when no direct receiver method is present. It is not yet
-  wired into the active endpoint theorem.
+  old shadow-check path when no direct receiver method is present. `End2EndSafety`
+  now exposes a diagnostic runtime wrapper that uses this reduction for the
+  no-receiver branch; the direct-receiver branch and endpoint wiring remain.
 
 ## Remaining Tasks
 
@@ -82,10 +83,10 @@ validity checks must be represented in Rocq and the extracted checker.
    - Prove the direct-receiver branch of runtime soundness for the split
      certificate
      `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits`:
-     ordinary no-receiver programs already reduce to the old shadow-check path;
-     direct-receiver-summary functions still need to use the existing receiver
-     replay theorem without requiring whole-environment generic
-     provenance/preservation readiness.
+     the no-receiver branch now delegates to the old shadow-check route; direct-
+     receiver-summary functions still need to use the existing receiver replay
+     theorem without requiring whole-environment generic provenance/preservation
+     readiness.
    - Replace the remaining blanket synthetic-route dependency with per-callee
      mixed evidence from the active endpoint certificate.
    - Wire the split certificate into the active endpoint only after the theorem
@@ -124,9 +125,9 @@ validity checks must be represented in Rocq and the extracted checker.
   no-receiver mixed summary gates pass, while generic provenance/preservation
   readiness still fails for the raw receiver-call body and the strict ordinary
   component summary remains false. The split certificate now preserves the old
-  no-receiver theorem path, but the direct-receiver runtime branch is not yet
-  proved or used by the active endpoint; no handwritten OCaml fallback logic is
-  allowed.
+  no-receiver theorem path up to an `End2EndSafety` wrapper, but the direct-
+  receiver runtime branch is not yet proved or used by the active endpoint; no
+  handwritten OCaml fallback logic is allowed.
 
 ## Key Decisions
 

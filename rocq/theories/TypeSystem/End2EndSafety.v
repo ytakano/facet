@@ -565,6 +565,42 @@ Proof.
     exact Hprog.
 Qed.
 
+Lemma env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_for_in :
+  forall env fdef,
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env ->
+    (callee_body_root_shadow_provenance_summary env fdef /\
+     preservation_ready_expr (fn_body fdef)) \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef.
+Proof.
+  intros env fdef Hunique Hin Hevidence.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name fdef) fdef Hin eq_refl Hunique) as Hlookup.
+  exact (Hevidence (fn_name fdef) fdef Hlookup).
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_for_in :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    In fdef (env_fns env') ->
+    (callee_body_root_shadow_provenance_summary env' fdef /\
+     preservation_ready_expr (fn_body fdef)) \/
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env' fdef.
+Proof.
+  intros env env' fdef Hprog Hin.
+  eapply env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_for_in.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hin.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
   forall env env',
     infer_program_env_end2end_assoc_direct_receiver_split env =

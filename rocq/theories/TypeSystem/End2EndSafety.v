@@ -601,6 +601,44 @@ Proof.
     exact Hprog.
 Qed.
 
+Lemma env_fns_root_shadow_provenance_preservation_of_paired_for_in_not_direct :
+  forall env fdef,
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        env fdef ->
+    callee_body_root_shadow_provenance_summary env fdef /\
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env fdef Hunique Hin Hevidence Hnot_direct.
+  destruct (env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence_for_in
+    env fdef Hunique Hin Hevidence) as [Hordinary | Hdirect].
+  - exact Hordinary.
+  - exfalso. exact (Hnot_direct Hdirect).
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_for_in_not_direct :
+  forall env env' fdef,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    In fdef (env_fns env') ->
+    ~ callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+        env' fdef ->
+    callee_body_root_shadow_provenance_summary env' fdef /\
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env env' fdef Hprog Hin Hnot_direct.
+  eapply env_fns_root_shadow_provenance_preservation_of_paired_for_in_not_direct.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hin.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
+  - exact Hnot_direct.
+Qed.
+
 Definition direct_receiver_method_narrow_summary_local_bounds_stable
     (env : global_env) : Prop :=
   forall bounds fdef,

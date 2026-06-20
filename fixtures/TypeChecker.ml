@@ -17016,6 +17016,35 @@ let check_env_root_shadow_direct_receiver_method_present env =
   existsb (check_fn_root_shadow_direct_receiver_method_present env)
     env.env_fns
 
+(** val check_fn_root_shadow_provenance_summary_or_direct_receiver_method :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_provenance_summary_or_direct_receiver_method env fdef =
+  (||) (check_fn_root_shadow_provenance_summary env fdef)
+    (check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef)
+
+(** val check_env_root_shadow_provenance_summary_or_direct_receiver_method :
+    global_env -> bool **)
+
+let check_env_root_shadow_provenance_summary_or_direct_receiver_method env =
+  forallb
+    (check_fn_root_shadow_provenance_summary_or_direct_receiver_method env)
+    env.env_fns
+
+(** val check_fn_preservation_ready_or_direct_receiver_method :
+    global_env -> fn_def -> bool **)
+
+let check_fn_preservation_ready_or_direct_receiver_method env fdef =
+  (||) (preservation_ready_expr_b fdef.fn_body)
+    (check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef)
+
+(** val check_env_preservation_ready_or_direct_receiver_method :
+    global_env -> bool **)
+
+let check_env_preservation_ready_or_direct_receiver_method env =
+  forallb (check_fn_preservation_ready_or_direct_receiver_method env)
+    env.env_fns
+
 (** val check_env_end2end_direct_receiver_mixed_ready : global_env -> bool **)
 
 let check_env_end2end_direct_receiver_mixed_ready env =
@@ -17072,6 +17101,17 @@ let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
           env)
         (check_env_root_shadow_provenance_summary env))
       (check_env_preservation_ready env))
+
+(** val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits env =
+  (&&)
+    ((&&)
+      (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+        env)
+      (check_env_root_shadow_provenance_summary_or_direct_receiver_method env))
+    (check_env_preservation_ready_or_direct_receiver_method env)
 
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
     global_env -> bool **)

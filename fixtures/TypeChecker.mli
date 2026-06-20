@@ -1657,6 +1657,18 @@ val check_fn_root_shadow_direct_receiver_method_present :
 
 val check_env_root_shadow_direct_receiver_method_present : global_env -> bool
 
+val check_fn_root_shadow_provenance_summary_or_direct_receiver_method :
+  global_env -> fn_def -> bool
+
+val check_env_root_shadow_provenance_summary_or_direct_receiver_method :
+  global_env -> bool
+
+val check_fn_preservation_ready_or_direct_receiver_method :
+  global_env -> fn_def -> bool
+
+val check_env_preservation_ready_or_direct_receiver_method :
+  global_env -> bool
+
 val check_env_end2end_direct_receiver_mixed_ready : global_env -> bool
 
 val check_env_root_shadow_no_receiver_component_body_summary_provider_check :
@@ -1675,6 +1687,9 @@ val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
   global_env -> bool
 
 val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_shadow_checks :
+  global_env -> bool
+
+val check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits :
   global_env -> bool
 
 val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :

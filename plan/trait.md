@@ -65,7 +65,10 @@ validity checks must be represented in Rocq and the extracted checker.
   and a no-receiver reduction lemma showing the split certificate recovers the
   old shadow-check path when no direct receiver method is present. `End2EndSafety`
   now exposes a diagnostic runtime wrapper that uses this reduction for the
-  no-receiver branch; the direct-receiver branch and endpoint wiring remain.
+  no-receiver branch. The split certificate is extracted and diagnostics show
+  the blocked direct-call receiver fixture passes it while the authoritative
+  checker still rejects; the direct-receiver runtime branch and endpoint wiring
+  remain.
 
 ## Remaining Tasks
 
@@ -124,10 +127,10 @@ validity checks must be represented in Rocq and the extracted checker.
   the direct-receiver summary, direct-component, component-ready-body, and
   no-receiver mixed summary gates pass, while generic provenance/preservation
   readiness still fails for the raw receiver-call body and the strict ordinary
-  component summary remains false. The split certificate now preserves the old
-  no-receiver theorem path up to an `End2EndSafety` wrapper, but the direct-
-  receiver runtime branch is not yet proved or used by the active endpoint; no
-  handwritten OCaml fallback logic is allowed.
+  component summary remains false. The extracted split certificate passes this
+  fixture and preserves the old no-receiver theorem path up to an `End2EndSafety`
+  wrapper, but the direct-receiver runtime branch is not yet proved or used by
+  the active endpoint; no handwritten OCaml fallback logic is allowed.
 
 ## Key Decisions
 

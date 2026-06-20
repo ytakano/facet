@@ -331,6 +331,66 @@ Proof.
   exact Hsplit.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_combined_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  destruct (check_env_end2end_direct_receiver_split_ready_facts env'
+    (infer_program_env_end2end_assoc_direct_receiver_split_ready_check
+      env env' Hprog)) as [Hcombined _Hlocal].
+  exact Hcombined.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  destruct (check_env_end2end_direct_receiver_split_ready_facts env'
+    (infer_program_env_end2end_assoc_direct_receiver_split_ready_check
+      env env' Hprog)) as [_Hcombined Hlocal].
+  exact Hlocal.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_combined :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_base_combined env =
+      infer_ok env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_combined.
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_split_base
+    env env' Hprog).
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_split_combined_check
+    env env' Hprog).
+  reflexivity.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_base_mixed_when_no_receiver :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    infer_program_env_end2end_assoc_direct_receiver_base_mixed env =
+      infer_ok env'.
+Proof.
+  intros env env' Hprog Hno_receiver.
+  unfold infer_program_env_end2end_assoc_direct_receiver_base_mixed.
+  rewrite (infer_program_env_end2end_assoc_direct_receiver_split_base
+    env env' Hprog).
+  unfold check_env_end2end_direct_receiver_mixed_ready.
+  rewrite Hno_receiver. reflexivity.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_sound :
   forall env env' f,
     infer_program_env_end2end_assoc_direct_receiver_split env =

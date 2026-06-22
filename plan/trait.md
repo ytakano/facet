@@ -39,7 +39,8 @@ that the CLI actually uses.
   exact-route package provider, the integration bridge to
   `component_body_local_bounds_ready_body_route_provider_in_env`, ready-body
   reachable callbacks, the nested smaller-height ready-body body-call callback,
-  and the synthetic-callback adapter for that smaller-height callback.
+  and callback adapters for both synthetic consumers and ready-body exact-route
+  providers.
 - The remaining low-level proof gap is the ready-body current-step theorem and
   height induction over `store_safe_ready_body_exact_body_call_route_reachable`.
   Once that route theorem exists, the active mixed no-capture direct-call
@@ -202,11 +203,12 @@ that the CLI actually uses.
   ready-body route exact-target checker, its local-bounds projection, and an
   endpoint-level branch-scoped exact-route package provider, integration
   bridge, low-level ready-body reachable callback shapes, the nested
-  smaller-height ready-body body-call callback bridge, and the corresponding
-  synthetic-callback adapter now exist. The remaining proof gap is the route
-  theorem: the ready-body current-step and height induction over reachable exact
-  routes still need to be proved before the public theorem can stop reaching
-  route preservation through the synthetic route provider.
+  smaller-height ready-body body-call callback bridge, and callback adapters for
+  synthetic consumers plus ready-body exact-route providers now exist. The
+  remaining proof gap is the route theorem: the ready-body current-step and
+  height induction over reachable exact routes still need to be proved before
+  the public theorem can stop reaching route preservation through the synthetic
+  route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

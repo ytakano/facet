@@ -51,10 +51,13 @@ that the CLI actually uses.
   This packages the active mixed endpoint's provable no-receiver local runtime
   evidence: ready-body-or-narrow summary provider plus alpha-body callback
   provider.
-- The remaining proof surface issue is the route bridge from that local runtime
-  package to the mixed endpoint public theorem. The next proof step is to derive
-  or package `mixed_ready_body_or_narrow_summary_provider_route_bridge` without
-  adding public premises or more one-off wrapper theorem variants.
+- `End2EndSafety.v` also has
+  `mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_summary_route_public_runtime_evidence`,
+  which packages public runtime evidence plus a synthetic summary route premise
+  into `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
+- The remaining proof surface issue is deriving that synthetic summary route
+  premise internally, without adding it as a public premise or introducing more
+  one-off wrapper theorem variants.
 
 ## Active Proof Plan
 
@@ -66,9 +69,12 @@ that the CLI actually uses.
    - Completed subtask: package the active mixed endpoint's provable local
      no-receiver runtime evidence in
      `assoc_direct_receiver_mixed_local_runtime_package`.
-   - Next subtask: prove or package the summary-provider route bridge needed by
-     the mixed endpoint public theorem without adding public route, callback,
-     cleanup, or diagnostic premises.
+   - Completed subtask: package public runtime evidence plus explicit synthetic
+     summary route evidence into
+     `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
+   - Next subtask: derive the synthetic summary route evidence internally from
+     existing exact-body/scoped-package facts, then use the bridge to retarget
+     the public theorem.
 
 2. Introduce an explicit runtime evidence package.
    - Extend the current local package only when a runtime consumer needs more
@@ -133,9 +139,10 @@ that the CLI actually uses.
   store-safe synthetic summary evidence, while the public theorem currently only
   assumes the weaker synthetic direct-call prefix preservation premise.
 - The active mixed endpoint now has a small local runtime package for the
-  no-receiver branch, but it still lacks the route bridge needed by the public
-  theorem. The next Rocq subtask is a lemma of this shape:
-  `mixed_ready_body_or_narrow_summary_provider_route_bridge_of_public_runtime_evidence`.
+  no-receiver branch and a bridge helper that works when synthetic summary route
+  evidence is available. The next Rocq subtask is to prove that evidence without
+  exposing this premise publicly:
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement`.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
 

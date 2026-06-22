@@ -14995,6 +14995,37 @@ Proof.
   - exact Hshadow_route.
 Qed.
 
+Lemma mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_summary_route_public_runtime_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_prefix_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_bridge.
+Proof.
+  intros _Hsynthetic_prefix _Hscope_synthetic _Htyping_ready Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys Hframe_ready Hparam_ready _Hstatic
+    Hsynthetic_route.
+  eapply mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_and_shadow_routes.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hsynthetic_route.
+  - intros env0.
+    eapply eval_preserves_typing_roots_store_safe_shadow_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_provenance_ready_with_callee_summary.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hframe_ready.
+    + exact Hprefix_ready.
+    + exact Hparam_ready.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_global_env_with_local_bounds :
   forall env bounds,
     component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env

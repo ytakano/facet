@@ -83,10 +83,14 @@ that the CLI actually uses.
   direct endpoint swap is still circular because the current route package asks
   for callee-level synthetic summary evidence.
   `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-  is the next certificate boundary: its soundness lemma
-  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target_package_in_local_bounds_family`
-  packages ready-body exact-route evidence plus exact-target facts under local
-  bounds without requiring synthetic direct-call evidence for no-target callees.
+  is the next certificate boundary: its soundness lemma packages ready-body
+  exact-route evidence plus exact-target facts under local bounds without
+  requiring synthetic direct-call evidence for no-target callees. The active
+  mixed local runtime package now also has a branch-scoped projection,
+  `assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family`,
+  that exposes the same ready-body exact-route package shape from the existing
+  synthetic route/exact-target field when the selected no-capture direct-call
+  component check succeeds.
 - The newer implementation roadmap is now treated as a phase map rather than a
   literal task list. Phase 1 is complete; the useful Phase 2 boundary is the
   existing local runtime package plus the remaining need to stop threading
@@ -138,19 +142,19 @@ that the CLI actually uses.
      `store_safe_ready_body_exact_body_call_route_package_at` path and keeps the
      active endpoint unchanged while giving the next refactor a non-synthetic
      route package to consume.
-   - Completed implementation attempt: directly refactoring
-     `assoc_direct_receiver_mixed_local_runtime_package` to consume the
-     ready-body exact-route projection does not compile while the active mixed
-     endpoint exposes only the synthetic route sidecar. Adding
+   - Completed correction: a global active mixed gate conjunct for
      `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-     as a global active mixed gate conjunct compiles, but it is too strong: the
-     full regression suite rejects many existing valid function, lifetime,
-     module, and trait programs with `ErrEndToEndSafetyGateFailed`.
-   - Next implementation subtask: narrow the ready-body exact-route certificate
-     to the no-receiver/direct-call component branch instead of making it a
-     whole-environment active gate. The package consumer should be fed by a
-     branch-scoped checker projection or a route-package field derived only when
-     the component store-safe check selects the no-capture direct-call path.
+     is too strong and rejects broad existing valid programs, so the active
+     checker gate remains unchanged.
+   - Completed implementation subtask: add
+     `assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family`,
+     a branch-scoped projection from the active mixed local runtime package's
+     existing synthetic route/exact-target field into the ready-body exact-route
+     package shape.
+   - Next implementation subtask: consume this branch-scoped projection in the
+     ready-body route provider or local runtime package consumer, then replace
+     synthetic route consumption only for that no-capture direct-call component
+     branch.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -234,10 +238,12 @@ that the CLI actually uses.
      package from the mixed local runtime package is blocked by certificate
      scope, not just proof ordering. A global active gate for the ready-body
      exact-route checker rejects broad existing valid programs.
-   - Next subtask: derive the ready-body exact-route package from a branch-scoped
-     no-capture direct-call component certificate, then switch the local runtime
-     package consumer. After that, rerun `tests/run.sh` and only promote the
-     split endpoint if the checker frontier is clean.
+   - Completed implementation subtask: derive the ready-body exact-route package
+     from the branch-scoped no-capture direct-call component certificate exposed
+     by the active mixed local runtime package.
+   - Next subtask: switch the local runtime package consumer to this
+     branch-scoped projection. After that, rerun `tests/run.sh` and only promote
+     the split endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq
@@ -279,10 +285,11 @@ that the CLI actually uses.
 - The active mixed endpoint has a local runtime package with
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
   checker-backed synthetic route-summary/exact-target certificate. A
-  ready-body route exact-target checker and local-bounds projection exist, but a
-  whole-environment active gate for that checker is too strong. The next proof
-  step is a branch-scoped projection for no-capture direct-call components, not
-  a global active-gate conjunct.
+  ready-body route exact-target checker, its local-bounds projection, and a
+  branch-scoped projection from the active mixed local runtime package now
+  exist. The remaining proof step is consuming that branch-scoped projection in
+  the route provider/public theorem path while keeping the active checker gate
+  unchanged.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

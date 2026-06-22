@@ -17062,6 +17062,43 @@ Proof.
   - eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready.
 Qed.
 
+Lemma assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family :
+  forall env' f_component env0,
+    assoc_direct_receiver_mixed_local_runtime_package env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    global_env_local_bounds_family
+      (global_env_with_local_bounds env' (fn_bounds f_component)) env0 ->
+    (forall fname,
+      store_safe_ready_body_exact_body_call_route_package_at env0 fname) /\
+    (forall fdef,
+      In fdef (env_fns env0) ->
+      direct_call_target_expr (fn_body fdef) <> None ->
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env0 fdef).
+Proof.
+  intros env' f_component env0 Hpackage Hin_component Hcomponent_check
+    Hfamily.
+  destruct Hpackage as [_Hprovider _Halpha Hroute_exact].
+  split.
+  - intros fname fdef fcall used used' fname_body args_body Hin Hname
+      Hrename Htarget.
+    destruct (Hroute_exact f_component env0 fdef Hin_component
+      Hcomponent_check Hfamily Hin) as [Hroute_summary _Hexact].
+    destruct Hroute_summary as [Hcomponent_summary Hsynthetic_summary].
+    split.
+    + intros fcallee Hlookup.
+      left.
+      eapply Hsynthetic_summary; eassumption.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds;
+        eassumption.
+  - intros fdef Hin Hdirect_some.
+    destruct (Hroute_exact f_component env0 fdef Hin_component
+      Hcomponent_check Hfamily Hin) as [_Hroute_summary Hexact].
+    eapply Hexact. exact Hdirect_some.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_summary_route_evidence_of_local_runtime_package :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

@@ -2882,6 +2882,8 @@ Definition check_env_end2end_direct_receiver_split_ready
     env &&
   check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
     env &&
+  check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    env &&
   check_env_root_shadow_provenance_summary env &&
   check_env_preservation_ready env.
 
@@ -2910,7 +2912,7 @@ Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
   repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[[Hcombined Hlocal] Hprov] Hpres].
+  destruct Hcheck as [[[[Hcombined Hlocal] _Hroute] Hprov] Hpres].
   unfold check_env_direct_receiver_method_body_runtime_facts_sidecar.
   rewrite Hprov. rewrite Hpres. reflexivity.
 Qed.
@@ -2926,8 +2928,21 @@ Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
   repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[[Hcombined Hlocal] _Hprov] _Hpres].
+  destruct Hcheck as [[[[Hcombined Hlocal] _Hroute] _Hprov] _Hpres].
   split; assumption.
+Qed.
+
+Lemma check_env_end2end_direct_receiver_split_ready_synthetic_route_exact_target :
+  forall env,
+    check_env_end2end_direct_receiver_split_ready env = true ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[[_Hcombined_local Hroute] _Hprov] _Hpres].
+  exact Hroute.
 Qed.
 
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks

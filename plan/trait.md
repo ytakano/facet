@@ -41,13 +41,16 @@ that the CLI actually uses.
   strict/exact endpoint.
 - A diagnostic split endpoint exists:
   `infer_program_env_end2end_assoc_direct_receiver_split`, gated by
-  `check_env_end2end_direct_receiver_split_ready`. Diagnostics show that it can
-  accept direct-call receiver fixtures rejected by the active mixed endpoint, but
-  it is not yet the active checker authority and does not yet have the required
-  non-diagnostic runtime-safety theorem. `End2EndSafety.v` now has
+  `check_env_end2end_direct_receiver_split_ready`. It is not yet the active
+  checker authority. `End2EndSafety.v` now has
   `direct_receiver_split_runtime_evidence_in_env`, which packages split-ready
-  runtime facts and closes the no-receiver branch through
-  `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_no_receiver_with_runtime_evidence`.
+  runtime facts, and the non-diagnostic theorem
+  `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
+  compiles with the same public preservation-premise shape as the active mixed
+  theorem. The checker frontier is still wrong: the current split gate's
+  synthetic route/exact-target sidecar rejects valid no-target local-bounds
+  callees with `local-bounds-synthetic-direct-call-ready-summary` and
+  `no-direct-call-target` diagnostics.
 - `End2EndSafety.v` now has an internal
   `assoc_direct_receiver_mixed_local_runtime_package` produced by
   `infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package`.
@@ -151,9 +154,17 @@ that the CLI actually uses.
      `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_exact_body_call_route_package`,
      which internalizes the abstract summary-route bridge through the existing
      exact-body route package.
-   - Next subtask: derive the split route package from checker-backed local
-     runtime evidence, so the split theorem has the same public premise shape as
-     the active mixed endpoint before promotion.
+   - Completed subtask: add the split checker-backed synthetic route/exact-target
+     sidecar, derive split local route-summary/exact-target evidence, and make
+     `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
+     use the same public preservation-premise shape as the active mixed theorem.
+   - Current blocker: this proof path currently relies on a synthetic
+     route/exact-target sidecar that is too strong for valid no-target
+     local-bounds callees.
+   - Next subtask: add a ready-body exact-route bridge, or an equivalent
+     narrowed checker-backed route certificate, so the split theorem remains
+     proved while `tests/run.sh` stops rejecting valid direct-call/local-bounds
+     programs.
    - Required theorem:
 
      ```coq
@@ -168,14 +179,16 @@ that the CLI actually uses.
      check_env_end2end_direct_receiver_ready env' = true
      ```
 
-5. Promote the split endpoint only after its proof closes.
-   - Do not change the CLI active endpoint until the split endpoint has checker
-     soundness, runtime evidence, and checked-initial runtime safety.
-   - After the proof closes, switch the CLI from
+5. Promote the split endpoint only after the proof and checker frontier close.
+   - Switch the CLI from
      `infer_program_env_end2end_assoc_direct_receiver_mixed` to
      `infer_program_env_end2end_assoc_direct_receiver_split`.
-   - `--diagnose-trait-gates` may remain diagnostic, but it must not become an
+   - Keep `--diagnose-trait-gates` diagnostic-only; it must not become an
      acceptance path.
+   - Re-run Rocq extraction before relying on dune builds.
+   - Do not promote while `tests/run.sh` rejects valid local-bounds/direct-call
+     programs or `tests/diagnose_trait_gates.sh` reports the synthetic-summary
+     no-target blocker.
 
 6. Promote receiver tests conservatively.
    - Move only direct-receiver fixtures justified by the proved split endpoint
@@ -195,19 +208,21 @@ that the CLI actually uses.
   checker-backed route-summary/exact-target certificate. The package is threaded
   through the public runtime theorem for selected component local bounds.
 - The diagnostic split endpoint remains promising but cannot become the CLI
-  authority until it has a non-diagnostic checked-initial runtime-safety theorem.
-  The no-receiver branch now has a package-backed consumer. The
-  direct-receiver-present branch now has a lower split-package consumer that
-  avoids synthetic-summary runtime facts as explicit theorem premises. The direct
-  method body runtime provider is checker-backed by a sidecar over ordinary
-  provenance and preservation checks; this is sound and keeps the proof moving,
-  but it deliberately strengthens the diagnostic split gate until the route
-  certificate is narrowed. A non-diagnostic split runtime theorem now exists and
-  consumes the existing summary-route bridge. A concrete split theorem now
-  internalizes that bridge through the existing exact-body route package. The
-  remaining promotion blocker is deriving the route package from split
-  checker-backed local runtime evidence, matching the active mixed endpoint's
-  public premise shape before switching the CLI.
+  authority yet. The no-receiver branch has a package-backed consumer, and the
+  direct-receiver-present branch has a lower split-package consumer that avoids
+  synthetic-summary runtime facts as explicit theorem premises. The required
+  theorem
+  `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
+  now compiles with the same public preservation-premise shape as the active
+  mixed theorem. The unresolved blocker is the checker certificate, not the
+  public theorem premise shape: the split gate currently carries a synthetic
+  route/exact-target sidecar that is too strong for valid no-target
+  local-bounds callees. `cd rocq && make` and `dune build` pass, but
+  `sh tests/run.sh` still rejects valid direct-call/local-bounds programs and
+  `sh tests/diagnose_trait_gates.sh` reports the synthetic-summary no-target
+  blocker. The next task is to replace this dependency with a ready-body
+  exact-route bridge, or an equivalent narrowed checker-backed certificate,
+  before any CLI promotion or test promotion.
 
 ## Unsupported Or Deferred Features
 
@@ -267,7 +282,7 @@ The trait type-safety implementation is complete for this roadmap slice when:
 1. Done: `infer_program_env_end2end_big_step_safe_checked_initial_ready` targets
    the active checker endpoint.
 2. The CLI accept/reject path uses only an extracted Rocq endpoint.
-3. The split endpoint has a non-diagnostic checked-initial runtime-safety theorem.
+3. The split endpoint has a non-diagnostic checked-initial runtime-safety theorem and a checker frontier that accepts valid no-target local-bounds callees.
 4. No final runtime theorem depends on the diagnostic no-receiver/direct-ready
    case assumption.
 5. Direct-receiver trait programs accepted by the CLI are covered by the public

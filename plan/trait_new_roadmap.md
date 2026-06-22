@@ -32,7 +32,7 @@ The public checked-initial runtime theorem now targets the active mixed endpoint
 infer_program_env_end2end_assoc_direct_receiver_mixed
 ```
 
-The mismatch with the older strict/exact endpoint has been fixed. The remaining proof work is the split endpoint runtime-safety theorem.
+The mismatch with the older strict/exact endpoint has been fixed. The remaining proof work is to make the split endpoint's checker certificate strong enough for the runtime theorem without rejecting valid no-target local-bounds callees.
 
 There is also a diagnostic split endpoint:
 
@@ -46,7 +46,7 @@ with gate:
 check_env_end2end_direct_receiver_split_ready
 ```
 
-This split endpoint is promising, and it appears to accept programs that the active mixed endpoint rejects, but it is still diagnostic. Do **not** make it the active checker authority until its runtime-safety theorem is complete. Current progress: `direct_receiver_split_runtime_evidence_in_env` packages split-ready runtime facts, the no-receiver branch has a package-backed runtime consumer, and the direct-receiver-present branch has a lower package consumer that avoids synthetic-summary runtime facts as explicit theorem premises. `direct_receiver_method_body_runtime_facts_provider` is now derived from split evidence through a checker-backed sidecar over the ordinary provenance and preservation checks. The component ready-body-or-narrow summary provider is also derived from the same ordinary provenance/preservation sidecar, and the mixed ready-body-or-narrow route provider is derived through the existing summary-route bridge. A non-diagnostic theorem named `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready` now exists, and `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_exact_body_call_route_package` internalizes the abstract route bridge through the existing exact-body route package. The remaining promotion blocker is deriving that route package from split checker-backed local runtime evidence so the split theorem has the same public premise shape as the active mixed endpoint before the CLI is switched.
+This split endpoint is promising, but it is still diagnostic. Do **not** make it the active checker authority yet. Current progress: `direct_receiver_split_runtime_evidence_in_env` packages split-ready runtime facts, the no-receiver branch has a package-backed runtime consumer, and the direct-receiver-present branch has a lower package consumer that avoids synthetic-summary runtime facts as explicit theorem premises. `direct_receiver_method_body_runtime_facts_provider` is now derived from split evidence through a checker-backed sidecar over the ordinary provenance and preservation checks. The component ready-body-or-narrow summary provider is also derived from the same ordinary provenance/preservation sidecar, and the mixed ready-body-or-narrow route provider is derived through the existing summary-route bridge. A non-diagnostic theorem named `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready` compiles with the same public preservation-premise shape as the active mixed theorem. However, the current split ready gate is too strong: its synthetic route/exact-target sidecar requires local-bounds callees with no direct-call target to satisfy synthetic direct-call evidence. Regression diagnostics show valid programs failing with `local-bounds-synthetic-direct-call-ready-summary` and `no-direct-call-target`. The remaining work is not promotion; it is to replace this dependency with a ready-body exact-route bridge, or otherwise narrow the checker sidecar so no-target callees are accepted while preserving the proved split theorem.
 
 ---
 
@@ -653,6 +653,8 @@ and existing per-function case lemmas.
 
 The split endpoint has a non-diagnostic checked-initial runtime theorem.
 
+Current status: the theorem compiles, but only with a split ready gate that carries an over-strong synthetic route/exact-target sidecar. Before Phase 4 is considered done, replace that sidecar with a ready-body exact-route bridge, or an equivalent narrowed checker-backed certificate, so valid no-target local-bounds callees no longer fail `local-bounds-synthetic-direct-call-ready-summary` diagnostics.
+
 The final split theorem must not require:
 
 ```coq
@@ -668,11 +670,11 @@ cd rocq && make
 
 ---
 
-# Phase 5: Promote the Split Endpoint Only After the Proof Closes
+# Phase 5: Promote the Split Endpoint Only After the Proof and Checker Frontier Close
 
 ## Goal
 
-Make the split endpoint the active checker authority only after Phase 4 is complete.
+Make the split endpoint the active checker authority only after Phase 4 is complete and the valid-program frontier is restored.
 
 ## Preconditions
 
@@ -687,6 +689,8 @@ infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_init
 ```
 
 and the public checked-initial theorem can be retargeted safely if desired.
+
+Also require `sh tests/run.sh` and `sh tests/diagnose_trait_gates.sh` to stop reporting the synthetic-summary no-target blocker for valid local-bounds/direct-call programs.
 
 ## CLI Change
 
@@ -1052,7 +1056,7 @@ Do the work in this order:
 1. Retarget public safety theorem to active mixed endpoint, adding the minimal internal evidence adapter needed to close it.
 2. Generalize that adapter into a Prop-level runtime evidence package carrying route, value/callback, cleanup, and local-bounds replay facts as needed.
 3. Solve direct-receiver local-bounds replay.
-4. Prove non-diagnostic split endpoint runtime safety.
+4. Prove non-diagnostic split endpoint runtime safety with a checker frontier that accepts valid no-target local-bounds callees.
 5. Promote split endpoint to CLI authority.
 6. Promote only proved receiver tests.
 7. Document remaining unsupported forms.

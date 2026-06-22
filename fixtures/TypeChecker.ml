@@ -16128,6 +16128,47 @@ let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_wi
       env)
     env.env_fns
 
+(** val check_fn_root_shadow_direct_call_exact_body_target :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_direct_call_exact_body_target env fdef =
+  match direct_call_target_expr fdef.fn_body with
+  | Some _ ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef
+  | None -> true
+
+(** val check_env_root_shadow_direct_call_exact_body_target :
+    global_env -> bool **)
+
+let check_env_root_shadow_direct_call_exact_body_target env =
+  forallb (check_fn_root_shadow_direct_call_exact_body_target env) env.env_fns
+
+(** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target env fdef =
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then let local_env = global_env_with_local_bounds env fdef.fn_bounds in
+       (&&)
+         ((&&)
+           (check_env_root_shadow_synthetic_direct_call_ready_summary
+             local_env)
+           (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+             local_env))
+         (check_env_root_shadow_direct_call_exact_body_target local_env)
+  else true
+
+(** val check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target :
+    global_env -> bool **)
+
+let check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target env =
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env)
+    env.env_fns
+
 (** val check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary :
     global_env -> fn_def -> bool **)
 
@@ -17117,10 +17158,17 @@ let check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summa
 
 let check_env_end2end_direct_receiver_split_ready env =
   (&&)
-    (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
-      env)
-    (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
-      env)
+    ((&&)
+      ((&&)
+        ((&&)
+          (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+            env)
+          (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+            env))
+        (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+          env))
+      (check_env_root_shadow_provenance_summary env))
+    (check_env_preservation_ready env)
 
 (** val check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks :
     global_env -> bool **)
@@ -17180,8 +17228,11 @@ let check_program_env_end2end_assoc_strict_exact_closure_direct_receiver env =
 let infer_program_env_end2end_assoc_direct_receiver_mixed env =
   match infer_program_env_end2end_assoc env with
   | Infer_ok env' ->
-    if (&&) (check_env_end2end_direct_receiver_mixed_ready env')
-         (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+    if (&&)
+         ((&&) (check_env_end2end_direct_receiver_mixed_ready env')
+           (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+             env'))
+         (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
            env')
     then Infer_ok env'
     else Infer_err ErrEndToEndSafetyGateFailed

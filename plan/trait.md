@@ -44,7 +44,10 @@ that the CLI actually uses.
   `check_env_end2end_direct_receiver_split_ready`. Diagnostics show that it can
   accept direct-call receiver fixtures rejected by the active mixed endpoint, but
   it is not yet the active checker authority and does not yet have the required
-  non-diagnostic runtime-safety theorem.
+  non-diagnostic runtime-safety theorem. `End2EndSafety.v` now has
+  `direct_receiver_split_runtime_evidence_in_env`, which packages split-ready
+  runtime facts and closes the no-receiver branch through
+  `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_no_receiver_with_runtime_evidence`.
 - `End2EndSafety.v` now has an internal
   `assoc_direct_receiver_mixed_local_runtime_package` produced by
   `infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package`.
@@ -123,6 +126,13 @@ that the CLI actually uses.
 4. Prove runtime safety for the split endpoint.
    - Target endpoint: `infer_program_env_end2end_assoc_direct_receiver_split`.
    - Target gate: `check_env_end2end_direct_receiver_split_ready`.
+   - Completed subtask: package split-ready runtime facts in
+     `direct_receiver_split_runtime_evidence_in_env` and prove the no-receiver
+     branch consumer using that package.
+   - Next subtask: add the direct-receiver-present consumer that uses the split
+     package's combined captured/direct-component check plus
+     `env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence`,
+     without requiring full `check_env_end2end_direct_receiver_ready`.
    - Required theorem:
 
      ```coq
@@ -165,6 +175,9 @@ that the CLI actually uses.
   through the public runtime theorem for selected component local bounds.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
+  The no-receiver branch now has a package-backed consumer; the direct-receiver
+  present branch still needs a consumer for split package facts rather than the
+  older full direct-ready certificate.
 
 ## Unsupported Or Deferred Features
 

@@ -20655,6 +20655,104 @@ Proof.
       eassumption.
 Qed.
 
+
+Definition direct_receiver_split_no_receiver_runtime_branch_in_env
+    (env : global_env) : Prop :=
+  check_env_root_shadow_direct_receiver_method_present env = false /\
+  check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    env = true /\
+  component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+    env /\
+  env_fns_root_shadow_summary_evidence env.
+
+Record direct_receiver_split_runtime_evidence_in_env
+    (env : global_env) : Prop := {
+  direct_receiver_split_runtime_combined_check :
+    check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+      env = true;
+  direct_receiver_split_runtime_local_certificate_check :
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
+      env = true;
+  direct_receiver_split_runtime_provenance_preservation_or_direct :
+    env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence
+      env;
+  direct_receiver_split_runtime_no_receiver_branch :
+    check_env_root_shadow_direct_receiver_method_present env = false ->
+    direct_receiver_split_no_receiver_runtime_branch_in_env env
+}.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_runtime_evidence :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_split_runtime_evidence_in_env env'.
+Proof.
+  intros env env' Hprog.
+  constructor.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_combined_check.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_provenance_preservation_or_direct_receiver_method_evidence.
+    exact Hprog.
+  - intros Hno_receiver.
+    pose proof
+      (infer_program_env_end2end_assoc_direct_receiver_split_combined_check
+        env env' Hprog) as Hcombined.
+    pose proof
+      (infer_program_env_end2end_assoc_direct_receiver_split_local_certificate_check
+        env env' Hprog) as Hlocal.
+    destruct
+      (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits_facts
+        env' Hlocal) as (Hprovider_check & _Hprovenance & _Hpreservation).
+    split; [exact Hno_receiver |].
+    split.
+    + exact
+        (check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_direct_receiver_combined_no_receiver
+          env' Hno_receiver Hcombined).
+    + split.
+      * exact
+          (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_sound
+            env' Hprovider_check Hno_receiver).
+      * exact
+          (infer_program_env_end2end_assoc_direct_receiver_split_root_shadow_summary_evidence_when_no_receiver
+            env env' Hprog Hno_receiver).
+Qed.
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_no_receiver_with_runtime_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_split_runtime_evidence_in_env env' ->
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hroute_bridge env env' f s s' v Hprog
+    Hevidence Hno_receiver Hinitial Hin Hstore Heval.
+  destruct (direct_receiver_split_runtime_no_receiver_branch
+    env' Hevidence Hno_receiver) as
+    (_Hno_receiver & Hcombined_check & Hprovider & _Hshadow_summary).
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_check_big_step_safe_checked_initial_ready_with_component_mixed_route_provider.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name.
+    exact Hprog.
+  - exact Hcombined_check.
+  - exact Hprovider.
+  - eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge.
+    + exact Hroute_bridge.
+    + exact Hprovider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_direct_ready_branch_bundle :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

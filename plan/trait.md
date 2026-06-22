@@ -46,7 +46,11 @@ that the CLI actually uses.
   theorem and height induction over
   `store_safe_ready_body_exact_body_call_route_reachable`; the new adapters
   still require an existing ready-body route statement plus current-call
-  `store_safe_function_value_call_args` evidence.
+  `store_safe_function_value_call_args` evidence. A compiled ready-body
+  env-family/local-bounds exact-route provider wrapper pair now exists in
+  `TypeSafetyDirectCallRoute.v`, but it is intentionally conservative: it
+  exposes the requested provider-shaped theorem names only from an already
+  established global ready-body route statement.
   Once that route theorem exists, the active mixed no-capture direct-call
   component branch can stop depending on the synthetic route provider.
 - The diagnostic split endpoint,

@@ -20745,6 +20745,57 @@ Proof.
     exact Hpreservation.
 Qed.
 
+Lemma component_body_local_bounds_ready_body_or_narrow_summary_provider_of_env_summary :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env.
+Proof.
+  intros env Hsummary f_component fname fdef _Hin_component
+    _Hcomponent_check Hlookup.
+  right. left.
+  eapply env_fns_root_shadow_summary_evidence_global_env_with_local_bounds_for_route.
+  - exact Hsummary.
+  - exact Hlookup.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_component_ready_body_or_narrow_summary_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env'.
+Proof.
+  intros env env' Hprog.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_ready_check
+      env env' Hprog) as Hready.
+  pose proof
+    (check_env_end2end_direct_receiver_split_ready_runtime_facts_sidecar
+      env' Hready) as Hsidecar.
+  destruct
+    (check_env_direct_receiver_method_body_runtime_facts_sidecar_facts
+      env' Hsidecar) as [Hprovenance Hpreservation].
+  eapply component_body_local_bounds_ready_body_or_narrow_summary_provider_of_env_summary.
+  eapply check_env_root_shadow_summary_evidence_of_provenance_and_preservation_checks;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_mixed_ready_body_or_narrow_route_provider :
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env'.
+Proof.
+  intros Hbridge env env' Hprog.
+  eapply component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_of_summary_route_bridge.
+  - exact Hbridge.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_component_ready_body_or_narrow_summary_provider.
+    exact Hprog.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_no_receiver_with_runtime_evidence :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
@@ -20831,6 +20882,36 @@ Proof.
     + exact Hinitial.
     + exact Hstore.
     + exact Heval.
+Qed.
+
+
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready :
+  mixed_ready_body_or_narrow_summary_provider_route_bridge ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroute_bridge env env' f s s' v Hprog Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_local_runtime_facts.
+  - exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_runtime_evidence.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_direct_receiver_method_body_runtime_facts_provider.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_component_ready_body_or_narrow_summary_provider.
+    exact Hprog.
+  - eapply infer_program_env_end2end_assoc_direct_receiver_split_mixed_ready_body_or_narrow_route_provider.
+    + exact Hroute_bridge.
+    + exact Hprog.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 

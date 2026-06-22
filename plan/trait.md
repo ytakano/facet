@@ -142,8 +142,14 @@ that the CLI actually uses.
    - Completed subtask: derive `direct_receiver_method_body_runtime_facts_provider`
      from split evidence through a checker-backed sidecar requiring the ordinary
      provenance and preservation checks already used by the runtime facts lemmas.
-   - Next subtask: derive the remaining mixed route provider from split evidence:
-     `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env`.
+   - Completed subtask: derive the split component summary provider from
+     checker-backed ordinary provenance/preservation evidence, derive
+     `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env`
+     through the existing summary-route bridge, and add the non-diagnostic
+     theorem `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`.
+   - Next subtask: internalize the summary-route bridge for the split endpoint
+     using checker-backed route evidence, so the split theorem has the same
+     public premise shape as the active mixed endpoint before promotion.
    - Required theorem:
 
      ```coq
@@ -192,8 +198,10 @@ that the CLI actually uses.
   method body runtime provider is checker-backed by a sidecar over ordinary
   provenance and preservation checks; this is sound and keeps the proof moving,
   but it deliberately strengthens the diagnostic split gate until the route
-  certificate is narrowed. The final theorem still needs a split-certificate
-  derivation for the mixed ready-body-or-narrow route provider.
+  certificate is narrowed. A non-diagnostic split runtime theorem now exists and
+  consumes the existing summary-route bridge; the remaining promotion blocker is
+  internalizing that bridge for the split endpoint rather than exposing it as a
+  theorem premise.
 
 ## Unsupported Or Deferred Features
 

@@ -26,13 +26,13 @@ infer_program_env_end2end_assoc_direct_receiver_mixed
 
 as the authoritative checker endpoint.
 
-However, the public checked-initial runtime theorem still targets the older endpoint:
+The public checked-initial runtime theorem now targets the active mixed endpoint:
 
 ```coq
-infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
+infer_program_env_end2end_assoc_direct_receiver_mixed
 ```
 
-This mismatch must be fixed before doing more direct-receiver split work.
+The mismatch with the older strict/exact endpoint has been fixed. The remaining proof work is the split endpoint runtime-safety theorem.
 
 There is also a diagnostic split endpoint:
 
@@ -46,7 +46,7 @@ with gate:
 check_env_end2end_direct_receiver_split_ready
 ```
 
-This split endpoint is promising, and it appears to accept programs that the active mixed endpoint rejects, but it is still diagnostic. Do **not** make it the active checker authority until its runtime-safety theorem is complete.
+This split endpoint is promising, and it appears to accept programs that the active mixed endpoint rejects, but it is still diagnostic. Do **not** make it the active checker authority until its runtime-safety theorem is complete. Current progress: `direct_receiver_split_runtime_evidence_in_env` packages split-ready runtime facts, the no-receiver branch has a package-backed runtime consumer, and the direct-receiver-present branch has a narrow package consumer that still requires explicit global provenance, preservation, and synthetic-summary runtime facts.
 
 ---
 
@@ -240,13 +240,15 @@ Do not add stronger public assumptions.
 
 ## Phase 1 Definition of Done
 
-The following must hold:
+Status: complete.
 
-```sh
-rg -n "Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready" rocq/theories/TypeSystem/End2EndSafety.v
+The public theorem:
+
+```coq
+infer_program_env_end2end_big_step_safe_checked_initial_ready
 ```
 
-shows that the theorem targets:
+now targets:
 
 ```coq
 infer_program_env_end2end_assoc_direct_receiver_mixed

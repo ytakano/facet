@@ -129,10 +129,15 @@ that the CLI actually uses.
    - Completed subtask: package split-ready runtime facts in
      `direct_receiver_split_runtime_evidence_in_env` and prove the no-receiver
      branch consumer using that package.
-   - Next subtask: add the direct-receiver-present consumer that uses the split
-     package's combined captured/direct-component check plus
-     `env_fns_root_shadow_provenance_preservation_or_direct_receiver_method_evidence`,
-     without requiring full `check_env_end2end_direct_receiver_ready`.
+   - Completed subtask: add a split-package consumer
+     `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_direct_component_runtime_facts`,
+     which uses the split combined captured/direct-component check without
+     requiring full `check_env_end2end_direct_receiver_ready`.
+   - Next subtask: remove that consumer's remaining explicit global runtime
+     facts by deriving or replacing these premises from split package evidence:
+     `env_fns_root_shadow_provenance_summary_evidence`,
+     `env_fns_preservation_ready`, and
+     `env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence`.
    - Required theorem:
 
      ```coq
@@ -175,9 +180,12 @@ that the CLI actually uses.
   through the public runtime theorem for selected component local bounds.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
-  The no-receiver branch now has a package-backed consumer; the direct-receiver
-  present branch still needs a consumer for split package facts rather than the
-  older full direct-ready certificate.
+  The no-receiver branch now has a package-backed consumer. The
+  direct-receiver-present branch has a narrow split-package consumer, but it
+  still requires explicit global provenance, preservation, and synthetic-summary
+  runtime facts; the final theorem must either derive those facts from split
+  evidence or use a lower consumer that accepts paired ordinary-or-direct
+  evidence directly.
 
 ## Unsupported Or Deferred Features
 

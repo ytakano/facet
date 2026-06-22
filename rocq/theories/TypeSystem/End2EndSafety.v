@@ -242,7 +242,7 @@ Proof.
   destruct (infer_fns_env_end2end_assoc_direct_receiver_base
               env_elab (env_fns env_elab)) as [[] | err]
     eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   eapply infer_fns_env_end2end_assoc_direct_receiver_base_in_sound;
     eassumption.
 Qed.
@@ -314,7 +314,7 @@ Proof.
   destruct (infer_fns_env_end2end_assoc_direct_receiver_base
               env_elab (env_fns env_elab)) as [[] | err]
     eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   apply andb_true_iff in Hunique_global as [Hunique_top _].
   eapply infer_program_env_alpha_elab_unique_by_name; eauto.
 Qed.
@@ -331,7 +331,7 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_split_ready env_checked)
     eqn:Hsplit; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -359,7 +359,7 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_split_ready env_checked)
     eqn:Hsplit; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   exact Hsplit.
 Qed.
 
@@ -1158,7 +1158,7 @@ Proof.
       env_checked &&
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1179,8 +1179,8 @@ Proof.
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
   repeat rewrite andb_true_iff in Hgate.
-  destruct Hgate as [[_Hmixed_ready Hlocal_check] _Hroute_exact_check].
-  injection Hprog as <-.
+  destruct Hgate as [[_Hmixed_ready Hlocal_check] _Hroute_check].
+  inversion Hprog; subst.
   exact Hlocal_check.
 Qed.
 
@@ -1201,9 +1201,9 @@ Proof.
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
   repeat rewrite andb_true_iff in Hgate.
-  destruct Hgate as [[_Hmixed_ready _Hlocal_check] Hroute_exact_check].
-  injection Hprog as <-.
-  exact Hroute_exact_check.
+  destruct Hgate as [[_Hmixed_ready _Hlocal_check] Hroute_check].
+  inversion Hprog; subst.
+  exact Hroute_check.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_sound :
@@ -1295,7 +1295,7 @@ Proof.
       env_checked &&
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  injection Hprog as ->.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1317,7 +1317,7 @@ Proof.
       env_checked &&
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  injection Hprog as ->.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1352,7 +1352,7 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
     try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1445,7 +1445,7 @@ Proof.
   destruct
     (check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
       env_checked); try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1539,7 +1539,7 @@ Proof.
   destruct
     (check_env_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
       env_checked); try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -1890,7 +1890,7 @@ Proof.
     as [env_checked | err] eqn:Hassoc; try discriminate.
   destruct (check_env_end2end_direct_receiver_ready env_checked);
     try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_sound; eauto.
 Qed.
 
@@ -1975,7 +1975,7 @@ Proof.
     as [env_checked | err] eqn:Hassoc; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
     try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   eapply infer_program_env_end2end_assoc_strict_exact_closure_sound; eauto.
 Qed.
 
@@ -2236,7 +2236,7 @@ Proof.
   destruct (infer_fns_env_end2end_assoc_strict_exact_closure
               env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   apply andb_true_iff in Hunique_global as [Hunique_top _].
   eapply infer_program_env_alpha_elab_unique_by_name; eauto.
 Qed.
@@ -2257,7 +2257,7 @@ Proof.
   destruct (infer_fns_env_end2end_assoc_strict_exact_closure
               env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_assoc_strict_exact_closure_check_env_ready.
   exact Hfns.
@@ -2279,7 +2279,7 @@ Proof.
   destruct (infer_fns_env_end2end_assoc_strict_exact_closure
               env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_assoc_strict_exact_closure_combined_check_env_ready.
   exact Hfns.
@@ -2374,7 +2374,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   apply andb_true_iff in Hunique_global as [Hunique_top _].
   eapply infer_program_env_alpha_elab_unique_by_name; eauto.
 Qed.
@@ -2394,7 +2394,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
   eapply infer_fns_env_end2end_assoc_check_env_ready.
   exact Hfns.
@@ -2415,7 +2415,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_assoc env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_assoc_combined_check_env_ready.
   exact Hfns.
@@ -2672,7 +2672,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   apply andb_true_iff in Hunique_global as [Hunique_top _].
   eapply infer_program_env_alpha_elab_unique_by_name; eauto.
 Qed.
@@ -2692,7 +2692,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
   eapply infer_fns_env_end2end_check_env_ready.
   exact Hfns.
@@ -2713,7 +2713,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_combined_check_env_ready.
   exact Hfns.
@@ -2733,7 +2733,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   apply andb_true_iff in Hunique_global as [Hunique_top _].
   eapply infer_program_env_alpha_elab_unique_by_name; eauto.
 Qed.
@@ -2753,7 +2753,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_strict_exact_closure_check_env_ready.
   exact Hfns.
@@ -2774,7 +2774,7 @@ Proof.
     try discriminate.
   destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
   eapply infer_fns_env_end2end_strict_exact_closure_combined_check_env_ready.
   exact Hfns.
@@ -13364,8 +13364,8 @@ Proof.
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
   repeat rewrite andb_true_iff in Hgate.
-  destruct Hgate as [[Hmixed_ready _Hlocal_check] _Hroute_exact_check].
-  injection Hprog as <-.
+  destruct Hgate as [[Hmixed_ready _Hlocal_check] _Hroute_check].
+  inversion Hprog; subst.
   eapply check_env_end2end_direct_receiver_mixed_ready_cases.
   exact Hmixed_ready.
 Qed.
@@ -13439,7 +13439,7 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked);
     try discriminate.
-  injection Hprog as <-.
+  inversion Hprog; subst.
   reflexivity.
 Qed.
 
@@ -16754,6 +16754,31 @@ Proof.
     (env_fns env)) Hcheck); exact Hin.
 Qed.
 
+Lemma check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct_sound_at :
+  forall env fname fdef fname_body args_body synthetic_body,
+    check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct
+      env = true ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    direct_call_target_expr (fn_body fdef) =
+      Some (fname_body, args_body, synthetic_body) ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+Proof.
+  intros env fname fdef fname_body args_body synthetic_body Hcheck Hlookup
+    Htarget.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _Hname].
+  unfold check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct
+    in Hcheck.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_synthetic_direct_call_ready_summary_when_direct env)
+    (env_fns env)) Hcheck fdef Hin) as Hfn_check.
+  unfold check_fn_root_shadow_synthetic_direct_call_ready_summary_when_direct
+    in Hfn_check.
+  rewrite Htarget in Hfn_check.
+  eapply check_fn_root_shadow_synthetic_direct_call_ready_summary_sound.
+  exact Hfn_check.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_summary_and_exact_target_in_local_bounds_family :
   forall env env' f_component env0 fdef,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =
@@ -18356,11 +18381,11 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic
     Hsummary_to_route env env' f s s' v Hprog
-    Hready_body_check_when_no_receiver Hinitial Hin Hstore Heval.
+    Hroute_check_when_no_receiver Hinitial Hin Hstore Heval.
   destruct
     (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - pose proof (Hready_body_check_when_no_receiver Hno_receiver)
+  - pose proof (Hroute_check_when_no_receiver Hno_receiver)
       as Hready_check.
     eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family.
     + exact Hroot_names.
@@ -18418,7 +18443,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hsummary_to_route
-    env env' f s s' v Hprog Hready_body_check_when_no_receiver Hinitial
+    env env' f s s' v Hprog Hroute_check_when_no_receiver Hinitial
     Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_route_provider_check_prefix.
   - exact Hsynthetic_route.
@@ -18433,7 +18458,7 @@ Proof.
       preservation_ready_expr_static_runtime_named_prefix_store_complete).
   - exact Hsummary_to_route.
   - exact Hprog.
-  - exact Hready_body_check_when_no_receiver.
+  - exact Hroute_check_when_no_receiver.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.
@@ -18473,12 +18498,12 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_b
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic env env' f s s' v
-    Hprog Hready_body_check_when_no_receiver Hsynthetic_provider_when_no_receiver
+    Hprog Hroute_check_when_no_receiver Hsynthetic_provider_when_no_receiver
     Hshadow_provider_when_no_receiver Hinitial Hin Hstore Heval.
   destruct
     (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_cases
       env env' Hprog) as [Hno_receiver | Hdirect_ready].
-  - pose proof (Hready_body_check_when_no_receiver Hno_receiver)
+  - pose proof (Hroute_check_when_no_receiver Hno_receiver)
       as Hready_check.
     eapply infer_program_env_end2end_assoc_big_step_safe_checked_initial_ready_with_ready_body_route_component_local_bounds_family.
     + exact Hroot_names.
@@ -18545,7 +18570,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_chec
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hframe_ready Hparam_ready env env' f s s' v Hprog
-    Hready_body_check_when_no_receiver Hsynthetic_provider_when_no_receiver
+    Hroute_check_when_no_receiver Hsynthetic_provider_when_no_receiver
     Hshadow_provider_when_no_receiver Hinitial Hin Hstore Heval.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_public_callbacks_big_step_safe_checked_initial_ready_with_no_receiver_component_ready_body_summary_and_mixed_route_providers_prefix.
   - exact Hsynthetic_route.
@@ -18559,7 +18584,7 @@ Proof.
   - exact (preservation_ready_expr_static_runtime_named_prefix_of_store
       preservation_ready_expr_static_runtime_named_prefix_store_complete).
   - exact Hprog.
-  - exact Hready_body_check_when_no_receiver.
+  - exact Hroute_check_when_no_receiver.
   - exact Hsynthetic_provider_when_no_receiver.
   - exact Hshadow_provider_when_no_receiver.
   - exact Hinitial.
@@ -19163,7 +19188,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_p
     check_env_root_shadow_direct_receiver_method_present env' = false ->
     component_body_local_bounds_ready_body_summary_provider_in_env env'.
 Proof.
-  intros env env' _Hprog Hready_body_check Hno_receiver.
+  intros env env' _Hprog Hroute_check Hno_receiver.
   eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
   eapply check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_sound;
     eassumption.
@@ -19179,7 +19204,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_pro
     check_env_root_shadow_direct_receiver_method_present env' = false ->
     component_body_local_bounds_ready_body_route_provider_in_env env'.
 Proof.
-  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  intros Hsummary_to_route env env' Hprog Hroute_check Hno_receiver.
   eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
   - exact Hsummary_to_route.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check;
@@ -19201,7 +19226,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_prov
       eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
         (global_env_with_local_bounds env' (fn_bounds f_component)).
 Proof.
-  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  intros Hsummary_to_route env env' Hprog Hroute_check Hno_receiver.
   eapply component_body_local_bounds_synthetic_route_provider_of_ready_body_route_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
     eassumption.
@@ -19217,7 +19242,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_
     check_env_root_shadow_direct_receiver_method_present env' = false ->
     component_body_local_bounds_ready_body_callback_provider_in_env env'.
 Proof.
-  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  intros Hsummary_to_route env env' Hprog Hroute_check Hno_receiver.
   eapply component_body_local_bounds_ready_body_callback_provider_of_route_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
     eassumption.
@@ -19234,7 +19259,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_ready_body
     component_body_local_bounds_synthetic_ready_body_callback_provider_in_env
       env'.
 Proof.
-  intros Hsummary_to_route env env' Hprog Hready_body_check Hno_receiver.
+  intros Hsummary_to_route env env' Hprog Hroute_check Hno_receiver.
   eapply component_body_local_bounds_synthetic_ready_body_callback_provider_of_ready_body_callback_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check;
     eassumption.
@@ -19254,7 +19279,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_callback_
     strict_exact_closure_component_body_store_safe_callback_at_provider
       env' f_component.
 Proof.
-  intros Hsummary_to_route env env' f_component Hprog Hready_body_check
+  intros Hsummary_to_route env env' f_component Hprog Hroute_check
     Hno_receiver Hin_component Hcomponent_check.
   eapply component_body_local_bounds_ready_body_summary_provider_store_safe_callback_at_provider.
   - eapply component_body_local_bounds_ready_body_route_provider_of_summary_provider.
@@ -19284,7 +19309,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_a
     component_body_local_bounds_ready_body_summary_provider_in_env env' /\
     component_body_local_bounds_ready_body_route_provider_in_env env'.
 Proof.
-  intros Hroot_names Hroot_keys env env' _Hprog Hready_body_check
+  intros Hroot_names Hroot_keys env env' _Hprog Hroute_check
     Hno_receiver Hsynthetic_provider Hshadow_provider.
   eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_and_route_provider_sound_of_synthetic_and_shadow_routes;
     try eassumption.
@@ -19310,11 +19335,11 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_pro
     component_body_local_bounds_shadow_summary_route_provider_in_env env' ->
     component_body_local_bounds_ready_body_route_provider_in_env env'.
 Proof.
-  intros Hroot_names Hroot_keys env env' Hprog Hready_body_check
+  intros Hroot_names Hroot_keys env env' Hprog Hroute_check
     Hno_receiver Hsynthetic_provider Hshadow_provider.
   destruct
     (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_and_route_provider_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes
-      Hroot_names Hroot_keys env env' Hprog Hready_body_check Hno_receiver
+      Hroot_names Hroot_keys env env' Hprog Hroute_check Hno_receiver
       Hsynthetic_provider Hshadow_provider) as [_ Hroute].
   exact Hroute.
 Qed.
@@ -19337,7 +19362,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_
     component_body_local_bounds_shadow_summary_route_provider_in_env env' ->
     component_body_local_bounds_ready_body_callback_provider_in_env env'.
 Proof.
-  intros Hroot_names Hroot_keys env env' Hprog Hready_body_check
+  intros Hroot_names Hroot_keys env env' Hprog Hroute_check
     Hno_receiver Hsynthetic_provider Hshadow_provider.
   eapply component_body_local_bounds_ready_body_callback_provider_of_route_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_route_provider_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes;
@@ -19363,7 +19388,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_ready_body
     component_body_local_bounds_synthetic_ready_body_callback_provider_in_env
       env'.
 Proof.
-  intros Hroot_names Hroot_keys env env' Hprog Hready_body_check
+  intros Hroot_names Hroot_keys env env' Hprog Hroute_check
     Hno_receiver Hsynthetic_provider Hshadow_provider.
   eapply component_body_local_bounds_synthetic_ready_body_callback_provider_of_ready_body_callback_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes;
@@ -19393,7 +19418,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_store_safe_callback_
       env' f_component.
 Proof.
   intros Hroot_names Hroot_keys env env' f_component Hprog
-    Hready_body_check Hno_receiver Hsynthetic_provider Hshadow_provider
+    Hroute_check Hno_receiver Hsynthetic_provider Hshadow_provider
     Hin_component Hcomponent_check.
   eapply strict_exact_closure_component_body_store_safe_callback_at_provider_of_synthetic_ready_body_callback_provider.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_ready_body_callback_provider_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes;
@@ -19430,7 +19455,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
       strict_exact_closure_component_body_store_safe_callback_at_provider
         env' f_component).
 Proof.
-  intros Hroot_names Hroot_keys env env' Hprog Hready_body_check
+  intros Hroot_names Hroot_keys env env' Hprog Hroute_check
     Hno_receiver Hsynthetic_provider Hshadow_provider.
   split.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_summary_provider_of_no_receiver_component_ready_body_summary_provider_check;
@@ -19473,12 +19498,12 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
         env' f_component).
 Proof.
   intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
-    Hready_body_check Hno_receiver Hshadow_provider.
+    Hroute_check Hno_receiver Hshadow_provider.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hprog.
-  - exact Hready_body_check.
+  - exact Hroute_check.
   - exact Hno_receiver.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
       eassumption.
@@ -19870,12 +19895,12 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_
         env' f_component).
 Proof.
   intros Hroot_names Hroot_keys Hsummary_to_route env env' Hprog
-    Hready_body_check Hno_receiver Hshadow_summary.
+    Hroute_check Hno_receiver Hshadow_summary.
   eapply infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_provider_bundle_of_no_receiver_component_ready_body_summary_provider_check_and_mixed_routes.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hprog.
-  - exact Hready_body_check.
+  - exact Hroute_check.
   - exact Hno_receiver.
   - eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_provider_of_no_receiver_component_ready_body_summary_provider_check;
       eassumption.
@@ -19900,7 +19925,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_exact_rou
       store_safe_ready_body_exact_body_call_route_package_at
         (global_env_with_local_bounds env' bounds) fname.
 Proof.
-  intros env env' bounds _Hprog Hready_body_check Hno_receiver
+  intros env env' bounds _Hprog Hroute_check Hno_receiver
     Hcomponent_check fname.
   eapply component_body_local_bounds_ready_body_summary_provider_exact_route_package_at_all.
   - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
@@ -19923,7 +19948,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_reachable
     store_safe_ready_body_exact_body_call_route_reachable_package_provider
       (global_env_with_local_bounds env' bounds) base_fname.
 Proof.
-  intros env env' bounds base_fname Hprog Hready_body_check Hno_receiver
+  intros env env' bounds base_fname Hprog Hroute_check Hno_receiver
     Hcomponent_check.
   eapply component_body_local_bounds_ready_body_summary_provider_reachable_package_provider.
   - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.
@@ -19959,7 +19984,7 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_reachable
     store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
       (global_env_with_local_bounds env' bounds) base_fname.
 Proof.
-  intros env env' bounds base_fname Hprog Hready_body_check Hno_receiver
+  intros env env' bounds base_fname Hprog Hroute_check Hno_receiver
     Hcomponent_check Htarget.
   eapply component_body_local_bounds_ready_body_summary_provider_reachable_package_and_exact_target_provider.
   - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_local_bounds_ready_body_summary_provider_sound.

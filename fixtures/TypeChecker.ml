@@ -17165,7 +17165,7 @@ let check_env_end2end_direct_receiver_split_ready env =
             env)
           (check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
             env))
-        (check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+        (check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
           env))
       (check_env_root_shadow_provenance_summary env))
     (check_env_preservation_ready env)

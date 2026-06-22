@@ -47,10 +47,12 @@ that the CLI actually uses.
   runtime facts, and the non-diagnostic theorem
   `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
   compiles with the same public preservation-premise shape as the active mixed
-  theorem. The checker frontier is still wrong: the current split gate's
-  synthetic route/exact-target sidecar rejects valid no-target local-bounds
-  callees with `local-bounds-synthetic-direct-call-ready-summary` and
-  `no-direct-call-target` diagnostics.
+  theorem. The split-ready gate now uses the ready-body provider check instead
+  of the synthetic route/exact-target sidecar, so the old no-target blocker is
+  no longer the split-ready certificate itself. The active CLI endpoint still
+  rejects valid no-target local-bounds callees because
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` retains the older
+  synthetic route/exact-target gate.
 - `End2EndSafety.v` now has an internal
   `assoc_direct_receiver_mixed_local_runtime_package` produced by
   `infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package`.
@@ -68,12 +70,20 @@ that the CLI actually uses.
   `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` is
   weaker than the store-safe synthetic summary route evidence consumed by the
   mixed value/cleanup bridge.
-- `CheckerRootSidecars.v` now exposes the active mixed endpoint's
+- `CheckerRootSidecars.v` exposes the active mixed endpoint's
   checker-backed component certificate for selected no-capture direct-call
   callees under local bounds: synthetic route summaries, store-safe component
   summaries, and exact-body targets. `End2EndSafety.v` packages this in
   `assoc_direct_receiver_mixed_local_runtime_package` and derives the
   store-safe synthetic summary route evidence needed by the mixed route bridge.
+- A narrower checker building block now exists but is not yet promoted into the
+  active endpoint: `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
+  requires synthetic direct-call readiness only for bodies that actually expose
+  a `direct_call_target_expr`. Its soundness projection
+  `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct_sound_at`
+  compiles. This avoids rejecting no-target callees by construction, but the
+  endpoint gate remains on the older synthetic route/exact-target certificate
+  until a non-circular ready-body route bridge is proved.
 
 ## Active Proof Plan
 
@@ -99,9 +109,14 @@ that the CLI actually uses.
    - Completed subtask: retarget the public theorem body to consume this
      package and make `infer_program_env_end2end_big_step_safe_checked_initial_ready`
      use `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Next subtask: start the split endpoint runtime-safety proof using the same
-     evidence-package style, without relying on the diagnostic no-receiver/direct-ready
-     disjunction as a public premise.
+   - Completed subtask: add the direct-target-only synthetic readiness checker
+     `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
+     plus its soundness projection. Keep the active endpoint on the older
+     compile-proven synthetic route/exact-target sidecar until the route bridge
+     can consume the narrowed certificate.
+   - Next subtask: prove the ready-body/synthetic-route bridge from the
+     narrowed `when_direct` certificate plus existing ready-body and exact-body
+     facts, then switch the endpoint gate to the narrowed route certificate.
 
 2. Introduce an explicit runtime evidence package.
    - Extend the current local package only when a runtime consumer needs more
@@ -158,13 +173,21 @@ that the CLI actually uses.
      sidecar, derive split local route-summary/exact-target evidence, and make
      `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
      use the same public preservation-premise shape as the active mixed theorem.
-   - Current blocker: this proof path currently relies on a synthetic
+   - Completed subtask: switch the diagnostic split-ready gate to the
+     ready-body provider check while preserving the split runtime-safety theorem.
+     This removes the synthetic route/exact-target sidecar from the split-ready
+     certificate itself.
+   - Current blocker: the active mixed CLI endpoint still relies on a synthetic
      route/exact-target sidecar that is too strong for valid no-target
      local-bounds callees.
-   - Next subtask: add a ready-body exact-route bridge, or an equivalent
-     narrowed checker-backed route certificate, so the split theorem remains
-     proved while `tests/run.sh` stops rejecting valid direct-call/local-bounds
-     programs.
+   - Completed diagnostic subtask: a direct-target-only checker certificate now
+     proves synthetic readiness exactly at discovered direct-call targets, but a
+     naive endpoint switch is circular because the ready-body route provider
+     still depends on the synthetic route bridge it is meant to replace.
+   - Next subtask: add a non-circular ready-body exact-route bridge, or consume
+     the narrowed `when_direct` certificate in the existing scoped-package route
+     lemmas, so the split theorem remains proved while `tests/run.sh` stops
+     rejecting valid direct-call/local-bounds programs.
    - Required theorem:
 
      ```coq
@@ -203,10 +226,13 @@ that the CLI actually uses.
   The earlier value/cleanup bridge gap is closed by deriving the required
   synthetic route evidence from the mixed endpoint's checker-backed local
   runtime package.
-- The active mixed endpoint now has a local runtime package with
+- The active mixed endpoint has a local runtime package with
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
   checker-backed route-summary/exact-target certificate. The package is threaded
-  through the public runtime theorem for selected component local bounds.
+  through the public runtime theorem for selected component local bounds. A
+  direct-target-only replacement certificate exists and compiles, but it is not
+  yet sufficient to switch the endpoint gate because the ready-body route bridge
+  still needs a non-circular proof.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids
@@ -215,14 +241,17 @@ that the CLI actually uses.
   `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
   now compiles with the same public preservation-premise shape as the active
   mixed theorem. The unresolved blocker is the checker certificate, not the
-  public theorem premise shape: the split gate currently carries a synthetic
-  route/exact-target sidecar that is too strong for valid no-target
-  local-bounds callees. `cd rocq && make` and `dune build` pass, but
-  `sh tests/run.sh` still rejects valid direct-call/local-bounds programs and
-  `sh tests/diagnose_trait_gates.sh` reports the synthetic-summary no-target
-  blocker. The next task is to replace this dependency with a ready-body
-  exact-route bridge, or an equivalent narrowed checker-backed certificate,
-  before any CLI promotion or test promotion.
+  public theorem premise shape: the split-ready gate no longer carries the
+  synthetic route/exact-target sidecar, but the active mixed endpoint still does.
+  The narrowed `when_direct` checker certificate is the next candidate for the
+  active route certificate, but it still needs a route bridge that does not
+  re-enter the synthetic route provider. After this subtask,
+  `cd rocq && timeout 900 make theories/TypeSystem/End2EndSafety.vo`,
+  `cd rocq && timeout 900 make`, and `dune build` pass. `sh tests/run.sh`
+  still fails on valid direct-call/local-bounds programs, and
+  `sh tests/diagnose_trait_gates.sh` still fails because the diagnostic
+  frontier expectations have changed and the active end-to-end gate remains
+  closed.
 
 ## Unsupported Or Deferred Features
 

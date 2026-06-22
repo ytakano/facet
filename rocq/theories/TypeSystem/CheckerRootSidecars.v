@@ -1613,6 +1613,19 @@ Definition check_env_root_shadow_synthetic_direct_call_ready_summary
   forallb (check_fn_root_shadow_synthetic_direct_call_ready_summary env)
     (env_fns env).
 
+Definition check_fn_root_shadow_synthetic_direct_call_ready_summary_when_direct
+    (env : global_env) (fdef : fn_def) : bool :=
+  match direct_call_target_expr (fn_body fdef) with
+  | Some _ => check_fn_root_shadow_synthetic_direct_call_ready_summary env fdef
+  | None => true
+  end.
+
+Definition check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_synthetic_direct_call_ready_summary_when_direct env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match fn_captures fdef with
@@ -1815,6 +1828,25 @@ Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_sum
     (env : global_env) : bool :=
   forallb
     (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env)
+    (env_fns env).
+
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_direct_route_exact_target
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then
+    let local_env := global_env_with_local_bounds env (fn_bounds fdef) in
+    check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct local_env &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      local_env &&
+    check_env_root_shadow_direct_call_exact_body_target local_env
+  else true.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_direct_route_exact_target
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_direct_route_exact_target
       env)
     (env_fns env).
 
@@ -2882,7 +2914,7 @@ Definition check_env_end2end_direct_receiver_split_ready
     env &&
   check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
     env &&
-  check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+  check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
     env &&
   check_env_root_shadow_provenance_summary env &&
   check_env_preservation_ready env.
@@ -2912,7 +2944,7 @@ Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
   repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[[[Hcombined Hlocal] _Hroute] Hprov] Hpres].
+  destruct Hcheck as [[[[Hcombined Hlocal] _Hready_body] Hprov] Hpres].
   unfold check_env_direct_receiver_method_body_runtime_facts_sidecar.
   rewrite Hprov. rewrite Hpres. reflexivity.
 Qed.
@@ -2928,21 +2960,21 @@ Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
   repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[[[Hcombined Hlocal] _Hroute] _Hprov] _Hpres].
+  destruct Hcheck as [[[[Hcombined Hlocal] _Hready_body] _Hprov] _Hpres].
   split; assumption.
 Qed.
 
-Lemma check_env_end2end_direct_receiver_split_ready_synthetic_route_exact_target :
+Lemma check_env_end2end_direct_receiver_split_ready_body_summary_provider_check :
   forall env,
     check_env_end2end_direct_receiver_split_ready env = true ->
-    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check
       env = true.
 Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
   repeat rewrite andb_true_iff in Hcheck.
-  destruct Hcheck as [[[_Hcombined_local Hroute] _Hprov] _Hpres].
-  exact Hroute.
+  destruct Hcheck as [[[_Hcombined_local Hready_body] _Hprov] _Hpres].
+  exact Hready_body.
 Qed.
 
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks

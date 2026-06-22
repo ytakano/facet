@@ -2625,6 +2625,98 @@ Proof.
     eassumption.
 Qed.
 
+Lemma eval_preserves_frame_param_scope_ready_body_summary_at_prefix_call_height_statement_evidence_at_of_reachable_less_callback :
+  forall base_env base_fname n_call env fname fdef,
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    eval_preserves_frame_param_scope_ready_body_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+  forall fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body Gamma_out R_body roots_body frame,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    preservation_ready_args args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    fn_root_shadow_ready_body_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    direct_call_callee_body_root_ready_body_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    root_env_covers_params (fn_params fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    store_frame_scope (fn_params fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (bind_params (fn_params fcall) vs s_args) frame ->
+    store_frame_static_fresh (sctx_of_ctx (params_ctx (fn_params fcall)))
+      frame ->
+    store_param_scope (fn_params fcall)
+      (bind_params (fn_params fcall) vs s_args) frame ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    n_body_call < n_call ->
+    store_frame_scope (fn_params fcall) (sctx_of_ctx Gamma_out) s_body
+      frame /\
+    exists frame', store_param_scope (fn_params fcall) s_body frame'.
+Proof.
+  intros base_env base_fname n_call env fname fdef Hreachable Hcallback
+    Hin Hname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body frame Hrename
+    Htarget Hready_body Htyped_body Hunique_body Hsummary_body
+    Hevidence_body Hcover Hstore_bind Hnamed_bind Hkeys_bind Hroots_bind
+    Hshadow_bind Hrn_bind Hframe Hfresh Hparam Heval_body n_body_call
+    Hheight_body Hlt_body.
+  eapply (Hcallback n_body_call Hlt_body
+    (global_env_with_local_bounds env (fn_bounds fcall)) fname_body).
+  - eapply store_safe_ready_body_exact_body_call_route_reachable_body_call_step;
+      eassumption.
+  - exact Heval_body.
+  - exact Hheight_body.
+  - exact Hready_body.
+  - exact Hstore_bind.
+  - exact Hnamed_bind.
+  - exact Hkeys_bind.
+  - exact Htyped_body.
+  - exact Hunique_body.
+  - exact Hsummary_body.
+  - exact Hevidence_body.
+  - exact Hcover.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_bind.
+  - exact Hframe.
+  - exact Hfresh.
+  - exact Hparam.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env fname,

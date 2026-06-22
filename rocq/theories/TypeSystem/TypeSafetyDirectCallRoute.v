@@ -2454,6 +2454,83 @@ Proof.
     eassumption.
 Qed.
 
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_ready_body_reachable_less_callback :
+  forall base_env base_fname n_call env fname fdef,
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    eval_preserves_typing_roots_ready_body_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+  forall fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body Gamma_out R_body roots_body,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body ->
+    preservation_ready_args args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    n_body_call < n_call ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body (sctx_of_ctx Gamma_out) /\
+    value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body ret T_body /\
+    store_ref_targets_preserved
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args) s_body /\
+    store_roots_within R_body s_body /\
+    value_roots_within roots_body ret /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body.
+Proof.
+  intros base_env base_fname n_call env fname fdef Hreachable Hcallback
+    Hin Hname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body Hrename Htarget
+    Hsafe_args Hready_body Htyped_body Hunique_body Hsummary_body
+    Hevidence_body Hstore_bind Hroots_bind Hshadow_bind Hrn_bind Hnamed_bind
+    Hkeys_bind Heval_body n_body_call Hheight_body Hlt_body.
+  eapply
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_reachable_less_callback;
+    try eassumption.
+  - intros fcallee Hlookup. left. exact (Hsummary_body fcallee Hlookup).
+  - eapply direct_call_callee_body_root_ready_body_evidence_at_of_synthetic.
+    exact Hevidence_body.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env fname,

@@ -23,163 +23,45 @@ that the CLI actually uses.
 - Traits, impls, associated types, trait methods, method-local type parameters,
   generic-trait impl remapping, associated type projections, and receiver-first
   UFCS method calls are parsed, lowered, and checked through the extracted Rocq
-  checker. Impl method bodies are elaborated to hidden functions and checked even
-  when uncalled. Dot syntax, associated type defaults, equality constraints, and
-  `deriving` remain deferred.
-- Supported method receivers are forms whose type is known before checker
-  execution: parameters, typed literals, pure literal/unit locals after
-  receiver-let elimination, fieldless struct literals, and payloadless enum
-  constructors, including generic instances. Field-bearing structs, payload
-  enums, direct-call receivers, generic direct-call receivers, non-pure inferred
-  locals, and call-initialized/general annotated locals remain gated.
-- The OCaml CLI currently uses
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` as its only checker
-  authority. Public checker soundness aliases target this endpoint.
-- The required public checked-initial runtime theorem now targets the active
-  mixed endpoint, `infer_program_env_end2end_assoc_direct_receiver_mixed`, and
-  consumes the mixed endpoint's local runtime package rather than the older
-  strict/exact endpoint.
-- A diagnostic split endpoint exists:
-  `infer_program_env_end2end_assoc_direct_receiver_split`, gated by
-  `check_env_end2end_direct_receiver_split_ready`. It is not yet the active
-  checker authority. `End2EndSafety.v` now has
-  `direct_receiver_split_runtime_evidence_in_env`, which packages split-ready
-  runtime facts, and the non-diagnostic theorem
-  `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`
-  compiles with the same public preservation-premise shape as the active mixed
-  theorem. The split-ready gate now uses the ready-body provider check instead
-  of the synthetic route/exact-target sidecar, so the old no-target blocker is
-  no longer the split-ready certificate itself. The active CLI endpoint still
-  rejects valid no-target local-bounds callees because
-  `infer_program_env_end2end_assoc_direct_receiver_mixed` retains the older
-  synthetic route/exact-target gate.
-- `End2EndSafety.v` now has an internal
-  `assoc_direct_receiver_mixed_local_runtime_package` produced by
-  `infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package`.
-  This packages the active mixed endpoint's provable no-receiver local runtime
-  evidence: ready-body-or-narrow summary provider plus alpha-body callback
-  provider.
-- `End2EndSafety.v` also has
-  `mixed_ready_body_or_narrow_summary_provider_route_bridge_of_synthetic_summary_route_public_runtime_evidence`,
-  which packages public runtime evidence plus a synthetic summary route premise
-  into `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
-- The remaining proof surface issue is deriving that synthetic summary route
-  premise internally, without adding it as a public premise or introducing more
-  one-off wrapper theorem variants. A direct retarget attempt showed that the
-  current public premise
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` is
-  weaker than the store-safe synthetic summary route evidence consumed by the
-  mixed value/cleanup bridge.
-- `CheckerRootSidecars.v` exposes the active mixed endpoint's
-  checker-backed component certificate for selected no-capture direct-call
-  callees under local bounds: synthetic route summaries, store-safe component
-  summaries, and exact-body targets. `End2EndSafety.v` packages this in
-  `assoc_direct_receiver_mixed_local_runtime_package` and derives the
-  store-safe synthetic summary route evidence needed by the mixed route bridge.
-- Two narrower checker building blocks now exist but are not yet promoted into
-  the active endpoint.
-  `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct` proves
-  synthetic readiness only for bodies with a `direct_call_target_expr`, but a
-  direct endpoint swap is still circular because the current route package asks
-  for callee-level synthetic summary evidence.
-  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-  is the next certificate boundary: its soundness lemma packages ready-body
-  exact-route evidence plus exact-target facts under local bounds without
-  requiring synthetic direct-call evidence for no-target callees. The active
-  mixed local runtime package now also has a branch-scoped projection,
-  `assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family`,
-  and the endpoint-level provider
-  `component_body_local_bounds_ready_body_exact_route_package_provider_in_env`.
-  The integration bridge
-  `ready_body_exact_route_package_provider_route_bridge` now states how that
-  provider will feed `component_body_local_bounds_ready_body_route_provider_in_env`
-  once the low-level ready-body route theorem exists.
-- The newer implementation roadmap is now treated as a phase map rather than a
-  literal task list. Phase 1 is complete; the useful Phase 2 boundary is the
-  existing local runtime package plus the remaining need to stop threading
-  synthetic route evidence through the active mixed checker gate. Phase 4's
-  split runtime theorem is already proved, but endpoint promotion remains
-  blocked until the checker frontier accepts no-target local-bounds callees.
+  checker. Feature work remains frozen: dot syntax, associated type defaults,
+  equality constraints, `deriving`, field-bearing struct receivers, payload enum
+  receivers, and broader inferred/call-initialized receiver forms are deferred.
+- The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
+  its only checker authority. The public theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` now targets
+  that active mixed endpoint with no stronger public preservation premises.
+- The active mixed endpoint has an internal local runtime package,
+  `assoc_direct_receiver_mixed_local_runtime_package`, containing the currently
+  proved no-receiver runtime facts. It still reaches route preservation through
+  checker-backed synthetic route-summary/exact-target evidence.
+- The replacement route path is in progress. The checker-side ready-body
+  exact-route certificate and local-bounds projection exist, as do the endpoint
+  exact-route package provider, the integration bridge to
+  `component_body_local_bounds_ready_body_route_provider_in_env`, ready-body
+  reachable callbacks, the nested smaller-height ready-body body-call callback,
+  and the synthetic-callback adapter for that smaller-height callback.
+- The remaining low-level proof gap is the ready-body current-step theorem and
+  height induction over `store_safe_ready_body_exact_body_call_route_reachable`.
+  Once that route theorem exists, the active mixed no-capture direct-call
+  component branch can stop depending on the synthetic route provider.
+- The diagnostic split endpoint,
+  `infer_program_env_end2end_assoc_direct_receiver_split`, has a compiled
+  checked-initial runtime theorem with the same public preservation-premise shape
+  as the active mixed theorem. It is not the CLI authority yet; promotion remains
+  blocked until the checker frontier accepts valid no-target local-bounds
+  callees without the old synthetic route/exact-target requirement.
 
 ## Active Proof Plan
 
-1. Retarget the public runtime theorem to the active mixed endpoint.
-   - Completed: `infer_program_env_end2end_big_step_safe_checked_initial_ready`
-     now targets `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Public premises remain no stronger than the current preservation packages.
-   - Completed subtask: package the active mixed endpoint's provable local
-     no-receiver runtime evidence in
-     `assoc_direct_receiver_mixed_local_runtime_package`.
-   - Completed subtask: package public runtime evidence plus explicit synthetic
-     summary route evidence into
-     `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
-   - Completed diagnostic subtask: the synthetic summary route evidence cannot
-     be derived from the current public premises alone; it needs a local
-     component certificate that combines route-summary readiness with
-     exact-body-target evidence.
-   - Completed implementation subtask: add the checker sidecar gate for the
-     active mixed endpoint, package route-summary/exact-target evidence in
-     `assoc_direct_receiver_mixed_local_runtime_package`, and derive the
-     store-safe synthetic summary route evidence through the existing
-     scoped-package lemmas.
-   - Completed subtask: retarget the public theorem body to consume this
-     package and make `infer_program_env_end2end_big_step_safe_checked_initial_ready`
-     use `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Completed subtask: add the direct-target-only synthetic readiness checker
-     `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
-     plus its soundness projection. Keep the active endpoint on the older
-     compile-proven synthetic route/exact-target sidecar until the route bridge
-     can consume the narrowed certificate.
-   - Completed diagnostic subtask: update `tests/diagnose_trait_gates.sh` to
-     parse diagnostic gate output even when the checker exits nonzero on known
-     rejected frontier cases; the diagnostic script now passes again.
-   - Completed analysis subtask: a direct active-gate swap to
-     `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
-     is insufficient because the current route package demands callee-level
-     synthetic summary evidence. The failure is at the route-package contract,
-     not at the direct-target-only checker projection.
-   - Completed implementation subtask: add the ready-body exact-route checker
-     certificate
-     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-     and prove its local-bounds package projection. This reuses the existing
-     `store_safe_ready_body_exact_body_call_route_package_at` path and keeps the
-     active endpoint unchanged while giving the next refactor a non-synthetic
-     route package to consume.
-   - Completed correction: a global active mixed gate conjunct for
-     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-     is too strong and rejects broad existing valid programs, so the active
-     checker gate remains unchanged.
-   - Completed implementation subtask: add
-     `assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family`,
-     a branch-scoped projection from the active mixed local runtime package's
-     existing synthetic route/exact-target field into the ready-body exact-route
-     package shape.
-   - Completed implementation subtask: introduce
-     `component_body_local_bounds_ready_body_exact_route_package_provider_in_env`
-     and derive it from
-     `infer_program_env_end2end_assoc_direct_receiver_mixed` through the local
-     runtime package.
-   - Completed implementation subtask: add
-     `ready_body_exact_route_package_provider_route_bridge` and
-     `component_body_local_bounds_ready_body_route_provider_of_exact_route_package_provider`,
-     the integration path from the endpoint exact-route package provider to the
-     ready-body route provider.
-   - Completed reconnaissance: the synthetic exact-route induction cannot be
-     wrapped because ready-body summaries may be ordinary shadow summaries, not
-     synthetic summaries.
-   - Completed implementation subtask: add ready-body reachable callback
-     definitions and lifting lemmas parallel to the synthetic reachable callback
-     layer in `TypeSafetyDirectCallRoute.v`.
-   - Completed implementation subtask: add the nested ready-body body-call
-     callback bridge
-     `eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_reachable_less_callback`,
-     which discharges smaller-height exact body calls by extending the reachable
-     ready-body route through the current callee's local bounds.
-   - Next implementation subtask: prove the ready-body current-step theorem over
+1. Finish the ready-body exact-route proof path for the active mixed endpoint.
+   - Prove the ready-body current-step theorem over
      `store_safe_ready_body_exact_body_call_route_reachable`, using the
-     nested-body bridge for recursive calls; then assemble the height induction,
-     instantiate the bridge, and replace synthetic route consumption only for the
-     no-capture direct-call component branch.
+     reachable-less typing/scope callbacks and the nested body-call adapters.
+   - Assemble the ready-body height induction and instantiate
+     `ready_body_exact_route_package_provider_route_bridge` for the active mixed
+     endpoint's branch-scoped exact-route package provider.
+   - Replace synthetic route consumption only for the no-capture direct-call
+     component branch; keep the public theorem premises unchanged.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -319,12 +201,12 @@ that the CLI actually uses.
   checker-backed synthetic route-summary/exact-target certificate. A
   ready-body route exact-target checker, its local-bounds projection, and an
   endpoint-level branch-scoped exact-route package provider, integration
-  bridge, low-level ready-body reachable callback shapes, and the nested
-  smaller-height ready-body body-call callback bridge now exist. The remaining
-  proof gap is the route theorem: the ready-body current-step and height
-  induction over reachable exact routes still need to be proved before the
-  public theorem can stop reaching route preservation through the synthetic
-  route provider.
+  bridge, low-level ready-body reachable callback shapes, the nested
+  smaller-height ready-body body-call callback bridge, and the corresponding
+  synthetic-callback adapter now exist. The remaining proof gap is the route
+  theorem: the ready-body current-step and height induction over reachable exact
+  routes still need to be proved before the public theorem can stop reaching
+  route preservation through the synthetic route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

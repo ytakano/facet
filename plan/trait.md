@@ -133,11 +133,12 @@ that the CLI actually uses.
      `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_direct_component_runtime_facts`,
      which uses the split combined captured/direct-component check without
      requiring full `check_env_end2end_direct_receiver_ready`.
-   - Next subtask: remove that consumer's remaining explicit global runtime
-     facts by deriving or replacing these premises from split package evidence:
-     `env_fns_root_shadow_provenance_summary_evidence`,
-     `env_fns_preservation_ready`, and
-     `env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence`.
+   - Completed subtask: replace the direct consumer's explicit global runtime
+     facts with the narrower theorem
+     `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_local_runtime_facts`.
+   - Next subtask: derive the remaining two local providers from the split
+     package: `direct_receiver_method_body_runtime_facts_provider` and
+     `component_body_local_bounds_narrow_summary_provider_in_env`.
    - Required theorem:
 
      ```coq
@@ -181,11 +182,11 @@ that the CLI actually uses.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
   The no-receiver branch now has a package-backed consumer. The
-  direct-receiver-present branch has a narrow split-package consumer, but it
-  still requires explicit global provenance, preservation, and synthetic-summary
-  runtime facts; the final theorem must either derive those facts from split
-  evidence or use a lower consumer that accepts paired ordinary-or-direct
-  evidence directly.
+  direct-receiver-present branch now has a lower split-package consumer that
+  avoids explicit global provenance, preservation, and synthetic-summary runtime
+  facts. The final theorem still needs split-certificate derivations for the
+  local direct-method body runtime provider and the component local-bounds narrow
+  summary provider.
 
 ## Unsupported Or Deferred Features
 

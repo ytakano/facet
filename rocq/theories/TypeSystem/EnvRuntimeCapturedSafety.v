@@ -24651,6 +24651,68 @@ Proof.
       eassumption.
 Qed.
 
+Definition direct_receiver_method_body_runtime_facts_provider
+    (env : global_env) : Prop :=
+  forall fdef,
+    callee_body_root_shadow_captured_call_direct_receiver_method_narrow_store_safe_summary
+      env fdef ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (global_env_with_local_bounds env (fn_bounds fdef)) /\
+    env_fns_preservation_ready
+      (global_env_with_local_bounds env (fn_bounds fdef)).
+
+Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready_and_direct_method_body_runtime_facts :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    direct_receiver_method_body_runtime_facts_provider env ->
+    callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    direct_receiver_method_live_scoped_body_lift_ready_provider_for_eval
+      env f ->
+    direct_receiver_method_consumed_scoped_body_lift_ready_provider_for_eval
+      env f ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hdirect_body_facts Hsummary Hinitial
+    Hstore Heval Hlive_body Hconsumed_body.
+  destruct Hsummary as [Hcaptured | Hdirect].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready;
+      eassumption.
+  - destruct (check_fn_root_shadow_direct_receiver_method_store_safe_summary_view_prop
+      env f Hdirect) as
+      (method_name & type_args & receiver_name & receiver_args & method_args &
+        target_synthetic_body & hidden_synthetic_body & receiver_callee &
+        method_callee & T_receiver & Gamma_receiver & R_receiver &
+        roots_receiver & T_receiver_env & Gamma_receiver_env & R_receiver_env &
+        roots_receiver_env & ret_roots_receiver & T_method & Gamma_method &
+        R_method & roots_method & T_method_env & Gamma_method_env &
+        R_method_env & roots_method_env & T_body & Gamma_body & R_out &
+        roots & _Htarget & _Hhidden & _Hsafe_receiver_args &
+        _Hsafe_method_args & _Hnot_free_method_args &
+        _Hnot_local_method_args & _Hnot_body_ctx & _Hin_receiver &
+        _Hname_receiver & _Hin_method & _Hname_method & _Harity & _Hbounds &
+        _Hreceiver_core & _Hreceiver_env & _Hreceiver_summary &
+        _Hreceiver_compat & _Hreceiver_roots & _Hreceiver_env_excl &
+        _Hmethod_core & _Hmethod_env & _Hmethod_ready & _Hmethod_summary &
+        _Hmethod_compat & _Hmethod_roots & _Hmethod_env_excl & Hbody_env &
+        _Hcompat & _Hroots_excl & _Henv_excl).
+    pose proof (infer_env_roots_shadow_safe_params_nodup_sidecar env
+      (fn_with_body f hidden_synthetic_body) (initial_root_env_for_fn f)
+      T_body Gamma_body R_out roots Hbody_env) as Hnodup.
+    unfold fn_with_body in Hnodup. simpl in Hnodup.
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+    destruct (Hdirect_body_facts f Hdirect) as
+      [Hevidence_body Hready_body].
+    eapply callee_body_root_shadow_captured_call_direct_receiver_method_summary_runtime_replay_checked_initial_value_with_selected_scoped_raw_body_replay;
+      try eassumption.
+    + eapply direct_receiver_method_live_scoped_raw_body_replay_provider_of_scoped_body_lift_ready;
+        eassumption.
+    + eapply direct_receiver_method_consumed_scoped_raw_body_replay_provider_of_scoped_body_lift_ready;
+        eassumption.
+Qed.
 
 
 Theorem callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready :

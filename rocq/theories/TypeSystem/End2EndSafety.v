@@ -20754,6 +20754,58 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_local_runtime_facts :
+  forall env env' f s s' v,
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_split_runtime_evidence_in_env env' ->
+    direct_receiver_method_body_runtime_facts_provider env' ->
+    component_body_local_bounds_narrow_summary_provider_in_env env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros env env' f s s' v Hprog Hevidence Hdirect_body_facts
+    Hcomponent_provider Hinitial Hin Hstore Heval.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name
+      env env' Hprog) as Hunique.
+  pose proof (direct_receiver_split_runtime_combined_check env' Hevidence)
+    as Hcombined_check.
+  unfold check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  apply forallb_forall with (x := f) in Hcombined_check; [| exact Hin].
+  unfold check_fn_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
+    in Hcombined_check.
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method
+    env' f) eqn:Hcaptured_check.
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_big_step_safe_checked_initial_ready_with_scoped_body_lift_ready_and_direct_method_body_runtime_facts.
+    + exact Hunique.
+    + exact Hdirect_body_facts.
+    + eapply check_fn_root_shadow_captured_call_store_safe_summary_with_direct_receiver_method_sound.
+      exact Hcaptured_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+    + apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
+    + apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_of_component_and_local_bounds_narrow_provider.
+      * exact Hunique.
+      * exact Hcomponent_provider.
+      * exact Hin.
+      * exact Hcombined_check.
+      * eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+        exact Hcombined_check.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_direct_component_runtime_facts :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

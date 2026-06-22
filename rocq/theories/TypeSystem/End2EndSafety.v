@@ -23138,8 +23138,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   preservation_ready_expr_static_runtime_named_prefix_statement ->
   forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
@@ -23147,8 +23147,9 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_prefix :
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-    Hroot_names Hroot_keys Hframe_ready Hparam_ready Hstatic.
-  eapply infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_static_component_callbacks_prefix.
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready _Hstatic env env' f
+    s s' v Hprog Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_big_step_safe_checked_initial_ready_with_endpoint_local_certificate_and_synthetic_route_provider.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
   - exact Htyping_ready.
@@ -23157,7 +23158,22 @@ Proof.
   - exact Hroot_keys.
   - exact Hframe_ready.
   - exact Hparam_ready.
-  - exact Hstatic.
+  - exact Hprog.
+  - intros _Hno_receiver f_component Hin_component Hcomponent_check.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_summary_route_evidence_of_local_runtime_package.
+    + exact Hscope_synthetic.
+    + exact eval_preserves_typing_ready_prefix_mutual.
+    + exact eval_preserves_typing_roots_ready_prefix_mutual.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hprog.
+    + exact Hin_component.
+    + exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
@@ -23170,8 +23186,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env env' f s s' v,
-    infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed
-      env = infer_ok env' ->
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->

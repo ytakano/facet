@@ -35,10 +35,10 @@ that the CLI actually uses.
 - The OCaml CLI currently uses
   `infer_program_env_end2end_assoc_direct_receiver_mixed` as its only checker
   authority. Public checker soundness aliases target this endpoint.
-- The required public checked-initial runtime theorem still targets the older
-  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
-  endpoint. This mismatch must be fixed before promoting any direct-receiver
-  split endpoint.
+- The required public checked-initial runtime theorem now targets the active
+  mixed endpoint, `infer_program_env_end2end_assoc_direct_receiver_mixed`, and
+  consumes the mixed endpoint's local runtime package rather than the older
+  strict/exact endpoint.
 - A diagnostic split endpoint exists:
   `infer_program_env_end2end_assoc_direct_receiver_split`, gated by
   `check_env_end2end_direct_receiver_split_ready`. Diagnostics show that it can
@@ -72,10 +72,9 @@ that the CLI actually uses.
 ## Active Proof Plan
 
 1. Retarget the public runtime theorem to the active mixed endpoint.
-   - Move `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
-     `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
-     to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
-   - Keep public premises no stronger than the current preservation packages.
+   - Completed: `infer_program_env_end2end_big_step_safe_checked_initial_ready`
+     now targets `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+   - Public premises remain no stronger than the current preservation packages.
    - Completed subtask: package the active mixed endpoint's provable local
      no-receiver runtime evidence in
      `assoc_direct_receiver_mixed_local_runtime_package`.
@@ -91,9 +90,12 @@ that the CLI actually uses.
      `assoc_direct_receiver_mixed_local_runtime_package`, and derive the
      store-safe synthetic summary route evidence through the existing
      scoped-package lemmas.
-   - Next subtask: retarget the public theorem body to consume this package and
-     make `infer_program_env_end2end_big_step_safe_checked_initial_ready` use
-     `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+   - Completed subtask: retarget the public theorem body to consume this
+     package and make `infer_program_env_end2end_big_step_safe_checked_initial_ready`
+     use `infer_program_env_end2end_assoc_direct_receiver_mixed`.
+   - Next subtask: start the split endpoint runtime-safety proof using the same
+     evidence-package style, without relying on the diagnostic no-receiver/direct-ready
+     disjunction as a public premise.
 
 2. Introduce an explicit runtime evidence package.
    - Extend the current local package only when a runtime consumer needs more
@@ -153,17 +155,14 @@ that the CLI actually uses.
 
 ## Unresolved Blockers
 
-- The public runtime theorem is still not retargeted. A direct proof attempt via
-  the existing mixed value/cleanup bridge fails because that bridge needs
-  store-safe synthetic summary evidence, while the public theorem currently only
-  assumes the weaker synthetic direct-call prefix preservation premise.
+- The public runtime theorem retarget is complete for the active mixed endpoint.
+  The earlier value/cleanup bridge gap is closed by deriving the required
+  synthetic route evidence from the mixed endpoint's checker-backed local
+  runtime package.
 - The active mixed endpoint now has a local runtime package with
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
-  checker-backed route-summary/exact-target certificate. The package can derive:
-  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family`
-  for selected component local bounds. The remaining Rocq task is to thread this
-  package through the existing mixed endpoint runtime theorem and replace the
-  old strict/exact public endpoint.
+  checker-backed route-summary/exact-target certificate. The package is threaded
+  through the public runtime theorem for selected component local bounds.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
 
@@ -222,8 +221,8 @@ before relying on `dune build` or CLI tests.
 
 The trait type-safety implementation is complete for this roadmap slice when:
 
-1. `infer_program_env_end2end_big_step_safe_checked_initial_ready` targets the
-   active checker endpoint.
+1. Done: `infer_program_env_end2end_big_step_safe_checked_initial_ready` targets
+   the active checker endpoint.
 2. The CLI accept/reject path uses only an extracted Rocq endpoint.
 3. The split endpoint has a non-diagnostic checked-initial runtime-safety theorem.
 4. No final runtime theorem depends on the diagnostic no-receiver/direct-ready

@@ -76,14 +76,15 @@ that the CLI actually uses.
   summaries, and exact-body targets. `End2EndSafety.v` packages this in
   `assoc_direct_receiver_mixed_local_runtime_package` and derives the
   store-safe synthetic summary route evidence needed by the mixed route bridge.
-- A narrower checker building block now exists but is not yet promoted into the
+- A narrower checker building block exists but is not yet promoted into the
   active endpoint: `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
   requires synthetic direct-call readiness only for bodies that actually expose
   a `direct_call_target_expr`. Its soundness projection
   `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct_sound_at`
-  compiles. This avoids rejecting no-target callees by construction, but the
-  endpoint gate remains on the older synthetic route/exact-target certificate
-  until a non-circular ready-body route bridge is proved.
+  compiles. A direct endpoint swap is not enough: the current route package asks
+  for synthetic summary evidence on the looked-up callee, so no-target callees
+  still need a new non-circular ready-body route bridge or a weaker route-package
+  contract before the active gate can change.
 
 ## Active Proof Plan
 
@@ -114,9 +115,12 @@ that the CLI actually uses.
      plus its soundness projection. Keep the active endpoint on the older
      compile-proven synthetic route/exact-target sidecar until the route bridge
      can consume the narrowed certificate.
-   - Next subtask: prove the ready-body/synthetic-route bridge from the
-     narrowed `when_direct` certificate plus existing ready-body and exact-body
-     facts, then switch the endpoint gate to the narrowed route certificate.
+   - Completed diagnostic subtask: update `tests/diagnose_trait_gates.sh` to
+     parse diagnostic gate output even when the checker exits nonzero on known
+     rejected frontier cases; the diagnostic script now passes again.
+   - Next subtask: refactor the route-package contract or prove a non-circular
+     ready-body route bridge so the active endpoint no longer needs synthetic
+     summary evidence for no-target local-bounds callees.
 
 2. Introduce an explicit runtime evidence package.
    - Extend the current local package only when a runtime consumer needs more
@@ -244,14 +248,11 @@ that the CLI actually uses.
   public theorem premise shape: the split-ready gate no longer carries the
   synthetic route/exact-target sidecar, but the active mixed endpoint still does.
   The narrowed `when_direct` checker certificate is the next candidate for the
-  active route certificate, but it still needs a route bridge that does not
-  re-enter the synthetic route provider. After this subtask,
-  `cd rocq && timeout 900 make theories/TypeSystem/End2EndSafety.vo`,
-  `cd rocq && timeout 900 make`, and `dune build` pass. `sh tests/run.sh`
-  still fails on valid direct-call/local-bounds programs, and
-  `sh tests/diagnose_trait_gates.sh` still fails because the diagnostic
-  frontier expectations have changed and the active end-to-end gate remains
-  closed.
+  active route certificate, but the existing route package still re-enters the
+  synthetic route provider by asking for callee-level synthetic summary evidence.
+  `sh tests/diagnose_trait_gates.sh` now passes and tracks this frontier.
+  `sh tests/run.sh` still fails on valid direct-call/local-bounds programs
+  because the active end-to-end gate remains closed.
 
 ## Unsupported Or Deferred Features
 

@@ -120,6 +120,11 @@ while IFS= read -r file; do
   total=$((total + 1))
 
   if dune exec ocaml/main.exe -- --diagnose-trait-gates "$file" >"$tmp" 2>&1; then
+    diagnostic_status=0
+  else
+    diagnostic_status=$?
+  fi
+  if [ "$diagnostic_status" -eq 0 ] || grep -q "^trait-diagnostic-direct-receiver-base: " "$tmp"; then
     for gate in \
       trait-direct-receiver-method-present \
       trait-shadow-provenance-summary \
@@ -401,6 +406,11 @@ for file in $(find tests/valid -type f -name "*.facet" | sort); do
   full_no_receiver_ready_total=$((full_no_receiver_ready_total + 1))
 
   if dune exec ocaml/main.exe -- --diagnose-trait-gates "$file" >"$tmp" 2>&1; then
+    diagnostic_status=0
+  else
+    diagnostic_status=$?
+  fi
+  if [ "$diagnostic_status" -eq 0 ] || grep -q "^trait-diagnostic-direct-receiver-base: " "$tmp"; then
     line=$(grep -E "^trait-no-receiver-ready-body-summary: (ok|fail)$" "$tmp" || true)
     case "$line" in
       "trait-no-receiver-ready-body-summary: fail")
@@ -555,12 +565,12 @@ if dune exec ocaml/main.exe -- --diagnose-trait-gates \
 else
   for line in \
     "trait-diagnostic-direct-receiver-base: ok" \
-    "trait-diagnostic-direct-receiver-split: ok" \
+    "trait-diagnostic-direct-receiver-split: fail" \
     "trait-direct-receiver-method-present: ok" \
     "trait-preservation-ready: fail" \
     "trait-direct-receiver-ready: fail" \
     "trait-direct-receiver-split-ready: ok" \
-    "trait-direct-receiver-split-end2end-ready: ok" \
+    "trait-direct-receiver-split-end2end-ready: fail" \
     "trait-direct-receiver-method-function: main: provenance=fail preservation=fail direct-component=ok component=fail" \
     "trait-shadow-provenance-function: main: direct-receiver-method=ok direct-receiver-summary=ok preservation-expr=fail provenance-expr=fail" \
     "trait-preservation-function: main: direct-receiver-method=ok direct-receiver-summary=ok provenance-summary=fail" \

@@ -1831,6 +1831,26 @@ Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_sum
       env)
     (env_fns env).
 
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then
+    let local_env := global_env_with_local_bounds env (fn_bounds fdef) in
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary
+      local_env &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      local_env &&
+    check_env_root_shadow_direct_call_exact_body_target local_env
+  else true.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+      env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_direct_route_exact_target
     (env : global_env) (fdef : fn_def) : bool :=
   if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary

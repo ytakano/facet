@@ -17961,6 +17961,67 @@ Proof.
   - exact Hcomponent_check.
 Qed.
 
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target_package_in_local_bounds_family :
+  forall env f_component env0,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+      env = true ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    global_env_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)) env0 ->
+    (forall fname,
+      store_safe_ready_body_exact_body_call_route_package_at env0 fname) /\
+    (forall fdef,
+      In fdef (env_fns env0) ->
+      direct_call_target_expr (fn_body fdef) <> None ->
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env0 fdef).
+Proof.
+  intros env f_component env0 Hcert Hin_component Hcomponent_check Hfamily.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+    in Hcert.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+      env)
+    (env_fns env)) Hcert f_component Hin_component) as Hfn_cert.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target
+    in Hfn_cert.
+  rewrite Hcomponent_check in Hfn_cert.
+  repeat rewrite andb_true_iff in Hfn_cert.
+  destruct Hfn_cert as [[Hready_check Hstore_check] Hexact_env_check].
+  destruct Hfamily as (bounds & ->).
+  split.
+  - intros fname.
+    change (store_safe_ready_body_exact_body_call_route_package_at
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env (fn_bounds f_component)) bounds)
+      fname).
+    eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_summary_exact_route_package_at_all_sound.
+    + exact Hready_check.
+    + intros fdef Hin.
+      eapply (proj1 (forallb_forall
+        (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          (global_env_with_local_bounds env (fn_bounds f_component)))
+        (env_fns (global_env_with_local_bounds env (fn_bounds f_component))))
+        Hstore_check fdef Hin).
+  - intros fdef Hin Hdirect_some.
+    change (callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env (fn_bounds f_component)) bounds)
+      fdef).
+    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds.
+    eapply check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound.
+    pose proof (proj1 (forallb_forall
+      (check_fn_root_shadow_direct_call_exact_body_target
+        (global_env_with_local_bounds env (fn_bounds f_component)))
+      (env_fns (global_env_with_local_bounds env (fn_bounds f_component))))
+      Hexact_env_check fdef Hin) as Hexact_check.
+    unfold check_fn_root_shadow_direct_call_exact_body_target in Hexact_check.
+    destruct (direct_call_target_expr (fn_body fdef)); try contradiction.
+    exact Hexact_check.
+Qed.
+
 Lemma component_body_local_bounds_ready_body_summary_provider_reachable_package_provider :
   forall env bounds base_fname,
     component_body_local_bounds_ready_body_summary_provider_in_env env ->

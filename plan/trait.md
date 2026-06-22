@@ -76,15 +76,17 @@ that the CLI actually uses.
   summaries, and exact-body targets. `End2EndSafety.v` packages this in
   `assoc_direct_receiver_mixed_local_runtime_package` and derives the
   store-safe synthetic summary route evidence needed by the mixed route bridge.
-- A narrower checker building block exists but is not yet promoted into the
-  active endpoint: `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
-  requires synthetic direct-call readiness only for bodies that actually expose
-  a `direct_call_target_expr`. Its soundness projection
-  `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct_sound_at`
-  compiles. A direct endpoint swap is not enough: the current route package asks
-  for synthetic summary evidence on the looked-up callee, so no-target callees
-  still need a new non-circular ready-body route bridge or a weaker route-package
-  contract before the active gate can change.
+- Two narrower checker building blocks now exist but are not yet promoted into
+  the active endpoint.
+  `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct` proves
+  synthetic readiness only for bodies with a `direct_call_target_expr`, but a
+  direct endpoint swap is still circular because the current route package asks
+  for callee-level synthetic summary evidence.
+  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
+  is the next certificate boundary: its soundness lemma
+  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target_package_in_local_bounds_family`
+  packages ready-body exact-route evidence plus exact-target facts under local
+  bounds without requiring synthetic direct-call evidence for no-target callees.
 - The newer implementation roadmap is now treated as a phase map rather than a
   literal task list. Phase 1 is complete; the useful Phase 2 boundary is the
   existing local runtime package plus the remaining need to stop threading
@@ -129,13 +131,17 @@ that the CLI actually uses.
      is insufficient because the current route package demands callee-level
      synthetic summary evidence. The failure is at the route-package contract,
      not at the direct-target-only checker projection.
-   - Next implementation subtask: move the active route certificate toward a
-     ready-body exact-route package. Reuse the existing
-     `store_safe_ready_body_exact_body_call_route_package_at` and
-     `component_body_local_bounds_ready_body_summary_provider_exact_route_package_at_all`
-     path, then refactor the mixed local runtime package so no-target
-     local-bounds callees are covered by ready-body evidence instead of
-     synthetic direct-call evidence.
+   - Completed implementation subtask: add the ready-body exact-route checker
+     certificate
+     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
+     and prove its local-bounds package projection. This reuses the existing
+     `store_safe_ready_body_exact_body_call_route_package_at` path and keeps the
+     active endpoint unchanged while giving the next refactor a non-synthetic
+     route package to consume.
+   - Next implementation subtask: refactor
+     `assoc_direct_receiver_mixed_local_runtime_package` and its route consumer
+     to accept the ready-body exact-route certificate, then switch the active
+     mixed gate away from the synthetic route/exact-target sidecar.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -212,10 +218,13 @@ that the CLI actually uses.
      proves synthetic readiness exactly at discovered direct-call targets, but a
      naive endpoint switch is circular because the ready-body route provider
      still depends on the synthetic route bridge it is meant to replace.
-   - Next subtask: integrate a non-circular ready-body exact-route bridge into
-     the mixed local runtime package, then switch the active gate away from the
-     synthetic route/exact-target sidecar. After that, rerun `tests/run.sh` and
-     only promote the split endpoint if the checker frontier is clean.
+   - Completed implementation subtask: add a ready-body exact-route checker
+     certificate and local-bounds package projection. This is the candidate
+     replacement for the active mixed endpoint's synthetic route sidecar.
+   - Next subtask: consume that ready-body exact-route package from the mixed
+     local runtime package, then switch the active gate away from the synthetic
+     route/exact-target sidecar. After that, rerun `tests/run.sh` and only
+     promote the split endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq

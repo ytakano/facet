@@ -1785,6 +1785,39 @@ Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_sum
       env)
     (env_fns env).
 
+Definition check_fn_root_shadow_direct_call_exact_body_target
+    (env : global_env) (fdef : fn_def) : bool :=
+  match direct_call_target_expr (fn_body fdef) with
+  | Some _ =>
+      check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+        env fdef
+  | None => true
+  end.
+
+Definition check_env_root_shadow_direct_call_exact_body_target
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_direct_call_exact_body_target env)
+    (env_fns env).
+
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    (env : global_env) (fdef : fn_def) : bool :=
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then
+    let local_env := global_env_with_local_bounds env (fn_bounds fdef) in
+    check_env_root_shadow_synthetic_direct_call_ready_summary local_env &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      local_env &&
+    check_env_root_shadow_direct_call_exact_body_target local_env
+  else true.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_direct_receiver_method_or_no_capture_direct_component_store_safe_summary
     (env : global_env) (fdef : fn_def) : bool :=
   check_fn_root_shadow_direct_receiver_method_store_safe_summary env fdef ||
@@ -2922,6 +2955,8 @@ Definition infer_program_env_end2end_assoc_direct_receiver_mixed
   | infer_ok env' =>
       if check_env_end2end_direct_receiver_mixed_ready env' &&
          check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+           env' &&
+         check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
            env'
       then infer_ok env'
       else infer_err ErrEndToEndSafetyGateFailed
@@ -2960,6 +2995,8 @@ Definition infer_program_env_end2end_assoc_receiver_method_exact_mixed
            env' &&
          check_env_end2end_direct_receiver_mixed_ready env' &&
          check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+           env' &&
+         check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
            env'
       then infer_ok env'
       else infer_err ErrEndToEndSafetyGateFailed

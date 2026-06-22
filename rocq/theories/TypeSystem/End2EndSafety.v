@@ -1155,8 +1155,9 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  apply andb_true_iff in Hgate as [_Hmixed_ready _Hlocal_check].
   injection Hprog as <-.
   reflexivity.
 Qed.
@@ -1174,10 +1175,35 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  apply andb_true_iff in Hgate as [_Hmixed_ready Hlocal_check].
+  repeat rewrite andb_true_iff in Hgate.
+  destruct Hgate as [[_Hmixed_ready Hlocal_check] _Hroute_exact_check].
   injection Hprog as <-.
   exact Hlocal_check.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_exact_target_check :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_assoc_direct_receiver_mixed in Hprog.
+  destruct (infer_program_env_end2end_assoc env)
+    as [env_checked | err] eqn:Hbase; try discriminate.
+  destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
+    check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env_checked) eqn:Hgate; try discriminate.
+  repeat rewrite andb_true_iff in Hgate.
+  destruct Hgate as [[_Hmixed_ready _Hlocal_check] Hroute_exact_check].
+  injection Hprog as <-.
+  exact Hroute_exact_check.
 Qed.
 
 Theorem infer_program_env_end2end_assoc_direct_receiver_mixed_sound :
@@ -1266,8 +1292,9 @@ Proof.
     env_checked) eqn:Hexact; simpl in Hprog; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  apply andb_true_iff in Hgate as [_Hmixed_ready _Hlocal_check].
   injection Hprog as ->.
   reflexivity.
 Qed.
@@ -1287,6 +1314,8 @@ Proof.
     env_checked) eqn:Hexact; simpl in Hprog; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
   injection Hprog as ->.
   reflexivity.
@@ -13331,8 +13360,11 @@ Proof.
     as [env_checked | err] eqn:Hbase; try discriminate.
   destruct (check_env_end2end_direct_receiver_mixed_ready env_checked &&
     check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check
+      env_checked &&
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
       env_checked) eqn:Hgate; try discriminate.
-  apply andb_true_iff in Hgate as [Hmixed_ready _Hlocal_check].
+  repeat rewrite andb_true_iff in Hgate.
+  destruct Hgate as [[Hmixed_ready _Hlocal_check] _Hroute_exact_check].
   injection Hprog as <-.
   eapply check_env_end2end_direct_receiver_mixed_ready_cases.
   exact Hmixed_ready.
@@ -16722,6 +16754,87 @@ Proof.
     (env_fns env)) Hcheck); exact Hin.
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' f_component env0 fdef,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    global_env_local_bounds_family
+      (global_env_with_local_bounds env' (fn_bounds f_component)) env0 ->
+    In fdef (env_fns env0) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    (direct_call_target_expr (fn_body fdef) <> None ->
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env0 fdef).
+Proof.
+  intros env env' f_component env0 fdef Hprog Hin_component
+    Hcomponent_check Hfamily Hin.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_route_exact_target_check
+      env env' Hprog) as Hcert.
+  unfold check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    in Hcert.
+  pose proof (proj1 (forallb_forall
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+      env')
+    (env_fns env')) Hcert f_component Hin_component) as Hfn_cert.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target
+    in Hfn_cert.
+  rewrite Hcomponent_check in Hfn_cert.
+  repeat rewrite andb_true_iff in Hfn_cert.
+  destruct Hfn_cert as [[Hroute_check Hstore_check] Hexact_env_check].
+  assert (Hunique_local :
+    fn_env_unique_by_name
+      (global_env_with_local_bounds env' (fn_bounds f_component))).
+  { eapply fn_env_unique_by_name_global_env_with_local_bounds.
+    eapply infer_program_env_end2end_assoc_unique_by_name.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_base.
+    exact Hprog. }
+  destruct Hfamily as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' (fn_bounds f_component)) bounds))
+    with (env_fns env') in Hin.
+  split.
+  - split.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+      * exact Hunique_local.
+      * eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      pose proof (proj1 (forallb_forall
+        (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          (global_env_with_local_bounds env' (fn_bounds f_component)))
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))))
+        Hstore_check fdef Hin) as Hlocal_component_check.
+      exact Hlocal_component_check.
+    + intros fcall used used' fname_body args_body synthetic_body
+        Hrename Htarget.
+      pose proof (alpha_rename_fn_def_bounds used fdef fcall used' Hrename)
+        as Hbounds.
+      rewrite Hbounds.
+      change (fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' (fn_bounds f_component))
+          (fn_bounds fdef)) fname_body).
+      eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+      eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+      eapply check_env_root_shadow_synthetic_direct_call_ready_summary_sound.
+      exact Hroute_check.
+  - intros Hdirect_some.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds.
+    eapply check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound.
+    pose proof (proj1 (forallb_forall
+      (check_fn_root_shadow_direct_call_exact_body_target
+        (global_env_with_local_bounds env' (fn_bounds f_component)))
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))))
+      Hexact_env_check fdef Hin) as Hexact_check.
+    unfold check_fn_root_shadow_direct_call_exact_body_target in Hexact_check.
+    destruct (direct_call_target_expr (fn_body fdef)); try contradiction.
+    exact Hexact_check.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary_sound :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_or_local_narrow_summary
@@ -16837,7 +16950,20 @@ Record assoc_direct_receiver_mixed_local_runtime_package
   assoc_direct_receiver_mixed_local_runtime_alpha_body_callback_provider :
     check_env_root_shadow_direct_receiver_method_present env' = false ->
     component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
-      env'
+      env';
+  assoc_direct_receiver_mixed_local_runtime_synthetic_route_exact_target :
+    forall f_component env0 fdef,
+      In f_component (env_fns env') ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component = true ->
+      global_env_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component)) env0 ->
+      In fdef (env_fns env0) ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+        env0 fdef /\
+      (direct_call_target_expr (fn_body fdef) <> None ->
+        callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+          env0 fdef)
 }.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package :
@@ -16847,15 +16973,93 @@ Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_packag
     assoc_direct_receiver_mixed_local_runtime_package env'.
 Proof.
   intros env env' Hprog.
-  constructor; intros Hno_receiver.
-  - destruct
+  constructor.
+  - intros Hno_receiver.
+    destruct
       (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
         env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
     exact Hprovider.
-  - destruct
+  - intros Hno_receiver.
+    destruct
       (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
         env env' Hprog Hno_receiver) as [_Hprovider Halpha_provider].
     exact Halpha_provider.
+  - intros f_component env0 fdef Hin_component Hcomponent_check
+      Hfamily Hin.
+    eapply infer_program_env_end2end_assoc_direct_receiver_mixed_route_summary_and_exact_target_in_local_bounds_family;
+      eassumption.
+Qed.
+
+Lemma assoc_direct_receiver_mixed_local_runtime_package_synthetic_summary_route_evidence :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env' f_component,
+    assoc_direct_receiver_mixed_local_runtime_package env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env' (fn_bounds f_component)).
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env' f_component Hpackage Hin_component
+    Hcomponent_check.
+  destruct Hpackage as [_Hprovider _Halpha Hroute_exact].
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package_with_component_exact_target
+    with (component_ready := fun env0 fdef =>
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+        env0 fdef /\
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env0 fdef).
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body Hfamily Hin Hname Hrename Htarget.
+    destruct (Hroute_exact f_component env0 fdef Hin_component
+      Hcomponent_check Hfamily Hin) as [Hroute_summary Hexact].
+    split.
+    + exact Hroute_summary.
+    + eapply Hexact.
+      destruct (direct_call_target_expr_alpha_rename_fn_def_inv
+        used fdef fcall used' fname_body args_body synthetic_body
+        Hrename Htarget) as (args0 & Htarget_original).
+      rewrite Htarget_original. discriminate.
+  - intros env0 fdef [_Hroute_summary Hexact].
+    exact Hexact.
+  - eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_summary_route_evidence_of_local_runtime_package :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f_component,
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env' (fn_bounds f_component)).
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f_component Hprog Hin_component
+    Hcomponent_check.
+  eapply assoc_direct_receiver_mixed_local_runtime_package_synthetic_summary_route_evidence;
+    try eassumption.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package.
+  exact Hprog.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_local_bounds_family_of_local_certificate :

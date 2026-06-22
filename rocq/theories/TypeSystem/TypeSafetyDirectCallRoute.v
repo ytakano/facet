@@ -19702,6 +19702,52 @@ Proof.
   exact (preservation_ready_expr_static_runtime_named_prefix_of_static Hstatic).
 Qed.
 
+Theorem eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_and_target_provider_prefix :
+  (forall env,
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env) ->
+  forall base_env base_fname fdef,
+    store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    In fdef (env_fns base_env) ->
+    fn_name fdef = base_fname ->
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at
+      base_env fdef.
+Proof.
+  intros Hready_route base_env base_fname fdef Htarget_provider Hprovider
+    Hin_base Hname_base.
+  unfold
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at.
+  intros fname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
+    Hrename Htarget Hsafe_args Hready Htyped Hunique Hsummary Hevidence
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval n_body_call Hheight.
+  assert (Hreachable_body :
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname
+      (global_env_with_local_bounds base_env (fn_bounds fcall)) fname_body).
+  { eapply store_safe_ready_body_exact_body_call_route_reachable_body_call_step.
+    - constructor.
+    - exact Hin_base.
+    - exact Hname_base.
+    - exact Hrename.
+    - exact Htarget. }
+  pose proof
+    (Htarget_provider base_env base_fname
+      (store_safe_ready_body_exact_body_call_route_reachable_here
+        base_env base_fname)
+      fdef fcall used used' fname_body args_body
+      (ECall fname_body args_body) Hin_base Hname_base Hrename Htarget)
+    as _Htarget_exact.
+  pose proof
+    (Hprovider
+      (global_env_with_local_bounds base_env (fn_bounds fcall)) fname_body
+      Hreachable_body) as _Hbody_package.
+  eapply Hready_route; try eassumption.
+Qed.
+
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_body_call_callback_and_exact_body_call_route_package_at_all_prefix :
   eval_preserves_typing_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->

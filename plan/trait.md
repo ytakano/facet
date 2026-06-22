@@ -42,7 +42,10 @@ that the CLI actually uses.
   typing/scope callback adapters for synthetic consumers and ready-body
   exact-route providers, a combined nested-callback package helper,
   ready-body route-statement adapters for reachable-provider-shaped consumers,
-  and ready-body callback family accessors for local-bounds consumers.
+  ready-body callback family accessors for local-bounds consumers, and a
+  provider-shaped ready-body call-store-safe callback wrapper that can consume
+  reachable exact-route package/target providers once supplied with the existing
+  global ready-body route statement.
 - The remaining low-level proof gap is the standalone ready-body current-step
   theorem and height induction over
   `store_safe_ready_body_exact_body_call_route_reachable`; the new adapters

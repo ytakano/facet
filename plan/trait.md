@@ -57,7 +57,16 @@ that the CLI actually uses.
   into `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
 - The remaining proof surface issue is deriving that synthetic summary route
   premise internally, without adding it as a public premise or introducing more
-  one-off wrapper theorem variants.
+  one-off wrapper theorem variants. A direct retarget attempt showed that the
+  current public premise
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` is
+  weaker than the store-safe synthetic summary route evidence consumed by the
+  mixed value/cleanup bridge.
+- The next internal certificate must be component-scoped: the active mixed
+  endpoint needs checker-backed route-summary plus exact-body-target evidence
+  for selected no-capture direct-call component callees under local bounds. The
+  likely source files are `CheckerRootSidecars.v` for exposing the boolean fact
+  and `End2EndSafety.v` for packaging it into the mixed runtime evidence route.
 
 ## Active Proof Plan
 
@@ -72,9 +81,15 @@ that the CLI actually uses.
    - Completed subtask: package public runtime evidence plus explicit synthetic
      summary route evidence into
      `mixed_ready_body_or_narrow_summary_provider_route_bridge`.
-   - Next subtask: derive the synthetic summary route evidence internally from
-     existing exact-body/scoped-package facts, then use the bridge to retarget
-     the public theorem.
+   - Completed diagnostic subtask: the synthetic summary route evidence cannot
+     be derived from the current public premises alone; it needs a local
+     component certificate that combines route-summary readiness with
+     exact-body-target evidence.
+   - Next implementation subtask: expose the smallest checker-backed
+     route-summary/exact-target fact for no-capture direct-call component
+     callees, package it in the active mixed endpoint runtime evidence, and
+     derive the store-safe synthetic summary route premise through the existing
+     scoped-package lemmas.
 
 2. Introduce an explicit runtime evidence package.
    - Extend the current local package only when a runtime consumer needs more
@@ -140,8 +155,10 @@ that the CLI actually uses.
   assumes the weaker synthetic direct-call prefix preservation premise.
 - The active mixed endpoint now has a small local runtime package for the
   no-receiver branch and a bridge helper that works when synthetic summary route
-  evidence is available. The next Rocq subtask is to prove that evidence without
-  exposing this premise publicly:
+  evidence is available. The next Rocq subtask is not another public wrapper: it
+  is to prove a local component certificate, backed by checker facts, that
+  supplies both route-summary readiness and exact-body-target evidence. That
+  certificate should feed the existing scoped-package lemmas to produce:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement`.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.

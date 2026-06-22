@@ -170,10 +170,16 @@ that the CLI actually uses.
    - Completed implementation subtask: add ready-body reachable callback
      definitions and lifting lemmas parallel to the synthetic reachable callback
      layer in `TypeSafetyDirectCallRoute.v`.
+   - Completed implementation subtask: add the nested ready-body body-call
+     callback bridge
+     `eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_reachable_less_callback`,
+     which discharges smaller-height exact body calls by extending the reachable
+     ready-body route through the current callee's local bounds.
    - Next implementation subtask: prove the ready-body current-step theorem over
-     `store_safe_ready_body_exact_body_call_route_reachable`, then assemble the
-     height induction, instantiate the bridge, and replace synthetic route
-     consumption only for the no-capture direct-call component branch.
+     `store_safe_ready_body_exact_body_call_route_reachable`, using the
+     nested-body bridge for recursive calls; then assemble the height induction,
+     instantiate the bridge, and replace synthetic route consumption only for the
+     no-capture direct-call component branch.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -313,10 +319,11 @@ that the CLI actually uses.
   checker-backed synthetic route-summary/exact-target certificate. A
   ready-body route exact-target checker, its local-bounds projection, and an
   endpoint-level branch-scoped exact-route package provider, integration
-  bridge, and low-level ready-body reachable callback shapes now exist. The
-  remaining proof gap is the route theorem: the ready-body current-step and
-  height induction over reachable exact routes still need to be proved before
-  the public theorem can stop reaching route preservation through the synthetic
+  bridge, low-level ready-body reachable callback shapes, and the nested
+  smaller-height ready-body body-call callback bridge now exist. The remaining
+  proof gap is the route theorem: the ready-body current-step and height
+  induction over reachable exact routes still need to be proved before the
+  public theorem can stop reaching route preservation through the synthetic
   route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the

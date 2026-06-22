@@ -14592,6 +14592,22 @@ Definition component_body_local_bounds_ready_body_route_provider_in_env
     eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_local_bounds_ready_body_exact_route_package_provider_in_env
+    (env : global_env) : Prop :=
+  forall f_component env0,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    global_env_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f_component)) env0 ->
+    (forall fname,
+      store_safe_ready_body_exact_body_call_route_package_at env0 fname) /\
+    (forall fdef,
+      In fdef (env_fns env0) ->
+      direct_call_target_expr (fn_body fdef) <> None ->
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env0 fdef).
+
 Definition component_body_local_bounds_shadow_summary_route_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,
@@ -17097,6 +17113,31 @@ Proof.
     destruct (Hroute_exact f_component env0 fdef Hin_component
       Hcomponent_check Hfamily Hin) as [_Hroute_summary Hexact].
     eapply Hexact. exact Hdirect_some.
+Qed.
+
+Lemma assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_provider :
+  forall env',
+    assoc_direct_receiver_mixed_local_runtime_package env' ->
+    component_body_local_bounds_ready_body_exact_route_package_provider_in_env
+      env'.
+Proof.
+  intros env' Hpackage f_component env0 Hin_component Hcomponent_check
+    Hfamily.
+  eapply assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family;
+    eassumption.
+Qed.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_exact_route_package_provider_of_local_runtime_package :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    component_body_local_bounds_ready_body_exact_route_package_provider_in_env
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_provider.
+  eapply infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package.
+  exact Hprog.
 Qed.
 
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_synthetic_summary_route_evidence_of_local_runtime_package :

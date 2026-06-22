@@ -147,9 +147,13 @@ that the CLI actually uses.
      `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env`
      through the existing summary-route bridge, and add the non-diagnostic
      theorem `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready`.
-   - Next subtask: internalize the summary-route bridge for the split endpoint
-     using checker-backed route evidence, so the split theorem has the same
-     public premise shape as the active mixed endpoint before promotion.
+   - Completed subtask: add
+     `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_exact_body_call_route_package`,
+     which internalizes the abstract summary-route bridge through the existing
+     exact-body route package.
+   - Next subtask: derive the split route package from checker-backed local
+     runtime evidence, so the split theorem has the same public premise shape as
+     the active mixed endpoint before promotion.
    - Required theorem:
 
      ```coq
@@ -199,9 +203,11 @@ that the CLI actually uses.
   provenance and preservation checks; this is sound and keeps the proof moving,
   but it deliberately strengthens the diagnostic split gate until the route
   certificate is narrowed. A non-diagnostic split runtime theorem now exists and
-  consumes the existing summary-route bridge; the remaining promotion blocker is
-  internalizing that bridge for the split endpoint rather than exposing it as a
-  theorem premise.
+  consumes the existing summary-route bridge. A concrete split theorem now
+  internalizes that bridge through the existing exact-body route package. The
+  remaining promotion blocker is deriving the route package from split
+  checker-backed local runtime evidence, matching the active mixed endpoint's
+  public premise shape before switching the CLI.
 
 ## Unsupported Or Deferred Features
 

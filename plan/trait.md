@@ -139,8 +139,10 @@ that the CLI actually uses.
    - Completed correction: align the component branch with the split
      certificate by requiring `component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env`
      plus mixed route evidence instead of the stronger narrow-summary provider.
-   - Next subtask: derive the remaining two providers from split evidence:
-     `direct_receiver_method_body_runtime_facts_provider` and
+   - Completed subtask: derive `direct_receiver_method_body_runtime_facts_provider`
+     from split evidence through a checker-backed sidecar requiring the ordinary
+     provenance and preservation checks already used by the runtime facts lemmas.
+   - Next subtask: derive the remaining mixed route provider from split evidence:
      `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env`.
    - Required theorem:
 
@@ -186,11 +188,12 @@ that the CLI actually uses.
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
   The no-receiver branch now has a package-backed consumer. The
   direct-receiver-present branch now has a lower split-package consumer that
-  avoids explicit global provenance, preservation, and synthetic-summary runtime
-  facts. The component branch now matches the split certificate's
-  ready-body-or-narrow summary provider. The final theorem still needs
-  split-certificate derivations for the local direct-method body runtime provider
-  and the mixed ready-body-or-narrow route provider.
+  avoids synthetic-summary runtime facts as explicit theorem premises. The direct
+  method body runtime provider is checker-backed by a sidecar over ordinary
+  provenance and preservation checks; this is sound and keeps the proof moving,
+  but it deliberately strengthens the diagnostic split gate until the route
+  certificate is narrowed. The final theorem still needs a split-certificate
+  derivation for the mixed ready-body-or-narrow route provider.
 
 ## Unsupported Or Deferred Features
 

@@ -20719,6 +20719,32 @@ Proof.
             env env' Hprog Hno_receiver).
 Qed.
 
+Lemma infer_program_env_end2end_assoc_direct_receiver_split_direct_receiver_method_body_runtime_facts_provider :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_split env =
+      infer_ok env' ->
+    direct_receiver_method_body_runtime_facts_provider env'.
+Proof.
+  intros env env' Hprog fdef _Hdirect.
+  pose proof
+    (infer_program_env_end2end_assoc_direct_receiver_split_ready_check
+      env env' Hprog) as Hready.
+  pose proof
+    (check_env_end2end_direct_receiver_split_ready_runtime_facts_sidecar
+      env' Hready) as Hsidecar.
+  destruct
+    (check_env_direct_receiver_method_body_runtime_facts_sidecar_facts
+      env' Hsidecar) as [Hprovenance Hpreservation].
+  split.
+  - eapply env_fns_root_shadow_provenance_summary_evidence_global_env_with_local_bounds.
+    eapply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
+    eapply check_env_root_shadow_provenance_summary_ready.
+    exact Hprovenance.
+  - eapply env_fns_preservation_ready_global_env_with_local_bounds.
+    eapply check_env_preservation_ready_sound.
+    exact Hpreservation.
+Qed.
+
 Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_when_no_receiver_with_runtime_evidence :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

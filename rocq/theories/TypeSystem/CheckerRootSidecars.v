@@ -2881,7 +2881,39 @@ Definition check_env_end2end_direct_receiver_split_ready
   check_env_root_shadow_captured_call_store_safe_with_direct_receiver_method_or_no_capture_direct_component_summary
     env &&
   check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check_with_direct_receiver_splits
-    env.
+    env &&
+  check_env_root_shadow_provenance_summary env &&
+  check_env_preservation_ready env.
+
+Definition check_env_direct_receiver_method_body_runtime_facts_sidecar
+    (env : global_env) : bool :=
+  check_env_root_shadow_provenance_summary env &&
+  check_env_preservation_ready env.
+
+Lemma check_env_direct_receiver_method_body_runtime_facts_sidecar_facts :
+  forall env,
+    check_env_direct_receiver_method_body_runtime_facts_sidecar env = true ->
+    check_env_root_shadow_provenance_summary env = true /\
+    check_env_preservation_ready env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_env_direct_receiver_method_body_runtime_facts_sidecar
+    in Hcheck.
+  apply andb_true_iff in Hcheck. exact Hcheck.
+Qed.
+
+Lemma check_env_end2end_direct_receiver_split_ready_runtime_facts_sidecar :
+  forall env,
+    check_env_end2end_direct_receiver_split_ready env = true ->
+    check_env_direct_receiver_method_body_runtime_facts_sidecar env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[[Hcombined Hlocal] Hprov] Hpres].
+  unfold check_env_direct_receiver_method_body_runtime_facts_sidecar.
+  rewrite Hprov. rewrite Hpres. reflexivity.
+Qed.
 
 Lemma check_env_end2end_direct_receiver_split_ready_facts :
   forall env,
@@ -2893,7 +2925,9 @@ Lemma check_env_end2end_direct_receiver_split_ready_facts :
 Proof.
   intros env Hcheck.
   unfold check_env_end2end_direct_receiver_split_ready in Hcheck.
-  apply andb_true_iff in Hcheck. exact Hcheck.
+  repeat rewrite andb_true_iff in Hcheck.
+  destruct Hcheck as [[[Hcombined Hlocal] _Hprov] _Hpres].
+  split; assumption.
 Qed.
 
 Definition check_env_root_shadow_no_receiver_component_ready_body_summary_provider_check_with_shadow_checks

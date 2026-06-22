@@ -138,10 +138,19 @@ that the CLI actually uses.
      `store_safe_ready_body_exact_body_call_route_package_at` path and keeps the
      active endpoint unchanged while giving the next refactor a non-synthetic
      route package to consume.
-   - Next implementation subtask: refactor
-     `assoc_direct_receiver_mixed_local_runtime_package` and its route consumer
-     to accept the ready-body exact-route certificate, then switch the active
-     mixed gate away from the synthetic route/exact-target sidecar.
+   - Completed implementation attempt: directly refactoring
+     `assoc_direct_receiver_mixed_local_runtime_package` to consume the
+     ready-body exact-route projection does not compile yet. The projection is
+     defined later than the package, and the deeper blocker is that the active
+     mixed endpoint still exposes only
+     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target`;
+     the ready-body projection requires the new ready-body route exact-target
+     checker.
+   - Next implementation subtask: add an active-mixed certificate projection for
+     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
+     by first adding that checker to the active gate, then refactor
+     `assoc_direct_receiver_mixed_local_runtime_package` to consume the exposed
+     ready-body route package.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -221,9 +230,12 @@ that the CLI actually uses.
    - Completed implementation subtask: add a ready-body exact-route checker
      certificate and local-bounds package projection. This is the candidate
      replacement for the active mixed endpoint's synthetic route sidecar.
-   - Next subtask: consume that ready-body exact-route package from the mixed
-     local runtime package, then switch the active gate away from the synthetic
-     route/exact-target sidecar. After that, rerun `tests/run.sh` and only
+   - Completed implementation attempt: consuming the ready-body exact-route
+     package from the mixed local runtime package is blocked until the active
+     mixed endpoint itself exposes the ready-body route exact-target checker.
+   - Next subtask: add the ready-body route exact-target checker to the active
+     mixed gate, prove the corresponding active-gate projection, then switch the
+     local runtime package consumer. After that, rerun `tests/run.sh` and only
      promote the split endpoint if the checker frontier is clean.
    - Required theorem:
 
@@ -265,11 +277,11 @@ that the CLI actually uses.
   runtime package.
 - The active mixed endpoint has a local runtime package with
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
-  checker-backed route-summary/exact-target certificate. The package is threaded
-  through the public runtime theorem for selected component local bounds. A
-  direct-target-only replacement certificate exists and compiles, but it is not
-  yet sufficient to switch the endpoint gate because the ready-body route bridge
-  still needs a non-circular proof.
+  checker-backed synthetic route-summary/exact-target certificate. A
+  ready-body route exact-target checker and local-bounds projection exist, but
+  the active mixed gate does not expose that checker yet. The next proof step is
+  therefore an active-gate projection change, not another package consumer
+  wrapper.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

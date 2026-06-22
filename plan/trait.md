@@ -40,8 +40,9 @@ that the CLI actually uses.
   `component_body_local_bounds_ready_body_route_provider_in_env`, ready-body
   reachable callbacks, the nested smaller-height ready-body body-call callback,
   typing/scope callback adapters for synthetic consumers and ready-body
-  exact-route providers, a combined nested-callback package helper, and
-  ready-body route-statement adapters for reachable-provider-shaped consumers.
+  exact-route providers, a combined nested-callback package helper,
+  ready-body route-statement adapters for reachable-provider-shaped consumers,
+  and ready-body callback family accessors for local-bounds consumers.
 - The remaining low-level proof gap is the standalone ready-body current-step
   theorem and height induction over
   `store_safe_ready_body_exact_body_call_route_reachable`; the new adapters
@@ -66,9 +67,9 @@ that the CLI actually uses.
    - Prove the standalone ready-body current-step theorem over
      `store_safe_ready_body_exact_body_call_route_reachable`, using the
      reachable-less typing/scope callbacks and the nested body-call adapters.
-     The compiled route-statement adapters provide the eventual consumer shape
-     but do not yet discharge the route statement or current-call safe-args
-     premise.
+     The compiled route-statement adapters and callback family accessors provide
+     the eventual consumer shape but do not yet discharge the route statement or
+     current-call safe-args premise.
    - Assemble the ready-body height induction and instantiate
      `ready_body_exact_route_package_provider_route_bridge` for the active mixed
      endpoint's branch-scoped exact-route package provider.
@@ -164,8 +165,9 @@ that the CLI actually uses.
    - Completed implementation subtask: add the integration bridge from the
      endpoint exact-route package provider to the ready-body route provider.
    - Completed implementation subtask: add the low-level ready-body reachable
-     callback shapes, nested callback package helper, and route-statement
-     adapters needed by the future height induction.
+     callback shapes, nested callback package helper, route-statement adapters,
+     and ready-body callback family accessors needed by the future height
+     induction.
    - Next subtask: prove the standalone ready-body current-step theorem over
      reachable exact routes, assemble the height induction, instantiate the bridge, and
      then switch the local runtime package consumer to the branch-scoped
@@ -217,8 +219,9 @@ that the CLI actually uses.
   bridge, low-level ready-body reachable callback shapes, the nested
   smaller-height ready-body body-call callback bridge, typing/scope callback
   adapters for synthetic consumers plus ready-body exact-route providers, a
-  combined nested-callback package helper, and ready-body route-statement
-  adapters now exist. The remaining proof gap is the route theorem: the
+  combined nested-callback package helper, ready-body route-statement adapters,
+  and ready-body callback family accessors now exist. The remaining proof gap is
+  the route theorem: the
   standalone ready-body current-step and height induction over reachable exact
   routes still need to be proved before
   the public theorem can stop reaching route preservation through the synthetic

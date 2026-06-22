@@ -1426,6 +1426,38 @@ Proof.
   - exact Hsummary.
 Qed.
 
+
+Theorem eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_in_env_family :
+  forall env_family env fdef,
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_env_family
+      env_family ->
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at
+      env fdef.
+Proof.
+  intros env_family env fdef Hfamily Henv.
+  unfold
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at.
+  intros fname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
+    Hrename Htarget Hsafe_args Hready Htyped Hunique Hsummary Hevidence
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval n_body_call Hheight.
+  eapply Hfamily; eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_in_local_bounds_family :
+  forall base env fdef,
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+      base ->
+    global_env_local_bounds_family base env ->
+    eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at
+      env fdef.
+Proof.
+  intros base env fdef Hfamily Henv.
+  eapply eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_in_env_family;
+    eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family_of_summary_at_prefix_call_statement_evidence_at_height :
   forall env_family,
   (forall env bounds,

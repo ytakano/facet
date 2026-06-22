@@ -46,7 +46,7 @@ with gate:
 check_env_end2end_direct_receiver_split_ready
 ```
 
-This split endpoint is promising, and it appears to accept programs that the active mixed endpoint rejects, but it is still diagnostic. Do **not** make it the active checker authority until its runtime-safety theorem is complete. Current progress: `direct_receiver_split_runtime_evidence_in_env` packages split-ready runtime facts, the no-receiver branch has a package-backed runtime consumer, and the direct-receiver-present branch has a lower package consumer that avoids explicit global provenance, preservation, and synthetic-summary runtime facts. The remaining split proof gap is deriving `direct_receiver_method_body_runtime_facts_provider` and `component_body_local_bounds_narrow_summary_provider_in_env` from the split certificate.
+This split endpoint is promising, and it appears to accept programs that the active mixed endpoint rejects, but it is still diagnostic. Do **not** make it the active checker authority until its runtime-safety theorem is complete. Current progress: `direct_receiver_split_runtime_evidence_in_env` packages split-ready runtime facts, the no-receiver branch has a package-backed runtime consumer, and the direct-receiver-present branch has a lower package consumer that avoids explicit global provenance, preservation, and synthetic-summary runtime facts. The remaining split proof gap is deriving `direct_receiver_method_body_runtime_facts_provider` and `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env` from split evidence; the component summary side now uses the split certificate's ready-body-or-narrow provider shape.
 
 ---
 

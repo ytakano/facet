@@ -136,9 +136,12 @@ that the CLI actually uses.
    - Completed subtask: replace the direct consumer's explicit global runtime
      facts with the narrower theorem
      `infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready_with_runtime_evidence_and_local_runtime_facts`.
-   - Next subtask: derive the remaining two local providers from the split
-     package: `direct_receiver_method_body_runtime_facts_provider` and
-     `component_body_local_bounds_narrow_summary_provider_in_env`.
+   - Completed correction: align the component branch with the split
+     certificate by requiring `component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env`
+     plus mixed route evidence instead of the stronger narrow-summary provider.
+   - Next subtask: derive the remaining two providers from split evidence:
+     `direct_receiver_method_body_runtime_facts_provider` and
+     `component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env`.
    - Required theorem:
 
      ```coq
@@ -184,9 +187,10 @@ that the CLI actually uses.
   The no-receiver branch now has a package-backed consumer. The
   direct-receiver-present branch now has a lower split-package consumer that
   avoids explicit global provenance, preservation, and synthetic-summary runtime
-  facts. The final theorem still needs split-certificate derivations for the
-  local direct-method body runtime provider and the component local-bounds narrow
-  summary provider.
+  facts. The component branch now matches the split certificate's
+  ready-body-or-narrow summary provider. The final theorem still needs
+  split-certificate derivations for the local direct-method body runtime provider
+  and the mixed ready-body-or-narrow route provider.
 
 ## Unsupported Or Deferred Features
 

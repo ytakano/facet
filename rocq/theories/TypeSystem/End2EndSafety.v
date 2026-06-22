@@ -20760,7 +20760,10 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_chec
       infer_ok env' ->
     direct_receiver_split_runtime_evidence_in_env env' ->
     direct_receiver_method_body_runtime_facts_provider env' ->
-    component_body_local_bounds_narrow_summary_provider_in_env env' ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env' ->
+    component_body_local_bounds_mixed_ready_body_or_narrow_route_provider_in_env
+      env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
@@ -20768,7 +20771,7 @@ Theorem infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_chec
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros env env' f s s' v Hprog Hevidence Hdirect_body_facts
-    Hcomponent_provider Hinitial Hin Hstore Heval.
+    Hcomponent_provider Hcomponent_route_provider Hinitial Hin Hstore Heval.
   pose proof
     (infer_program_env_end2end_assoc_direct_receiver_split_unique_by_name
       env env' Hprog) as Hunique.
@@ -20791,15 +20794,14 @@ Proof.
     + exact Heval.
     + apply direct_receiver_method_live_scoped_body_lift_ready_provider_proven.
     + apply direct_receiver_method_consumed_scoped_body_lift_ready_provider_proven.
-  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_big_step_safe_checked_initial_ready.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_mixed_route_provider.
     + exact Hunique.
-    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_narrow_callee_summary_of_component_and_local_bounds_narrow_provider.
-      * exact Hunique.
-      * exact Hcomponent_provider.
-      * exact Hin.
-      * exact Hcombined_check.
-      * eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
-        exact Hcombined_check.
+    + exact Hcomponent_provider.
+    + eapply Hcomponent_route_provider; eassumption.
+    + exact Hin.
+    + exact Hcombined_check.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcombined_check.
     + exact Hinitial.
     + exact Hstore.
     + exact Heval.

@@ -140,17 +140,17 @@ that the CLI actually uses.
      route package to consume.
    - Completed implementation attempt: directly refactoring
      `assoc_direct_receiver_mixed_local_runtime_package` to consume the
-     ready-body exact-route projection does not compile yet. The projection is
-     defined later than the package, and the deeper blocker is that the active
-     mixed endpoint still exposes only
-     `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_synthetic_route_exact_target`;
-     the ready-body projection requires the new ready-body route exact-target
-     checker.
-   - Next implementation subtask: add an active-mixed certificate projection for
+     ready-body exact-route projection does not compile while the active mixed
+     endpoint exposes only the synthetic route sidecar. Adding
      `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_with_ready_body_route_exact_target`
-     by first adding that checker to the active gate, then refactor
-     `assoc_direct_receiver_mixed_local_runtime_package` to consume the exposed
-     ready-body route package.
+     as a global active mixed gate conjunct compiles, but it is too strong: the
+     full regression suite rejects many existing valid function, lifetime,
+     module, and trait programs with `ErrEndToEndSafetyGateFailed`.
+   - Next implementation subtask: narrow the ready-body exact-route certificate
+     to the no-receiver/direct-call component branch instead of making it a
+     whole-environment active gate. The package consumer should be fed by a
+     branch-scoped checker projection or a route-package field derived only when
+     the component store-safe check selects the no-capture direct-call path.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -231,12 +231,13 @@ that the CLI actually uses.
      certificate and local-bounds package projection. This is the candidate
      replacement for the active mixed endpoint's synthetic route sidecar.
    - Completed implementation attempt: consuming the ready-body exact-route
-     package from the mixed local runtime package is blocked until the active
-     mixed endpoint itself exposes the ready-body route exact-target checker.
-   - Next subtask: add the ready-body route exact-target checker to the active
-     mixed gate, prove the corresponding active-gate projection, then switch the
-     local runtime package consumer. After that, rerun `tests/run.sh` and only
-     promote the split endpoint if the checker frontier is clean.
+     package from the mixed local runtime package is blocked by certificate
+     scope, not just proof ordering. A global active gate for the ready-body
+     exact-route checker rejects broad existing valid programs.
+   - Next subtask: derive the ready-body exact-route package from a branch-scoped
+     no-capture direct-call component certificate, then switch the local runtime
+     package consumer. After that, rerun `tests/run.sh` and only promote the
+     split endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq
@@ -278,10 +279,10 @@ that the CLI actually uses.
 - The active mixed endpoint has a local runtime package with
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
   checker-backed synthetic route-summary/exact-target certificate. A
-  ready-body route exact-target checker and local-bounds projection exist, but
-  the active mixed gate does not expose that checker yet. The next proof step is
-  therefore an active-gate projection change, not another package consumer
-  wrapper.
+  ready-body route exact-target checker and local-bounds projection exist, but a
+  whole-environment active gate for that checker is too strong. The next proof
+  step is a branch-scoped projection for no-capture direct-call components, not
+  a global active-gate conjunct.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

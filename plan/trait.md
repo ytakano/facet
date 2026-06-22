@@ -85,6 +85,12 @@ that the CLI actually uses.
   for synthetic summary evidence on the looked-up callee, so no-target callees
   still need a new non-circular ready-body route bridge or a weaker route-package
   contract before the active gate can change.
+- The newer implementation roadmap is now treated as a phase map rather than a
+  literal task list. Phase 1 is complete; the useful Phase 2 boundary is the
+  existing local runtime package plus the remaining need to stop threading
+  synthetic route evidence through the active mixed checker gate. Phase 4's
+  split runtime theorem is already proved, but endpoint promotion remains
+  blocked until the checker frontier accepts no-target local-bounds callees.
 
 ## Active Proof Plan
 
@@ -118,17 +124,30 @@ that the CLI actually uses.
    - Completed diagnostic subtask: update `tests/diagnose_trait_gates.sh` to
      parse diagnostic gate output even when the checker exits nonzero on known
      rejected frontier cases; the diagnostic script now passes again.
-   - Next subtask: refactor the route-package contract or prove a non-circular
-     ready-body route bridge so the active endpoint no longer needs synthetic
-     summary evidence for no-target local-bounds callees.
+   - Completed analysis subtask: a direct active-gate swap to
+     `check_env_root_shadow_synthetic_direct_call_ready_summary_when_direct`
+     is insufficient because the current route package demands callee-level
+     synthetic summary evidence. The failure is at the route-package contract,
+     not at the direct-target-only checker projection.
+   - Next implementation subtask: move the active route certificate toward a
+     ready-body exact-route package. Reuse the existing
+     `store_safe_ready_body_exact_body_call_route_package_at` and
+     `component_body_local_bounds_ready_body_summary_provider_exact_route_package_at_all`
+     path, then refactor the mixed local runtime package so no-target
+     local-bounds callees are covered by ready-body evidence instead of
+     synthetic direct-call evidence.
 
 2. Introduce an explicit runtime evidence package.
-   - Extend the current local package only when a runtime consumer needs more
-     evidence: route selection, value/callback support, cleanup support, and
-     local-bounds replay support may all belong in the final package.
-   - Do not make the final package route-only if that forces later theorem
-     wrappers to reconstruct callback, cleanup, or local-bounds facts separately.
-   - The intended shape is:
+   - Status: partially complete. The current
+     `assoc_direct_receiver_mixed_local_runtime_package` is the Phase 2 seed:
+     it packages the active endpoint's checker-derived no-receiver runtime
+     facts and is consumed by the public theorem.
+   - Keep extending this package only when a runtime consumer actually needs
+     more evidence: route selection, value/callback support, cleanup support,
+     and local-bounds replay support may all belong in the final package.
+   - Do not make the package route-only if that forces later theorem wrappers to
+     reconstruct callback, cleanup, or local-bounds facts separately.
+   - Target shape:
 
      ```text
      extracted checker accepts env
@@ -138,10 +157,15 @@ that the CLI actually uses.
      ```
 
 3. Close the direct-receiver local-bounds replay gap.
-   - The known blocker is direct-receiver method evidence under local bounds, or
-     an equivalent replay theorem that consumes the direct summary without
-     reconstructing whole-environment generic provenance/preservation readiness.
-   - Prefer a narrow replay-facing lemma over a broad global stability theorem.
+   - Earlier direct-receiver replay work is no longer the immediate blocker for
+     the current frontier. The split theorem has a non-diagnostic safety proof,
+     and the diagnostic split gate no longer carries the synthetic route
+     sidecar.
+   - The active blocker is narrower: the CLI still uses the mixed endpoint, and
+     that endpoint's checker gate still requires the synthetic route/exact-target
+     certificate for no-receiver component callees.
+   - Prefer a route-package refactor or ready-body exact-route bridge over a
+     broad global stability theorem.
    - Do not solve this by adding `check_env_end2end_direct_receiver_ready env' =
      true` as a final theorem premise.
 
@@ -181,17 +205,17 @@ that the CLI actually uses.
      ready-body provider check while preserving the split runtime-safety theorem.
      This removes the synthetic route/exact-target sidecar from the split-ready
      certificate itself.
-   - Current blocker: the active mixed CLI endpoint still relies on a synthetic
-     route/exact-target sidecar that is too strong for valid no-target
-     local-bounds callees.
+   - Status: the split theorem is proved. The remaining blocker is not the
+     theorem premise shape; it is the checker frontier of the still-active mixed
+     endpoint.
    - Completed diagnostic subtask: a direct-target-only checker certificate now
      proves synthetic readiness exactly at discovered direct-call targets, but a
      naive endpoint switch is circular because the ready-body route provider
      still depends on the synthetic route bridge it is meant to replace.
-   - Next subtask: add a non-circular ready-body exact-route bridge, or consume
-     the narrowed `when_direct` certificate in the existing scoped-package route
-     lemmas, so the split theorem remains proved while `tests/run.sh` stops
-     rejecting valid direct-call/local-bounds programs.
+   - Next subtask: integrate a non-circular ready-body exact-route bridge into
+     the mixed local runtime package, then switch the active gate away from the
+     synthetic route/exact-target sidecar. After that, rerun `tests/run.sh` and
+     only promote the split endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq

@@ -167,10 +167,13 @@ that the CLI actually uses.
    - Completed reconnaissance: the synthetic exact-route induction cannot be
      wrapped because ready-body summaries may be ordinary shadow summaries, not
      synthetic summaries.
-   - Next implementation subtask: add the real ready-body current-step/height
-     induction theorem matching the existing synthetic exact-route induction,
-     then instantiate the bridge and replace synthetic route consumption only
-     for the no-capture direct-call component branch.
+   - Completed implementation subtask: add ready-body reachable callback
+     definitions and lifting lemmas parallel to the synthetic reachable callback
+     layer in `TypeSafetyDirectCallRoute.v`.
+   - Next implementation subtask: prove the ready-body current-step theorem over
+     `store_safe_ready_body_exact_body_call_route_reachable`, then assemble the
+     height induction, instantiate the bridge, and replace synthetic route
+     consumption only for the no-capture direct-call component branch.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -260,11 +263,13 @@ that the CLI actually uses.
      provider.
    - Completed implementation subtask: add the integration bridge from the
      endpoint exact-route package provider to the ready-body route provider.
-   - Next subtask: prove the low-level ready-body current-step/height induction
-     theorem matching the existing synthetic exact-route theorem, instantiate
-     the bridge, and then switch the local runtime package consumer to the
-     branch-scoped provider. After that, rerun `tests/run.sh` and only promote
-     the split endpoint if the checker frontier is clean.
+   - Completed implementation subtask: add the low-level ready-body reachable
+     callback shapes needed by the future height induction.
+   - Next subtask: prove the ready-body current-step theorem over reachable
+     exact routes, assemble the height induction, instantiate the bridge, and
+     then switch the local runtime package consumer to the branch-scoped
+     provider. After that, rerun `tests/run.sh` and only promote the split
+     endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq
@@ -307,10 +312,11 @@ that the CLI actually uses.
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
   checker-backed synthetic route-summary/exact-target certificate. A
   ready-body route exact-target checker, its local-bounds projection, and an
-  endpoint-level branch-scoped exact-route package provider and integration
-  bridge now exist. The remaining proof gap is the route theorem: there is no
-  ready-body analogue of the existing synthetic exact-route induction theorem,
-  so the public theorem still reaches route preservation through the synthetic
+  endpoint-level branch-scoped exact-route package provider, integration
+  bridge, and low-level ready-body reachable callback shapes now exist. The
+  remaining proof gap is the route theorem: the ready-body current-step and
+  height induction over reachable exact routes still need to be proved before
+  the public theorem can stop reaching route preservation through the synthetic
   route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the

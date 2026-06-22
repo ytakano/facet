@@ -14608,6 +14608,30 @@ Definition component_body_local_bounds_ready_body_exact_route_package_provider_i
       callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
         env0 fdef).
 
+Definition ready_body_exact_route_package_provider_route_bridge : Prop :=
+  forall base,
+    (forall env0,
+      global_env_local_bounds_family base env0 ->
+      forall fname,
+        store_safe_ready_body_exact_body_call_route_package_at env0 fname) ->
+    eval_preserves_typing_roots_store_safe_ready_body_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base.
+
+Lemma component_body_local_bounds_ready_body_route_provider_of_exact_route_package_provider :
+  ready_body_exact_route_package_provider_route_bridge ->
+  forall env,
+    component_body_local_bounds_ready_body_exact_route_package_provider_in_env
+      env ->
+    component_body_local_bounds_ready_body_route_provider_in_env env.
+Proof.
+  intros Hbridge env Hprovider f_component Hin_component Hcomponent_check.
+  eapply Hbridge.
+  intros env0 Hfamily fname.
+  destruct (Hprovider f_component env0 Hin_component Hcomponent_check
+    Hfamily) as [Hpackages _Hexact_targets].
+  exact (Hpackages fname).
+Qed.
+
 Definition component_body_local_bounds_shadow_summary_route_provider_in_env
     (env : global_env) : Prop :=
   forall f_component,

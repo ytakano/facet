@@ -90,9 +90,10 @@ that the CLI actually uses.
   `assoc_direct_receiver_mixed_local_runtime_package_ready_body_exact_route_package_in_local_bounds_family`,
   and the endpoint-level provider
   `component_body_local_bounds_ready_body_exact_route_package_provider_in_env`.
-  These expose the ready-body exact-route package shape from the existing
-  synthetic route/exact-target field when the selected no-capture direct-call
-  component check succeeds.
+  The integration bridge
+  `ready_body_exact_route_package_provider_route_bridge` now states how that
+  provider will feed `component_body_local_bounds_ready_body_route_provider_in_env`
+  once the low-level ready-body route theorem exists.
 - The newer implementation roadmap is now treated as a phase map rather than a
   literal task list. Phase 1 is complete; the useful Phase 2 boundary is the
   existing local runtime package plus the remaining need to stop threading
@@ -158,14 +159,18 @@ that the CLI actually uses.
      and derive it from
      `infer_program_env_end2end_assoc_direct_receiver_mixed` through the local
      runtime package.
-   - Completed reconnaissance: no existing theorem derives
-     `component_body_local_bounds_ready_body_route_provider_in_env` from the
-     ready-body exact-route package provider. The available exact-route theorem
-     is synthetic-only and consumes
-     `store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at`.
-   - Next implementation subtask: add the ready-body analogue of the synthetic
-     exact-route induction theorem, then use the provider to replace synthetic
-     route consumption only for the no-capture direct-call component branch.
+   - Completed implementation subtask: add
+     `ready_body_exact_route_package_provider_route_bridge` and
+     `component_body_local_bounds_ready_body_route_provider_of_exact_route_package_provider`,
+     the integration path from the endpoint exact-route package provider to the
+     ready-body route provider.
+   - Completed reconnaissance: the synthetic exact-route induction cannot be
+     wrapped because ready-body summaries may be ordinary shadow summaries, not
+     synthetic summaries.
+   - Next implementation subtask: add the real ready-body current-step/height
+     induction theorem matching the existing synthetic exact-route induction,
+     then instantiate the bridge and replace synthetic route consumption only
+     for the no-capture direct-call component branch.
 
 2. Introduce an explicit runtime evidence package.
    - Status: partially complete. The current
@@ -253,11 +258,13 @@ that the CLI actually uses.
      from the branch-scoped no-capture direct-call component certificate exposed
      by the active mixed local runtime package, and expose it as an endpoint
      provider.
-   - Next subtask: prove a ready-body exact-route induction theorem matching the
-     existing synthetic exact-route theorem, then switch the local runtime
-     package consumer to the branch-scoped provider. After that, rerun
-     `tests/run.sh` and only promote the split endpoint if the checker frontier
-     is clean.
+   - Completed implementation subtask: add the integration bridge from the
+     endpoint exact-route package provider to the ready-body route provider.
+   - Next subtask: prove the low-level ready-body current-step/height induction
+     theorem matching the existing synthetic exact-route theorem, instantiate
+     the bridge, and then switch the local runtime package consumer to the
+     branch-scoped provider. After that, rerun `tests/run.sh` and only promote
+     the split endpoint if the checker frontier is clean.
    - Required theorem:
 
      ```coq
@@ -300,10 +307,11 @@ that the CLI actually uses.
   ready-body-or-narrow summary evidence, alpha-body callback evidence, and a
   checker-backed synthetic route-summary/exact-target certificate. A
   ready-body route exact-target checker, its local-bounds projection, and an
-  endpoint-level branch-scoped exact-route package provider now exist. The
-  remaining proof gap is the route theorem: there is no ready-body analogue of
-  the existing synthetic exact-route induction theorem, so the public theorem
-  still reaches route preservation through the synthetic route provider.
+  endpoint-level branch-scoped exact-route package provider and integration
+  bridge now exist. The remaining proof gap is the route theorem: there is no
+  ready-body analogue of the existing synthetic exact-route induction theorem,
+  so the public theorem still reaches route preservation through the synthetic
+  route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority yet. The no-receiver branch has a package-backed consumer, and the
   direct-receiver-present branch has a lower split-package consumer that avoids

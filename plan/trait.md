@@ -7,6 +7,17 @@ of truth for accept/reject behavior: OCaml may parse and resolve names, but
 trait solving, method resolution, associated type compatibility, and final
 validity checks must be represented in Rocq and the extracted checker.
 
+The current implementation pass is focused on the trait-related type-safety
+proof architecture, not on adding more trait surface features. The public
+runtime theorem that must remain available is:
+
+```coq
+infer_program_env_end2end_big_step_safe_checked_initial_ready
+```
+
+This theorem must prove checked-initial big-step safety for the checker endpoint
+that the CLI actually uses.
+
 ## Current State
 
 - Traits, impls, associated types, trait methods, method-local type parameters,
@@ -21,191 +32,170 @@ validity checks must be represented in Rocq and the extracted checker.
   constructors, including generic instances. Field-bearing structs, payload
   enums, direct-call receivers, generic direct-call receivers, non-pure inferred
   locals, and call-initialized/general annotated locals remain gated.
-- The OCaml CLI uses `infer_program_env_end2end_assoc_direct_receiver_mixed` as
-  its only checker authority. Public checker soundness aliases target this
-  endpoint. The required public runtime theorem
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` still targets
-  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`.
-- The active no-receiver certificate is
-  `check_env_root_shadow_no_receiver_component_ready_body_or_local_narrow_summary_provider_check`.
-  At each component-local callee it accepts synthetic-ready, ordinary-shadow, or
-  narrow evidence; this is broad enough for the current valid suite.
-- Runtime proof plumbing for the active endpoint now has named mixed route,
-  cleanup, value-callback, alpha-callback, provider-bundle, combined route/value
-  bridge adapters, and ready-body-route bridges to mixed route and value-callback
-  providers. Endpoint and public wrappers expose the ready-body route path; the
-  active local certificate packages summary, alpha-callback, route, and value
-  providers through the combined bridge, including nested local-bounds-family
-  extensions and an active branch-local argument order. It also has reusable
-  local-certificate route bundles from global synthetic-branch routes,
-  synthetic evidence-at routes, exact-body route packages, all-target synthetic
-  summary evidence, separate synthetic/ordinary-shadow routes, and component
-  mixed-route providers; the synthetic-branch, synthetic evidence-at, exact-body,
-  all-target synthetic summary, and component mixed-route endpoints now flow
-  through the ready-body route path. Scoped evidence-at remains stable through
-  nested local bounds, and non-height synthetic evidence-at routes are bridged to
-  heighted local-bounds routes. The combined bridge is packaged directly from
-  synthetic-ready plus ordinary-shadow route premises.
-- The active endpoint can currently be proved with either an explicit
-  summary-route bridge, a mixed-ready-or-narrow route provider, a synthetic-branch
-  route, synthetic evidence-at routes, all-target synthetic summary evidence, a
-  ready-body route provider, or separate per-component synthetic and
-  ordinary-shadow route providers. Public prefix and non-prefix wrappers expose
-  the synthetic-branch, synthetic evidence-at, mixed-ready-or-narrow, ready-body,
-  and synthetic-plus-shadow route-provider paths. A direct retarget attempt shows
-  the exact remaining mismatch: the mixed-route bridge needs a store-safe
-  synthetic summary route for synthetic branches, but the required public theorem
-  only assumes the weaker synthetic prefix preservation premise. Diagnostic mode
-  reports trait gates for active-endpoint rejections, including method-present
-  functions, direct-receiver sub-gates, and the generic provenance/preservation
-  functions that fail despite direct-receiver summary coverage, by inspecting
-  extracted diagnostic endpoints without changing checker authority. Rocq now
-  has a checker-side split certificate for ordinary provenance/preservation
-  readiness or direct-receiver-method summary coverage, per-function case lemmas,
-  and a no-receiver reduction lemma showing the split certificate recovers the
-  old shadow-check path when no direct receiver method is present. `End2EndSafety`
-  now exposes a diagnostic runtime wrapper that uses this reduction for the
-  no-receiver branch. The split certificate is extracted and diagnostics show
-  the blocked direct-call receiver fixture passes it while the authoritative
-  checker still rejects. The proposed direct-receiver split end-to-end gate is
-  named in Rocq, extracted, and also passes that fixture diagnostically. A
-  diagnostic-only split endpoint now composes the direct-receiver base checker
-  with this split gate and also accepts the blocked fixture, without changing
-  the authoritative CLI endpoint. `End2EndSafety` proves this endpoint's base
-  result, split-gate result, checker-soundness facts, endpoint uniqueness facts,
-  combined-check bridge, no-receiver bridge to the base-mixed endpoint,
-  exposed split provenance/preservation certificates, Prop-level runtime
-  evidence packages, a paired per-callee split evidence package,
-  replay-friendly in-environment consumer facts for concrete callees,
-  non-direct callee projections back to ordinary provenance/preservation, and
-  conditional local-bounds bridges/projections, concrete local-bounds case
-  consumers, name-indexed evidence-at wrappers, name-indexed non-direct
-  ordinary-evidence projections, no-direct conversions back to ordinary
-  environment evidence, no-receiver boolean bridges to no-direct evidence,
-  no-receiver ordinary-evidence wrappers with local-bounds lifting,
-  no-receiver shadow-summary and ready-body route-provider packaging,
-  component-local-bounds provider packaging, and component-provider lookup
-  case/projection facts for paired evidence. Diagnostic
-  no-receiver/direct-ready runtime wrappers, named no-receiver/direct-ready
-  branch bundles consumed by branch-bundle runtime and case-dispatch theorems
-  exist; the
-  no-receiver runtime path and case dispatcher now consume the packaged
-  ready-body route provider. Consuming the concrete paired evidence in
-  the direct replay proof and active endpoint wiring remain.
+- The OCaml CLI currently uses
+  `infer_program_env_end2end_assoc_direct_receiver_mixed` as its only checker
+  authority. Public checker soundness aliases target this endpoint.
+- The required public checked-initial runtime theorem still targets the older
+  `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
+  endpoint. This mismatch must be fixed before promoting any direct-receiver
+  split endpoint.
+- A diagnostic split endpoint exists:
+  `infer_program_env_end2end_assoc_direct_receiver_split`, gated by
+  `check_env_end2end_direct_receiver_split_ready`. Diagnostics show that it can
+  accept direct-call receiver fixtures rejected by the active mixed endpoint, but
+  it is not yet the active checker authority and does not yet have the required
+  non-diagnostic runtime-safety theorem.
+- The proof surface in `End2EndSafety.v` has accumulated many route, callback,
+  cleanup, bridge, branch-bundle, and diagnostic theorem variants. The next proof
+  step is to package the checker-derived runtime facts once and consume that
+  package from the public theorem, instead of adding more one-off wrappers.
 
-## Remaining Tasks
+## Active Proof Plan
 
-1. Retarget the required public runtime theorem.
+1. Retarget the public runtime theorem to the active mixed endpoint.
    - Move `infer_program_env_end2end_big_step_safe_checked_initial_ready` from
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Keep public premises no stronger than the current preservation packages.
-   - Prove the missing internal branch-route adapter: under the active local
-     certificate, synthetic-ready callees must obtain the store-safe synthetic
-     summary route, ordinary-shadow callees use the ordinary-shadow route, and
-     narrow callees use the proved narrow package.
+   - If existing mixed-endpoint wrappers only close under extra route, callback,
+     cleanup, or diagnostic premises, add the smallest internal runtime evidence
+     adapter needed to close the public theorem. Do not expose these facts as
+     public theorem premises.
 
-2. Finish direct-call receiver activation.
-   - Prove runtime soundness for the proposed gate
-     `check_env_end2end_direct_receiver_split_ready` as used by diagnostic
-     endpoint `infer_program_env_end2end_assoc_direct_receiver_split`: basic
-     endpoint soundness, uniqueness, executable bridge facts, split
-     provenance/preservation certificate facts, Prop-level and paired per-callee
-     evidence packages, concrete callee consumer facts, non-direct callee
-     ordinary-evidence projections, conditional local-bounds bridges/projections,
-     concrete local-bounds case consumers, name-indexed evidence-at wrappers,
-     name-indexed non-direct ordinary-evidence projections, no-direct
-     conversions back to ordinary environment evidence, no-receiver boolean
-     bridges to no-direct evidence, no-receiver ordinary-evidence wrappers with
-     local-bounds lifting, no-receiver shadow-summary and ready-body
-     route-provider packaging, component-local-bounds provider packaging, and
-     component-provider lookup case/projection facts,
-     separate no-receiver/direct-ready runtime wrappers, named
-     no-receiver/direct-ready branch bundles consumed by branch-bundle runtime
-     and case-dispatch theorems are proved; the next step
-     is proving or avoiding local-bounds stability for direct-receiver narrow
-     summaries so split evidence can feed replay without whole-environment generic
-     provenance/preservation readiness.
-   - Replace the remaining blanket synthetic-route dependency with per-callee
-     mixed evidence from the active endpoint certificate.
-   - Wire the split certificate into the active endpoint only after the theorem
-     is proved, then add positive direct-call receiver UFCS tests with Rocq,
-     extraction, and CLI coverage.
+2. Introduce an explicit runtime evidence package.
+   - Convert checker booleans and endpoint gates into Prop-level evidence once.
+   - The package must be strong enough for runtime consumers: route selection,
+     value/callback support, cleanup support, and local-bounds replay support may
+     all belong in the package.
+   - Do not make the package route-only if that forces later theorem wrappers to
+     reconstruct callback, cleanup, or local-bounds facts separately.
+   - The intended shape is:
 
-3. Extend receiver coverage conservatively.
-   - Keep receiver-first prefix calls as the canonical surface syntax.
-   - Add remaining receiver forms only when Rocq checker summaries and safety
-     proofs provide store/root-safe evidence for each shape.
-   - Keep generic trait arguments explicit through `<Ty as Trait<...>>` for this
-     roadmap slice.
+     ```text
+     extracted checker accepts env
+       -> checker certificate facts
+       -> runtime evidence package
+       -> checked-initial big-step safety
+     ```
 
-4. Maintain assoc-aware trait behavior.
-   - Preserve assoc-aware normalization at checker boundaries rather than by
-     rewriting whole raw ASTs.
-   - Keep parser/desugar name resolution separate from trait solving and final
-     checker authority.
+3. Close the direct-receiver local-bounds replay gap.
+   - The known blocker is direct-receiver method evidence under local bounds, or
+     an equivalent replay theorem that consumes the direct summary without
+     reconstructing whole-environment generic provenance/preservation readiness.
+   - Prefer a narrow replay-facing lemma over a broad global stability theorem.
+   - Do not solve this by adding `check_env_end2end_direct_receiver_ready env' =
+     true` as a final theorem premise.
+
+4. Prove runtime safety for the split endpoint.
+   - Target endpoint: `infer_program_env_end2end_assoc_direct_receiver_split`.
+   - Target gate: `check_env_end2end_direct_receiver_split_ready`.
+   - Required theorem:
+
+     ```coq
+     infer_program_env_end2end_assoc_direct_receiver_split_big_step_safe_checked_initial_ready
+     ```
+
+   - The theorem must consume the split certificate directly and must not depend
+     on the diagnostic assumption:
+
+     ```coq
+     check_env_root_shadow_direct_receiver_method_present env' = false \/
+     check_env_end2end_direct_receiver_ready env' = true
+     ```
+
+5. Promote the split endpoint only after its proof closes.
+   - Do not change the CLI active endpoint until the split endpoint has checker
+     soundness, runtime evidence, and checked-initial runtime safety.
+   - After the proof closes, switch the CLI from
+     `infer_program_env_end2end_assoc_direct_receiver_mixed` to
+     `infer_program_env_end2end_assoc_direct_receiver_split`.
+   - `--diagnose-trait-gates` may remain diagnostic, but it must not become an
+     acceptance path.
+
+6. Promote receiver tests conservatively.
+   - Move only direct-receiver fixtures justified by the proved split endpoint
+     from invalid to valid.
+   - Do not bulk-promote field-bearing struct receivers, payload enum receivers,
+     local inferred call receivers, call-initialized/general annotated locals, or
+     dot syntax receivers.
 
 ## Unresolved Blockers
 
-- The required public runtime theorem is not yet retargeted. The active endpoint
-  route/value path is available through public ready-body, mixed-ready-or-narrow,
-  synthetic-branch, synthetic-evidence, synthetic-plus-shadow, combined bridge,
-  exact-body, and all-target synthetic-summary wrappers. The remaining blocker is
-  internal: the active certificate proves ready-body-or-narrow summary evidence,
-  but the recursive route still needs store-safe synthetic branch routing for
-  synthetic-ready callees, ordinary-shadow routing for shadow callees, and narrow
-  package routing for narrow callees without adding any public premise.
-- The stricter shadow-check certificate proves extra ordinary-shadow evidence and
-  remains useful diagnostically, but it is too restrictive to become the active
-  endpoint gate without rejecting current valid programs.
-- Direct-call receiver safety-gate tests remain invalid. Diagnostics for the
-  explicit function-call receiver case show `main` is the method-present function:
-  the direct-receiver summary, direct-component, component-ready-body, and
-  no-receiver mixed summary gates pass, while generic provenance/preservation
-  readiness still fails for the raw receiver-call body and the strict ordinary
-  component summary remains false. The extracted split certificate and proposed
-  split end-to-end gate both pass this fixture and preserve the old no-receiver
-  theorem path through an `End2EndSafety` wrapper; that no-receiver runtime
-  path and the case dispatcher now consume the packaged ready-body route
-  provider, and the direct-ready runtime branch is
-  proved under the explicit direct-ready gate, with reusable named
-  no-receiver/direct-ready branch bundles consumed by branch-bundle runtime and
-  case-dispatch theorems. A case-dispatched
-  split theorem exists, and split provenance/preservation certificates now have
-  Prop-level and paired per-callee evidence packages, concrete callee consumer
-  facts, non-direct callee ordinary-evidence projections, conditional
-  local-bounds bridges/projections, concrete local-bounds case consumers,
-  name-indexed evidence-at wrappers, name-indexed non-direct ordinary-evidence
-  projections, no-direct conversions back to ordinary environment evidence,
-  no-receiver boolean bridges to no-direct evidence, no-receiver
-  ordinary-evidence wrappers with local-bounds lifting, no-receiver
-  shadow-summary and ready-body route-provider packaging,
-  component-local-bounds provider packaging, and component-provider lookup
-  case/projection facts. The
-  remaining replay gap is
-  direct-receiver narrow-summary stability under local bounds, or an equivalent
-  replay theorem that consumes the direct summary without reconstructing generic
-  provenance/preservation for the local-bounds environment. Until that is
-  closed, the evidence is not threaded strongly enough to select the direct
-  branch for the blocked fixture or to replace the active endpoint; no
-  handwritten OCaml fallback logic is allowed. The diagnostic split endpoint
-  demonstrates the
-  candidate gate over the direct-receiver base environment only, with checker
-  soundness and uniqueness inherited from the base endpoint plus proved
-  no-receiver/direct-ready wrappers and case dispatch; it is not yet the active
-  checker authority or a full split-certificate runtime-safety endpoint.
+- The public runtime theorem is still not retargeted. A direct proof attempt via
+  the existing mixed value/cleanup bridge fails because that bridge needs
+  store-safe synthetic summary evidence, while the public theorem currently only
+  assumes the weaker synthetic direct-call prefix preservation premise.
+- The next Rocq subtask is to introduce the smallest internal runtime evidence
+  adapter for the active mixed endpoint, then make the public theorem consume
+  that package without adding public route, callback, cleanup, or diagnostic
+  premises.
+- The diagnostic split endpoint remains promising but cannot become the CLI
+  authority until it has a non-diagnostic checked-initial runtime-safety theorem.
 
-## Key Decisions
+## Unsupported Or Deferred Features
 
-- Rocq definitions are the source of truth. Generated OCaml extraction artifacts
-  are regenerated from Rocq and are not edited manually.
+Do not add or expand these until the type-safety endpoint is stable:
+
+```text
+dot method syntax
+associated type defaults
+equality constraints
+deriving
+field-bearing struct receivers
+payload enum receivers
+generic direct-call receiver generalization
+call-initialized local receiver generalization
+new OCaml fallback logic
+```
+
+## Non-Negotiable Constraints
+
+- Rocq definitions are the source of truth.
+- Generated OCaml extraction artifacts must not be edited manually:
+  `fixtures/TypeChecker.ml` and `fixtures/TypeChecker.mli` change only through
+  Rocq extraction.
 - No handwritten OCaml checker fallback paths are allowed. `ErrNotImplemented`
   from the extracted end-to-end checker is a rejection.
 - Parser/desugar may resolve names and build hidden calls, but must not become a
   type-directed trait solver.
-- Associated type defaults and equality constraints are out of scope for the
-  current implementation pass.
-- Dot method calls remain syntax-level rejected until they can desugar to the
-  same receiver-first prefix form before Rocq checking.
-- Future deriving must expand to ordinary impl declarations validated by the
-  extracted checker; no parser-only generated acceptance path is allowed.
+- Do not weaken the public type-safety theorem by adding ad hoc public premises.
+- Do not try to prove split readiness implies ordinary direct readiness; the
+  split gate exists because ordinary direct readiness is too strong for some
+  valid direct-receiver-method programs.
+- No `Admitted`, `Axiom`, or `Abort` in the final proof path.
+- Do not add more theorem variants of the form
+  `...with_X_and_Y_and_Z_and_callback_and_bridge...`; package those facts into a
+  runtime evidence record instead.
+
+## Key Commands
+
+Before completing type-system-related work, run the relevant checks from the
+repository root unless noted:
+
+```sh
+cd rocq && make
+dune build
+sh tests/run.sh
+sh tests/diagnose_trait_gates.sh
+rg -n "Admitted\.|Axiom|Abort\." rocq/theories
+```
+
+When the CLI endpoint changes, regenerate extraction through `cd rocq && make`
+before relying on `dune build` or CLI tests.
+
+## Acceptance Criteria
+
+The trait type-safety implementation is complete for this roadmap slice when:
+
+1. `infer_program_env_end2end_big_step_safe_checked_initial_ready` targets the
+   active checker endpoint.
+2. The CLI accept/reject path uses only an extracted Rocq endpoint.
+3. The split endpoint has a non-diagnostic checked-initial runtime-safety theorem.
+4. No final runtime theorem depends on the diagnostic no-receiver/direct-ready
+   case assumption.
+5. Direct-receiver trait programs accepted by the CLI are covered by the public
+   checked-initial big-step theorem.
+6. Unsupported receiver shapes remain rejected.
+7. `plan/trait_new_roadmap.md` and this file agree on the active endpoint,
+   proved theorem, remaining blocked receiver forms, promoted test files, and
+   deferred features.

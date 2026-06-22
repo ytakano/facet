@@ -2717,6 +2717,119 @@ Proof.
   - exact Hparam.
 Qed.
 
+Lemma eval_preserves_ready_body_exact_route_reachable_less_callbacks_of_package_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base_env base_fname n_call env fname fdef,
+    store_safe_ready_body_exact_body_call_route_reachable_exact_body_target_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    store_safe_ready_body_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    eval_preserves_typing_roots_ready_body_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    eval_preserves_frame_param_scope_ready_body_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+      base_env base_fname n_call ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+  forall fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body synthetic_body T_body Gamma_out R_body roots_body
+      frame,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    preservation_ready_args args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    root_env_covers_params (fn_params fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_frame_scope (fn_params fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (bind_params (fn_params fcall) vs s_args) frame ->
+    store_frame_static_fresh (sctx_of_ctx (params_ctx (fn_params fcall)))
+      frame ->
+    store_param_scope (fn_params fcall)
+      (bind_params (fn_params fcall) vs s_args) frame ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    n_body_call < n_call ->
+    (store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body (sctx_of_ctx Gamma_out) /\
+    value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body ret T_body /\
+    store_ref_targets_preserved
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args) s_body /\
+    store_roots_within R_body s_body /\
+    value_roots_within roots_body ret /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body) /\
+    store_frame_scope (fn_params fcall) (sctx_of_ctx Gamma_out) s_body
+      frame /\
+    exists frame', store_param_scope (fn_params fcall) s_body frame'.
+Proof.
+  intros Hroot_names Hroot_keys base_env base_fname n_call env fname fdef
+    Htarget_provider Hprovider Hreachable Htyping_callback Hframe_callback
+    Hin Hname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body synthetic_body T_body Gamma_out R_body roots_body
+    frame Hrename Htarget Hready_body Htyped_body Hunique_body Hcover
+    Hstore_bind Hroots_bind Hshadow_bind Hrn_bind Hnamed_bind Hkeys_bind
+    Hframe Hfresh Hparam Heval_body n_body_call Hheight_body Hlt_body.
+  pose proof
+    (Htarget_provider env fname Hreachable fdef fcall used used'
+      fname_body args_body synthetic_body Hin Hname Hrename Htarget)
+    as Htarget_exact.
+  assert (Htarget_call :
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body)).
+  { unfold direct_call_target_expr in Htarget_exact |- *.
+    destruct (fn_body fcall); try discriminate.
+    - inversion Htarget_exact. reflexivity.
+    - destruct e; try discriminate. }
+  destruct (Hprovider env fname Hreachable fdef fcall used used'
+    fname_body args_body Hin Hname Hrename Htarget_call)
+    as [Hsummary_body _Hsafe_args].
+  assert (Hevidence_body :
+    direct_call_callee_body_root_ready_body_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body).
+  { eapply direct_call_callee_body_root_ready_body_evidence_at_of_ready_body_summary_at;
+      eassumption. }
+  split.
+  - eapply
+      eval_preserves_typing_roots_store_safe_ready_body_call_store_safe_callback_height_statement_at_of_reachable_less_callback_and_ready_body_exact_route_package_provider;
+      eassumption.
+  - eapply
+      eval_preserves_frame_param_scope_ready_body_summary_at_prefix_call_height_statement_evidence_at_of_reachable_less_callback;
+      eassumption.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env fname,

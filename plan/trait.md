@@ -40,9 +40,13 @@ that the CLI actually uses.
   `component_body_local_bounds_ready_body_route_provider_in_env`, ready-body
   reachable callbacks, the nested smaller-height ready-body body-call callback,
   typing/scope callback adapters for synthetic consumers and ready-body
-  exact-route providers, and a combined nested-callback package helper.
-- The remaining low-level proof gap is the ready-body current-step theorem and
-  height induction over `store_safe_ready_body_exact_body_call_route_reachable`.
+  exact-route providers, a combined nested-callback package helper, and
+  ready-body route-statement adapters for reachable-provider-shaped consumers.
+- The remaining low-level proof gap is the standalone ready-body current-step
+  theorem and height induction over
+  `store_safe_ready_body_exact_body_call_route_reachable`; the new adapters
+  still require an existing ready-body route statement plus current-call
+  `store_safe_function_value_call_args` evidence.
   Once that route theorem exists, the active mixed no-capture direct-call
   component branch can stop depending on the synthetic route provider.
 - The diagnostic split endpoint,
@@ -55,9 +59,12 @@ that the CLI actually uses.
 ## Active Proof Plan
 
 1. Finish the ready-body exact-route proof path for the active mixed endpoint.
-   - Prove the ready-body current-step theorem over
+   - Prove the standalone ready-body current-step theorem over
      `store_safe_ready_body_exact_body_call_route_reachable`, using the
      reachable-less typing/scope callbacks and the nested body-call adapters.
+     The compiled route-statement adapters provide the eventual consumer shape
+     but do not yet discharge the route statement or current-call safe-args
+     premise.
    - Assemble the ready-body height induction and instantiate
      `ready_body_exact_route_package_provider_route_bridge` for the active mixed
      endpoint's branch-scoped exact-route package provider.
@@ -153,9 +160,10 @@ that the CLI actually uses.
    - Completed implementation subtask: add the integration bridge from the
      endpoint exact-route package provider to the ready-body route provider.
    - Completed implementation subtask: add the low-level ready-body reachable
-     callback shapes needed by the future height induction.
-   - Next subtask: prove the ready-body current-step theorem over reachable
-     exact routes, assemble the height induction, instantiate the bridge, and
+     callback shapes, nested callback package helper, and route-statement
+     adapters needed by the future height induction.
+   - Next subtask: prove the standalone ready-body current-step theorem over
+     reachable exact routes, assemble the height induction, instantiate the bridge, and
      then switch the local runtime package consumer to the branch-scoped
      provider. After that, rerun `tests/run.sh` and only promote the split
      endpoint if the checker frontier is clean.
@@ -204,10 +212,11 @@ that the CLI actually uses.
   endpoint-level branch-scoped exact-route package provider, integration
   bridge, low-level ready-body reachable callback shapes, the nested
   smaller-height ready-body body-call callback bridge, typing/scope callback
-  adapters for synthetic consumers plus ready-body exact-route providers, and a
-  combined nested-callback package helper now exist. The remaining proof gap is
-  the route theorem: the ready-body current-step and
-  height induction over reachable exact routes still need to be proved before
+  adapters for synthetic consumers plus ready-body exact-route providers, a
+  combined nested-callback package helper, and ready-body route-statement
+  adapters now exist. The remaining proof gap is the route theorem: the
+  standalone ready-body current-step and height induction over reachable exact
+  routes still need to be proved before
   the public theorem can stop reaching route preservation through the synthetic
   route provider.
 - The diagnostic split endpoint remains promising but cannot become the CLI

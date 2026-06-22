@@ -16796,6 +16796,37 @@ Proof.
       eassumption.
 Qed.
 
+
+Record assoc_direct_receiver_mixed_local_runtime_package
+    (env' : global_env) : Prop := {
+  assoc_direct_receiver_mixed_local_runtime_ready_body_or_narrow_provider :
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_or_narrow_summary_provider_in_env
+      env';
+  assoc_direct_receiver_mixed_local_runtime_alpha_body_callback_provider :
+    check_env_root_shadow_direct_receiver_method_present env' = false ->
+    component_body_local_bounds_ready_body_or_narrow_alpha_body_callback_provider_in_env
+      env'
+}.
+
+Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package :
+  forall env env',
+    infer_program_env_end2end_assoc_direct_receiver_mixed env =
+      infer_ok env' ->
+    assoc_direct_receiver_mixed_local_runtime_package env'.
+Proof.
+  intros env env' Hprog.
+  constructor; intros Hno_receiver.
+  - destruct
+      (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+        env env' Hprog Hno_receiver) as [Hprovider _Halpha_provider].
+    exact Hprovider.
+  - destruct
+      (infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_provider_bundle_of_local_certificate
+        env env' Hprog Hno_receiver) as [_Hprovider Halpha_provider].
+    exact Halpha_provider.
+Qed.
+
 Lemma infer_program_env_end2end_assoc_direct_receiver_mixed_ready_body_or_narrow_summary_provider_in_local_bounds_family_of_local_certificate :
   forall env env' env0,
     infer_program_env_end2end_assoc_direct_receiver_mixed env =

@@ -45,10 +45,16 @@ that the CLI actually uses.
   accept direct-call receiver fixtures rejected by the active mixed endpoint, but
   it is not yet the active checker authority and does not yet have the required
   non-diagnostic runtime-safety theorem.
-- The proof surface in `End2EndSafety.v` has accumulated many route, callback,
-  cleanup, bridge, branch-bundle, and diagnostic theorem variants. The next proof
-  step is to package the checker-derived runtime facts once and consume that
-  package from the public theorem, instead of adding more one-off wrappers.
+- `End2EndSafety.v` now has an internal
+  `assoc_direct_receiver_mixed_local_runtime_package` produced by
+  `infer_program_env_end2end_assoc_direct_receiver_mixed_local_runtime_package`.
+  This packages the active mixed endpoint's provable no-receiver local runtime
+  evidence: ready-body-or-narrow summary provider plus alpha-body callback
+  provider.
+- The remaining proof surface issue is the route bridge from that local runtime
+  package to the mixed endpoint public theorem. The next proof step is to derive
+  or package `mixed_ready_body_or_narrow_summary_provider_route_bridge` without
+  adding public premises or more one-off wrapper theorem variants.
 
 ## Active Proof Plan
 
@@ -57,18 +63,19 @@ that the CLI actually uses.
      `infer_program_env_end2end_assoc_strict_exact_closure_direct_receiver_mixed`
      to `infer_program_env_end2end_assoc_direct_receiver_mixed`.
    - Keep public premises no stronger than the current preservation packages.
-   - If existing mixed-endpoint wrappers only close under extra route, callback,
-     cleanup, or diagnostic premises, add the smallest internal runtime evidence
-     adapter needed to close the public theorem. Do not expose these facts as
-     public theorem premises.
+   - Completed subtask: package the active mixed endpoint's provable local
+     no-receiver runtime evidence in
+     `assoc_direct_receiver_mixed_local_runtime_package`.
+   - Next subtask: prove or package the summary-provider route bridge needed by
+     the mixed endpoint public theorem without adding public route, callback,
+     cleanup, or diagnostic premises.
 
 2. Introduce an explicit runtime evidence package.
-   - Convert checker booleans and endpoint gates into Prop-level evidence once.
-   - The package must be strong enough for runtime consumers: route selection,
-     value/callback support, cleanup support, and local-bounds replay support may
-     all belong in the package.
-   - Do not make the package route-only if that forces later theorem wrappers to
-     reconstruct callback, cleanup, or local-bounds facts separately.
+   - Extend the current local package only when a runtime consumer needs more
+     evidence: route selection, value/callback support, cleanup support, and
+     local-bounds replay support may all belong in the final package.
+   - Do not make the final package route-only if that forces later theorem
+     wrappers to reconstruct callback, cleanup, or local-bounds facts separately.
    - The intended shape is:
 
      ```text
@@ -125,10 +132,10 @@ that the CLI actually uses.
   the existing mixed value/cleanup bridge fails because that bridge needs
   store-safe synthetic summary evidence, while the public theorem currently only
   assumes the weaker synthetic direct-call prefix preservation premise.
-- The next Rocq subtask is to introduce the smallest internal runtime evidence
-  adapter for the active mixed endpoint, then make the public theorem consume
-  that package without adding public route, callback, cleanup, or diagnostic
-  premises.
+- The active mixed endpoint now has a small local runtime package for the
+  no-receiver branch, but it still lacks the route bridge needed by the public
+  theorem. The next Rocq subtask is a lemma of this shape:
+  `mixed_ready_body_or_narrow_summary_provider_route_bridge_of_public_runtime_evidence`.
 - The diagnostic split endpoint remains promising but cannot become the CLI
   authority until it has a non-diagnostic checked-initial runtime-safety theorem.
 

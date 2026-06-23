@@ -27,6 +27,33 @@ RUN apt-get update && \
       clang && \
     rm -rf /var/lib/apt/lists/*
 
+RUN cd /tmp && \
+    curl -sLJO https://github.com/vprover/vampire/releases/download/v5.0.1/vampire-Linux-X64.zip && \
+    unzip vampire-Linux-X64.zip && \
+    mv vampire /usr/local/bin
+
+RUN cd /tmp && \
+    curl -sLJO https://github.com/CVC4/CVC4-archived/releases/download/1.8/cvc4-1.8-x86_64-linux-opt && \
+    mv cvc4-1.8-x86_64-linux-opt /usr/local/bin && \
+    chmod +x /usr/local/bin/cvc4
+
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/eprover/eprover.git && \
+    cd eprover && \
+    ./configure --bindir=/usr/local/bin --man-prefix=/usr/local/share/man && \
+    make -j`nproc` && \
+    make install
+
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/Z3Prover/z3.git && \
+    cd z3 && \
+    python3 scripts/mk_make.py --prefix=/usr/local && \
+    cd build && \
+    make -j`nproc` && \
+    make install &&
+    make -j`nproc` examples && \
+    cp z3_tptp /usr/local/bin
+
 RUN npm i -g @openai/codex
 
 RUN set -eux; \
@@ -74,7 +101,7 @@ RUN opam init --yes --auto-setup && \
 
 RUN opam repo add rocq-released https://rocq-prover.org/opam/released && \
     opam update && \
-    opam install -y rocq-prover rocq-stdlib vsrocq-language-server rocq-core=9.1.1
+    opam install -y rocq-prover rocq-stdlib vsrocq-language-server rocq-core=9.1.1 coq-hammer
 
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
